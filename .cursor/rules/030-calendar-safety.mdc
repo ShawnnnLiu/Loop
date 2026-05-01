@@ -1,0 +1,25 @@
+---
+description: Calendar write safety invariants
+alwaysApply: true
+---
+
+# Calendar Safety
+
+Hard rule: no calendar write without `approval_event_id`, `run_id`, and `task_id`.
+
+Additional required fields:
+
+- `plan_version`
+- `approved_payload_hash`
+- calendar target identifier
+
+The Scheduler can only create draft schedules. Calendar Write Manager is the only writer.
+
+Every write must support:
+
+- dry-run;
+- duplicate detection by metadata;
+- verification read after write;
+- rollback by stored `calendar_event_mapping`.
+
+See `docs/axioms/06-calendar-safety.md`.

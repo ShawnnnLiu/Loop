@@ -1,0 +1,19 @@
+---
+description: Schema contract rules for structured orchestration objects
+alwaysApply: true
+---
+
+# Schema Contracts
+
+Check `docs/specs/` before changing schema-related code.
+
+Rules:
+
+- Treat specs as contracts between LLM nodes and deterministic services.
+- Update the relevant spec before changing object shape or semantics.
+- Reject invalid LLM output before consumers use it.
+- Keep `task_plan.prerequisites_met` forbidden; compute prerequisite status deterministically.
+- Preserve `run_id`, `plan_version`, `task_id`, and typed `reason_code` where required.
+- Include invalid fixtures for schema and invariant tests.
+
+Related docs: `docs/axioms/03-data-contracts.md` and `docs/axioms/04-validation-layer.md`.

@@ -1,0 +1,19 @@
+---
+description: Testing expectations for deterministic invariants
+alwaysApply: true
+---
+
+# Testing and Invariants
+
+Add or update tests for:
+
+- typed `reason_code` values;
+- valid and invalid state transitions;
+- schema, graph, coverage, user-fit, and scheduling validation checks;
+- Scheduler failure debug payloads;
+- calendar preview, approval, write, verification, duplicate prevention, and rollback;
+- telemetry-derived drift classification.
+
+Do not rely on prompt wording as a test oracle. Use fixtures, contract checks, and deterministic assertions.
+
+Related docs: `AGENTS.md`, `docs/axioms/02-state-machine.md`, `docs/axioms/04-validation-layer.md`, and `docs/axioms/06-calendar-safety.md`.

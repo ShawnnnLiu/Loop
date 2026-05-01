@@ -1,0 +1,27 @@
+---
+description: Architecture boundaries between LLM nodes and deterministic services
+alwaysApply: true
+---
+
+# Architecture Boundaries
+
+Allowed LLM nodes:
+
+- `StrategistNode`
+- `PlannerNode`
+- `ReflectionSummaryNode`
+- `UserFacingExplanationNode`
+
+Deterministic code must own:
+
+- state routing and Supervisor transitions;
+- validation and repair retry limits;
+- prerequisite status;
+- scheduling;
+- approval gates;
+- calendar writes and rollback;
+- telemetry storage;
+- drift classification in the MVP;
+- source confidence scoring.
+
+Do not let prompts, chat history, or prose outputs become control-plane state. See `docs/axioms/01-system-boundaries.md`.

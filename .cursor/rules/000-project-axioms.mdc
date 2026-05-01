@@ -1,0 +1,21 @@
+---
+description: Core project axioms for deterministic career-preparation orchestration
+alwaysApply: true
+---
+
+# Project Axioms
+
+Core thesis: **LLMs propose. Deterministic infrastructure disposes.**
+
+Non-negotiable axioms:
+
+- No silent calendar writes.
+- No LLM-controlled routing.
+- No invalid Planner output may reach the Scheduler.
+- No calendar write may occur without `approval_event_id`.
+- Prerequisites are computed deterministically from dependencies and completion state.
+- The active plan is never mutated directly; use plan versions.
+- Every failure must produce a typed `reason_code`.
+- Every external side effect must support dry-run, verification, and rollback.
+
+Before major changes, read `AGENTS.md`, `docs/README.md`, and the relevant files in `docs/axioms/`, `docs/specs/`, and `docs/decisions/`.

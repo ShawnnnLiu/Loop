@@ -1,0 +1,29 @@
+{
+  "plan_version": "plan_004",
+  "tasks": [
+    {
+      "task_id": "dp_001",
+      "module_id": "dp",
+      "title": "Review DP state definitions",
+      "description": "Study how to define state, transition, base case, and answer extraction.",
+      "dependencies": [],
+      "estimated_duration_min": 60,
+      "cognitive_load": 4,
+      "category": "concept_review",
+      "required_focus_level": "deep",
+      "splittable": false
+    },
+    {
+      "task_id": "dp_002",
+      "module_id": "dp",
+      "title": "Solve 3 one-dimensional DP problems",
+      "description": "Practice climbing stairs, house robber, and min cost climbing stairs.",
+      "dependencies": ["dp_001"],
+      "estimated_duration_min": 90,
+      "cognitive_load": 5,
+      "category": "practice",
+      "required_focus_level": "deep",
+      "splittable": true
+    }
+  ]
+}

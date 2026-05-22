@@ -1,0 +1,21 @@
+{
+  "run_id": "run_2026_05_04_001",
+  "artifact_type": "task_plan",
+  "valid": false,
+  "repairable": true,
+  "reason_code": "TASK_GRAPH_INVALID",
+  "violations": [
+    {
+      "type": "orphan_dependency",
+      "task_id": "dp_004",
+      "details": { "invalid_dependency": "dp_999" }
+    },
+    {
+      "type": "module_coverage_missing",
+      "module_id": "api_design"
+    }
+  ],
+  "repair_attempt": 1,
+  "max_repair_attempts": 2,
+  "next_action": "planner_repair_retry"
+}

@@ -1,0 +1,35 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.venv/
+venv/
+env/
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+*.egg-info/
+*.egg
+build/
+dist/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+.python-version
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+
+# uv
+.uv/
+
+# import-linter
+.import_linter_cache/
+
+# Generated artifacts (committed copy lives in /schemas/, this catches stray builds)
+/backend/.schemas-build/

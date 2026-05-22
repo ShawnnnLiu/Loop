@@ -1,0 +1,116 @@
+{
+  "$defs": {
+    "FocusLevel": {
+      "description": "Allowed values for ``task.required_focus_level``.",
+      "enum": [
+        "light",
+        "medium",
+        "deep"
+      ],
+      "title": "FocusLevel",
+      "type": "string"
+    },
+    "Task": {
+      "additionalProperties": false,
+      "description": "One concrete task derived from a syllabus module.",
+      "properties": {
+        "category": {
+          "$ref": "#/$defs/TaskCategory"
+        },
+        "cognitive_load": {
+          "maximum": 5,
+          "minimum": 1,
+          "title": "Cognitive Load",
+          "type": "integer"
+        },
+        "dependencies": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Dependencies",
+          "type": "array"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "estimated_duration_min": {
+          "exclusiveMinimum": 0,
+          "title": "Estimated Duration Min",
+          "type": "integer"
+        },
+        "module_id": {
+          "minLength": 1,
+          "title": "Module Id",
+          "type": "string"
+        },
+        "required_focus_level": {
+          "$ref": "#/$defs/FocusLevel"
+        },
+        "splittable": {
+          "default": false,
+          "title": "Splittable",
+          "type": "boolean"
+        },
+        "task_id": {
+          "minLength": 1,
+          "title": "Task Id",
+          "type": "string"
+        },
+        "title": {
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "task_id",
+        "module_id",
+        "title",
+        "estimated_duration_min",
+        "cognitive_load",
+        "category",
+        "required_focus_level"
+      ],
+      "title": "Task",
+      "type": "object"
+    },
+    "TaskCategory": {
+      "description": "Allowed values for ``task.category`` (see task-plan spec).",
+      "enum": [
+        "concept_review",
+        "practice",
+        "mock_interview",
+        "project",
+        "reflection",
+        "review"
+      ],
+      "title": "TaskCategory",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A versioned set of tasks (see spec).\n\nNote: per axiom 11, ``prerequisites_met`` is *not* a field on this model.\nThe model rejects it explicitly with ``FORBIDDEN_FIELD_PRESENT`` semantics\nvia the ``_reject_prerequisites_met`` validator.",
+  "properties": {
+    "plan_version": {
+      "minLength": 1,
+      "title": "Plan Version",
+      "type": "string"
+    },
+    "tasks": {
+      "items": {
+        "$ref": "#/$defs/Task"
+      },
+      "minItems": 1,
+      "title": "Tasks",
+      "type": "array"
+    }
+  },
+  "required": [
+    "plan_version",
+    "tasks"
+  ],
+  "title": "TaskPlan",
+  "type": "object"
+}

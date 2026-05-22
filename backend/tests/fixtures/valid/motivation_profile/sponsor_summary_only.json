@@ -1,0 +1,19 @@
+{
+  "motivation_profile_id": "mot_002",
+  "user_id": "user_456",
+  "profile_version": "mot_v1",
+  "self_motivation_level": "low",
+  "procrastination_risk": "high",
+  "pressure_tolerance": "low",
+  "weekly_checkin_enabled": false,
+  "missed_task_escalation_threshold": 3,
+  "behind_schedule_intervention_threshold_pct": 25,
+  "recovery_mode_preference": "ask_each_time",
+  "sponsor_enabled": true,
+  "sponsor_visibility_level": "summary_only",
+  "sponsor_id": "sponsor_001",
+  "nudge_channel_preference": "email",
+  "quiet_hours": { "start": "21:30", "end": "07:30" },
+  "created_at": "2026-04-28T12:00:00-07:00",
+  "updated_at": "2026-04-28T12:00:00-07:00"
+}

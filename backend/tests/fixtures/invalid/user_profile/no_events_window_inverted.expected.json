@@ -1,0 +1,7 @@
+{
+  "error_substrings": [
+    "no_events_before",
+    "must be earlier than",
+    "no_events_after"
+  ]
+}

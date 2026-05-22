@@ -1,0 +1,243 @@
+{
+  "$defs": {
+    "Day": {
+      "description": "Day-of-week token used everywhere a single weekday is referenced.",
+      "enum": [
+        "Mon",
+        "Tue",
+        "Wed",
+        "Thu",
+        "Fri",
+        "Sat",
+        "Sun"
+      ],
+      "title": "Day",
+      "type": "string"
+    },
+    "DeepWorkWindow": {
+      "additionalProperties": false,
+      "description": "A weekly recurring deep-work block.\n\n``start`` and ``end`` are local 24-hour times in the user's timezone;\ntimezone semantics are owned by the surrounding profile, not this object.",
+      "properties": {
+        "day": {
+          "$ref": "#/$defs/Day"
+        },
+        "end": {
+          "title": "End",
+          "type": "string"
+        },
+        "start": {
+          "title": "Start",
+          "type": "string"
+        }
+      },
+      "required": [
+        "day",
+        "start",
+        "end"
+      ],
+      "title": "DeepWorkWindow",
+      "type": "object"
+    },
+    "ExperienceLevel": {
+      "enum": [
+        "beginner",
+        "intermediate",
+        "advanced"
+      ],
+      "title": "ExperienceLevel",
+      "type": "string"
+    },
+    "HardConstraints": {
+      "additionalProperties": false,
+      "description": "Non-negotiable scheduling boundaries.",
+      "properties": {
+        "allow_weekends": {
+          "default": true,
+          "title": "Allow Weekends",
+          "type": "boolean"
+        },
+        "max_daily_study_min": {
+          "exclusiveMinimum": 0,
+          "maximum": 1440,
+          "title": "Max Daily Study Min",
+          "type": "integer"
+        },
+        "min_break_between_deep_blocks_min": {
+          "maximum": 720,
+          "minimum": 0,
+          "title": "Min Break Between Deep Blocks Min",
+          "type": "integer"
+        },
+        "no_events_after": {
+          "title": "No Events After",
+          "type": "string"
+        },
+        "no_events_before": {
+          "title": "No Events Before",
+          "type": "string"
+        }
+      },
+      "required": [
+        "no_events_before",
+        "no_events_after",
+        "max_daily_study_min",
+        "min_break_between_deep_blocks_min"
+      ],
+      "title": "HardConstraints",
+      "type": "object"
+    },
+    "Preferences": {
+      "additionalProperties": false,
+      "description": "Soft preferences used as tie-breakers when multiple schedules are valid.",
+      "properties": {
+        "avoid_back_to_back_deep_work": {
+          "default": false,
+          "title": "Avoid Back To Back Deep Work",
+          "type": "boolean"
+        },
+        "prefer_evening_sessions": {
+          "default": false,
+          "title": "Prefer Evening Sessions",
+          "type": "boolean"
+        },
+        "prefer_weekend_long_blocks": {
+          "default": false,
+          "title": "Prefer Weekend Long Blocks",
+          "type": "boolean"
+        }
+      },
+      "title": "Preferences",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Structured user profile (see ``docs/specs/user-profile.schema.md``).",
+  "properties": {
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "deep_work_windows": {
+      "items": {
+        "$ref": "#/$defs/DeepWorkWindow"
+      },
+      "title": "Deep Work Windows",
+      "type": "array"
+    },
+    "experience_level": {
+      "$ref": "#/$defs/ExperienceLevel"
+    },
+    "goal": {
+      "title": "Goal",
+      "type": "string"
+    },
+    "hard_constraints": {
+      "$ref": "#/$defs/HardConstraints"
+    },
+    "known_strengths": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Known Strengths",
+      "type": "array"
+    },
+    "known_weaknesses": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Known Weaknesses",
+      "type": "array"
+    },
+    "max_session_length_min": {
+      "exclusiveMinimum": 0,
+      "maximum": 720,
+      "title": "Max Session Length Min",
+      "type": "integer"
+    },
+    "motivation_profile_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Motivation Profile Id"
+    },
+    "preferences": {
+      "$ref": "#/$defs/Preferences"
+    },
+    "preferred_session_length_min": {
+      "exclusiveMinimum": 0,
+      "maximum": 720,
+      "title": "Preferred Session Length Min",
+      "type": "integer"
+    },
+    "profile_version": {
+      "title": "Profile Version",
+      "type": "string"
+    },
+    "target_companies": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Target Companies",
+      "type": "array"
+    },
+    "target_level": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Target Level"
+    },
+    "target_role": {
+      "title": "Target Role",
+      "type": "string"
+    },
+    "timeline_weeks": {
+      "exclusiveMinimum": 0,
+      "title": "Timeline Weeks",
+      "type": "integer"
+    },
+    "updated_at": {
+      "format": "date-time",
+      "title": "Updated At",
+      "type": "string"
+    },
+    "user_id": {
+      "title": "User Id",
+      "type": "string"
+    },
+    "weekly_hours": {
+      "exclusiveMinimum": 0,
+      "maximum": 40,
+      "title": "Weekly Hours",
+      "type": "number"
+    }
+  },
+  "required": [
+    "user_id",
+    "profile_version",
+    "goal",
+    "target_role",
+    "timeline_weeks",
+    "weekly_hours",
+    "experience_level",
+    "preferred_session_length_min",
+    "max_session_length_min",
+    "hard_constraints",
+    "created_at",
+    "updated_at"
+  ],
+  "title": "UserProfile",
+  "type": "object"
+}

@@ -1,0 +1,11 @@
+{
+  "run_id": "run_x",
+  "artifact_type": "task_plan",
+  "valid": false,
+  "repairable": true,
+  "reason_code": "VALIDATION_FAILED",
+  "violations": [],
+  "repair_attempt": 0,
+  "max_repair_attempts": 2,
+  "next_action": "planner_repair_retry"
+}

@@ -1,0 +1,32 @@
+{
+  "syllabus_version": "syl_003",
+  "goal_summary": "Prepare for backend SWE interviews at Meta and Stripe over 10 weeks.",
+  "modules": [
+    {
+      "module_id": "dp",
+      "title": "Dynamic Programming",
+      "priority": "high",
+      "reason": "User listed DP as a weakness and target companies commonly test algorithmic reasoning.",
+      "target_outcomes": [
+        "Recognize common DP state definitions",
+        "Solve 1D and 2D DP problems under interview constraints"
+      ],
+      "estimated_total_min": 720,
+      "difficulty": 5,
+      "source_claim_ids": ["claim_012", "claim_018"]
+    },
+    {
+      "module_id": "api_design",
+      "title": "API Design and Product-Oriented Backend Design",
+      "priority": "medium",
+      "reason": "Relevant for Stripe-style backend interviews.",
+      "target_outcomes": [
+        "Design clean API surfaces",
+        "Explain tradeoffs between consistency, latency, and developer experience"
+      ],
+      "estimated_total_min": 360,
+      "difficulty": 4,
+      "source_claim_ids": ["claim_024"]
+    }
+  ]
+}

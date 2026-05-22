@@ -1,0 +1,17 @@
+{
+  "plan_version": "plan_x",
+  "tasks": [
+    {
+      "task_id": "dp_001",
+      "module_id": "dp",
+      "title": "Review DP state definitions",
+      "dependencies": [],
+      "estimated_duration_min": 60,
+      "cognitive_load": 3,
+      "category": "concept_review",
+      "required_focus_level": "deep",
+      "splittable": false,
+      "prerequisites_met": true
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "run_id": "run_x",
+  "plan_version": "plan_x",
+  "schedule_status": "failed",
+  "scheduled_tasks": [],
+  "unscheduled_tasks": [],
+  "available_capacity_min": 0,
+  "largest_available_block_min": 0,
+  "repair_options": ["extend_timeline"]
+}

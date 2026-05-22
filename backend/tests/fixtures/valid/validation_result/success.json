@@ -1,0 +1,11 @@
+{
+  "run_id": "run_2026_05_04_001",
+  "artifact_type": "task_plan",
+  "valid": true,
+  "repairable": false,
+  "reason_code": null,
+  "violations": [],
+  "repair_attempt": 0,
+  "max_repair_attempts": 2,
+  "next_action": "scheduler"
+}

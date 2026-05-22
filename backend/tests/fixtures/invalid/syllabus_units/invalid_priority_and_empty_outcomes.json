@@ -1,0 +1,14 @@
+{
+  "syllabus_version": "syl_x",
+  "goal_summary": "Test",
+  "modules": [
+    {
+      "module_id": "dp",
+      "title": "Dynamic Programming",
+      "priority": "urgent",
+      "target_outcomes": [],
+      "estimated_total_min": 60,
+      "difficulty": 3
+    }
+  ]
+}

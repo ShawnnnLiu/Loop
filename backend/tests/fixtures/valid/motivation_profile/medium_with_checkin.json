@@ -1,0 +1,21 @@
+{
+  "motivation_profile_id": "mot_001",
+  "user_id": "user_123",
+  "profile_version": "mot_v1",
+  "self_motivation_level": "medium",
+  "procrastination_risk": "high",
+  "pressure_tolerance": "medium",
+  "weekly_checkin_enabled": true,
+  "weekly_checkin_day": "Sun",
+  "weekly_checkin_time": "19:00",
+  "missed_task_escalation_threshold": 2,
+  "behind_schedule_intervention_threshold_pct": 20,
+  "recovery_mode_preference": "reschedule",
+  "sponsor_enabled": false,
+  "sponsor_visibility_level": "none",
+  "sponsor_id": null,
+  "nudge_channel_preference": "in_app",
+  "quiet_hours": { "start": "22:00", "end": "08:00" },
+  "created_at": "2026-04-28T12:00:00-07:00",
+  "updated_at": "2026-04-28T12:00:00-07:00"
+}

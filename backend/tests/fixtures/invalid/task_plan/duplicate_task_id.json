@@ -1,0 +1,27 @@
+{
+  "plan_version": "plan_x",
+  "tasks": [
+    {
+      "task_id": "dp_001",
+      "module_id": "dp",
+      "title": "Review DP",
+      "dependencies": [],
+      "estimated_duration_min": 60,
+      "cognitive_load": 3,
+      "category": "concept_review",
+      "required_focus_level": "deep",
+      "splittable": false
+    },
+    {
+      "task_id": "dp_001",
+      "module_id": "dp",
+      "title": "Review DP again",
+      "dependencies": [],
+      "estimated_duration_min": 60,
+      "cognitive_load": 3,
+      "category": "review",
+      "required_focus_level": "medium",
+      "splittable": false
+    }
+  ]
+}

@@ -1,0 +1,90 @@
+[importlinter]
+root_packages =
+    agentic_calendar
+include_external_packages = True
+
+# ---------------------------------------------------------------------------
+# Contract 1: LLM SDK isolation.
+#
+# Only `agentic_calendar.llm_nodes` (and `agentic_calendar.tools`, the operator
+# CLI surface) may import LLM SDKs. This is the import-time enforcement of the
+# axiom in `docs/axioms/01-system-boundaries.md`.
+# ---------------------------------------------------------------------------
+[importlinter:contract:llm-sdk-isolation]
+name = LLM SDKs may only be imported by llm_nodes (and operator tools).
+type = forbidden
+source_modules =
+    agentic_calendar.common
+    agentic_calendar.contracts
+    agentic_calendar.supervisor
+    agentic_calendar.prerequisites
+    agentic_calendar.validation
+    agentic_calendar.scheduler
+    agentic_calendar.planning
+forbidden_modules =
+    openai
+    anthropic
+    cohere
+    mistralai
+# Note: import-linter does not support subpackages of external packages in
+# ``forbidden_modules`` (so ``google.generativeai`` / ``google.genai`` cannot
+# be listed here directly). When/if a Google LLM SDK lands, add a dedicated
+# top-level forbidden module or a custom contract via the import-linter API.
+
+# ---------------------------------------------------------------------------
+# Contract 2: Layered architecture.
+#
+# Top-level regions (supervisor, validation, scheduler, planning, llm_nodes)
+# must not import each other directly. They may depend on the shared
+# kernels (`common`, `contracts`, `prerequisites`); cross-region data flow
+# happens through `contracts/`. This keeps a fault localized: a regression
+# in scheduler/ cannot reach into validation/.
+# ---------------------------------------------------------------------------
+[importlinter:contract:layered-regions]
+name = Region packages must not import each other directly.
+type = independence
+modules =
+    agentic_calendar.supervisor
+    agentic_calendar.validation
+    agentic_calendar.scheduler
+    agentic_calendar.planning
+    agentic_calendar.llm_nodes
+
+# ---------------------------------------------------------------------------
+# Contract 4: Prerequisites is a shared kernel.
+#
+# `prerequisites` may depend on `common` and `contracts` only. It is the
+# single deterministic source of "is this task ready?" and may be imported
+# by any region; nothing inside it may reach back into a region.
+# ---------------------------------------------------------------------------
+[importlinter:contract:prerequisites-is-leaf]
+name = prerequisites/ may only depend on common/ and contracts/.
+type = forbidden
+source_modules =
+    agentic_calendar.prerequisites
+forbidden_modules =
+    agentic_calendar.supervisor
+    agentic_calendar.validation
+    agentic_calendar.scheduler
+    agentic_calendar.planning
+    agentic_calendar.llm_nodes
+
+# ---------------------------------------------------------------------------
+# Contract 3: Contracts package is leaf.
+#
+# `contracts` only depends on `common`. Nothing in contracts/ may import
+# business-logic regions; otherwise a contract change ripples everywhere and
+# the schemas stop being a stable boundary.
+# ---------------------------------------------------------------------------
+[importlinter:contract:contracts-is-leaf]
+name = contracts/ may only depend on common/.
+type = forbidden
+source_modules =
+    agentic_calendar.contracts
+forbidden_modules =
+    agentic_calendar.supervisor
+    agentic_calendar.prerequisites
+    agentic_calendar.validation
+    agentic_calendar.scheduler
+    agentic_calendar.planning
+    agentic_calendar.llm_nodes

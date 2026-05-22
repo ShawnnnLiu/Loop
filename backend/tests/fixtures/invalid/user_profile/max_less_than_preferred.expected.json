@@ -1,0 +1,5 @@
+{
+  "error_substrings": [
+    "max_session_length_min must be >= preferred_session_length_min"
+  ]
+}

@@ -1,0 +1,109 @@
+{
+  "$defs": {
+    "Priority": {
+      "enum": [
+        "high",
+        "medium",
+        "low"
+      ],
+      "title": "Priority",
+      "type": "string"
+    },
+    "SyllabusModule": {
+      "additionalProperties": false,
+      "description": "One structured learning module.",
+      "properties": {
+        "difficulty": {
+          "maximum": 5,
+          "minimum": 1,
+          "title": "Difficulty",
+          "type": "integer"
+        },
+        "estimated_total_min": {
+          "exclusiveMinimum": 0,
+          "title": "Estimated Total Min",
+          "type": "integer"
+        },
+        "module_id": {
+          "minLength": 1,
+          "title": "Module Id",
+          "type": "string"
+        },
+        "priority": {
+          "$ref": "#/$defs/Priority"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        },
+        "source_claim_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Claim Ids",
+          "type": "array"
+        },
+        "target_outcomes": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Target Outcomes",
+          "type": "array"
+        },
+        "title": {
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "module_id",
+        "title",
+        "priority",
+        "target_outcomes",
+        "estimated_total_min",
+        "difficulty"
+      ],
+      "title": "SyllabusModule",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Complete syllabus revision: ``syllabus_version`` + modules.",
+  "properties": {
+    "goal_summary": {
+      "minLength": 1,
+      "title": "Goal Summary",
+      "type": "string"
+    },
+    "modules": {
+      "items": {
+        "$ref": "#/$defs/SyllabusModule"
+      },
+      "minItems": 1,
+      "title": "Modules",
+      "type": "array"
+    },
+    "syllabus_version": {
+      "minLength": 1,
+      "title": "Syllabus Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "syllabus_version",
+    "goal_summary",
+    "modules"
+  ],
+  "title": "SyllabusUnits",
+  "type": "object"
+}

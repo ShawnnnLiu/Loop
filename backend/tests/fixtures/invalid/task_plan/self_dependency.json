@@ -1,0 +1,16 @@
+{
+  "plan_version": "plan_x",
+  "tasks": [
+    {
+      "task_id": "dp_002",
+      "module_id": "dp",
+      "title": "Solve 1D DP",
+      "dependencies": ["dp_002"],
+      "estimated_duration_min": 60,
+      "cognitive_load": 3,
+      "category": "practice",
+      "required_focus_level": "deep",
+      "splittable": true
+    }
+  ]
+}

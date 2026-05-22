@@ -1,0 +1,7 @@
+{
+  "error_substrings": [
+    "sponsor_visibility_level",
+    "must not be 'none'",
+    "sponsor_enabled is true"
+  ]
+}

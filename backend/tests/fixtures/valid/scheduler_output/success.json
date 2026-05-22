@@ -1,0 +1,17 @@
+{
+  "run_id": "run_2026_05_04_002",
+  "plan_version": "plan_005",
+  "schedule_status": "success",
+  "scheduled_tasks": [
+    {
+      "task_id": "dp_001",
+      "start": "2026-05-04T18:00:00-07:00",
+      "end": "2026-05-04T19:00:00-07:00",
+      "calendar_event_status": "draft_only"
+    }
+  ],
+  "unscheduled_tasks": [],
+  "available_capacity_min": 240,
+  "largest_available_block_min": 180,
+  "repair_options": []
+}

@@ -1,0 +1,197 @@
+{
+  "$defs": {
+    "Day": {
+      "description": "Day-of-week token used everywhere a single weekday is referenced.",
+      "enum": [
+        "Mon",
+        "Tue",
+        "Wed",
+        "Thu",
+        "Fri",
+        "Sat",
+        "Sun"
+      ],
+      "title": "Day",
+      "type": "string"
+    },
+    "Level": {
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "title": "Level",
+      "type": "string"
+    },
+    "NudgeChannel": {
+      "enum": [
+        "in_app",
+        "email",
+        "push"
+      ],
+      "title": "NudgeChannel",
+      "type": "string"
+    },
+    "QuietHours": {
+      "additionalProperties": false,
+      "description": "A single contiguous quiet-hours window in HH:MM local time.\n\n``end`` may legitimately be before ``start`` (overnight quiet hours), so\nwe do **not** enforce ordering here \u2014 see the spec.",
+      "properties": {
+        "end": {
+          "title": "End",
+          "type": "string"
+        },
+        "start": {
+          "title": "Start",
+          "type": "string"
+        }
+      },
+      "required": [
+        "start",
+        "end"
+      ],
+      "title": "QuietHours",
+      "type": "object"
+    },
+    "RecoveryPreference": {
+      "enum": [
+        "reschedule",
+        "scope_reduction",
+        "extend_timeline",
+        "ask_each_time"
+      ],
+      "title": "RecoveryPreference",
+      "type": "string"
+    },
+    "SponsorVisibility": {
+      "enum": [
+        "none",
+        "summary_only",
+        "milestone_progress",
+        "task_completion"
+      ],
+      "title": "SponsorVisibility",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Accountability preferences and procrastination risk.",
+  "properties": {
+    "behind_schedule_intervention_threshold_pct": {
+      "default": 20,
+      "maximum": 50,
+      "minimum": 5,
+      "title": "Behind Schedule Intervention Threshold Pct",
+      "type": "integer"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "missed_task_escalation_threshold": {
+      "default": 2,
+      "maximum": 14,
+      "minimum": 1,
+      "title": "Missed Task Escalation Threshold",
+      "type": "integer"
+    },
+    "motivation_profile_id": {
+      "title": "Motivation Profile Id",
+      "type": "string"
+    },
+    "nudge_channel_preference": {
+      "$ref": "#/$defs/NudgeChannel",
+      "default": "in_app"
+    },
+    "pressure_tolerance": {
+      "$ref": "#/$defs/Level"
+    },
+    "procrastination_risk": {
+      "$ref": "#/$defs/Level"
+    },
+    "profile_version": {
+      "title": "Profile Version",
+      "type": "string"
+    },
+    "quiet_hours": {
+      "$ref": "#/$defs/QuietHours"
+    },
+    "recovery_mode_preference": {
+      "$ref": "#/$defs/RecoveryPreference",
+      "default": "ask_each_time"
+    },
+    "self_motivation_level": {
+      "$ref": "#/$defs/Level"
+    },
+    "sponsor_enabled": {
+      "default": false,
+      "title": "Sponsor Enabled",
+      "type": "boolean"
+    },
+    "sponsor_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Sponsor Id"
+    },
+    "sponsor_visibility_level": {
+      "$ref": "#/$defs/SponsorVisibility",
+      "default": "none"
+    },
+    "updated_at": {
+      "format": "date-time",
+      "title": "Updated At",
+      "type": "string"
+    },
+    "user_id": {
+      "title": "User Id",
+      "type": "string"
+    },
+    "weekly_checkin_day": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Day"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "weekly_checkin_enabled": {
+      "title": "Weekly Checkin Enabled",
+      "type": "boolean"
+    },
+    "weekly_checkin_time": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Weekly Checkin Time"
+    }
+  },
+  "required": [
+    "motivation_profile_id",
+    "user_id",
+    "profile_version",
+    "self_motivation_level",
+    "procrastination_risk",
+    "pressure_tolerance",
+    "weekly_checkin_enabled",
+    "created_at",
+    "updated_at"
+  ],
+  "title": "MotivationProfile",
+  "type": "object"
+}

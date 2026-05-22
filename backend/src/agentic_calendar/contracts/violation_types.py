@@ -37,8 +37,12 @@ class ViolationType(StrEnum):
 
     # --- User-fit ---
     DURATION_EXCEEDS_USER_MAX_SESSION = "duration_exceeds_user_max_session"
+    DURATION_FAR_FROM_PREFERRED = "duration_far_from_preferred"
     WEEKLY_LOAD_EXCEEDS_CAPACITY = "weekly_load_exceeds_capacity"
     COGNITIVE_LOAD_OUT_OF_RANGE = "cognitive_load_out_of_range"
     CATEGORY_INVALID = "category_invalid"
     FOCUS_LEVEL_INVALID = "focus_level_invalid"
     HIGH_LOAD_TASKS_NOT_DISTRIBUTED = "high_load_tasks_not_distributed"
+
+    # --- Scheduling preconditions ---
+    NO_ROOT_TASK = "no_root_task"

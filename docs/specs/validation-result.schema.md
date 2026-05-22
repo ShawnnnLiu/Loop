@@ -79,17 +79,25 @@ A typed result object that captures whether an artifact passed validation, the t
 Recommended `type` values include:
 
 - `orphan_dependency`
-- `cycle_detected`
+- `cycle_detected` — carries `cycle_members` (list of unique cycle nodes,
+  rotated to start at the lexicographically smallest member; e.g. a 2-cycle
+  `a <-> b` is reported as `["a", "b"]`, not `["a", "b", "a"]`).
 - `self_dependency`
 - `duplicate_task_id`
 - `missing_module_id`
 - `module_coverage_missing`
 - `duration_exceeds_user_max_session`
+- `duration_far_from_preferred` — soft fragmentation signal: task duration is
+  below `preferred_session_length_min * (1 - PREFERRED_SESSION_TOLERANCE_RATIO)`.
 - `cognitive_load_out_of_range`
 - `category_invalid`
 - `focus_level_invalid`
 - `weekly_load_exceeds_capacity`
+- `no_root_task` — the plan has no schedulable starting task (every task has
+  at least one dependency). Distinct from cycle/orphan because it describes
+  the topology, not a specific bad edge.
 
+The canonical enum lives in `agentic_calendar.contracts.violation_types`.
 Each violation must carry the structured fields required to repair it.
 
 ## Invariants

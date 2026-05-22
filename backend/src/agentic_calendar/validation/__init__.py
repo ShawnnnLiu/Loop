@@ -3,6 +3,21 @@
 Each checker module is independent: schema, graph, coverage, user_fit, and
 scheduling_preconditions. The orchestrator composes them and returns a
 ``ValidationResult``. Validation must never mutate the artifact under test.
+
+TODO(phase 5+): structured ``ValidationResult`` orchestrators for
+``user_profile``, ``motivation_profile``, and ``syllabus_units`` are
+intentionally not implemented in Phase 1.
+
+Reasoning: a structured ``ValidationResult`` is only meaningful when it
+feeds a deterministic repair loop. The repair loop only exists for
+``task_plan`` today because ``PlannerNode`` is the sole LLM producer in
+Phase 1 (StrategistNode is fixture-backed and onboarding is deterministic).
+Adding ``validate_syllabus_units`` / ``validate_user_profile`` /
+``validate_motivation_profile`` now would be scaffolding without a
+consumer — the Pydantic contracts already reject malformed artifacts at
+parse time, which is sufficient until Phase 5 wires a real Strategist.
+The ``ArtifactType`` enum already reserves the slots so adding these
+orchestrators is purely additive.
 """
 
 from __future__ import annotations
@@ -97,10 +112,11 @@ def _summarize_reason(violations: list[Violation]) -> ReasonCode:
 
     1. forbidden field present (axiom 11)
     2. graph integrity
-    3. coverage
-    4. user fit
-    5. scheduling preconditions
-    6. generic schema invalid
+    3. scheduling preconditions (structural — must come before coverage so a
+       deadlocked plan reports the right reason)
+    4. coverage
+    5. user fit
+    6. generic schema invalid (fallback)
     """
     types = {v.type for v in violations}
 
@@ -116,6 +132,12 @@ def _summarize_reason(violations: list[Violation]) -> ReasonCode:
     if types & graph_types:
         return ReasonCode.TASK_GRAPH_INVALID
 
+    scheduling_precondition_types = {
+        ViolationType.NO_ROOT_TASK,
+    }
+    if types & scheduling_precondition_types:
+        return ReasonCode.SCHEDULING_PRECONDITION_FAILED
+
     coverage_types = {
         ViolationType.MODULE_COVERAGE_MISSING,
         ViolationType.MISSING_MODULE_ID,
@@ -126,6 +148,7 @@ def _summarize_reason(violations: list[Violation]) -> ReasonCode:
 
     user_fit_types = {
         ViolationType.DURATION_EXCEEDS_USER_MAX_SESSION,
+        ViolationType.DURATION_FAR_FROM_PREFERRED,
         ViolationType.WEEKLY_LOAD_EXCEEDS_CAPACITY,
         ViolationType.COGNITIVE_LOAD_OUT_OF_RANGE,
         ViolationType.HIGH_LOAD_TASKS_NOT_DISTRIBUTED,

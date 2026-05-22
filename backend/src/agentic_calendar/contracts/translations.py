@@ -32,8 +32,16 @@ USER_FACING: dict[ViolationType, str] = {
     ViolationType.DURATION_EXCEEDS_USER_MAX_SESSION: (
         "A task was too long for your session preferences. Splitting it up."
     ),
+    ViolationType.DURATION_FAR_FROM_PREFERRED: (
+        "Some tasks were much shorter than your preferred session length, "
+        "which can fragment focus. Re-sizing."
+    ),
     ViolationType.WEEKLY_LOAD_EXCEEDS_CAPACITY: (
         "The plan exceeded your weekly hours. Trimming scope."
+    ),
+    ViolationType.NO_ROOT_TASK: (
+        "The plan has no starting task — every task depends on another. "
+        "Restructuring so something can begin."
     ),
     ViolationType.COGNITIVE_LOAD_OUT_OF_RANGE: (
         "A task's difficulty rating was invalid. Recalibrating."

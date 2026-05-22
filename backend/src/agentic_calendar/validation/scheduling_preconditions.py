@@ -31,8 +31,7 @@ def check_scheduling_preconditions(plan: TaskPlan) -> list[Violation]:
         return []
     return [
         make_violation(
-            ViolationType.MISSING_MODULE_ID,
-            details_summary="no_root_task",
+            ViolationType.NO_ROOT_TASK,
             note=(
                 "every task has at least one dependency; the scheduler would "
                 "deadlock with DEPENDENCY_BLOCKED for every placement"

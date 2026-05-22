@@ -110,11 +110,13 @@
         "module_coverage_missing",
         "low_priority_module_overweighted",
         "duration_exceeds_user_max_session",
+        "duration_far_from_preferred",
         "weekly_load_exceeds_capacity",
         "cognitive_load_out_of_range",
         "category_invalid",
         "focus_level_invalid",
-        "high_load_tasks_not_distributed"
+        "high_load_tasks_not_distributed",
+        "no_root_task"
       ],
       "title": "ViolationType",
       "type": "string"

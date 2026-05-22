@@ -31,7 +31,6 @@ from agentic_calendar.contracts.scheduler_output import (
     UnscheduledTask,
 )
 from agentic_calendar.contracts.task_plan import Task
-from agentic_calendar.prerequisites import compute_runtime_view
 
 from . import debug as dbg
 from .inputs import FreeBusyInterval, SchedulerInput
@@ -75,22 +74,21 @@ def schedule(
     # Within a single run, a task placed earlier in topo order satisfies the
     # dependency relation for tasks placed later (axiom 11: prereqs are
     # computed deterministically from completion plus in-flight placements).
+    #
+    # Because ``ordered_tasks`` is a topological order, the only deps a task
+    # can have are tasks that appeared earlier in the iteration — so the
+    # per-task readiness check is a single subset test against the running
+    # ``completed_or_placed`` set: O(deps) per task, O(edges) overall.
     completed_or_placed: set[str] = set(inp.completed_task_ids)
 
     for task in ordered_tasks:
-        runtime = {
-            rt.task_id: rt
-            for rt in compute_runtime_view(
-                inp.plan, completed_task_ids=completed_or_placed
-            )
-        }
-        rt = runtime[task.task_id]
-        if not rt.eligible_for_scheduling:
+        blocked_by = [dep for dep in task.dependencies if dep not in completed_or_placed]
+        if blocked_by:
             unscheduled.append(
                 UnscheduledTask(
                     task_id=task.task_id,
                     reason_code=ReasonCode.DEPENDENCY_BLOCKED,
-                    debug=dbg.dependency_blocked_debug(blocked_by=rt.blocked_by),
+                    debug=dbg.dependency_blocked_debug(blocked_by=blocked_by),
                 )
             )
             continue

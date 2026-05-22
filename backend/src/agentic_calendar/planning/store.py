@@ -62,12 +62,23 @@ class InMemoryPlanVersionStore:
 
         State transitions arrive as ``model_copy`` instances of the same id;
         the store accepts these idempotently. The single-active invariant is
-        re-checked on every save so a misuse fails loudly here, not later.
+        re-checked on every save; if the new write would violate it, the
+        store rolls back the mutation and re-raises so the caller sees a
+        clean failure rather than a corrupt bucket.
         """
         with self._lock:
             user_bucket = self._by_user.setdefault(plan_version.user_id, {})
+            prior = user_bucket.get(plan_version.plan_version)
             user_bucket[plan_version.plan_version] = plan_version
-            self._enforce_single_active(plan_version.user_id)
+            try:
+                self._enforce_single_active(plan_version.user_id)
+            except MultipleActivePlansError:
+                # Roll back so the store stays in a queryable state.
+                if prior is None:
+                    del user_bucket[plan_version.plan_version]
+                else:
+                    user_bucket[plan_version.plan_version] = prior
+                raise
 
     def get(self, user_id: str, plan_version: str) -> PlanVersion:
         with self._lock:

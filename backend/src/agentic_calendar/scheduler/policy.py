@@ -24,14 +24,18 @@ class DeepWorkWindowPolicy(BaseModel):
 
 
 class SchedulingPolicy(BaseModel):
-    """Pure-data scheduling policy passed to the Scheduler."""
+    """Pure-data scheduling policy passed to the Scheduler.
+
+    Note: there is no separate ``max_contiguous_study_min``; the scheduler
+    uses ``max_session_length_min`` as the per-task cap. Re-introducing a
+    distinct contiguous-study cap requires an axiom-05 update first.
+    """
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     no_events_before: HHMM
     no_events_after: HHMM
     allow_weekends: bool = True
-    max_contiguous_study_min: int = Field(gt=0, le=12 * 60)
     min_break_between_deep_blocks_min: int = Field(ge=0, le=12 * 60)
     max_daily_study_min: int = Field(gt=0, le=24 * 60)
     respect_deep_work_windows: bool = True
@@ -45,7 +49,6 @@ def policy_from_user_profile(user: UserProfile) -> SchedulingPolicy:
         no_events_before=user.hard_constraints.no_events_before,
         no_events_after=user.hard_constraints.no_events_after,
         allow_weekends=user.hard_constraints.allow_weekends,
-        max_contiguous_study_min=user.max_session_length_min,
         min_break_between_deep_blocks_min=(
             user.hard_constraints.min_break_between_deep_blocks_min
         ),

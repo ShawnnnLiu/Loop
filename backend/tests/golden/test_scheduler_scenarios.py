@@ -125,7 +125,6 @@ def test_scenario_2_no_weekday_availability_schedules_on_weekend_only() -> None:
         no_events_before="08:00",
         no_events_after="22:30",
         allow_weekends=True,
-        max_contiguous_study_min=120,
         min_break_between_deep_blocks_min=30,
         max_daily_study_min=240,
         respect_deep_work_windows=True,

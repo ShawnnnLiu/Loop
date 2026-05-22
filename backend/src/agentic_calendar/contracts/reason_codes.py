@@ -60,8 +60,26 @@ class ReasonCode(StrEnum):
     NO_VALID_CONTIGUOUS_BLOCK = "NO_VALID_CONTIGUOUS_BLOCK"
     INSUFFICIENT_WEEKLY_CAPACITY = "INSUFFICIENT_WEEKLY_CAPACITY"
     DEPENDENCY_BLOCKED = "DEPENDENCY_BLOCKED"
+
     OUTSIDE_ALLOWED_HOURS = "OUTSIDE_ALLOWED_HOURS"
+    """Reserved (axiom 05 / 16). **No Phase 1 producer.**
+
+    The Phase 1 scheduler defensively clips candidate windows to
+    ``[no_events_before, no_events_after]`` inside ``windows.py`` before
+    any placement happens, so this code is structurally unreachable today.
+    It remains in the enum so future phases that loosen the clip can emit
+    it without breaking downstream consumers."""
+
     DAILY_LOAD_EXCEEDED = "DAILY_LOAD_EXCEEDED"
+    """Reserved (axiom 05 / 16). **No Phase 1 producer.**
+
+    The greedy placement loop currently skips windows where
+    ``used_today + duration > max_daily_study_min`` and lets the task fall
+    through to ``NO_VALID_CONTIGUOUS_BLOCK`` (or the capacity-promotion
+    path). Distinguishing daily-load failures from contiguous-block
+    failures is deferred to Phase 2, when richer Scheduler diagnostics
+    land alongside the approval UI."""
+
     DEEP_WORK_REQUIRED_UNAVAILABLE = "DEEP_WORK_REQUIRED_UNAVAILABLE"
     TASK_TOO_LONG_UNSPLITTABLE = "TASK_TOO_LONG_UNSPLITTABLE"
     TASK_TOO_LONG_SPLITTABLE = "TASK_TOO_LONG_SPLITTABLE"

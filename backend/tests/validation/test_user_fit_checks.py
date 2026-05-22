@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from agentic_calendar.contracts.violation_types import ViolationType
 from agentic_calendar.validation.user_fit import (
+    PREFERRED_SESSION_TOLERANCE_RATIO,
     WEEKLY_LOAD_TOLERANCE,
     check_user_fit,
 )
@@ -83,4 +84,65 @@ def test_weekly_load_within_tolerance_allowed() -> None:
     violations = check_user_fit(plan, user)
     assert not any(
         v.type is ViolationType.WEEKLY_LOAD_EXCEEDS_CAPACITY for v in violations
+    )
+
+
+def test_task_far_below_preferred_flagged() -> None:
+    """A 15-min task when preferred is 60 min should fire DURATION_FAR_FROM_PREFERRED."""
+    user = load_user_profile()  # preferred_session_length_min = 60
+    lower = int(user.preferred_session_length_min * (1 - PREFERRED_SESSION_TOLERANCE_RATIO))
+    too_short = lower - 1  # one minute below the soft floor
+    plan = make_plan(make_task(task_id="t1", estimated_duration_min=too_short))
+    violations = check_user_fit(plan, user)
+    matching = [
+        v for v in violations if v.type is ViolationType.DURATION_FAR_FROM_PREFERRED
+    ]
+    assert len(matching) == 1
+    v = matching[0]
+    assert v.task_id == "t1"
+    assert v.details["duration_min"] == too_short
+    assert v.details["preferred_session_length_min"] == user.preferred_session_length_min
+    assert v.details["lower_bound_min"] == lower
+    assert v.details["tolerance_ratio"] == PREFERRED_SESSION_TOLERANCE_RATIO
+
+
+def test_task_at_lower_bound_allowed() -> None:
+    """A task exactly at the tolerance floor must not fire."""
+    user = load_user_profile()
+    lower = int(user.preferred_session_length_min * (1 - PREFERRED_SESSION_TOLERANCE_RATIO))
+    plan = make_plan(make_task(task_id="t1", estimated_duration_min=lower))
+    violations = check_user_fit(plan, user)
+    assert not any(
+        v.type is ViolationType.DURATION_FAR_FROM_PREFERRED for v in violations
+    )
+
+
+def test_task_above_preferred_not_flagged_by_preferred_check() -> None:
+    """The preferred-session check only fires below preferred.
+
+    Above-preferred is already covered by ``DURATION_EXCEEDS_USER_MAX_SESSION``
+    (hard) or by ``splittable=True`` (the scheduler chunks it).
+    """
+    user = load_user_profile()  # preferred=60, max=120
+    plan = make_plan(
+        make_task(task_id="t1", estimated_duration_min=90, splittable=True),
+        make_task(task_id="t2", estimated_duration_min=120, splittable=True),
+    )
+    violations = check_user_fit(plan, user)
+    assert not any(
+        v.type is ViolationType.DURATION_FAR_FROM_PREFERRED for v in violations
+    )
+
+
+def test_existing_fixture_durations_pass_preferred_check() -> None:
+    """The committed valid task_plan fixture (60-min / 90-min tasks at preferred=60)
+    must not regress under the new soft check."""
+    user = load_user_profile()
+    plan = make_plan(
+        make_task(task_id="t1", estimated_duration_min=60),
+        make_task(task_id="t2", estimated_duration_min=90),
+    )
+    violations = check_user_fit(plan, user)
+    assert not any(
+        v.type is ViolationType.DURATION_FAR_FROM_PREFERRED for v in violations
     )

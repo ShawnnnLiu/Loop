@@ -106,15 +106,19 @@ def _cycles(plan: TaskPlan, valid_ids: set[str]) -> list[Violation]:
                 parent[nbr] = node
                 dfs(nbr)
             elif color[nbr] == GRAY:
-                # Found a back edge node -> nbr; cycle is nbr ... node -> nbr.
-                cycle: list[str] = [nbr]
+                # Back edge node -> nbr. The cycle is nbr -> ... -> node -> nbr.
+                # Walk parent pointers from ``node`` back toward ``nbr``,
+                # reverse so the path reads in traversal order, then prepend
+                # ``nbr``. Result: a list of unique members in cycle order,
+                # no closing-node repetition (e.g. ``["a", "b"]`` not
+                # ``["a", "b", "a"]``).
+                path_back: list[str] = []
                 cur: str | None = node
                 while cur is not None and cur != nbr:
-                    cycle.append(cur)
+                    path_back.append(cur)
                     cur = parent.get(cur)
-                cycle.reverse()
-                if cycle and cycle[0] != cycle[-1]:
-                    cycle.append(nbr)
+                path_back.reverse()
+                cycle = [nbr, *path_back]
                 cycles.append(cycle)
         color[node] = BLACK
 
@@ -129,7 +133,7 @@ def _cycles(plan: TaskPlan, valid_ids: set[str]) -> list[Violation]:
     return [
         make_violation(
             ViolationType.CYCLE_DETECTED,
-            members=cycle,
+            cycle_members=cycle,
         )
         for cycle in deduped
     ]
@@ -141,17 +145,29 @@ def _dedupe_cycles(cycles: list[list[str]]) -> list[list[str]]:
     out: list[list[str]] = []
     for cycle in cycles:
         canon = _canonicalize_cycle(cycle)
-        if canon not in seen:
+        if canon and canon not in seen:
             seen.add(canon)
             out.append(list(canon))
     return out
 
 
 def _canonicalize_cycle(cycle: list[str]) -> tuple[str, ...]:
-    """Return the rotation that starts at the lexicographically smallest node."""
-    nodes = cycle[:-1] if cycle and cycle[0] == cycle[-1] else cycle
+    """Return the unique cycle members, rotated to start at the smallest node.
+
+    Output convention: each cycle is reported as its set of distinct members
+    in cyclic order. A 2-cycle ``a -> b -> a`` is reported as ``("a", "b")``,
+    not ``("a", "b", "a")``. This keeps the violation payload identical to
+    "the set of nodes that form the cycle, in traversal order starting at the
+    lexicographically smallest member" — which is what the repair Planner
+    actually needs.
+
+    The DFS in :func:`_cycles` already produces a unique-members list, but we
+    defensively strip a closing-node repetition here so callers that feed
+    arbitrary cycle representations still get a canonical form.
+    """
+    nodes = cycle[:-1] if cycle and len(cycle) > 1 and cycle[0] == cycle[-1] else cycle
     if not nodes:
-        return tuple(cycle)
+        return tuple()
     smallest = min(range(len(nodes)), key=lambda i: nodes[i])
     rotated = nodes[smallest:] + nodes[:smallest]
-    return tuple([*rotated, rotated[0]])
+    return tuple(rotated)

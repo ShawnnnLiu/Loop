@@ -86,6 +86,40 @@ def test_two_active_plans_for_same_user_raises_invariant() -> None:
         store.save(_make_pv(plan_version="plan_002", state=LifecycleState.ACTIVE))
 
 
+def test_failed_active_save_rolls_back_and_leaves_store_queryable() -> None:
+    """A save that violates the single-active invariant must not corrupt state.
+
+    Without rollback, the rejected plan would linger in the bucket and the
+    next ``get_active`` call would also raise — leaving the store unusable.
+    """
+    store = InMemoryPlanVersionStore()
+    pv1 = _make_pv(plan_version="plan_001", state=LifecycleState.ACTIVE)
+    pv2 = _make_pv(plan_version="plan_002", state=LifecycleState.ACTIVE)
+    store.save(pv1)
+    with pytest.raises(MultipleActivePlansError):
+        store.save(pv2)
+    # The rejected plan must not be present.
+    with pytest.raises(PlanVersionNotFoundError):
+        store.get("user_001", "plan_002")
+    # The store is still queryable; the original active plan is intact.
+    active = store.get_active("user_001")
+    assert active is not None
+    assert active.plan_version == "plan_001"
+
+
+def test_failed_save_restores_prior_version_when_replacing() -> None:
+    """If a same-id save would violate the invariant, the prior value must remain."""
+    store = InMemoryPlanVersionStore()
+    pv_active = _make_pv(plan_version="plan_001", state=LifecycleState.ACTIVE)
+    other_active = _make_pv(plan_version="plan_other", state=LifecycleState.ACTIVE)
+    store.save(pv_active)
+    with pytest.raises(MultipleActivePlansError):
+        store.save(other_active)
+    # plan_001 still present, still ACTIVE.
+    survivor = store.get("user_001", "plan_001")
+    assert survivor.state is LifecycleState.ACTIVE
+
+
 def test_users_are_isolated() -> None:
     store = InMemoryPlanVersionStore()
     pv_a = _make_pv(plan_version="plan_a", user_id="user_A")
@@ -107,3 +141,73 @@ def test_save_replaces_same_id_with_updated_version() -> None:
     approved = pv.transition_to(LifecycleState.APPROVED, now=now)
     store.save(approved)
     assert store.get("user_001", "plan_001").state is LifecycleState.APPROVED
+
+
+# --------------------------------------------------------------------------- #
+# Concurrency: the in-memory store advertises thread-safety via an RLock; the
+# tests below pin that contract so a future refactor cannot quietly drop it.
+# --------------------------------------------------------------------------- #
+
+
+def test_concurrent_saves_of_distinct_plan_versions_all_visible() -> None:
+    """N threads saving distinct plan_versions: every save is visible after join."""
+    import threading
+
+    store = InMemoryPlanVersionStore()
+    n = 64
+    pvs = [_make_pv(plan_version=f"plan_{i:03d}") for i in range(n)]
+    barrier = threading.Barrier(n)
+
+    def saver(pv: PlanVersion) -> None:
+        barrier.wait()  # release all threads simultaneously
+        store.save(pv)
+
+    threads = [threading.Thread(target=saver, args=(pv,)) for pv in pvs]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    listing = store.list_for_user("user_001")
+    assert {pv.plan_version for pv in listing} == {f"plan_{i:03d}" for i in range(n)}
+
+
+def test_concurrent_active_saves_exactly_one_wins() -> None:
+    """Two threads racing to mark different plans ACTIVE for the same user.
+
+    The single-active invariant must hold: exactly one save succeeds; the
+    other raises ``MultipleActivePlansError``.
+    """
+    import threading
+
+    store = InMemoryPlanVersionStore()
+    pv1 = _make_pv(plan_version="plan_001", state=LifecycleState.ACTIVE)
+    pv2 = _make_pv(plan_version="plan_002", state=LifecycleState.ACTIVE)
+
+    errors: list[BaseException] = []
+    successes: list[str] = []
+    barrier = threading.Barrier(2)
+    lock = threading.Lock()
+
+    def saver(pv: PlanVersion) -> None:
+        barrier.wait()
+        try:
+            store.save(pv)
+        except MultipleActivePlansError as exc:
+            with lock:
+                errors.append(exc)
+        else:
+            with lock:
+                successes.append(pv.plan_version)
+
+    threads = [threading.Thread(target=saver, args=(pv,)) for pv in (pv1, pv2)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    assert len(successes) == 1
+    assert len(errors) == 1
+    active = store.get_active("user_001")
+    assert active is not None
+    assert active.plan_version == successes[0]

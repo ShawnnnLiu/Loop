@@ -128,6 +128,7 @@ Validation `reason_code` and violation `type` values are engineer-facing. Each m
 | `orphan_dependency` | "A task referenced a prerequisite that doesn't exist. Fixing now." |
 | `cycle_detected` | "Two tasks depend on each other in a loop. Restructuring." |
 | `duration_exceeds_user_max_session` | "A task was too long for your session preferences. Splitting it up." |
+| `duration_far_from_preferred` | "Some tasks were much shorter than your preferred session length, which can fragment focus. Re-sizing." |
 | `module_coverage_missing` | "An important module was missing tasks. Adding them." |
 | `weekly_load_exceeded` | "The plan exceeded your weekly hours. Trimming scope." |
 | `cognitive_load_out_of_range` | "A task's difficulty rating was invalid. Recalibrating." |
@@ -135,6 +136,7 @@ Validation `reason_code` and violation `type` values are engineer-facing. Each m
 | `focus_level_invalid` | "A task's focus level was unrecognized. Replacing with a valid level." |
 | `self_dependency` | "A task depended on itself. Removing the cycle." |
 | `duplicate_task_id` | "Two tasks shared the same ID. Re-numbering." |
+| `no_root_task` | "The plan has no starting task — every task depends on another. Restructuring so something can begin." |
 
 The `UserFacingExplanationNode` may compose multi-violation summaries from these strings, but the source phrases come from this deterministic table.
 

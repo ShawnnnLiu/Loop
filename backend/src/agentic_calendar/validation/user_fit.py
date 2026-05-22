@@ -2,12 +2,34 @@
 
 * total weekly load <= ``user.weekly_hours * 1.2``;
 * no task exceeds ``user.max_session_length_min`` unless ``splittable`` is true;
+* tasks are not notably shorter than ``user.preferred_session_length_min``
+  (fragmentation signal);
 * ``cognitive_load`` is in the allowed range (already enforced by the
   contract; we re-report here so callers get a typed ``Violation`` even when
   the input was assembled programmatically).
 
-The 1.2 capacity multiplier is the heuristic prior from the spec; it lives
-here so it can be tuned per phase without touching the orchestrator.
+The capacity multiplier and preferred-session tolerance are heuristic priors
+from the spec; they live here so they can be tuned per phase without touching
+the orchestrator.
+
+TODO(phase 4+): high-cognitive-load distribution and beginner-overload
+checks (``HIGH_LOAD_TASKS_NOT_DISTRIBUTED`` etc.) are deferred until a
+deterministic policy exists. Reasoning:
+
+* ``cognitive_load`` is an LLM-proposed integer in ``[1, 5]`` produced by
+  ``PlannerNode``; the Pydantic contract bounds the range but the value
+  itself is not calibrated. Per-user calibration lands with Phase 4
+  telemetry (axiom 17). Treating raw load as ground truth for "high" before
+  calibration would penalise plans whose author happened to be conservative.
+* "Distributed across the plan" needs an ordering axis (topological order,
+  scheduler placement order, or week-by-week binning). None of those is
+  established at the validation layer in Phase 1; scheduler-side ordering
+  arrives downstream.
+* "Beginner not overloaded early" depends on the same ordering plus a
+  deterministic threshold the spec does not pin.
+
+Implementing any of these without the underlying policy would be
+heuristic-on-heuristic and likely to fight calibration once it arrives.
 """
 
 from __future__ import annotations
@@ -22,10 +44,18 @@ from .base import make_violation
 WEEKLY_LOAD_TOLERANCE = 1.2
 """Heuristic prior (axiom 04): plan may exceed weekly capacity by up to 20%."""
 
+PREFERRED_SESSION_TOLERANCE_RATIO = 0.5
+"""Heuristic prior: a task is "far from preferred" if its duration is below
+``preferred_session_length_min * (1 - PREFERRED_SESSION_TOLERANCE_RATIO)``.
+The upper-bound case is already caught by ``DURATION_EXCEEDS_USER_MAX_SESSION``
+(hard) or by ``splittable=True`` (the scheduler will chunk it), so this check
+only flags fragmentation downward."""
+
 
 def check_user_fit(plan: TaskPlan, user_profile: UserProfile) -> list[Violation]:
     violations: list[Violation] = []
     violations.extend(_session_length_violations(plan, user_profile))
+    violations.extend(_preferred_session_length_violations(plan, user_profile))
     violations.extend(_weekly_load_violation(plan, user_profile))
     violations.extend(_cognitive_load_violations(plan))
     return violations
@@ -47,6 +77,38 @@ def _session_length_violations(
                     duration_min=t.estimated_duration_min,
                     max_session_length_min=user.max_session_length_min,
                     splittable=t.splittable,
+                )
+            )
+    return out
+
+
+def _preferred_session_length_violations(
+    plan: TaskPlan, user: UserProfile
+) -> list[Violation]:
+    """Flag tasks notably shorter than the user's preferred session length.
+
+    A short task is a fragmentation signal: switching focus into and out of a
+    15-minute slot when the user prefers 60-minute sessions wastes ramp-up
+    time. The upper-bound case is intentionally not flagged here:
+
+    * tasks above ``max_session_length_min`` with ``splittable=False`` are
+      already reported by ``DURATION_EXCEEDS_USER_MAX_SESSION``;
+    * splittable long tasks are expected to be chunked by the scheduler.
+    """
+    out: list[Violation] = []
+    lower = int(
+        user.preferred_session_length_min * (1 - PREFERRED_SESSION_TOLERANCE_RATIO)
+    )
+    for t in plan.tasks:
+        if t.estimated_duration_min < lower:
+            out.append(
+                make_violation(
+                    ViolationType.DURATION_FAR_FROM_PREFERRED,
+                    task_id=t.task_id,
+                    duration_min=t.estimated_duration_min,
+                    preferred_session_length_min=user.preferred_session_length_min,
+                    tolerance_ratio=PREFERRED_SESSION_TOLERANCE_RATIO,
+                    lower_bound_min=lower,
                 )
             )
     return out

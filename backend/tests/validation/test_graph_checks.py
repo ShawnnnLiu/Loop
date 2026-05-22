@@ -61,7 +61,12 @@ def test_self_dependency_rejected_by_model() -> None:
 
 
 def test_two_node_cycle_detected() -> None:
-    """Build a 2-cycle by bypassing the contract via direct model construction."""
+    """Build a 2-cycle by bypassing the contract via direct model construction.
+
+    Contract: ``details["cycle_members"]`` is the unique cycle nodes, rotated
+    to start at the lexicographically smallest member. A 2-cycle ``a <-> b``
+    is reported as ``["a", "b"]`` (not ``["a", "b", "a"]``).
+    """
     from agentic_calendar.contracts.common_types import FocusLevel, TaskCategory
     from agentic_calendar.contracts.task_plan import Task, TaskPlan
 
@@ -96,11 +101,13 @@ def test_two_node_cycle_detected() -> None:
         v for v in violations if v.type is ViolationType.CYCLE_DETECTED
     ]
     assert len(cycle_violations) == 1
-    members = cycle_violations[0].details["members"]
-    assert set(members) == {"a", "b"}
+    assert cycle_violations[0].details["cycle_members"] == ["a", "b"]
+    # The old "members" key must be gone — pin the contract.
+    assert "members" not in cycle_violations[0].details
 
 
 def test_three_node_cycle_detected() -> None:
+    """A 3-cycle ``a -> b -> c -> a`` is reported as ``["a", "b", "c"]``."""
     from agentic_calendar.contracts.common_types import FocusLevel, TaskCategory
     from agentic_calendar.contracts.task_plan import Task, TaskPlan
 
@@ -127,6 +134,7 @@ def test_three_node_cycle_detected() -> None:
         v for v in violations if v.type is ViolationType.CYCLE_DETECTED
     ]
     assert len(cycle_violations) == 1
+    assert cycle_violations[0].details["cycle_members"] == ["a", "b", "c"]
 
 
 def test_orphan_and_cycle_reported_independently() -> None:

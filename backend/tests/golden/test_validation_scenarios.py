@@ -69,8 +69,11 @@ def test_scenario_3_cycle_in_task_graph(syllabus, user_profile) -> None:  # type
     assert result.valid is False
     assert result.reason_code is ReasonCode.TASK_GRAPH_INVALID
     cycle_v = next(v for v in result.violations if v.type is ViolationType.CYCLE_DETECTED)
-    members = cycle_v.details.get("cycle_members") or cycle_v.details.get("members")
-    assert members and set(members) >= {"a", "b"}
+    # Contract: cycle_members is the canonical (smallest-rotated, no closing
+    # repetition) list of unique cycle nodes. For ``a <-> b`` this is exactly
+    # ``["a", "b"]``.
+    assert cycle_v.details["cycle_members"] == ["a", "b"]
+    assert "members" not in cycle_v.details
 
     assert result.next_action is NextAction.PLANNER_REPAIR_RETRY
     next_state = route(SupervisorState.PLANNER_VALIDATING, _signal_for(result.next_action))

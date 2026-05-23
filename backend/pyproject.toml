@@ -21,6 +21,7 @@ dev = [
 
 [project.scripts]
 agentic-calendar-export-schemas = "agentic_calendar.tools.export_schemas:main"
+agentic-calendar-visualize = "agentic_calendar.tools.visualize:main"
 
 [build-system]
 requires = ["hatchling>=1.24"]

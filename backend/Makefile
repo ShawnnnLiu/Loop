@@ -1,4 +1,4 @@
-.PHONY: help install sync test test-fast lint typecheck format boundaries schemas check clean
+.PHONY: help install sync test test-fast lint typecheck format boundaries schemas visualize check clean
 
 help:
 	@echo "Targets:"
@@ -11,6 +11,7 @@ help:
 	@echo "  typecheck   mypy --strict on src/"
 	@echo "  boundaries  import-linter contracts (LLM SDK isolation, layering)"
 	@echo "  schemas     regenerate /schemas/*.schema.json from Pydantic contracts"
+	@echo "  visualize   render the 'success' scheduler scenario to ../schedule.html"
 	@echo "  check       lint + typecheck + boundaries + test"
 	@echo "  clean       remove caches and build artifacts"
 
@@ -37,6 +38,10 @@ boundaries:
 
 schemas:
 	uv run python -m agentic_calendar.tools.export_schemas --out ../schemas
+
+visualize:
+	uv run agentic-calendar-visualize --scenario success --out ../schedule.html
+	@echo "open ../schedule.html in your browser"
 
 check: lint typecheck boundaries test
 

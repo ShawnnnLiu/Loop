@@ -33,3 +33,7 @@ dist/
 
 # Generated artifacts (committed copy lives in /schemas/, this catches stray builds)
 /backend/.schemas-build/
+
+# Technical documentation & Context
+
+graphify-out/

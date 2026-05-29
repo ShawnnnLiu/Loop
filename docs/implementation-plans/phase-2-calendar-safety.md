@@ -49,6 +49,8 @@ The axiom roadmap (`../axioms/10-mvp-roadmap.md`) originally listed three additi
 
 Deferring these does not weaken the Phase 2 calendar-safety guarantees: every flow is reachable today via the operator CLIs, the in-memory adapter, and the deterministic stores. The Frontend MVP phase will wire the real Google Calendar adapter (`backend/src/agentic_calendar/calendar_writer/google_adapter.py` currently raises `NotImplementedError`) and the user-facing screens on top of the existing backend.
 
+See `./phase-frontend-mvp.md` for the full deferred-items tracker (Phase 1 UI items included).
+
 ## Test Expectations
 
 - Approval required tests.

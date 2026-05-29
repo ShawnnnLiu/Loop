@@ -6,17 +6,22 @@ The MVP build plan is split across seven phases. Phases 1–2 deliver the determ
 
 **Goal:** prove structured generation and deterministic validation.
 
-Deliverables:
+Deliverables (backend, shipped):
 
 - User profile schema.
 - Motivation profile schema.
-- Structured onboarding UI.
 - Syllabus schema.
 - Task schema.
 - `StrategistNode`.
 - `PlannerNode`.
 - Validation Layer.
+
+Deferred to the Frontend MVP phase (not yet scheduled):
+
+- Structured onboarding UI.
 - Basic draft plan UI.
+
+See `../implementation-plans/phase-frontend-mvp.md` for the full deferred-items tracker.
 
 Excluded:
 
@@ -48,7 +53,7 @@ Deferred to the Frontend MVP phase (not yet scheduled):
 
 The deferral is intentional: the deterministic core had to prove out first. The Frontend MVP phase will land the three UI/integration items above plus a real Google Calendar adapter; until then, every Phase 2 flow is exercised via operator CLIs.
 
-See `../implementation-plans/phase-2-calendar-safety.md`.
+See `../implementation-plans/phase-2-calendar-safety.md` and `../implementation-plans/phase-frontend-mvp.md`.
 
 ## Phase 3: Sponsor and Parent Reporting
 

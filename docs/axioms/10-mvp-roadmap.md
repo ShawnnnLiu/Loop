@@ -32,16 +32,21 @@ See `../implementation-plans/phase-1-core-planning.md`.
 
 **Goal:** safely convert validated tasks into draft schedules and approved calendar events.
 
-Deliverables:
+Deliverables (backend, shipped):
 
-- Calendar free/busy integration.
 - Deterministic Scheduler.
-- Draft schedule preview.
-- Approval gate UI.
 - Calendar Write Manager.
 - `run_id`/`task_id` metadata.
 - Local event mapping.
 - Write verification and rollback.
+
+Deferred to the Frontend MVP phase (not yet scheduled):
+
+- Calendar free/busy integration (requires the Google Calendar adapter, which is currently a `NotImplementedError` stub).
+- Draft schedule preview UI (today only the `preview_calendar_write` operator CLI exists).
+- Approval gate UI (today only the `approve_calendar_write` operator CLI exists).
+
+The deferral is intentional: the deterministic core had to prove out first. The Frontend MVP phase will land the three UI/integration items above plus a real Google Calendar adapter; until then, every Phase 2 flow is exercised via operator CLIs.
 
 See `../implementation-plans/phase-2-calendar-safety.md`.
 

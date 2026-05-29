@@ -39,6 +39,16 @@ Implement safe calendar preview, approval, write, verification, duplicate preven
 - Offline calendar sync.
 - Heuristic drift responses.
 
+## Deferred From Phase 2 (Tracked For The Frontend MVP Phase)
+
+The axiom roadmap (`../axioms/10-mvp-roadmap.md`) originally listed three additional Phase 2 deliverables that are deliberately deferred from this implementation plan and will land in the Frontend MVP phase:
+
+- **Calendar free/busy integration.** The Scheduler input contract already carries a `calendar_free_busy` field, but no live fetcher populates it. Blocked on the real Google Calendar adapter.
+- **Draft schedule preview UI.** The deterministic preview already exists as the `preview_calendar_write` operator CLI; the user-facing surface lands with the Frontend MVP phase.
+- **Approval gate UI.** The approval gate is fully enforced server-side (hash recheck, `approval_event_id` invariant); the user-facing surface lands with the Frontend MVP phase.
+
+Deferring these does not weaken the Phase 2 calendar-safety guarantees: every flow is reachable today via the operator CLIs, the in-memory adapter, and the deterministic stores. The Frontend MVP phase will wire the real Google Calendar adapter (`backend/src/agentic_calendar/calendar_writer/google_adapter.py` currently raises `NotImplementedError`) and the user-facing screens on top of the existing backend.
+
 ## Test Expectations
 
 - Approval required tests.

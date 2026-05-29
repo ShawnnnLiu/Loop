@@ -97,6 +97,12 @@ class CalendarEventMapping(BaseModel):
         (i.e., the first transition from ``dry_run`` to ``written``); otherwise
         the existing value is preserved.
 
+        ``last_verified_at`` is stamped to ``now`` only when ``new_status`` is
+        a verification outcome (``VERIFIED`` or ``VERIFICATION_FAILED``); other
+        transitions preserve the prior value. ``last_verified_at`` semantically
+        means "the time the external event was last read back from the
+        calendar," not "the time the row was last touched."
+
         Status-transition legality is enforced by
         ``CalendarEventMappingStore.update_status``, not here. Field
         invariants (``verified`` requires non-null event id, etc.) ARE
@@ -105,7 +111,11 @@ class CalendarEventMapping(BaseModel):
         """
         payload: dict[str, object] = self.model_dump(mode="python")
         payload["calendar_write_status"] = new_status
-        payload["last_verified_at"] = now
+        if new_status in (
+            CalendarWriteStatus.VERIFIED,
+            CalendarWriteStatus.VERIFICATION_FAILED,
+        ):
+            payload["last_verified_at"] = now
         if calendar_event_id is not None:
             payload["calendar_event_id"] = calendar_event_id
         return CalendarEventMapping.model_validate(payload)

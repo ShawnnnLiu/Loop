@@ -178,6 +178,40 @@ def test_with_status_updates_event_id_when_supplied() -> None:
     assert updated.calendar_write_status is CalendarWriteStatus.WRITTEN
 
 
+def test_with_status_preserves_last_verified_at_on_non_verification_transitions() -> None:
+    """``last_verified_at`` is the time the external event was last read back
+    from the calendar — not the time the row last changed. Non-verification
+    transitions (e.g. ``WRITTEN → ROLLBACK_PENDING``) must NOT overwrite it."""
+    verified_at = datetime(2026, 5, 4, 18, 0, tzinfo=UTC)
+    mapping = CalendarEventMapping(
+        **_kwargs(  # type: ignore[arg-type]
+            calendar_write_status=CalendarWriteStatus.VERIFIED,
+            calendar_event_id="gcal_evt_001",
+            last_verified_at=verified_at,
+        )
+    )
+    later = datetime(2026, 5, 4, 19, 0, tzinfo=UTC)
+    updated = mapping.with_status(CalendarWriteStatus.ROLLBACK_PENDING, now=later)
+    assert updated.calendar_write_status is CalendarWriteStatus.ROLLBACK_PENDING
+    # last_verified_at is unchanged — the event was not re-read.
+    assert updated.last_verified_at == verified_at
+
+
+def test_with_status_stamps_last_verified_at_on_verification_failed() -> None:
+    """Both verification outcomes (``VERIFIED`` and ``VERIFICATION_FAILED``)
+    are produced by a real read-back, so both stamp ``last_verified_at``."""
+    mapping = CalendarEventMapping(
+        **_kwargs(  # type: ignore[arg-type]
+            calendar_write_status=CalendarWriteStatus.WRITTEN,
+            calendar_event_id="gcal_evt_001",
+            last_verified_at=None,
+        )
+    )
+    now = datetime(2026, 5, 4, 18, 30, tzinfo=UTC)
+    updated = mapping.with_status(CalendarWriteStatus.VERIFICATION_FAILED, now=now)
+    assert updated.last_verified_at == now
+
+
 def test_with_status_to_verified_with_null_event_id_raises() -> None:
     """``with_status`` re-runs validators."""
     mapping = CalendarEventMapping(

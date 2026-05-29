@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
-import pytest
-
 from agentic_calendar.approval.store import InMemoryApprovalEventStore
 from agentic_calendar.calendar_writer.in_memory_adapter import (
     FailureModes,
@@ -225,6 +223,48 @@ def test_approve_and_write_hash_mismatch_aborts_before_adapter() -> None:
     assert adapter.all_events() == []
 
 
+def test_approve_and_write_duplicate_detected_aborts_pre_write() -> None:
+    """Pre-write metadata query finds an in-flight event tagged with the same
+    run_id (axiom 06 lines 120-122) → ABORTED_PRE_WRITE with
+    CALENDAR_WRITE_DUPLICATE_DETECTED. No further adapter writes happen.
+    """
+    mgr, adapter, mapping_store, approval_store, *_ = _make_manager()
+    draft = _draft()
+    approval = _approval_for(draft)
+    approval_store.save(approval)
+
+    # DeterministicIdGenerator emits "run_001" on the first new_id("run") call,
+    # which is what approve_and_write will use. Pre-stage an event tagged with
+    # that run_id to simulate a previous in-flight write the duplicate guard
+    # must catch.
+    adapter.create_event(
+        target_calendar_id="primary",
+        scheduled_start=datetime(2026, 5, 4, 18, 0, tzinfo=UTC),
+        scheduled_end=datetime(2026, 5, 4, 19, 0, tzinfo=UTC),
+        metadata={
+            "app": "career_scheduler",
+            "run_id": "run_001",
+            "plan_version": draft.plan_version,
+            "task_id": "t1",
+        },
+    )
+    pre_write_event_count = len(adapter.all_events())
+
+    result = mgr.approve_and_write(
+        approval_event_id=approval.approval_event_id,
+        draft=draft,
+        target_calendar_id="primary",
+    )
+    assert result.status is WriteStatus.ABORTED_PRE_WRITE
+    assert result.reason_code is ReasonCode.CALENDAR_WRITE_DUPLICATE_DETECTED
+    assert result.run_id == "run_001"
+    assert result.written_mappings == ()
+    # No new events created; the pre-staged event is the only one present.
+    assert len(adapter.all_events()) == pre_write_event_count
+    # No mappings persisted under the colliding run_id.
+    assert mapping_store.list_for_run("run_001") == []
+
+
 def test_approve_and_write_unsupported_canonicalization_version() -> None:
     mgr, adapter, _mapping_store, approval_store, *_ = _make_manager()
     draft = _draft()
@@ -345,6 +385,8 @@ def test_verify_after_success_returns_all_verified() -> None:
 
 
 def test_rollback_after_success_marks_mappings_rolled_back() -> None:
+    """Rolling back a fully-VERIFIED run deletes every external event and
+    transitions every mapping to ROLLED_BACK (axiom 06 lines 132-137)."""
     mgr, adapter, mapping_store, approval_store, *_ = _make_manager()
     draft = _draft()
     approval = _approval_for(draft)
@@ -355,16 +397,9 @@ def test_rollback_after_success_marks_mappings_rolled_back() -> None:
         target_calendar_id="primary",
     )
     assert write_result.run_id is not None
-
-    # NB: VERIFIED is terminal in the store's transition table, so the manager
-    # currently can only roll back mappings still in WRITTEN/VERIFICATION_FAILED.
-    # Force VERIFIED mappings into WRITTEN via direct store mutation to
-    # exercise the rollback path end-to-end.
+    # All mappings start VERIFIED after a successful write.
     for m in mapping_store.list_for_run(write_result.run_id):
-        forced = m.with_status(
-            CalendarWriteStatus.WRITTEN, now=_NOW, calendar_event_id=m.calendar_event_id
-        )
-        mapping_store.save(forced)
+        assert m.calendar_write_status is CalendarWriteStatus.VERIFIED
 
     rollback = mgr.rollback(
         run_id=write_result.run_id, target_calendar_id="primary"
@@ -386,12 +421,6 @@ def test_rollback_with_failing_delete_marks_rollback_failed() -> None:
         target_calendar_id="primary",
     )
     assert write_result.run_id is not None
-    # Force mappings back to WRITTEN so rollback can run.
-    for m in mapping_store.list_for_run(write_result.run_id):
-        forced = m.with_status(
-            CalendarWriteStatus.WRITTEN, now=_NOW, calendar_event_id=m.calendar_event_id
-        )
-        mapping_store.save(forced)
     # Inject delete failure for one event.
     failing_id = mapping_store.list_for_run(write_result.run_id)[0].calendar_event_id
     assert failing_id is not None
@@ -437,14 +466,62 @@ def test_reconcile_writes_only_missing_tasks() -> None:
     # Clear failure modes; reconcile should now succeed for t1.
     adapter._failure_modes = FailureModes()  # type: ignore[attr-defined]
     reconcile_result = mgr.reconcile_after_crash(
+        approval_event_id=approval.approval_event_id,
+        draft=draft,
         run_id=write_result.run_id,
         target_calendar_id="primary",
-        user_id="user_a",
     )
     assert reconcile_result.status is WriteStatus.SUCCESS
     # All mappings end VERIFIED.
     for m in mapping_store.list_for_run(write_result.run_id):
         assert m.calendar_write_status is CalendarWriteStatus.VERIFIED
+
+
+def test_reconcile_rejects_mismatched_draft_hash() -> None:
+    """Per axiom 06 lines 181-189 the hash recheck is MANDATORY on every
+    write path — reconcile cannot quietly write the original payload if the
+    draft has changed since approval. Passing a draft whose canonical hash
+    differs from the approval's recorded hash must abort with
+    APPROVAL_HASH_MISMATCH before any adapter call."""
+    mgr, adapter, _ms, approval_store, *_ = _make_manager(
+        failure_modes=FailureModes(drop_silently_for_task_ids=frozenset({"t1"}))
+    )
+    original_draft = _draft()
+    approval = _approval_for(original_draft)
+    approval_store.save(approval)
+    write_result = mgr.approve_and_write(
+        approval_event_id=approval.approval_event_id,
+        draft=original_draft,
+        target_calendar_id="primary",
+    )
+    assert write_result.run_id is not None
+    assert write_result.status is WriteStatus.PARTIAL_FAILURE
+
+    # The draft was mutated between approval and reconcile (a different
+    # task list with the same plan_version/draft_schedule_id).
+    mutated_draft = _draft(
+        entries=(
+            DraftScheduleEntry(
+                task_id="t_NEW",
+                start=datetime(2026, 5, 4, 22, 0, tzinfo=UTC),
+                end=datetime(2026, 5, 4, 23, 0, tzinfo=UTC),
+            ),
+        )
+    )
+    adapter._failure_modes = FailureModes()  # type: ignore[attr-defined]
+    events_before = len(adapter.all_events())
+    result = mgr.reconcile_after_crash(
+        approval_event_id=approval.approval_event_id,
+        draft=mutated_draft,
+        run_id=write_result.run_id,
+        target_calendar_id="primary",
+    )
+    assert result.status is WriteStatus.ABORTED_PRE_WRITE
+    assert result.reason_code is ReasonCode.APPROVAL_HASH_MISMATCH
+    # run_id is preserved on the failure result for telemetry.
+    assert result.run_id == write_result.run_id
+    # No further adapter writes happened.
+    assert len(adapter.all_events()) == events_before
 
 
 def test_reconcile_lock_busy() -> None:
@@ -461,9 +538,10 @@ def test_reconcile_lock_busy() -> None:
     # Acquire the lock for the same user with a different run.
     lock.acquire(user_id="user_a", run_id="someone_else")
     result = mgr.reconcile_after_crash(
+        approval_event_id=approval.approval_event_id,
+        draft=draft,
         run_id=write_result.run_id,
         target_calendar_id="primary",
-        user_id="user_a",
     )
     assert result.status is WriteStatus.LOCK_BUSY
     assert result.reason_code is ReasonCode.CALENDAR_WRITE_LOCK_BUSY
@@ -501,30 +579,5 @@ def test_lock_released_on_pre_write_abort() -> None:
     assert token.holder_run_id == "r"
 
 
-# --------------------------------------------------------------------------- #
-# parametric pass over reason-code branches
-# --------------------------------------------------------------------------- #
-
-
-@pytest.mark.parametrize(
-    "reason_code,expected_status",
-    [
-        (ReasonCode.APPROVAL_MISSING, WriteStatus.ABORTED_PRE_WRITE),
-        (ReasonCode.APPROVAL_EXPIRED, WriteStatus.ABORTED_PRE_WRITE),
-        (ReasonCode.APPROVAL_HASH_MISMATCH, WriteStatus.ABORTED_PRE_WRITE),
-        (ReasonCode.APPROVAL_HASH_ALGORITHM_UNSUPPORTED, WriteStatus.ABORTED_PRE_WRITE),
-    ],
-)
-def test_abort_reasons_map_to_aborted_status(
-    reason_code: ReasonCode, expected_status: WriteStatus
-) -> None:
-    """Internal _aborted helper assigns ABORTED_PRE_WRITE for the four pre-write
-    failure modes."""
-    mgr, *_ = _make_manager()
-    # Reach into the helper via the public _aborted result; we trigger each
-    # via the right code path above. This parametric test just asserts the
-    # contract is uniform.
-    # (Each individual reason has its own dedicated test above.)
-    _ = (mgr, reason_code, expected_status)  # already verified by name-specific tests
 
 

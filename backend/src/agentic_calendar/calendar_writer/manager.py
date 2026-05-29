@@ -27,7 +27,8 @@ from agentic_calendar.approval.store import (
 )
 from agentic_calendar.common.clock import Clock
 from agentic_calendar.common.ids import IdGenerator
-from agentic_calendar.contracts.approval_event import HashAlgorithm
+from agentic_calendar.common.logging import correlated, get_logger
+from agentic_calendar.contracts.approval_event import ApprovalEvent, HashAlgorithm
 from agentic_calendar.contracts.calendar_event_mapping import (
     CalendarEventMapping,
     CalendarWriteStatus,
@@ -50,6 +51,8 @@ from .metadata import build_event_metadata
 from .rollback import RollbackResult, rollback_run
 from .store import CalendarEventMappingStore
 from .verification import VerificationResult, verify_run
+
+_log = get_logger(__name__)
 
 
 class WriteStatus(StrEnum):
@@ -193,34 +196,13 @@ class CalendarWriteManager:
            **No auto-retry.**
         7. Release the lock in ``finally``.
         """
-        # --- Step 1: load + validate approval ----------------------------
-        try:
-            approval = self._approval_store.get(approval_event_id)
-        except ApprovalEventNotFoundError:
-            return self._aborted(ReasonCode.APPROVAL_MISSING, run_id=None)
-
-        now = self._clock.now()
-        if approval.expires_at <= now:
-            return self._aborted(ReasonCode.APPROVAL_EXPIRED, run_id=None)
-
-        if approval.hash_algorithm is not HashAlgorithm.SHA256:
-            return self._aborted(
-                ReasonCode.APPROVAL_HASH_ALGORITHM_UNSUPPORTED, run_id=None
-            )
-
-        # --- Step 2: mandatory hash recheck (axiom 06 lines 181-189) ----
-        try:
-            hash_ok = verify_payload_hash(
-                draft,
-                approval.approved_payload_hash,
-                approval.hash_canonicalization_version,
-            )
-        except UnsupportedCanonicalizationVersionError:
-            return self._aborted(
-                ReasonCode.APPROVAL_HASH_ALGORITHM_UNSUPPORTED, run_id=None
-            )
-        if not hash_ok:
-            return self._aborted(ReasonCode.APPROVAL_HASH_MISMATCH, run_id=None)
+        # --- Steps 1+2: load + validate approval, hash recheck ----------
+        approval, validation_failure = self._validate_approval(
+            approval_event_id=approval_event_id, draft=draft, run_id=None
+        )
+        if validation_failure is not None:
+            return validation_failure
+        assert approval is not None  # _validate_approval contract
 
         # --- Step 3: acquire lock ---------------------------------------
         run_id = self._id_generator.new_id("run")
@@ -321,21 +303,16 @@ class CalendarWriteManager:
         mappings = self._mapping_store.list_for_run(run_id)
         # Transition each mapping into ROLLBACK_PENDING before invoking the
         # adapter so a crash mid-rollback leaves a queryable in-progress state.
+        # VERIFIED is included per axiom 06 lines 132-137: every successful
+        # write must be rollback-able.
         now = self._clock.now()
+        _ROLLBACKABLE = {
+            CalendarWriteStatus.WRITTEN,
+            CalendarWriteStatus.VERIFIED,
+            CalendarWriteStatus.VERIFICATION_FAILED,
+        }
         for mapping in mappings:
-            if mapping.calendar_write_status in {
-                CalendarWriteStatus.ROLLED_BACK,
-                CalendarWriteStatus.ROLLBACK_FAILED,
-                CalendarWriteStatus.VERIFIED,
-            }:
-                # Terminal already; only `verified` is allowed to transition
-                # into rollback_pending and we permit it via the legal-table
-                # if we ever extend; for Phase 2 we honor the table strictly.
-                continue
-            if mapping.calendar_write_status is CalendarWriteStatus.WRITTEN or (
-                mapping.calendar_write_status
-                is CalendarWriteStatus.VERIFICATION_FAILED
-            ):
+            if mapping.calendar_write_status in _ROLLBACKABLE:
                 self._mapping_store.update_status(
                     run_id,
                     mapping.task_id,
@@ -378,17 +355,38 @@ class CalendarWriteManager:
         return result
 
     def reconcile_after_crash(
-        self, *, run_id: str, target_calendar_id: str, user_id: str
+        self,
+        *,
+        approval_event_id: str,
+        draft: DraftSchedule,
+        run_id: str,
+        target_calendar_id: str,
     ) -> WriteResult:
         """Manual-retry path: write only confirmed-missing tasks, then verify.
 
-        Called by the operator/UI after a partial-failure run. Acquires the
-        lock, queries the adapter for already-written events tagged with
-        ``run_id``, and creates only events that are confirmed missing. Never
-        creates duplicates; never auto-runs.
+        Called by the operator/UI after a partial-failure run. Per axiom 06
+        lines 181-189 the hash recheck is mandatory on every write path, so
+        the caller must re-supply the ``approval_event_id`` and the (re-fetched)
+        ``draft``; we re-validate the approval and recompute the payload hash
+        before touching the adapter. ``user_id`` is taken from the approval to
+        eliminate any chance of caller-side mismatch.
+
+        Acquires the lock, queries the adapter for already-written events
+        tagged with ``run_id``, and creates only events that are confirmed
+        missing. Never creates duplicates; never auto-runs.
         """
+        # --- Approval + hash recheck (axiom 06 lines 181-189) ----------
+        approval, validation_failure = self._validate_approval(
+            approval_event_id=approval_event_id, draft=draft, run_id=run_id
+        )
+        if validation_failure is not None:
+            return validation_failure
+        assert approval is not None  # _validate_approval contract
+
         try:
-            token = self._lock_manager.acquire(user_id=user_id, run_id=run_id)
+            token = self._lock_manager.acquire(
+                user_id=approval.user_id, run_id=run_id
+            )
         except CalendarWriteLockBusyError:
             return WriteResult(
                 run_id=run_id,
@@ -429,6 +427,15 @@ class CalendarWriteManager:
                         metadata=metadata,
                     )
                 except Exception:
+                    correlated(
+                        _log,
+                        run_id=run_id,
+                        plan_version=mapping.plan_version,
+                        task_id=mapping.task_id,
+                    ).exception(
+                        "adapter.create_event raised during reconcile_after_crash "
+                        "(reason_code will be CALENDAR_WRITE_FAILED)"
+                    )
                     return WriteResult(
                         run_id=run_id,
                         status=WriteStatus.PARTIAL_FAILURE,
@@ -491,6 +498,56 @@ class CalendarWriteManager:
     # internal helpers
     # ------------------------------------------------------------------ #
 
+    def _validate_approval(
+        self,
+        *,
+        approval_event_id: str,
+        draft: DraftSchedule,
+        run_id: str | None,
+    ) -> tuple[ApprovalEvent | None, WriteResult | None]:
+        """Steps 1+2 of axiom 06 lines 181-189: load approval, check expiry/
+        algorithm, recompute payload hash. Used by both ``approve_and_write``
+        and ``reconcile_after_crash`` — the hash recheck is mandatory on every
+        write path, not just the first attempt.
+
+        Returns ``(approval, None)`` on success or ``(approval_or_None, WriteResult)``
+        when validation fails; callers must short-circuit on a non-None
+        ``WriteResult``. The approval is ``None`` only when the lookup itself
+        failed. ``run_id`` is propagated into the failure ``WriteResult`` so
+        the caller can preserve the existing run identifier on a reconcile.
+        """
+        try:
+            approval = self._approval_store.get(approval_event_id)
+        except ApprovalEventNotFoundError:
+            return None, self._aborted(ReasonCode.APPROVAL_MISSING, run_id=run_id)
+
+        now = self._clock.now()
+        if approval.expires_at <= now:
+            return approval, self._aborted(
+                ReasonCode.APPROVAL_EXPIRED, run_id=run_id
+            )
+
+        if approval.hash_algorithm is not HashAlgorithm.SHA256:
+            return approval, self._aborted(
+                ReasonCode.APPROVAL_HASH_ALGORITHM_UNSUPPORTED, run_id=run_id
+            )
+
+        try:
+            hash_ok = verify_payload_hash(
+                draft,
+                approval.approved_payload_hash,
+                approval.hash_canonicalization_version,
+            )
+        except UnsupportedCanonicalizationVersionError:
+            return approval, self._aborted(
+                ReasonCode.APPROVAL_HASH_ALGORITHM_UNSUPPORTED, run_id=run_id
+            )
+        if not hash_ok:
+            return approval, self._aborted(
+                ReasonCode.APPROVAL_HASH_MISMATCH, run_id=run_id
+            )
+        return approval, None
+
     def _create_events(
         self,
         *,
@@ -517,6 +574,15 @@ class CalendarWriteManager:
                     metadata=metadata,
                 )
             except Exception:
+                correlated(
+                    _log,
+                    run_id=run_id,
+                    plan_version=draft.plan_version,
+                    task_id=entry.task_id,
+                ).exception(
+                    "adapter.create_event raised; aborting per-task loop "
+                    "(reason_code will be CALENDAR_WRITE_FAILED)"
+                )
                 had_failure = True
                 break
 
@@ -549,10 +615,10 @@ class CalendarWriteManager:
     ) -> list[CalendarEventMapping]:
         """Translate verification outcomes into mapping store transitions.
 
-        Mappings already at the target terminal status are passed through
+        Mappings already at the target verification status are passed through
         unchanged so re-verification (e.g. after ``reconcile_after_crash``)
-        does not attempt a VERIFIED -> VERIFIED transition (which the store
-        rejects as illegal — VERIFIED is terminal).
+        does not attempt a no-op self-transition like VERIFIED -> VERIFIED,
+        which the store rejects as illegal.
         """
         verified = set(verification.verified_task_ids)
         failed = set(verification.failed_task_ids)

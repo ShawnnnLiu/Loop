@@ -56,7 +56,10 @@ _LEGAL_TRANSITIONS: dict[CalendarWriteStatus, frozenset[CalendarWriteStatus]] = 
     CalendarWriteStatus.ROLLBACK_PENDING: frozenset(
         {CalendarWriteStatus.ROLLED_BACK, CalendarWriteStatus.ROLLBACK_FAILED}
     ),
-    CalendarWriteStatus.VERIFIED: frozenset(),
+    # VERIFIED is the only "success" state but must be reachable for rollback;
+    # axiom 06 lines 132-137 require every automated write to have a rollback
+    # path, and the only escape from VERIFIED is into ROLLBACK_PENDING.
+    CalendarWriteStatus.VERIFIED: frozenset({CalendarWriteStatus.ROLLBACK_PENDING}),
     CalendarWriteStatus.ROLLED_BACK: frozenset(),
     CalendarWriteStatus.ROLLBACK_FAILED: frozenset(),
 }
@@ -165,14 +168,12 @@ class InMemoryCalendarEventMappingStore:
                     f"{prior.calendar_write_status.value!r} -> {new_status.value!r} "
                     f"for (run_id={run_id!r}, task_id={task_id!r})"
                 )
-            try:
-                updated = prior.with_status(
-                    new_status, now=now, calendar_event_id=calendar_event_id
-                )
-            except Exception:
-                # Pydantic validation (e.g. verified-without-event-id) failed.
-                # Bucket is untouched; re-raise.
-                raise
+            # ``with_status`` may raise (e.g. verified-without-event-id);
+            # we let it propagate. The bucket assignment below only runs on
+            # success, so the prior value is preserved on failure.
+            updated = prior.with_status(
+                new_status, now=now, calendar_event_id=calendar_event_id
+            )
             self._by_key[key] = updated
             return updated
 

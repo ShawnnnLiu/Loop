@@ -112,6 +112,7 @@ _LEGAL_TRANSITIONS: list[tuple[CalendarWriteStatus, CalendarWriteStatus]] = [
     (CalendarWriteStatus.WRITTEN, CalendarWriteStatus.ROLLBACK_PENDING),
     (CalendarWriteStatus.VERIFICATION_FAILED, CalendarWriteStatus.ROLLBACK_PENDING),
     (CalendarWriteStatus.VERIFICATION_FAILED, CalendarWriteStatus.WRITTEN),
+    (CalendarWriteStatus.VERIFIED, CalendarWriteStatus.ROLLBACK_PENDING),
     (CalendarWriteStatus.ROLLBACK_PENDING, CalendarWriteStatus.ROLLED_BACK),
     (CalendarWriteStatus.ROLLBACK_PENDING, CalendarWriteStatus.ROLLBACK_FAILED),
 ]
@@ -249,9 +250,14 @@ def test_update_status_invariant_failure_rolls_back() -> None:
 
 
 def test_legal_next_states_terminal() -> None:
-    assert list(legal_next_states(CalendarWriteStatus.VERIFIED)) == []
+    # ROLLED_BACK and ROLLBACK_FAILED are true terminals. VERIFIED is the only
+    # "success" state but is intentionally non-terminal — axiom 06 lines
+    # 132-137 require every successful write to remain rollback-able.
     assert list(legal_next_states(CalendarWriteStatus.ROLLED_BACK)) == []
     assert list(legal_next_states(CalendarWriteStatus.ROLLBACK_FAILED)) == []
+    assert set(legal_next_states(CalendarWriteStatus.VERIFIED)) == {
+        CalendarWriteStatus.ROLLBACK_PENDING
+    }
 
 
 def test_legal_next_states_written() -> None:

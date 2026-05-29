@@ -18,27 +18,22 @@ def test_list_returns_zero(capsys: pytest.CaptureFixture[str]) -> None:
 def test_rollback_success_path_marks_everything_rolled_back(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """The CLI runs a full write then immediately rolls it back.
-
-    Because the write moves mappings to VERIFIED (terminal), the CLI's
-    rollback call exercises only the rollback queries; the mappings stay
-    at VERIFIED. We confirm the write_result was a success and the
-    rollback_result is queryable.
-    """
+    """The CLI runs a full write then rolls it back; every mapping must
+    end ROLLED_BACK and every external event must be deleted."""
     rc = cli.main(["--scenario", "success"])
     assert rc == 0
     payload = json.loads(capsys.readouterr().out)
     assert payload["write_result"]["status"] == "success"
-    # rollback_result is well-formed.
-    assert "deleted_event_ids" in payload["rollback_result"]
-    assert "failed_event_ids" in payload["rollback_result"]
-    # Final mappings still have a valid status.
+    assert payload["rollback_result"]["fully_rolled_back"] is True
+    assert payload["rollback_result"]["failed_event_ids"] == []
+    # Every mapping is actually rolled back (axiom 06 lines 132-137).
+    assert payload["final_mappings"], "expected non-empty final_mappings"
     for m in payload["final_mappings"]:
-        assert m["calendar_write_status"] in {
-            "verified",
-            "rolled_back",
-            "rollback_failed",
-        }
+        assert m["calendar_write_status"] == "rolled_back"
+    # Adapter delete actually fired for every event written.
+    assert len(payload["rollback_result"]["deleted_event_ids"]) == len(
+        payload["final_mappings"]
+    )
 
 
 def test_rollback_byte_stable(capsys: pytest.CaptureFixture[str]) -> None:

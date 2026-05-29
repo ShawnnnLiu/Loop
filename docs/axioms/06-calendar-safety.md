@@ -252,6 +252,31 @@ This is a deliberate product decision: **the app's internal schedule is the auth
 
 Any feature that depends on the external calendar being authoritative (for example, "delete from Google Calendar means the task is cancelled") must be explicitly opt-in, never default behavior.
 
+## Typed Reason Codes (Phase 2)
+
+Every Phase 2 calendar-safety failure produces one of the typed `ReasonCode`
+values below. These codes are exhaustive for the Calendar Write Manager and
+the approval flow; consumers (telemetry, audit log, `UserFacingExplanationNode`)
+may rely on the enumeration being closed.
+
+| `ReasonCode` | Trigger | Recoverable? |
+| --- | --- | --- |
+| `APPROVAL_MISSING` | Write attempted with no matching `approval_event_id`. | Yes — user re-approves. |
+| `APPROVAL_EXPIRED` | Approval's `expires_at` ≤ `clock.now()` at write time. | Yes — user re-approves. |
+| `APPROVAL_HASH_MISMATCH` | Recomputed hash differs from `approved_payload_hash`. **P1 incident.** | Yes — user reviews and re-approves the (changed) draft. |
+| `APPROVAL_HASH_ALGORITHM_UNSUPPORTED` | Approval's `hash_algorithm` is not in the allowed set. | No — reject; log. |
+| `CALENDAR_WRITE_LOCK_BUSY` | Another write for the same user holds the lock. | Yes — caller retries after backoff. |
+| `CALENDAR_WRITE_LOCK_EXPIRED` | Holder's lock token expired mid-write (TTL or cleanup eviction). | Manual retry only (see "Crash Recovery"). |
+| `CALENDAR_WRITE_DUPLICATE_DETECTED` | Pre-write metadata query found events already tagged with this `run_id`. | Manual investigation; no auto-retry. |
+| `CALENDAR_WRITE_FAILED` | Adapter create-event call raised. | Per axiom 06 lines 110–118; reconcile by `run_id`. |
+| `CALENDAR_VERIFICATION_FAILED` | Post-write read-back found mismatched metadata or times. | Mark `verification_failed`; route rollback. |
+| `CALENDAR_ROLLBACK_FAILED` | Adapter delete-event call raised during rollback. | Mark `rollback_failed`; escalate to user attention (axiom 06 line 136). |
+| `EXTERNAL_SYNC_FAILED` | Partial-failure terminal: some events confirmed missing, no auto-retry. | Manual retry via `reconcile_after_crash`. |
+
+The eleven codes above are declared in
+`backend/src/agentic_calendar/contracts/reason_codes.py` alongside the existing
+Phase 1 codes.
+
 ## Related Docs
 
 - `05-scheduler-policy.md`
@@ -259,4 +284,5 @@ Any feature that depends on the external calendar being authoritative (for examp
 - `16-reliability-patterns.md`
 - `../specs/approval-event.schema.md`
 - `../specs/calendar-event-mapping.schema.md`
+- `../specs/draft-schedule.schema.md`
 - `../decisions/ADR-0002-preview-only-calendar-writes.md`

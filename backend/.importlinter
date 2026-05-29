@@ -21,6 +21,8 @@ source_modules =
     agentic_calendar.validation
     agentic_calendar.scheduler
     agentic_calendar.planning
+    agentic_calendar.approval
+    agentic_calendar.calendar_writer
 forbidden_modules =
     openai
     anthropic
@@ -49,6 +51,16 @@ modules =
     agentic_calendar.scheduler
     agentic_calendar.planning
     agentic_calendar.llm_nodes
+    agentic_calendar.approval
+
+# Note: `calendar_writer` is intentionally NOT in the independence set above.
+# The Calendar Write Manager must import :class:`ApprovalEventStore` from
+# the `approval` region (axiom 06 line 5 separates the approval service from
+# the writer, but the writer reads from the store). Independence contracts
+# are bidirectional, so adding `calendar_writer` to the set would block that
+# import. We instead constrain `calendar_writer` via the
+# `calendar-writer-is-leaf` forbidden contract below, which blocks every
+# region except `approval`.
 
 # ---------------------------------------------------------------------------
 # Contract 4: Prerequisites is a shared kernel.
@@ -68,6 +80,48 @@ forbidden_modules =
     agentic_calendar.scheduler
     agentic_calendar.planning
     agentic_calendar.llm_nodes
+
+# ---------------------------------------------------------------------------
+# Contract 5: Calendar Writer leaf-deps.
+#
+# `calendar_writer` is the only writer to an external calendar (axiom 06
+# line 18). It may depend on `common`, `contracts`, and `approval` (for
+# the approval-event store). Every other region is forbidden.
+# ---------------------------------------------------------------------------
+[importlinter:contract:calendar-writer-is-leaf]
+name = calendar_writer/ may only depend on common/, contracts/, and approval/.
+type = forbidden
+source_modules =
+    agentic_calendar.calendar_writer
+forbidden_modules =
+    agentic_calendar.supervisor
+    agentic_calendar.validation
+    agentic_calendar.scheduler
+    agentic_calendar.planning
+    agentic_calendar.llm_nodes
+    agentic_calendar.prerequisites
+
+# ---------------------------------------------------------------------------
+# Contract 6: Approval leaf-deps.
+#
+# `approval` (the approval service per axiom 06 line 5) owns the approval-
+# event store. It may depend only on `common` and `contracts`; importing the
+# calendar writer or any other region would invert the approval ↔ writer
+# direction and defeat the seam.
+# ---------------------------------------------------------------------------
+[importlinter:contract:approval-is-leaf]
+name = approval/ may only depend on common/ and contracts/.
+type = forbidden
+source_modules =
+    agentic_calendar.approval
+forbidden_modules =
+    agentic_calendar.supervisor
+    agentic_calendar.validation
+    agentic_calendar.scheduler
+    agentic_calendar.planning
+    agentic_calendar.llm_nodes
+    agentic_calendar.prerequisites
+    agentic_calendar.calendar_writer
 
 # ---------------------------------------------------------------------------
 # Contract 3: Contracts package is leaf.

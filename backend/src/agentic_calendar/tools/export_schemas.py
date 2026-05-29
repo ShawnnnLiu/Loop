@@ -1,4 +1,4 @@
-"""Export every Phase 1 Pydantic contract to JSON Schema.
+"""Export every Pydantic contract to JSON Schema.
 
 Output goes to ``<repo>/schemas/<contract>.schema.json`` by default. The
 generated files are committed so that the (future) frontend has a single
@@ -22,7 +22,11 @@ from typing import Any
 
 from pydantic import BaseModel
 
+from agentic_calendar.contracts.approval_event import ApprovalEvent
+from agentic_calendar.contracts.calendar_event_mapping import CalendarEventMapping
+from agentic_calendar.contracts.draft_schedule import DraftSchedule
 from agentic_calendar.contracts.motivation_profile import MotivationProfile
+from agentic_calendar.contracts.plan_diff import PlanDiff
 from agentic_calendar.contracts.scheduler_output import SchedulerOutput
 from agentic_calendar.contracts.syllabus_units import SyllabusUnits
 from agentic_calendar.contracts.task_plan import TaskPlan
@@ -36,6 +40,10 @@ CONTRACTS: dict[str, type[BaseModel]] = {
     "task_plan": TaskPlan,
     "validation_result": ValidationResult,
     "scheduler_output": SchedulerOutput,
+    "draft_schedule": DraftSchedule,
+    "approval_event": ApprovalEvent,
+    "calendar_event_mapping": CalendarEventMapping,
+    "plan_diff": PlanDiff,
 }
 
 

@@ -95,6 +95,7 @@ Approval events expire after **24 hours** by default. After `expires_at`, the ha
 - Approval records are immutable once created. New approvals must produce new `approval_event_id` values.
 - `expires_at` must be after `created_at`.
 - `hash_algorithm` must be one of the allowed values.
+- `approved_payload_hash` must carry the algorithm prefix; e.g. when `hash_algorithm == "sha256"`, `approved_payload_hash` must match the pattern `sha256:[0-9a-f]{64}`. Mismatched prefix is a rejection at contract validation, before any consumer sees the event.
 - Hash mismatches at write time are P1 incidents and must produce a typed `reason_code` of `APPROVAL_HASH_MISMATCH`.
 
 ## Audit Logging

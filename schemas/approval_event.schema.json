@@ -1,0 +1,86 @@
+{
+  "$defs": {
+    "ApprovalActionType": {
+      "description": "Allowed action types for an approval event (spec lines 47-53).\n\nOther action types must be explicitly defined before use.",
+      "enum": [
+        "add_to_calendar",
+        "update_calendar",
+        "rollback_calendar"
+      ],
+      "title": "ApprovalActionType",
+      "type": "string"
+    },
+    "HashAlgorithm": {
+      "description": "Allowed approval-payload hash algorithms (spec lines 55-59).\n\nOnly ``sha256`` is supported for the MVP. The Calendar Write Manager\nrejects any unknown algorithm with\n``ReasonCode.APPROVAL_HASH_ALGORITHM_UNSUPPORTED``.",
+      "enum": [
+        "sha256"
+      ],
+      "title": "HashAlgorithm",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "User authorization for a specific draft schedule.",
+  "properties": {
+    "action_type": {
+      "$ref": "#/$defs/ApprovalActionType"
+    },
+    "approval_event_id": {
+      "minLength": 1,
+      "title": "Approval Event Id",
+      "type": "string"
+    },
+    "approved_payload_hash": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Approved Payload Hash",
+      "type": "string"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "draft_schedule_id": {
+      "minLength": 1,
+      "title": "Draft Schedule Id",
+      "type": "string"
+    },
+    "expires_at": {
+      "format": "date-time",
+      "title": "Expires At",
+      "type": "string"
+    },
+    "hash_algorithm": {
+      "$ref": "#/$defs/HashAlgorithm"
+    },
+    "hash_canonicalization_version": {
+      "minLength": 1,
+      "title": "Hash Canonicalization Version",
+      "type": "string"
+    },
+    "plan_id": {
+      "minLength": 1,
+      "title": "Plan Id",
+      "type": "string"
+    },
+    "user_id": {
+      "minLength": 1,
+      "title": "User Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "approval_event_id",
+    "user_id",
+    "plan_id",
+    "draft_schedule_id",
+    "action_type",
+    "approved_payload_hash",
+    "hash_algorithm",
+    "hash_canonicalization_version",
+    "created_at",
+    "expires_at"
+  ],
+  "title": "ApprovalEvent",
+  "type": "object"
+}

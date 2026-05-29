@@ -1,0 +1,90 @@
+{
+  "$defs": {
+    "CalendarWriteStatus": {
+      "description": "Lifecycle of a single external calendar event (spec lines 43-51).",
+      "enum": [
+        "dry_run",
+        "written",
+        "verified",
+        "verification_failed",
+        "rollback_pending",
+        "rolled_back",
+        "rollback_failed"
+      ],
+      "title": "CalendarWriteStatus",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "One internal task \u2194 one external calendar event.",
+  "properties": {
+    "calendar_event_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Calendar Event Id"
+    },
+    "calendar_write_status": {
+      "$ref": "#/$defs/CalendarWriteStatus"
+    },
+    "last_verified_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Last Verified At"
+    },
+    "plan_version": {
+      "minLength": 1,
+      "title": "Plan Version",
+      "type": "string"
+    },
+    "run_id": {
+      "minLength": 1,
+      "title": "Run Id",
+      "type": "string"
+    },
+    "scheduled_end": {
+      "format": "date-time",
+      "title": "Scheduled End",
+      "type": "string"
+    },
+    "scheduled_start": {
+      "format": "date-time",
+      "title": "Scheduled Start",
+      "type": "string"
+    },
+    "task_id": {
+      "minLength": 1,
+      "title": "Task Id",
+      "type": "string"
+    },
+    "user_modified_bool": {
+      "title": "User Modified Bool",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "task_id",
+    "plan_version",
+    "run_id",
+    "calendar_event_id",
+    "scheduled_start",
+    "scheduled_end",
+    "calendar_write_status",
+    "user_modified_bool",
+    "last_verified_at"
+  ],
+  "title": "CalendarEventMapping",
+  "type": "object"
+}

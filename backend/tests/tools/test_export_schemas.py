@@ -14,14 +14,26 @@ from agentic_calendar.tools.export_schemas import (
 )
 
 
-def test_every_phase_1_contract_registered() -> None:
+def test_every_contract_registered() -> None:
+    """The CONTRACTS dict must list every Pydantic contract the project ships.
+
+    Phase 1 contracts: user/motivation profile, syllabus, task plan,
+    validation result, scheduler output. Phase 2 contracts: draft schedule,
+    approval event, calendar event mapping, plan diff.
+    """
     expected = {
+        # Phase 1
         "user_profile",
         "motivation_profile",
         "syllabus_units",
         "task_plan",
         "validation_result",
         "scheduler_output",
+        # Phase 2
+        "draft_schedule",
+        "approval_event",
+        "calendar_event_mapping",
+        "plan_diff",
     }
     assert set(CONTRACTS.keys()) == expected
 

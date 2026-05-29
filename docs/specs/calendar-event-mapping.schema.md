@@ -50,6 +50,26 @@ Local mapping between an internal task and the external calendar event the syste
 - `rolled_back`
 - `rollback_failed`
 
+### Valid Status Transitions
+
+Status changes are enforced by `CalendarEventMappingStore.update_status`.
+Any transition not listed below raises `InvalidStatusTransitionError`; the
+store rolls the bucket back to its prior value so it remains queryable.
+
+| From | Allowed To |
+| --- | --- |
+| `dry_run` | `written`, `rolled_back` |
+| `written` | `verified`, `verification_failed`, `rollback_pending` |
+| `verification_failed` | `rollback_pending`, `written` (manual retry only — never automatic) |
+| `rollback_pending` | `rolled_back`, `rollback_failed` |
+| `verified` | (terminal) |
+| `rolled_back` | (terminal) |
+| `rollback_failed` | (terminal; escalates to user attention per axiom 06 line 136) |
+
+Automatic re-writes from `verification_failed` to `written` are forbidden
+(axiom 06 lines 226–232). Only user-triggered manual retries through
+`reconcile_after_crash` may take that transition.
+
 ## Calendar Event Metadata
 
 The Calendar Write Manager must attach app-level metadata to each external event so duplicates can be detected and rollback can succeed without title matching:

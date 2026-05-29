@@ -12,8 +12,9 @@ in their respective phases.
 Sources:
     * ``docs/axioms/04-validation-layer.md`` (validation / repair codes)
     * ``docs/axioms/05-scheduler-policy.md`` (scheduler codes)
+    * ``docs/axioms/06-calendar-safety.md`` (calendar-safety codes; Phase 2)
     * ``docs/axioms/12-edge-case-policy-engine.md`` (policy codes)
-    * ``docs/axioms/15-plan-versioning-and-diffs.md`` (diff reason codes; later)
+    * ``docs/axioms/15-plan-versioning-and-diffs.md`` (diff reason codes)
     * ``docs/axioms/16-reliability-patterns.md`` (canonical list)
 """
 
@@ -92,3 +93,79 @@ class ReasonCode(StrEnum):
     # --- Profile / capacity changes (axiom 12) ---
     PROFILE_MAJOR_CHANGE = "PROFILE_MAJOR_CHANGE"
     CAPACITY_CHANGE = "CAPACITY_CHANGE"
+
+    # --- Calendar safety (axiom 06) ---
+    APPROVAL_MISSING = "APPROVAL_MISSING"
+    """A calendar write was attempted with no matching ``approval_event_id``
+    (axiom 06 line 60)."""
+
+    APPROVAL_EXPIRED = "APPROVAL_EXPIRED"
+    """The approval's ``expires_at`` is at or before ``clock.now()``; user
+    must re-approve (axiom 06 lines 195-197)."""
+
+    APPROVAL_HASH_MISMATCH = "APPROVAL_HASH_MISMATCH"
+    """Recomputed payload hash does not equal the recorded
+    ``approved_payload_hash``. **P1 incident** (axiom 06 line 208)."""
+
+    APPROVAL_HASH_ALGORITHM_UNSUPPORTED = "APPROVAL_HASH_ALGORITHM_UNSUPPORTED"
+    """``ApprovalEvent.hash_algorithm`` is not in the allowed set; reject
+    (axiom 06 line 165; approval-event spec lines 55-59)."""
+
+    CALENDAR_WRITE_LOCK_BUSY = "CALENDAR_WRITE_LOCK_BUSY"
+    """Another in-flight write holds the per-user lock; caller may retry
+    after backoff (axiom 06 line 103, axiom 13)."""
+
+    CALENDAR_WRITE_LOCK_EXPIRED = "CALENDAR_WRITE_LOCK_EXPIRED"
+    """Lock token's TTL elapsed mid-write, or the cleanup job evicted a
+    zombie. Treated as ``EXTERNAL_SYNC_FAILED`` and surfaces the manual-retry
+    UI (axiom 06 lines 224-247)."""
+
+    CALENDAR_WRITE_DUPLICATE_DETECTED = "CALENDAR_WRITE_DUPLICATE_DETECTED"
+    """Pre-write metadata query found events already tagged with this
+    ``run_id``; do not write blindly (axiom 06 lines 120-122)."""
+
+    CALENDAR_WRITE_FAILED = "CALENDAR_WRITE_FAILED"
+    """External adapter's ``create_event`` raised. Reconcile by ``run_id``
+    (axiom 06 lines 110-118)."""
+
+    CALENDAR_VERIFICATION_FAILED = "CALENDAR_VERIFICATION_FAILED"
+    """Post-write read-back found mismatched metadata or scheduled times
+    (axiom 06 lines 124-130)."""
+
+    CALENDAR_ROLLBACK_FAILED = "CALENDAR_ROLLBACK_FAILED"
+    """Adapter ``delete_event`` raised during rollback; mark
+    ``rollback_failed`` and escalate (axiom 06 line 136)."""
+
+    EXTERNAL_SYNC_FAILED = "EXTERNAL_SYNC_FAILED"
+    """Partial-failure terminal: some events confirmed missing; no auto-retry.
+    Surfaces the manual-retry UI (axiom 06 lines 228-232)."""
+
+    # --- Plan diff (axiom 15 / spec plan-diff) ---
+    DEEP_WORK_WINDOW_CONFLICT = "DEEP_WORK_WINDOW_CONFLICT"
+    """Field changed "to fit your deep work windows" (plan-diff spec line 137).
+    **No Phase 2 producer**; ships with the contract so the diff service can
+    emit it without a follow-on enum change."""
+
+    USER_DURATION_CALIBRATION = "USER_DURATION_CALIBRATION"
+    """Field changed "based on your recent pace" (plan-diff spec line 138).
+    **No Phase 2 producer.**"""
+
+    DEPENDENCY_RESCHEDULED = "DEPENDENCY_RESCHEDULED"
+    """Field changed "because a prerequisite moved" (plan-diff spec line 139).
+    **No Phase 2 producer.**"""
+
+    WEEKLY_CAPACITY_REBALANCE = "WEEKLY_CAPACITY_REBALANCE"
+    """Field changed "to balance your weekly load" (plan-diff spec line 140).
+    **No Phase 2 producer.**"""
+
+    EXTERNAL_CALENDAR_CONFLICT = "EXTERNAL_CALENDAR_CONFLICT"
+    """Field changed "because of an event on your calendar" (plan-diff spec
+    line 141). **No Phase 2 producer.**"""
+
+    USER_PROFILE_CHANGE = "USER_PROFILE_CHANGE"
+    """Field changed "based on your profile update" (plan-diff spec line 142).
+    **No Phase 2 producer.**"""
+
+    DRIFT_REMEDIATION = "DRIFT_REMEDIATION"
+    """Field changed "to adapt to your recent completion pattern" (plan-diff
+    spec line 143). **No Phase 2 producer.**"""

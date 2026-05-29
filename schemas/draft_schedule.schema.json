@@ -1,0 +1,78 @@
+{
+  "$defs": {
+    "CalendarEventStatus": {
+      "description": "Phase 1 only ever produces ``DRAFT_ONLY``.",
+      "enum": [
+        "draft_only"
+      ],
+      "title": "CalendarEventStatus",
+      "type": "string"
+    },
+    "DraftScheduleEntry": {
+      "additionalProperties": false,
+      "description": "One placed task as the user will see it for approval.",
+      "properties": {
+        "calendar_event_status": {
+          "$ref": "#/$defs/CalendarEventStatus",
+          "default": "draft_only"
+        },
+        "end": {
+          "format": "date-time",
+          "title": "End",
+          "type": "string"
+        },
+        "start": {
+          "format": "date-time",
+          "title": "Start",
+          "type": "string"
+        },
+        "task_id": {
+          "minLength": 1,
+          "title": "Task Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "task_id",
+        "start",
+        "end"
+      ],
+      "title": "DraftScheduleEntry",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Immutable, hashable draft schedule.\n\nOrder of ``entries`` is significant: axiom 06 line 153 calls it the\n\"scheduled order\" and the canonical hash covers this order.",
+  "properties": {
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "draft_schedule_id": {
+      "minLength": 1,
+      "title": "Draft Schedule Id",
+      "type": "string"
+    },
+    "entries": {
+      "items": {
+        "$ref": "#/$defs/DraftScheduleEntry"
+      },
+      "title": "Entries",
+      "type": "array"
+    },
+    "plan_version": {
+      "minLength": 1,
+      "title": "Plan Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "draft_schedule_id",
+    "plan_version",
+    "entries",
+    "created_at"
+  ],
+  "title": "DraftSchedule",
+  "type": "object"
+}

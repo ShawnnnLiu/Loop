@@ -271,7 +271,7 @@ def test_scenario_12_timeline_infeasibility(relaxed_policy) -> None:  # type: ig
 def test_success_routes_to_awaiting_user_approval_not_calendar(
     relaxed_policy,  # type: ignore[no-untyped-def]
 ) -> None:
-    """Even on full success, Phase 1 never advances to WRITING_TO_CALENDAR."""
+    """Scheduler success must land in approval, never directly in any calendar-write state."""
     plan = TaskPlan.model_validate({
         "plan_version": "p_ok",
         "tasks": [make_task(task_id="t1", estimated_duration_min=60)],
@@ -282,5 +282,6 @@ def test_success_routes_to_awaiting_user_approval_not_calendar(
         SupervisorState.SCHEDULER_RUNNING, _signal_for(out.schedule_status)
     )
     assert next_state is SupervisorState.AWAITING_USER_APPROVAL
-    assert next_state is not SupervisorState.WRITING_TO_CALENDAR
+    assert next_state is not SupervisorState.CALENDAR_WRITE_APPROVED
+    assert next_state is not SupervisorState.CALENDAR_WRITE_IN_PROGRESS
     assert_no_calendar_write_leaks(out)

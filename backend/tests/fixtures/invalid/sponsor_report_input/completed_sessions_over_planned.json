@@ -1,0 +1,10 @@
+{
+  "user_id": "user_001",
+  "plan_id": "plan_001",
+  "status": "on_track",
+  "completion_summary": {
+    "completed_sessions": 12,
+    "planned_sessions": 10,
+    "on_track_percent": 50
+  }
+}

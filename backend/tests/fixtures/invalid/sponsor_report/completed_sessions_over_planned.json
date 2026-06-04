@@ -1,0 +1,17 @@
+{
+  "report_id": "rpt_bad_003",
+  "user_id": "user_001",
+  "sponsor_id": "sponsor_001",
+  "plan_id": "plan_001",
+  "visibility_level": "summary_only",
+  "status": "on_track",
+  "completion_summary": {
+    "completed_sessions": 15,
+    "planned_sessions": 10,
+    "on_track_percent": 50
+  },
+  "milestone_summary": [],
+  "task_completion_summary": null,
+  "trigger_reason_code": "SPONSOR_REPORT_PENDING",
+  "generated_at": "2026-05-15T10:00:00+00:00"
+}

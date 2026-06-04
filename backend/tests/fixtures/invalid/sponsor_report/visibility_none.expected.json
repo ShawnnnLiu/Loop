@@ -1,0 +1,5 @@
+{
+  "error_substrings": [
+    "a sponsor report must not be built at visibility_level 'none'"
+  ]
+}

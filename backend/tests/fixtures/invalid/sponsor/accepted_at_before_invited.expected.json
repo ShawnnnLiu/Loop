@@ -1,0 +1,3 @@
+{
+  "error_substrings": ["accepted_at must not precede invited_at"]
+}

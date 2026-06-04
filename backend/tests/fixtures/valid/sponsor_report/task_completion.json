@@ -1,0 +1,23 @@
+{
+  "report_id": "rpt_002",
+  "user_id": "user_001",
+  "sponsor_id": "sponsor_002",
+  "plan_id": "plan_002",
+  "visibility_level": "task_completion",
+  "status": "slightly_behind",
+  "completion_summary": {
+    "completed_sessions": 5,
+    "planned_sessions": 10,
+    "on_track_percent": 50
+  },
+  "milestone_summary": [],
+  "task_completion_summary": {
+    "completed_tasks": 12,
+    "total_tasks": 20
+  },
+  "suggested_support_action": "Schedule a check-in call",
+  "next_checkpoint_date": "2026-06-15",
+  "trigger_reason_code": "SPONSOR_REPORT_PENDING",
+  "generated_at": "2026-05-20T14:30:00-05:00",
+  "requires_user_approval_before_send": true
+}

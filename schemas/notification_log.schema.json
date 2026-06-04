@@ -1,0 +1,157 @@
+{
+  "$defs": {
+    "NotificationStatus": {
+      "description": "Terminal outcome of a delivery attempt (spec \"Status Semantics\").",
+      "enum": [
+        "drafted",
+        "approved",
+        "sent",
+        "dry_run",
+        "blocked",
+        "failed"
+      ],
+      "title": "NotificationStatus",
+      "type": "string"
+    },
+    "NudgeChannel": {
+      "enum": [
+        "in_app",
+        "email",
+        "push"
+      ],
+      "title": "NudgeChannel",
+      "type": "string"
+    },
+    "ReasonCode": {
+      "description": "All typed failure / outcome codes in the system.\n\nCodes are uppercase ``SCREAMING_SNAKE_CASE`` strings so they survive a\nJSON round-trip unchanged and so they read identically in logs, telemetry,\nand user-facing explanations.",
+      "enum": [
+        "VALIDATION_FAILED",
+        "SCHEMA_INVALID",
+        "TASK_GRAPH_INVALID",
+        "MODULE_COVERAGE_INSUFFICIENT",
+        "USER_FIT_VIOLATED",
+        "SCHEDULING_PRECONDITION_FAILED",
+        "REPAIR_LIMIT_EXCEEDED",
+        "FORBIDDEN_FIELD_PRESENT",
+        "NO_VALID_CONTIGUOUS_BLOCK",
+        "INSUFFICIENT_WEEKLY_CAPACITY",
+        "DEPENDENCY_BLOCKED",
+        "OUTSIDE_ALLOWED_HOURS",
+        "DAILY_LOAD_EXCEEDED",
+        "DEEP_WORK_REQUIRED_UNAVAILABLE",
+        "TASK_TOO_LONG_UNSPLITTABLE",
+        "TASK_TOO_LONG_SPLITTABLE",
+        "INVALID_STATE_TRANSITION",
+        "USER_APPROVAL_REQUIRED",
+        "ERROR_REQUIRES_USER",
+        "PROFILE_MAJOR_CHANGE",
+        "CAPACITY_CHANGE",
+        "APPROVAL_MISSING",
+        "APPROVAL_EXPIRED",
+        "APPROVAL_HASH_MISMATCH",
+        "APPROVAL_HASH_ALGORITHM_UNSUPPORTED",
+        "CALENDAR_WRITE_LOCK_BUSY",
+        "CALENDAR_WRITE_LOCK_EXPIRED",
+        "CALENDAR_WRITE_DUPLICATE_DETECTED",
+        "CALENDAR_WRITE_FAILED",
+        "CALENDAR_VERIFICATION_FAILED",
+        "CALENDAR_ROLLBACK_FAILED",
+        "EXTERNAL_SYNC_FAILED",
+        "DEEP_WORK_WINDOW_CONFLICT",
+        "USER_DURATION_CALIBRATION",
+        "DEPENDENCY_RESCHEDULED",
+        "WEEKLY_CAPACITY_REBALANCE",
+        "EXTERNAL_CALENDAR_CONFLICT",
+        "USER_PROFILE_CHANGE",
+        "DRIFT_REMEDIATION",
+        "SPONSOR_REPORT_PENDING",
+        "SPONSOR_PERMISSION_MISSING",
+        "SPONSOR_VISIBILITY_VIOLATION",
+        "ACCOUNTABILITY_CONTRACT_INACTIVE"
+      ],
+      "title": "ReasonCode",
+      "type": "string"
+    },
+    "SponsorVisibility": {
+      "enum": [
+        "none",
+        "summary_only",
+        "milestone_progress",
+        "task_completion"
+      ],
+      "title": "SponsorVisibility",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Append-only audit record for one sponsor report delivery attempt.",
+  "properties": {
+    "channel": {
+      "$ref": "#/$defs/NudgeChannel"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "dry_run": {
+      "default": false,
+      "title": "Dry Run",
+      "type": "boolean"
+    },
+    "engineering_review": {
+      "default": false,
+      "title": "Engineering Review",
+      "type": "boolean"
+    },
+    "notification_log_id": {
+      "minLength": 1,
+      "title": "Notification Log Id",
+      "type": "string"
+    },
+    "reason_code": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ReasonCode"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "report_id": {
+      "minLength": 1,
+      "title": "Report Id",
+      "type": "string"
+    },
+    "sponsor_id": {
+      "minLength": 1,
+      "title": "Sponsor Id",
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/NotificationStatus"
+    },
+    "user_id": {
+      "minLength": 1,
+      "title": "User Id",
+      "type": "string"
+    },
+    "visibility_level": {
+      "$ref": "#/$defs/SponsorVisibility"
+    }
+  },
+  "required": [
+    "notification_log_id",
+    "report_id",
+    "sponsor_id",
+    "user_id",
+    "visibility_level",
+    "channel",
+    "status",
+    "created_at"
+  ],
+  "title": "NotificationLog",
+  "type": "object"
+}

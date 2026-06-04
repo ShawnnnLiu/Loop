@@ -62,3 +62,14 @@ def test_serializes_to_string() -> None:
 def test_round_trip_from_string() -> None:
     code = ReasonCode("INSUFFICIENT_WEEKLY_CAPACITY")
     assert code is ReasonCode.INSUFFICIENT_WEEKLY_CAPACITY
+
+
+def test_phase_3_sponsor_codes_present() -> None:
+    """Sponsor-reporting reason codes from axiom 21 / axiom 16 must be defined."""
+    required = {
+        "SPONSOR_REPORT_PENDING",
+        "SPONSOR_PERMISSION_MISSING",
+        "SPONSOR_VISIBILITY_VIOLATION",
+    }
+    present = {c.value for c in ReasonCode}
+    assert required.issubset(present)

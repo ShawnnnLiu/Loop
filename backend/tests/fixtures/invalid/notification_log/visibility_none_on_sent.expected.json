@@ -1,0 +1,3 @@
+{
+  "error_substrings": ["visibility_level 'none' is only valid on a blocked entry with reason_code SPONSOR_PERMISSION_MISSING"]
+}

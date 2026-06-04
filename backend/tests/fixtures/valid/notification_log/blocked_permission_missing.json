@@ -1,0 +1,13 @@
+{
+  "notification_log_id": "nlog_blk_002",
+  "report_id": "report_004",
+  "sponsor_id": "sponsor_003",
+  "user_id": "user_003",
+  "visibility_level": "none",
+  "channel": "email",
+  "status": "blocked",
+  "reason_code": "SPONSOR_PERMISSION_MISSING",
+  "engineering_review": false,
+  "dry_run": false,
+  "created_at": "2026-05-13T14:00:00+01:00"
+}

@@ -1,0 +1,13 @@
+{
+  "notification_log_id": "nlog_inv_004",
+  "report_id": "report_inv_004",
+  "sponsor_id": "sponsor_001",
+  "user_id": "user_001",
+  "visibility_level": "none",
+  "channel": "push",
+  "status": "sent",
+  "reason_code": null,
+  "engineering_review": false,
+  "dry_run": false,
+  "created_at": "2026-05-10T19:12:00-07:00"
+}

@@ -1,0 +1,3 @@
+{
+  "error_substrings": ["pending sponsor must have null accepted_at and revoked_at"]
+}

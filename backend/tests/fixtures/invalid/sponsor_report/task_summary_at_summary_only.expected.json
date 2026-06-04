@@ -1,0 +1,5 @@
+{
+  "error_substrings": [
+    "task_completion_summary is only permitted at visibility_level 'task_completion'"
+  ]
+}

@@ -1,0 +1,111 @@
+{
+  "$defs": {
+    "NudgeChannel": {
+      "enum": [
+        "in_app",
+        "email",
+        "push"
+      ],
+      "title": "NudgeChannel",
+      "type": "string"
+    },
+    "SponsorRelationship": {
+      "description": "Coarse relationship label. Never raw identity (spec privacy note).",
+      "enum": [
+        "parent",
+        "mentor",
+        "coach",
+        "peer",
+        "other"
+      ],
+      "title": "SponsorRelationship",
+      "type": "string"
+    },
+    "SponsorStatus": {
+      "description": "Invite lifecycle state (spec \"Invite Lifecycle\").",
+      "enum": [
+        "pending",
+        "accepted",
+        "revoked"
+      ],
+      "title": "SponsorStatus",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A trusted third party who may receive permissioned progress reports.\n\nThe :class:`SponsorStatus` field reuses the channel enum from the\nmotivation profile (``NudgeChannel``) for ``contact_channel`` so the two\nnotions of \"where do messages go\" stay aligned.",
+  "properties": {
+    "accepted_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Accepted At"
+    },
+    "contact_channel": {
+      "$ref": "#/$defs/NudgeChannel"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "invited_at": {
+      "format": "date-time",
+      "title": "Invited At",
+      "type": "string"
+    },
+    "relationship": {
+      "$ref": "#/$defs/SponsorRelationship"
+    },
+    "revoked_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Revoked At"
+    },
+    "sponsor_id": {
+      "minLength": 1,
+      "title": "Sponsor Id",
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/SponsorStatus"
+    },
+    "updated_at": {
+      "format": "date-time",
+      "title": "Updated At",
+      "type": "string"
+    },
+    "user_id": {
+      "minLength": 1,
+      "title": "User Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "sponsor_id",
+    "user_id",
+    "relationship",
+    "contact_channel",
+    "status",
+    "invited_at",
+    "created_at",
+    "updated_at"
+  ],
+  "title": "Sponsor",
+  "type": "object"
+}

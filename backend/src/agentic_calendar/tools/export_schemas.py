@@ -26,8 +26,15 @@ from agentic_calendar.contracts.approval_event import ApprovalEvent
 from agentic_calendar.contracts.calendar_event_mapping import CalendarEventMapping
 from agentic_calendar.contracts.draft_schedule import DraftSchedule
 from agentic_calendar.contracts.motivation_profile import MotivationProfile
+from agentic_calendar.contracts.notification_log import NotificationLog
 from agentic_calendar.contracts.plan_diff import PlanDiff
 from agentic_calendar.contracts.scheduler_output import SchedulerOutput
+from agentic_calendar.contracts.sponsor import Sponsor
+from agentic_calendar.contracts.sponsor_report import (
+    SponsorReport,
+    SponsorReportApproval,
+    SponsorReportInput,
+)
 from agentic_calendar.contracts.syllabus_units import SyllabusUnits
 from agentic_calendar.contracts.task_plan import TaskPlan
 from agentic_calendar.contracts.user_profile import UserProfile
@@ -44,6 +51,11 @@ CONTRACTS: dict[str, type[BaseModel]] = {
     "approval_event": ApprovalEvent,
     "calendar_event_mapping": CalendarEventMapping,
     "plan_diff": PlanDiff,
+    "sponsor": Sponsor,
+    "sponsor_report": SponsorReport,
+    "sponsor_report_input": SponsorReportInput,
+    "sponsor_report_approval": SponsorReportApproval,
+    "notification_log": NotificationLog,
 }
 
 

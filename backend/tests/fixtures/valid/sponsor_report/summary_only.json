@@ -1,0 +1,20 @@
+{
+  "report_id": "rpt_001",
+  "user_id": "user_001",
+  "sponsor_id": "sponsor_001",
+  "plan_id": "plan_001",
+  "visibility_level": "summary_only",
+  "status": "on_track",
+  "completion_summary": {
+    "completed_sessions": 8,
+    "planned_sessions": 10,
+    "on_track_percent": 80
+  },
+  "milestone_summary": [],
+  "task_completion_summary": null,
+  "suggested_support_action": null,
+  "next_checkpoint_date": null,
+  "trigger_reason_code": "SPONSOR_REPORT_PENDING",
+  "generated_at": "2026-05-15T10:00:00+00:00",
+  "requires_user_approval_before_send": true
+}

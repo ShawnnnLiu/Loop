@@ -1,0 +1,23 @@
+{
+  "report_id": "rpt_900",
+  "user_id": "user_900",
+  "sponsor_id": "sponsor_900",
+  "plan_id": "plan_900",
+  "visibility_level": "task_completion",
+  "status": "behind",
+  "completion_summary": {
+    "completed_sessions": 4,
+    "planned_sessions": 6,
+    "on_track_percent": 60
+  },
+  "milestone_summary": [],
+  "task_completion_summary": {
+    "completed_tasks": 9,
+    "total_tasks": 5
+  },
+  "suggested_support_action": null,
+  "next_checkpoint_date": null,
+  "trigger_reason_code": "SPONSOR_REPORT_PENDING",
+  "generated_at": "2026-05-10T19:10:00-07:00",
+  "requires_user_approval_before_send": true
+}

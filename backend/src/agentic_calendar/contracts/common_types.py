@@ -68,3 +68,18 @@ class FocusLevel(StrEnum):
     LIGHT = "light"
     MEDIUM = "medium"
     DEEP = "deep"
+
+
+class AccountabilityStatus(StrEnum):
+    """Deterministic accountability/progress status (axiom 21 ``current_status``).
+
+    Shared by the sponsor report (Phase 3) and, later, the Accountability State
+    projection and Policy Engine (Phase 7). Computed deterministically from
+    thresholds; never inferred by the LLM.
+    """
+
+    ON_TRACK = "on_track"
+    SLIGHTLY_BEHIND = "slightly_behind"
+    BEHIND = "behind"
+    FAR_BEHIND = "far_behind"
+    DISENGAGED = "disengaged"

@@ -1,0 +1,46 @@
+{
+  "additionalProperties": false,
+  "description": "Explicit user authorization to send one sponsor report draft.\n\nThe approval records the report's canonical content hash\n(:func:`canonical_sponsor_report_hash`) so the Delivery Service can prove the\ncontent the user approved equals the content delivered. Approvals are\nimmutable once created.",
+  "properties": {
+    "approval_event_id": {
+      "minLength": 1,
+      "title": "Approval Event Id",
+      "type": "string"
+    },
+    "approved_payload_hash": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Approved Payload Hash",
+      "type": "string"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "report_id": {
+      "minLength": 1,
+      "title": "Report Id",
+      "type": "string"
+    },
+    "sponsor_id": {
+      "minLength": 1,
+      "title": "Sponsor Id",
+      "type": "string"
+    },
+    "user_id": {
+      "minLength": 1,
+      "title": "User Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "approval_event_id",
+    "report_id",
+    "user_id",
+    "sponsor_id",
+    "approved_payload_hash",
+    "created_at"
+  ],
+  "title": "SponsorReportApproval",
+  "type": "object"
+}

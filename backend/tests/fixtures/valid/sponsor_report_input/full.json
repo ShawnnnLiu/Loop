@@ -1,0 +1,20 @@
+{
+  "user_id": "user_002",
+  "plan_id": "plan_002",
+  "status": "slightly_behind",
+  "completion_summary": {
+    "completed_sessions": 7,
+    "planned_sessions": 10,
+    "on_track_percent": 70
+  },
+  "milestone_summary": [
+    {"milestone": "Complete module 1", "status": "on_track"},
+    {"milestone": "Complete module 2", "status": "slightly_behind"}
+  ],
+  "task_completion_summary": {
+    "completed_tasks": 14,
+    "total_tasks": 20
+  },
+  "candidate_suggested_support_action": "Consider a weekly check-in",
+  "next_checkpoint_date": "2026-06-20"
+}

@@ -64,7 +64,11 @@
         "WEEKLY_CAPACITY_REBALANCE",
         "EXTERNAL_CALENDAR_CONFLICT",
         "USER_PROFILE_CHANGE",
-        "DRIFT_REMEDIATION"
+        "DRIFT_REMEDIATION",
+        "SPONSOR_REPORT_PENDING",
+        "SPONSOR_PERMISSION_MISSING",
+        "SPONSOR_VISIBILITY_VIOLATION",
+        "ACCOUNTABILITY_CONTRACT_INACTIVE"
       ],
       "title": "ReasonCode",
       "type": "string"

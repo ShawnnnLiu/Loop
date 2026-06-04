@@ -1,0 +1,23 @@
+{
+  "report_id": "rpt_003",
+  "user_id": "user_003",
+  "sponsor_id": "sponsor_003",
+  "plan_id": "plan_003",
+  "visibility_level": "milestone_progress",
+  "status": "behind",
+  "completion_summary": {
+    "completed_sessions": 3,
+    "planned_sessions": 10,
+    "on_track_percent": 30
+  },
+  "milestone_summary": [
+    {"milestone": "Complete module 1", "status": "on_track"},
+    {"milestone": "Complete module 2", "status": "behind"}
+  ],
+  "task_completion_summary": null,
+  "suggested_support_action": "Review study schedule",
+  "next_checkpoint_date": "2026-06-10",
+  "trigger_reason_code": "SPONSOR_REPORT_PENDING",
+  "generated_at": "2026-05-18T09:00:00+01:00",
+  "requires_user_approval_before_send": true
+}

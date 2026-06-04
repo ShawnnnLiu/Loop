@@ -1,0 +1,158 @@
+{
+  "$defs": {
+    "AccountabilityStatus": {
+      "description": "Deterministic accountability/progress status (axiom 21 ``current_status``).\n\nShared by the sponsor report (Phase 3) and, later, the Accountability State\nprojection and Policy Engine (Phase 7). Computed deterministically from\nthresholds; never inferred by the LLM.",
+      "enum": [
+        "on_track",
+        "slightly_behind",
+        "behind",
+        "far_behind",
+        "disengaged"
+      ],
+      "title": "AccountabilityStatus",
+      "type": "string"
+    },
+    "CompletionSummary": {
+      "additionalProperties": false,
+      "description": "Session-level completion counts (spec ``completion_summary``).",
+      "properties": {
+        "completed_sessions": {
+          "minimum": 0,
+          "title": "Completed Sessions",
+          "type": "integer"
+        },
+        "on_track_percent": {
+          "maximum": 100,
+          "minimum": 0,
+          "title": "On Track Percent",
+          "type": "integer"
+        },
+        "planned_sessions": {
+          "minimum": 0,
+          "title": "Planned Sessions",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "completed_sessions",
+        "planned_sessions",
+        "on_track_percent"
+      ],
+      "title": "CompletionSummary",
+      "type": "object"
+    },
+    "MilestoneStatus": {
+      "additionalProperties": false,
+      "description": "One milestone's deterministic status (spec ``milestone_summary[*]``).",
+      "properties": {
+        "milestone": {
+          "minLength": 1,
+          "title": "Milestone",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/AccountabilityStatus"
+        }
+      },
+      "required": [
+        "milestone",
+        "status"
+      ],
+      "title": "MilestoneStatus",
+      "type": "object"
+    },
+    "TaskCompletionSummary": {
+      "additionalProperties": false,
+      "description": "Task-level counts (only at ``task_completion`` visibility).\n\nCounts only \u2014 never task titles or descriptions (spec privacy denylist).",
+      "properties": {
+        "completed_tasks": {
+          "minimum": 0,
+          "title": "Completed Tasks",
+          "type": "integer"
+        },
+        "total_tasks": {
+          "minimum": 0,
+          "title": "Total Tasks",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "completed_tasks",
+        "total_tasks"
+      ],
+      "title": "TaskCompletionSummary",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Deterministic progress snapshot consumed by the Sponsor Report Generator.\n\nThis is the Phase 3 boundary object: it carries the *already-computed*\nprogress numbers. It may carry more detail than a given visibility level\npermits (e.g. ``task_completion_summary`` while the user is at\n``summary_only``); the generator deterministically strips over-level fields\nvia the privacy filter. ``candidate_suggested_support_action`` is the only\nfield an LLM may later rephrase, and it is privacy-scanned before send.",
+  "properties": {
+    "candidate_suggested_support_action": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Candidate Suggested Support Action"
+    },
+    "completion_summary": {
+      "$ref": "#/$defs/CompletionSummary"
+    },
+    "milestone_summary": {
+      "items": {
+        "$ref": "#/$defs/MilestoneStatus"
+      },
+      "title": "Milestone Summary",
+      "type": "array"
+    },
+    "next_checkpoint_date": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Next Checkpoint Date"
+    },
+    "plan_id": {
+      "minLength": 1,
+      "title": "Plan Id",
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/AccountabilityStatus"
+    },
+    "task_completion_summary": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TaskCompletionSummary"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "user_id": {
+      "minLength": 1,
+      "title": "User Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "user_id",
+    "plan_id",
+    "status",
+    "completion_summary"
+  ],
+  "title": "SponsorReportInput",
+  "type": "object"
+}

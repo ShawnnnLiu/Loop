@@ -1,0 +1,249 @@
+{
+  "$defs": {
+    "AccountabilityStatus": {
+      "description": "Deterministic accountability/progress status (axiom 21 ``current_status``).\n\nShared by the sponsor report (Phase 3) and, later, the Accountability State\nprojection and Policy Engine (Phase 7). Computed deterministically from\nthresholds; never inferred by the LLM.",
+      "enum": [
+        "on_track",
+        "slightly_behind",
+        "behind",
+        "far_behind",
+        "disengaged"
+      ],
+      "title": "AccountabilityStatus",
+      "type": "string"
+    },
+    "CompletionSummary": {
+      "additionalProperties": false,
+      "description": "Session-level completion counts (spec ``completion_summary``).",
+      "properties": {
+        "completed_sessions": {
+          "minimum": 0,
+          "title": "Completed Sessions",
+          "type": "integer"
+        },
+        "on_track_percent": {
+          "maximum": 100,
+          "minimum": 0,
+          "title": "On Track Percent",
+          "type": "integer"
+        },
+        "planned_sessions": {
+          "minimum": 0,
+          "title": "Planned Sessions",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "completed_sessions",
+        "planned_sessions",
+        "on_track_percent"
+      ],
+      "title": "CompletionSummary",
+      "type": "object"
+    },
+    "MilestoneStatus": {
+      "additionalProperties": false,
+      "description": "One milestone's deterministic status (spec ``milestone_summary[*]``).",
+      "properties": {
+        "milestone": {
+          "minLength": 1,
+          "title": "Milestone",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/AccountabilityStatus"
+        }
+      },
+      "required": [
+        "milestone",
+        "status"
+      ],
+      "title": "MilestoneStatus",
+      "type": "object"
+    },
+    "ReasonCode": {
+      "description": "All typed failure / outcome codes in the system.\n\nCodes are uppercase ``SCREAMING_SNAKE_CASE`` strings so they survive a\nJSON round-trip unchanged and so they read identically in logs, telemetry,\nand user-facing explanations.",
+      "enum": [
+        "VALIDATION_FAILED",
+        "SCHEMA_INVALID",
+        "TASK_GRAPH_INVALID",
+        "MODULE_COVERAGE_INSUFFICIENT",
+        "USER_FIT_VIOLATED",
+        "SCHEDULING_PRECONDITION_FAILED",
+        "REPAIR_LIMIT_EXCEEDED",
+        "FORBIDDEN_FIELD_PRESENT",
+        "NO_VALID_CONTIGUOUS_BLOCK",
+        "INSUFFICIENT_WEEKLY_CAPACITY",
+        "DEPENDENCY_BLOCKED",
+        "OUTSIDE_ALLOWED_HOURS",
+        "DAILY_LOAD_EXCEEDED",
+        "DEEP_WORK_REQUIRED_UNAVAILABLE",
+        "TASK_TOO_LONG_UNSPLITTABLE",
+        "TASK_TOO_LONG_SPLITTABLE",
+        "INVALID_STATE_TRANSITION",
+        "USER_APPROVAL_REQUIRED",
+        "ERROR_REQUIRES_USER",
+        "PROFILE_MAJOR_CHANGE",
+        "CAPACITY_CHANGE",
+        "APPROVAL_MISSING",
+        "APPROVAL_EXPIRED",
+        "APPROVAL_HASH_MISMATCH",
+        "APPROVAL_HASH_ALGORITHM_UNSUPPORTED",
+        "CALENDAR_WRITE_LOCK_BUSY",
+        "CALENDAR_WRITE_LOCK_EXPIRED",
+        "CALENDAR_WRITE_DUPLICATE_DETECTED",
+        "CALENDAR_WRITE_FAILED",
+        "CALENDAR_VERIFICATION_FAILED",
+        "CALENDAR_ROLLBACK_FAILED",
+        "EXTERNAL_SYNC_FAILED",
+        "DEEP_WORK_WINDOW_CONFLICT",
+        "USER_DURATION_CALIBRATION",
+        "DEPENDENCY_RESCHEDULED",
+        "WEEKLY_CAPACITY_REBALANCE",
+        "EXTERNAL_CALENDAR_CONFLICT",
+        "USER_PROFILE_CHANGE",
+        "DRIFT_REMEDIATION",
+        "SPONSOR_REPORT_PENDING",
+        "SPONSOR_PERMISSION_MISSING",
+        "SPONSOR_VISIBILITY_VIOLATION",
+        "ACCOUNTABILITY_CONTRACT_INACTIVE"
+      ],
+      "title": "ReasonCode",
+      "type": "string"
+    },
+    "SponsorVisibility": {
+      "enum": [
+        "none",
+        "summary_only",
+        "milestone_progress",
+        "task_completion"
+      ],
+      "title": "SponsorVisibility",
+      "type": "string"
+    },
+    "TaskCompletionSummary": {
+      "additionalProperties": false,
+      "description": "Task-level counts (only at ``task_completion`` visibility).\n\nCounts only \u2014 never task titles or descriptions (spec privacy denylist).",
+      "properties": {
+        "completed_tasks": {
+          "minimum": 0,
+          "title": "Completed Tasks",
+          "type": "integer"
+        },
+        "total_tasks": {
+          "minimum": 0,
+          "title": "Total Tasks",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "completed_tasks",
+        "total_tasks"
+      ],
+      "title": "TaskCompletionSummary",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Privacy-filtered progress payload for a sponsor.\n\nConstruction does not itself enforce the privacy denylist \u2014 that is the\nprivacy filter's job, run on the candidate payload before this model is\nbuilt. The model enforces the *structural* visibility invariant\n(``task_completion_summary`` only at ``task_completion``) and numeric\nranges; ``extra=\"forbid\"`` guarantees no unknown field can ride along.",
+  "properties": {
+    "completion_summary": {
+      "$ref": "#/$defs/CompletionSummary"
+    },
+    "generated_at": {
+      "format": "date-time",
+      "title": "Generated At",
+      "type": "string"
+    },
+    "milestone_summary": {
+      "items": {
+        "$ref": "#/$defs/MilestoneStatus"
+      },
+      "title": "Milestone Summary",
+      "type": "array"
+    },
+    "next_checkpoint_date": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Next Checkpoint Date"
+    },
+    "plan_id": {
+      "minLength": 1,
+      "title": "Plan Id",
+      "type": "string"
+    },
+    "report_id": {
+      "minLength": 1,
+      "title": "Report Id",
+      "type": "string"
+    },
+    "requires_user_approval_before_send": {
+      "default": true,
+      "title": "Requires User Approval Before Send",
+      "type": "boolean"
+    },
+    "sponsor_id": {
+      "minLength": 1,
+      "title": "Sponsor Id",
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/AccountabilityStatus"
+    },
+    "suggested_support_action": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Suggested Support Action"
+    },
+    "task_completion_summary": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TaskCompletionSummary"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "trigger_reason_code": {
+      "$ref": "#/$defs/ReasonCode"
+    },
+    "user_id": {
+      "minLength": 1,
+      "title": "User Id",
+      "type": "string"
+    },
+    "visibility_level": {
+      "$ref": "#/$defs/SponsorVisibility"
+    }
+  },
+  "required": [
+    "report_id",
+    "user_id",
+    "sponsor_id",
+    "plan_id",
+    "visibility_level",
+    "status",
+    "completion_summary",
+    "trigger_reason_code",
+    "generated_at"
+  ],
+  "title": "SponsorReport",
+  "type": "object"
+}

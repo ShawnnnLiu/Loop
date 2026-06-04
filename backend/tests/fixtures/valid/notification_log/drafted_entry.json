@@ -1,0 +1,13 @@
+{
+  "notification_log_id": "nlog_draft_001",
+  "report_id": "report_005",
+  "sponsor_id": "sponsor_004",
+  "user_id": "user_004",
+  "visibility_level": "summary_only",
+  "channel": "in_app",
+  "status": "drafted",
+  "reason_code": null,
+  "engineering_review": false,
+  "dry_run": false,
+  "created_at": "2026-05-14T09:00:00-07:00"
+}

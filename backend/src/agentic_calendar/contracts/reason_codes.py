@@ -169,3 +169,35 @@ class ReasonCode(StrEnum):
     DRIFT_REMEDIATION = "DRIFT_REMEDIATION"
     """Field changed "to adapt to your recent completion pattern" (plan-diff
     spec line 143). **No Phase 2 producer.**"""
+
+    # --- Accountability / sponsor reporting (axiom 21 / axiom 16) ---
+    SPONSOR_REPORT_PENDING = "SPONSOR_REPORT_PENDING"
+    """A sponsor report draft was produced and awaits user approval before
+    send (axiom 21 line 74; sponsor-report spec). Recorded on the draft as its
+    ``trigger_reason_code`` and on the ``drafted`` notification-log entry.
+
+    The Phase 3 Sponsor Report Generator emits this whenever it successfully
+    builds a draft. The *policy trigger* that decides a report is warranted
+    (e.g. ``missed_tasks_7d >= 4``) is the Phase 7 Accountability Policy
+    Engine; Phase 3 owns the draft, filter, and gates."""
+
+    SPONSOR_PERMISSION_MISSING = "SPONSOR_PERMISSION_MISSING"
+    """Report generation or delivery was attempted without valid permission:
+    ``sponsor_enabled`` is false, ``sponsor_visibility_level`` is ``none``, the
+    profile's ``sponsor_id`` does not match, or the sponsor row is not in
+    ``accepted`` status (axiom 21 line 171; Phase 3 acceptance criteria). Blocks
+    send."""
+
+    SPONSOR_VISIBILITY_VIOLATION = "SPONSOR_VISIBILITY_VIOLATION"
+    """The privacy filter found denylisted content (raw calendar titles, essay
+    drafts, private notes, psychological labels) or a field exceeding the
+    visibility level (axiom 21 line 171; golden scenarios 19, 25). Blocks send
+    and flags the notification-log entry for engineering review."""
+
+    ACCOUNTABILITY_CONTRACT_INACTIVE = "ACCOUNTABILITY_CONTRACT_INACTIVE"
+    """The accountability contract is disabled, so no intervention or sponsor
+    report fires (axiom 16 line 41; golden scenarios 18, 24). **No Phase 3
+    producer.** This is the Phase 7 Accountability Policy Engine's classification
+    when the *whole contract* is off; at the Phase 3 generator level a
+    sponsor-disabled profile blocks with ``SPONSOR_PERMISSION_MISSING`` instead.
+    Ships in the enum now so the golden scenarios reference a defined code."""

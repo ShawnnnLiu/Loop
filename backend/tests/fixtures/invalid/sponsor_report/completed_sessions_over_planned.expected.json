@@ -1,0 +1,5 @@
+{
+  "error_substrings": [
+    "completed_sessions must not exceed planned_sessions"
+  ]
+}

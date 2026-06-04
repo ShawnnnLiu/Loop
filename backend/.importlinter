@@ -23,6 +23,7 @@ source_modules =
     agentic_calendar.planning
     agentic_calendar.approval
     agentic_calendar.calendar_writer
+    agentic_calendar.accountability
 forbidden_modules =
     openai
     anthropic
@@ -52,6 +53,7 @@ modules =
     agentic_calendar.planning
     agentic_calendar.llm_nodes
     agentic_calendar.approval
+    agentic_calendar.accountability
 
 # Note: `calendar_writer` is intentionally NOT in the independence set above.
 # The Calendar Write Manager must import :class:`ApprovalEventStore` from
@@ -80,6 +82,7 @@ forbidden_modules =
     agentic_calendar.scheduler
     agentic_calendar.planning
     agentic_calendar.llm_nodes
+    agentic_calendar.accountability
 
 # ---------------------------------------------------------------------------
 # Contract 5: Calendar Writer leaf-deps.
@@ -100,6 +103,7 @@ forbidden_modules =
     agentic_calendar.planning
     agentic_calendar.llm_nodes
     agentic_calendar.prerequisites
+    agentic_calendar.accountability
 
 # ---------------------------------------------------------------------------
 # Contract 6: Approval leaf-deps.
@@ -122,6 +126,7 @@ forbidden_modules =
     agentic_calendar.llm_nodes
     agentic_calendar.prerequisites
     agentic_calendar.calendar_writer
+    agentic_calendar.accountability
 
 # ---------------------------------------------------------------------------
 # Contract 3: Contracts package is leaf.
@@ -142,3 +147,30 @@ forbidden_modules =
     agentic_calendar.scheduler
     agentic_calendar.planning
     agentic_calendar.llm_nodes
+    agentic_calendar.approval
+    agentic_calendar.calendar_writer
+    agentic_calendar.accountability
+
+# ---------------------------------------------------------------------------
+# Contract 7: Accountability leaf-deps.
+#
+# `accountability` (the Phase 3 sponsor-reporting slice of axiom 21) may depend
+# only on `common` and `contracts`. It is a pure leaf: it imports no other
+# region. Nothing in the system imports it yet — a future composition root
+# (Phase 7) wires the generator/delivery from outside the region set, the same
+# way calendar_writer/approval are assembled.
+# ---------------------------------------------------------------------------
+[importlinter:contract:accountability-is-leaf]
+name = accountability/ may only depend on common/ and contracts/.
+type = forbidden
+source_modules =
+    agentic_calendar.accountability
+forbidden_modules =
+    agentic_calendar.supervisor
+    agentic_calendar.validation
+    agentic_calendar.scheduler
+    agentic_calendar.planning
+    agentic_calendar.llm_nodes
+    agentic_calendar.prerequisites
+    agentic_calendar.calendar_writer
+    agentic_calendar.approval

@@ -28,7 +28,7 @@ Core thesis: **LLMs propose. Deterministic infrastructure disposes.**
 8. `07-telemetry-and-drift.md` — Privacy rules, drift triggers, drift responses.
 9. `08-rag-source-claims.md` — Claim schema, source types, confidence formula, expiration.
 10. `09-cost-and-metrics.md` — Cost targets, controls, success metrics.
-11. `10-mvp-roadmap.md` — Five-phase build plan and explicit out-of-scope items.
+11. `10-mvp-roadmap.md` — Eight-phase build plan and explicit out-of-scope items.
 12. `11-prerequisite-logic.md` — Deterministic prerequisite computation.
 13. `12-edge-case-policy-engine.md` — Policy table, profile update policy, staleness triggers.
 14. `13-concurrency-model.md` — Calendar write lock, draft promotion, race rules.
@@ -40,6 +40,7 @@ Core thesis: **LLMs propose. Deterministic infrastructure disposes.**
 20. `19-always-online-mvp.md` — Online-only scope, offline behavior rules, and the offline task-completion exception.
 21. `20-partial-syllabus-regeneration.md` — Phase 2/3 deterministic patch-vs-regenerate classifier.
 22. `21-accountability-layer.md` — Deterministic accountability policy engine, weekly check-ins, and sponsor reporting.
+23. `22-llm-evaluation-and-observability.md` — LLM eval harness, structured-generation contract, generation reason codes, per-call observability.
 
 ## Specs
 
@@ -64,6 +65,7 @@ Core thesis: **LLMs propose. Deterministic infrastructure disposes.**
 - `decisions/ADR-0003-no-offline-mode-in-mvp.md`
 - `decisions/ADR-0004-no-per-user-ml-model-in-mvp.md`
 - `decisions/ADR-0005-structured-syllabus-not-prose.md`
+- `decisions/ADR-0006-llm-never-touches-the-calendar.md`
 
 ## Implementation Plans
 
@@ -74,6 +76,7 @@ Core thesis: **LLMs propose. Deterministic infrastructure disposes.**
 - `implementation-plans/phase-5-rag-caching.md`
 - `implementation-plans/phase-6-advanced-personalization.md`
 - `implementation-plans/phase-7-accountability-mvp.md`
+- `implementation-plans/phase-8-llm-eval-observability.md`
 
 ## Reading Path
 

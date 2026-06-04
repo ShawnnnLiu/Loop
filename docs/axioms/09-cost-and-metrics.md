@@ -177,4 +177,5 @@ The token budgets and cost ranges in this document are computed from current pri
 - `18-caching-strategy.md`
 - `19-always-online-mvp.md`
 - `21-accountability-layer.md`
+- `22-llm-evaluation-and-observability.md`
 - `../decisions/ADR-0004-no-per-user-ml-model-in-mvp.md`

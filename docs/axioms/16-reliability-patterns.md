@@ -121,4 +121,6 @@ Invariant violations must be logged with a typed `reason_code` and routed to `er
 - `14-checkpointing-recovery.md`
 - `15-plan-versioning-and-diffs.md`
 - `21-accountability-layer.md`
+- `22-llm-evaluation-and-observability.md`
+- `../decisions/ADR-0006-llm-never-touches-the-calendar.md`
 - `../golden-test-cases.md`

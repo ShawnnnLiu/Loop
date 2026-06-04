@@ -155,4 +155,6 @@ Every implementation that calls an LLM must have tests proving that invalid outp
 - `04-validation-layer.md`
 - `08-rag-source-claims.md`
 - `16-reliability-patterns.md`
+- `22-llm-evaluation-and-observability.md`
 - `../decisions/ADR-0001-deterministic-control-plane.md`
+- `../decisions/ADR-0006-llm-never-touches-the-calendar.md`

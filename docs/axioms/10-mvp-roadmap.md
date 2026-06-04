@@ -1,6 +1,6 @@
 # 10: MVP Roadmap
 
-The MVP build plan is split across seven phases. Phases 1–2 deliver the deterministic core. Phase 3 adds permissioned sponsor and parent reporting. Phases 4–6 deliver telemetry, RAG quality, and advanced personalization. Phase 7 ships the full accountability MVP.
+The MVP build plan is split across eight phases. Phases 1–2 deliver the deterministic core. Phase 3 adds permissioned sponsor and parent reporting. Phases 4–6 deliver telemetry, RAG quality, and advanced personalization. Phase 7 ships the full accountability MVP. Phase 8 is the cross-cutting LLM-reliability layer — evaluation, structured generation, and observability — that activates when real model adapters replace the Phase-1 fixture fakes.
 
 ## Phase 1: Core Planning Foundation
 
@@ -148,6 +148,28 @@ Excluded:
 - Fully autonomous replanning.
 
 See `../implementation-plans/phase-7-accountability-mvp.md`.
+
+## Phase 8: LLM Evaluation, Structured Generation, and Observability
+
+**Goal:** make the propose side measurable and reliable without granting the LLM new authority.
+
+This is a cross-cutting reliability layer, not a feature phase. It activates when real SDK adapters replace the Phase-1 fixture fakes; it does not depend on Phases 4–7, and they do not depend on it.
+
+Deliverables:
+
+- Eval harness over a fixed, versioned eval set (schema-validity rate of raw proposals, repair-recovery rate, post-repair invalid rate, reflection quality, latency and token cost per plan), with before/after reporting across prompt versions.
+- Structured generation at the boundary (schema-enforced output) with retained Pydantic re-validation and typed generation reason codes.
+- Deterministic fallback after bounded SDK retries — never silent, never a fabricated write.
+- Per-call observability records (`prompt_version`, model, tokens, latency, validation outcome) and a trace-view operator CLI.
+
+Excluded:
+
+- LLM-controlled routing, scheduling, approvals, or calendar writes.
+- LLM-based drift classification (stays deterministic).
+- Eval results feeding runtime decisions; observability is write-only.
+- A hosted dashboard UI; per-commit gating on non-deterministic eval runs.
+
+See `../implementation-plans/phase-8-llm-eval-observability.md`, `22-llm-evaluation-and-observability.md`, and `../decisions/ADR-0006-llm-never-touches-the-calendar.md`.
 
 ## Explicitly Out of Scope (MVP)
 

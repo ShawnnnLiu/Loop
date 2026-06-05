@@ -1,0 +1,6 @@
+{
+  "max_modules": 8,
+  "required_priority_values": ["high", "medium"],
+  "max_total_estimated_minutes": 3600,
+  "must_reference_claims_for_company_specific_modules": false
+}

@@ -1,0 +1,8 @@
+{
+  "target": "syllabus_units",
+  "role_target": "backend swe",
+  "company_target": "stripe",
+  "freshness_window": "2026-06",
+  "claim_version_set": ["a", "b"],
+  "object_schema_version": "syl-v1"
+}

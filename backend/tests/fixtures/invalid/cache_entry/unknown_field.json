@@ -1,0 +1,12 @@
+{
+  "key": {
+    "target": "syllabus_units",
+    "role_target": "backend swe",
+    "freshness_window": "2026-06",
+    "object_schema_version": "syl-v1"
+  },
+  "value_kind": "syllabus_units",
+  "value_json": {},
+  "created_at": "2026-06-04T12:00:00+00:00",
+  "bogus": 1
+}

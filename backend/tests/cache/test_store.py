@@ -11,6 +11,7 @@ from pydantic import ValidationError
 from agentic_calendar.cache.errors import CacheError
 from agentic_calendar.cache.keys import CacheKey, CacheTarget
 from agentic_calendar.cache.store import CacheEntry, InMemoryCache
+from tests._fixture_loader import iter_invalid, iter_valid
 
 NOW = datetime(2026, 6, 4, 12, 0, tzinfo=UTC)
 
@@ -111,3 +112,23 @@ def test_put_rejects_non_serializable_value() -> None:
     )
     with pytest.raises(CacheError):
         cache.put(entry)
+
+
+CONTRACT = "cache_entry"
+
+
+@pytest.mark.parametrize("fixture", list(iter_valid(CONTRACT)), ids=lambda f: f.name)
+def test_valid_fixture_parses(fixture: object) -> None:
+    obj = CacheEntry.model_validate(fixture.payload)  # type: ignore[attr-defined]
+    assert isinstance(obj, CacheEntry)
+
+
+@pytest.mark.parametrize("fixture", list(iter_invalid(CONTRACT)), ids=lambda f: f.name)
+def test_invalid_fixture_rejected(fixture: object) -> None:
+    payload = fixture.payload  # type: ignore[attr-defined]
+    expected = fixture.expected  # type: ignore[attr-defined]
+    with pytest.raises(ValidationError) as exc_info:
+        CacheEntry.model_validate(payload)
+    msg = str(exc_info.value)
+    for substr in expected["error_substrings"]:
+        assert substr in msg, f"expected substring {substr!r} not in:\n{msg}"

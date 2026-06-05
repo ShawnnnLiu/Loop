@@ -1,0 +1,31 @@
+{
+  "template_id": "career-transition-skeleton",
+  "goal_class": "career_transition",
+  "template_schema_version": "milestone-template-v1",
+  "milestones": [
+    {
+      "milestone_id": "skill-gap-assessment",
+      "title": "Skill-gap assessment",
+      "offset_days_before_deadline": 120,
+      "target_outcomes": ["Target-role skill gaps identified"],
+      "priority": "high",
+      "default_estimated_total_min": 600
+    },
+    {
+      "milestone_id": "portfolio-projects",
+      "title": "Portfolio projects",
+      "offset_days_before_deadline": 75,
+      "target_outcomes": ["Portfolio project completed"],
+      "priority": "high",
+      "default_estimated_total_min": 3600
+    },
+    {
+      "milestone_id": "interview-preparation",
+      "title": "Interview preparation",
+      "offset_days_before_deadline": 14,
+      "target_outcomes": ["Mock interviews completed"],
+      "priority": "high",
+      "default_estimated_total_min": 1800
+    }
+  ]
+}

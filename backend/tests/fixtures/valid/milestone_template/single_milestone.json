@@ -1,0 +1,15 @@
+{
+  "template_id": "minimal-template",
+  "goal_class": "college_admissions",
+  "template_schema_version": "milestone-template-v1",
+  "milestones": [
+    {
+      "milestone_id": "submit",
+      "title": "Submit application",
+      "offset_days_before_deadline": 0,
+      "target_outcomes": ["Application submitted"],
+      "priority": "high",
+      "default_estimated_total_min": 60
+    }
+  ]
+}

@@ -44,6 +44,8 @@ Recommended cache key dimensions:
 
 Cache keys must include the schema version of the cached object so a contract change forces re-generation.
 
+For the `task_template` target, the intended convention is that `object_schema_version` carries the `template_schema_version` of the `MilestoneTemplate` (the `templates/` registry) behind the entry. No production caller assembles `task_template` cache entries yet — that composition root is future work, the same way the `rag_retrieval` / `syllabus_units` producers are deferred — but following this convention makes the "Template schema update" trigger in the table above mechanical: bumping `TEMPLATE_SCHEMA_VERSION` changes the key and forces regeneration. The linkage is pinned in `backend/tests/templates/test_registry.py`.
+
 ## Cost Implication
 
 Caching reduces LLM cost on stable role targets. Combined with the limits in `09-cost-and-metrics.md`, caching is a primary lever to keep LLM-only cost near the ~$0.40 per active user per month target.

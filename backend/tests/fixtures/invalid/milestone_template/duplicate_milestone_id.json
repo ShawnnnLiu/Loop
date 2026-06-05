@@ -1,0 +1,23 @@
+{
+  "template_id": "t",
+  "goal_class": "career_transition",
+  "template_schema_version": "milestone-template-v1",
+  "milestones": [
+    {
+      "milestone_id": "dup",
+      "title": "First",
+      "offset_days_before_deadline": 30,
+      "target_outcomes": ["x"],
+      "priority": "high",
+      "default_estimated_total_min": 60
+    },
+    {
+      "milestone_id": "dup",
+      "title": "Second",
+      "offset_days_before_deadline": 10,
+      "target_outcomes": ["y"],
+      "priority": "low",
+      "default_estimated_total_min": 60
+    }
+  ]
+}

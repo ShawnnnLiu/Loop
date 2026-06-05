@@ -29,6 +29,7 @@ from agentic_calendar.contracts.calendar_event_mapping import CalendarEventMappi
 from agentic_calendar.contracts.company_target import CompanyTarget
 from agentic_calendar.contracts.draft_schedule import DraftSchedule
 from agentic_calendar.contracts.drift_event import DriftEvent
+from agentic_calendar.contracts.milestone_template import MilestoneTemplate
 from agentic_calendar.contracts.motivation_profile import MotivationProfile
 from agentic_calendar.contracts.notification_log import NotificationLog
 from agentic_calendar.contracts.plan_diff import PlanDiff
@@ -59,6 +60,7 @@ CONTRACTS: dict[str, type[BaseModel]] = {
     "company_target": CompanyTarget,
     "cache_key": CacheKey,
     "cache_entry": CacheEntry,
+    "milestone_template": MilestoneTemplate,
     "task_plan": TaskPlan,
     "validation_result": ValidationResult,
     "scheduler_output": SchedulerOutput,

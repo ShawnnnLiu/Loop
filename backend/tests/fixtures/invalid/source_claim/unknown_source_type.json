@@ -1,0 +1,10 @@
+{
+  "claim_id": "claim_enum",
+  "claim_text": "A claim from a source type the system does not recognise.",
+  "source_url": "https://example.com/x",
+  "source_type": "wiki",
+  "date_collected": "2026-05-01",
+  "confidence_score": 0.6,
+  "confidence_bucket": "medium",
+  "expires_at": "2026-08-01"
+}

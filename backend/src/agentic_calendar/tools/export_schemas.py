@@ -30,6 +30,7 @@ from agentic_calendar.contracts.motivation_profile import MotivationProfile
 from agentic_calendar.contracts.notification_log import NotificationLog
 from agentic_calendar.contracts.plan_diff import PlanDiff
 from agentic_calendar.contracts.scheduler_output import SchedulerOutput
+from agentic_calendar.contracts.source_claim import SourceClaim
 from agentic_calendar.contracts.sponsor import Sponsor
 from agentic_calendar.contracts.sponsor_report import (
     SponsorReport,
@@ -47,6 +48,7 @@ CONTRACTS: dict[str, type[BaseModel]] = {
     "user_profile": UserProfile,
     "motivation_profile": MotivationProfile,
     "syllabus_units": SyllabusUnits,
+    "source_claim": SourceClaim,
     "task_plan": TaskPlan,
     "validation_result": ValidationResult,
     "scheduler_output": SchedulerOutput,

@@ -107,7 +107,9 @@
         "DRIFT_EXTERNAL_CONFLICT",
         "DRIFT_LOW_ENGAGEMENT",
         "DRIFT_DEPENDENCY_BLOCKED",
-        "DRIFT_CALENDAR_FRAGMENTATION"
+        "DRIFT_CALENDAR_FRAGMENTATION",
+        "SOURCE_CLAIM_VALIDATION_FAILED",
+        "SOURCE_CLAIM_EXPIRED"
       ],
       "title": "ReasonCode",
       "type": "string"

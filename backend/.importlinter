@@ -27,6 +27,7 @@ source_modules =
     agentic_calendar.telemetry
     agentic_calendar.drift
     agentic_calendar.duration_estimation
+    agentic_calendar.source_claims
 forbidden_modules =
     openai
     anthropic
@@ -261,3 +262,33 @@ forbidden_modules =
     agentic_calendar.accountability
     agentic_calendar.telemetry
     agentic_calendar.drift
+    agentic_calendar.source_claims
+
+# ---------------------------------------------------------------------------
+# Contract 11: Source-claims kernel leaf-deps (Phase 5).
+#
+# `source_claims` is a shared kernel like `prerequisites`/`duration_estimation`:
+# it may depend only on `common` and `contracts`, and any region (notably the
+# future Strategist composition root, and `planning`) may import it. Nothing
+# inside it may reach back into a region or another kernel. It is intentionally
+# NOT in the independence set so regions can import it. It is the deterministic
+# confidence scorer (axiom 08) — an LLM never assigns confidence.
+# ---------------------------------------------------------------------------
+[importlinter:contract:source-claims-is-leaf]
+name = source_claims/ may only depend on common/ and contracts/.
+type = forbidden
+source_modules =
+    agentic_calendar.source_claims
+forbidden_modules =
+    agentic_calendar.supervisor
+    agentic_calendar.validation
+    agentic_calendar.scheduler
+    agentic_calendar.planning
+    agentic_calendar.llm_nodes
+    agentic_calendar.prerequisites
+    agentic_calendar.calendar_writer
+    agentic_calendar.approval
+    agentic_calendar.accountability
+    agentic_calendar.telemetry
+    agentic_calendar.drift
+    agentic_calendar.duration_estimation

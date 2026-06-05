@@ -1,0 +1,12 @@
+{
+  "claim_id": "claim_blog_1",
+  "claim_text": "Our backend interview emphasizes idempotent API design and observability.",
+  "source_url": "https://engineering.acme.com/interview-guide",
+  "source_type": "company_engineering_blog",
+  "date_collected": "2026-05-18",
+  "source_published_date": "2026-05-01",
+  "confidence_score": 0.85,
+  "confidence_bucket": "high",
+  "expires_at": "2027-10-23",
+  "corroborating_claim_ids": ["claim_official_1"]
+}

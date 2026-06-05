@@ -55,8 +55,17 @@ Every retrieved claim becomes an auditable object with provenance, source type, 
 - `interview_report`
 - `personal_anecdote`
 - `unclassified`
+- `canonical_topic_module` (curated internal content; produced by an internal curation path, never by URL classification)
 
 `source_type` must be classified by domain and URL rules, not by LLM judgment. See `../axioms/08-rag-source-claims.md`.
+
+## Contract vs. Kernel Responsibility
+
+The Pydantic contract (`backend/src/agentic_calendar/contracts/source_claim.py`) enforces only **shape and internal consistency**: `confidence_score` in `[0, 1]`, `confidence_bucket` consistent with the score, no self-reference, corroborating/contradicting lists disjoint, and `expires_at` not before `date_collected`. The **values** of `source_type`, `confidence_score`, `confidence_bucket`, and `expires_at` are *computed* deterministically by the `source_claims` kernel at ingestion, which is the only sanctioned producer — any of those fields present in a raw input payload are stripped and recomputed. This is the structural guarantee that LLMs never assign confidence.
+
+`expires_at` uses an inclusive boundary: a claim is expired when `expires_at <= now` (matching the approval/lock convention). The contract exposes `SourceClaim.is_expired(now)` so the kernel and the syllabus validator share one definition.
+
+Atomicity ("a claim is acceptable/rejectable independently") is a semantic property and is not contract-checkable; the contract enforces only non-emptiness of `claim_text`.
 
 ## Confidence Buckets
 

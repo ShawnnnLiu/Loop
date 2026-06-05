@@ -20,11 +20,54 @@ from typing import Any
 
 from pydantic import ValidationError
 
+from agentic_calendar.contracts.syllabus_units import SyllabusUnits
 from agentic_calendar.contracts.task_plan import TaskPlan
 from agentic_calendar.contracts.validation_result import Violation
 from agentic_calendar.contracts.violation_types import ViolationType
 
 from .base import make_violation
+
+
+def check_syllabus_units_shape(
+    payload: SyllabusUnits | dict[str, Any],
+) -> list[Violation]:
+    """Return shape-level violations for a candidate ``syllabus_units``.
+
+    Accepts either a parsed ``SyllabusUnits`` (returns ``[]``) or a raw dict
+    (parsed via Pydantic; any ``ValidationError`` is translated into structured
+    violations so callers never see a raw Pydantic error — axiom 04 / 16).
+    """
+    if isinstance(payload, SyllabusUnits):
+        return []
+    try:
+        SyllabusUnits.model_validate(payload)
+    except ValidationError as exc:
+        return _generic_pydantic_violations(exc)
+    return []
+
+
+def _generic_pydantic_violations(exc: ValidationError) -> list[Violation]:
+    """Map Pydantic error entries to structured ``Violation`` records.
+
+    A payload-agnostic translation (no task-plan-specific ``task_id`` lookup),
+    reused by artifacts whose deeper checks live elsewhere.
+    """
+    violations: list[Violation] = []
+    for err in exc.errors():
+        field = ".".join(str(p) for p in err["loc"])
+        etype = err["type"]
+        if etype == "missing":
+            vtype = ViolationType.REQUIRED_FIELD_MISSING
+        elif etype in {"enum", "literal_error"}:
+            vtype = ViolationType.ENUM_VALUE_INVALID
+        elif etype.startswith(("greater_than", "less_than", "int_")):
+            vtype = ViolationType.NUMERIC_OUT_OF_RANGE
+        else:
+            vtype = ViolationType.FIELD_TYPE_INVALID
+        violations.append(
+            make_violation(vtype, field=field, pydantic_message=err["msg"])
+        )
+    return violations
 
 
 def check_task_plan_shape(payload: TaskPlan | dict[str, Any]) -> list[Violation]:

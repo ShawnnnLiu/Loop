@@ -148,6 +148,49 @@ The `confidence_calibration_log` records every base-score change:
 
 No external claim of "accurate confidence scoring" or "calibrated source ranking" may be made until calibration is complete and a calibration log exists. MVP marketing and UI must describe confidence as heuristic.
 
+## Heuristic Prior Magnitudes (Phase 5)
+
+The formula structure, base scores, buckets, and expiration *ranges* above are
+the durable policy. The concrete magnitudes of each bonus/penalty, the
+recency/staleness time thresholds, and a single value inside each expiration
+range are **implementation priors** chosen by heuristic judgment, not data. They
+live in `backend/src/agentic_calendar/source_claims/priors.py` and, exactly like
+the drift thresholds (axiom 07), are tunable parameters pending the calibration
+pass — never presented as tuned. The Phase 5 defaults:
+
+| Term | Default |
+| --- | --- |
+| `recency_bonus` | `+0.10` when published `<= 30d` ago; linear decay to `0.0` at `>= 180d`; `0.0` if publication date unknown |
+| `corroboration_bonus` | `+0.05` per corroborating claim, capped at `+0.15` (saturates at 3) |
+| `anecdotal_penalty` | flat `-0.10` on `personal_anecdote` and `unclassified` |
+| `contradiction_penalty` | `-0.15` per contradicting claim, capped at `-0.45` (saturates at 3) |
+| `stale_penalty` | `0.0` until 30d before expiry; linear ramp to `-0.15` at expiry; further to `-0.30` capped past expiry |
+
+Recency and corroboration caps are deliberately small so they act as
+tiebreakers, not bucket-movers: a fresh, triply-corroborated `personal_anecdote`
+still ceilings at `low`. Contradiction is the strongest negative signal so a
+couple of credible contradictions can drop a fresh `company_engineering_blog`
+from `high` to `medium`. The `stale_penalty` (a smooth ranking signal) is
+distinct from the hard expiry boolean (a claim past `expires_at` is ineligible
+to drive generation, enforced in syllabus validation).
+
+### Base score and expiration additions
+
+- `canonical_topic_module` — omitted from the axiom tables above but named in the
+  expiration table. Scored as curated high-trust internal content: base **0.85**,
+  expiry **730 days** ("2+ years"). It is produced only by an internal curation
+  path, never by URL classification.
+- Single expiry-window values chosen inside each range (days):
+  `official_job_posting` 45 (30–60), `interview_report` 120 (90–180),
+  `role_taxonomy` 180, `company_engineering_blog` 540 (365–730). Windows the
+  table leaves unspecified are set conservatively and flagged as priors:
+  `interview_postmortem` 120 (reuses interview_report), `personal_anecdote` 90,
+  `unclassified` 30 (shortest, provenance unknown).
+
+Expiry is measured from `source_published_date` when present, else
+`date_collected`. The boundary is inclusive (`expires_at <= now` is expired),
+matching every other expiry in the system.
+
 ## Related Docs
 
 - `01-system-boundaries.md`

@@ -1,0 +1,10 @@
+{
+  "claim_id": "claim_unc_1",
+  "claim_text": "An unattributed page claims the interview focuses on system design.",
+  "source_url": "https://randomsite.example.org/page",
+  "source_type": "unclassified",
+  "date_collected": "2026-05-10",
+  "confidence_score": 0.2,
+  "confidence_bucket": "low",
+  "expires_at": "2026-06-09"
+}

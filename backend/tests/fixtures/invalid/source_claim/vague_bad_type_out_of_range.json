@@ -1,0 +1,10 @@
+{
+  "claim_id": "claim_bad_1",
+  "claim_text": "Study everything",
+  "source_url": "https://example.com/x",
+  "source_type": "blog",
+  "date_collected": "2026-05-01",
+  "confidence_score": 1.2,
+  "confidence_bucket": "high",
+  "expires_at": "2026-06-01"
+}

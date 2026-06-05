@@ -238,3 +238,26 @@ class ReasonCode(StrEnum):
     DRIFT_CALENDAR_FRAGMENTATION = "DRIFT_CALENDAR_FRAGMENTATION"
     """Total free time exists but the largest block is too small for deep-work
     tasks; split tasks or ask the user to open larger blocks."""
+
+    # --- RAG / source claims (axiom 08; Phase 5) ---
+    #
+    # Source claims are auditable evidence with a deterministic confidence score
+    # and an expiry. The LLM never assigns confidence; ingestion computes it.
+    # These codes carry syllabus-claim integrity failures into the system-wide
+    # typed vocabulary so the Strategist repair loop and explanations speak the
+    # same codes. All scoring magnitudes behind them are uncalibrated heuristic
+    # priors (axiom 08).
+    SOURCE_CLAIM_VALIDATION_FAILED = "SOURCE_CLAIM_VALIDATION_FAILED"
+    """A syllabus references source claims that are missing or expired, or a
+    company-specific module cites no claim while the strategy constraint
+    requires one. Summary code for the ``ORPHAN_SOURCE_CLAIM`` /
+    ``EXPIRED_SOURCE_CLAIM`` / ``COMPANY_MODULE_MISSING_CLAIM`` violations,
+    mirroring how ``MODULE_COVERAGE_INSUFFICIENT`` summarizes coverage."""
+
+    SOURCE_CLAIM_EXPIRED = "SOURCE_CLAIM_EXPIRED"
+    """A single source claim is past its ``expires_at`` and must be refreshed
+    before it can drive new syllabus generation (axiom 08 expiration policy).
+    Parallels ``APPROVAL_EXPIRED``; used by the refresh path and user-facing
+    explanations. The syllabus validator summarizes with
+    ``SOURCE_CLAIM_VALIDATION_FAILED``. **No Phase 5 validator producer** — it
+    ships for the claim-refresh job and explanation surface."""

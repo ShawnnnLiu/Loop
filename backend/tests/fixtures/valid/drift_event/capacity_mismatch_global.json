@@ -1,0 +1,17 @@
+{
+  "drift_event_id": "drift_002",
+  "plan_version": "plan_v4",
+  "drift_detected": true,
+  "drift_type": "capacity_mismatch",
+  "reason_code": "DRIFT_CAPACITY_MISMATCH",
+  "confidence": 0.75,
+  "evidence": {
+    "trigger_metric": "weekly_completion_ratio",
+    "trigger_value": 0.45,
+    "threshold": 0.7,
+    "sample_size": 4,
+    "affected_categories": []
+  },
+  "recommended_policy_action": "reduce_weekly_load",
+  "detected_at": "2026-05-15T09:00:00-07:00"
+}

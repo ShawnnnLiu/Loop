@@ -24,6 +24,9 @@ source_modules =
     agentic_calendar.approval
     agentic_calendar.calendar_writer
     agentic_calendar.accountability
+    agentic_calendar.telemetry
+    agentic_calendar.drift
+    agentic_calendar.duration_estimation
 forbidden_modules =
     openai
     anthropic
@@ -54,6 +57,8 @@ modules =
     agentic_calendar.llm_nodes
     agentic_calendar.approval
     agentic_calendar.accountability
+    agentic_calendar.telemetry
+    agentic_calendar.drift
 
 # Note: `calendar_writer` is intentionally NOT in the independence set above.
 # The Calendar Write Manager must import :class:`ApprovalEventStore` from
@@ -174,3 +179,85 @@ forbidden_modules =
     agentic_calendar.prerequisites
     agentic_calendar.calendar_writer
     agentic_calendar.approval
+    agentic_calendar.telemetry
+    agentic_calendar.drift
+    agentic_calendar.duration_estimation
+
+# ---------------------------------------------------------------------------
+# Contract 8: Telemetry leaf-deps (Phase 4).
+#
+# `telemetry` (ingestion, store, metrics, calibration) may depend only on
+# `common` and `contracts`. The drift classifier reads `TelemetryEvent`
+# objects via `contracts/`, never this region — so the two stay independent.
+# A composition root (operator CLIs / future app layer) wires telemetry from
+# outside the region set.
+# ---------------------------------------------------------------------------
+[importlinter:contract:telemetry-is-leaf]
+name = telemetry/ may only depend on common/ and contracts/.
+type = forbidden
+source_modules =
+    agentic_calendar.telemetry
+forbidden_modules =
+    agentic_calendar.supervisor
+    agentic_calendar.validation
+    agentic_calendar.scheduler
+    agentic_calendar.planning
+    agentic_calendar.llm_nodes
+    agentic_calendar.prerequisites
+    agentic_calendar.calendar_writer
+    agentic_calendar.approval
+    agentic_calendar.accountability
+    agentic_calendar.drift
+    agentic_calendar.duration_estimation
+
+# ---------------------------------------------------------------------------
+# Contract 9: Drift leaf-deps (Phase 4).
+#
+# `drift` (the deterministic classifier + policy mapping) may depend on
+# `common`, `contracts`, AND `prerequisites` (the shared "is this task ready?"
+# kernel, reused to detect `dependency_blocked` drift). Every other region is
+# forbidden. It must not import `telemetry`: it consumes `TelemetryEvent`
+# contracts passed in by the caller.
+# ---------------------------------------------------------------------------
+[importlinter:contract:drift-is-leaf]
+name = drift/ may only depend on common/, contracts/, and prerequisites/.
+type = forbidden
+source_modules =
+    agentic_calendar.drift
+forbidden_modules =
+    agentic_calendar.supervisor
+    agentic_calendar.validation
+    agentic_calendar.scheduler
+    agentic_calendar.planning
+    agentic_calendar.llm_nodes
+    agentic_calendar.calendar_writer
+    agentic_calendar.approval
+    agentic_calendar.accountability
+    agentic_calendar.telemetry
+    agentic_calendar.duration_estimation
+
+# ---------------------------------------------------------------------------
+# Contract 10: Duration-estimation kernel leaf-deps (Phase 4).
+#
+# `duration_estimation` is a shared kernel like `prerequisites`: it may depend
+# only on `common` and `contracts`, and any region (notably `planning`, for the
+# replan path) may import it. Nothing inside it may reach back into a region.
+# It is intentionally NOT in the independence set so regions can import it.
+# ---------------------------------------------------------------------------
+[importlinter:contract:duration-estimation-is-leaf]
+name = duration_estimation/ may only depend on common/ and contracts/.
+type = forbidden
+source_modules =
+    agentic_calendar.duration_estimation
+forbidden_modules =
+    agentic_calendar.supervisor
+    agentic_calendar.validation
+    agentic_calendar.scheduler
+    agentic_calendar.planning
+    agentic_calendar.llm_nodes
+    agentic_calendar.prerequisites
+    agentic_calendar.calendar_writer
+    agentic_calendar.approval
+    agentic_calendar.accountability
+    agentic_calendar.telemetry
+    agentic_calendar.drift

@@ -1,0 +1,13 @@
+{
+  "telemetry_event_id": "tel_difficulty_001",
+  "task_id": "dp_006",
+  "scheduled_duration_min": 120,
+  "actual_duration_min": 150,
+  "completed": true,
+  "completion_timestamp": "2026-05-09T22:00:00-07:00",
+  "user_reschedule_count": 3,
+  "subjective_difficulty": 4,
+  "data_quality": "complete",
+  "duration_estimated": false,
+  "captured_offline": false
+}

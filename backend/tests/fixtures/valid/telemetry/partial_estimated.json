@@ -1,0 +1,12 @@
+{
+  "telemetry_event_id": "tel_partial_001",
+  "task_id": "dp_004",
+  "scheduled_duration_min": 45,
+  "actual_duration_min": 45,
+  "completed": true,
+  "completion_timestamp": "2026-05-07T10:00:00-07:00",
+  "user_reschedule_count": 1,
+  "data_quality": "partial_estimated",
+  "duration_estimated": true,
+  "captured_offline": false
+}

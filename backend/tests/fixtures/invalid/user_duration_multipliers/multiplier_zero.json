@@ -1,0 +1,12 @@
+{
+  "user_id": "user_inv_002",
+  "computed_at": "2026-05-10T08:00:00-07:00",
+  "multipliers": [
+    {
+      "category": "practice",
+      "multiplier": 0.0,
+      "sample_size": 5,
+      "observed_ratio": 1.0
+    }
+  ]
+}

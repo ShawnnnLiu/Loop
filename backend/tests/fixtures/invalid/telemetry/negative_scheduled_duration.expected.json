@@ -1,0 +1,3 @@
+{
+  "error_substrings": ["scheduled_duration_min", "Input should be greater than 0"]
+}

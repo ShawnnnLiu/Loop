@@ -1,0 +1,13 @@
+{
+  "telemetry_event_id": "tel_offline_001",
+  "task_id": "dp_005",
+  "scheduled_duration_min": 30,
+  "actual_duration_min": 35,
+  "completed": true,
+  "completion_timestamp": "2026-05-08T14:30:00-07:00",
+  "user_reschedule_count": 0,
+  "data_quality": "offline_synced",
+  "duration_estimated": false,
+  "captured_offline": true,
+  "synced_at": "2026-05-08T18:00:00-07:00"
+}

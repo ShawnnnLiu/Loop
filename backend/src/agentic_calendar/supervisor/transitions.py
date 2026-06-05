@@ -54,11 +54,29 @@ TRANSITIONS: Mapping[tuple[S, Sig], S] = {
     (S.CALENDAR_WRITE_IN_PROGRESS, Sig.CALENDAR_VERIFICATION_FAILED): S.CALENDAR_WRITE_FAILED_STATE,
     (S.CALENDAR_WRITE_IN_PROGRESS, Sig.CALENDAR_WRITE_FAILED): S.CALENDAR_WRITE_FAILED_STATE,
 
-    (S.CALENDAR_WRITE_VERIFIED, Sig.CALENDAR_WRITE_SUCCEEDED): S.TERMINAL_SUCCESS,
+    # A verified write activates the plan (Phase 4). The journey no longer ends
+    # at the write — the plan lives on as ACTIVE_PLAN and accrues telemetry.
+    (S.CALENDAR_WRITE_VERIFIED, Sig.PLAN_ACTIVATED): S.ACTIVE_PLAN,
 
     # Failed writes self-loop while rollback runs, then exit to user attention.
     (S.CALENDAR_WRITE_FAILED_STATE, Sig.CALENDAR_ROLLBACK_REQUESTED): S.CALENDAR_WRITE_FAILED_STATE,
     (S.CALENDAR_WRITE_FAILED_STATE, Sig.CALENDAR_ROLLBACK_COMPLETED): S.ERROR_REQUIRES_USER,
+
+    # ---- ACTIVE PLAN / DRIFT / REPLAN LOOP (Phase 4, axiom 07) ----
+    # Deterministic drift classification drives these signals; an LLM never
+    # chooses them. A required replan re-enters PLANNER_RUNNING so it flows
+    # through validation → scheduler → approval — the approval gate is never
+    # bypassed (no calendar write without approval). The absence of any
+    # ACTIVE_PLAN/DRIFT_DETECTED/REPLAN_REQUIRED → CALENDAR_WRITE_* edge is the
+    # enforcement of axiom 02's invalid-transition table.
+    (S.ACTIVE_PLAN, Sig.DRIFT_DETECTED): S.DRIFT_DETECTED,
+    (S.ACTIVE_PLAN, Sig.NO_DRIFT): S.ACTIVE_PLAN,
+    (S.ACTIVE_PLAN, Sig.PLAN_COMPLETED): S.TERMINAL_SUCCESS,
+
+    (S.DRIFT_DETECTED, Sig.REPLAN_REQUIRED): S.REPLAN_REQUIRED,
+    (S.DRIFT_DETECTED, Sig.REPLAN_NOT_REQUIRED): S.ACTIVE_PLAN,
+
+    (S.REPLAN_REQUIRED, Sig.REPLAN_STARTED): S.PLANNER_RUNNING,
 }
 """All allowed (state, signal) → next-state edges.
 

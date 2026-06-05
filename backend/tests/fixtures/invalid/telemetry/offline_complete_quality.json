@@ -1,0 +1,12 @@
+{
+  "telemetry_event_id": "tel_inv_004",
+  "task_id": "dp_inv_004",
+  "scheduled_duration_min": 45,
+  "actual_duration_min": 50,
+  "completed": true,
+  "completion_timestamp": "2026-05-08T14:30:00-07:00",
+  "user_reschedule_count": 0,
+  "data_quality": "complete",
+  "duration_estimated": false,
+  "captured_offline": true
+}

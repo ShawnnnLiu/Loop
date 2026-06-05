@@ -26,7 +26,9 @@ tested end-to-end without any external model dependency:
 - ``FixturePlanner`` chooses a canned ``TaskPlan`` by ``syllabus_version``.
 - ``DeterministicUserFacingExplanation`` maps typed violations to reviewable
   strings (no model call).
-- ``StubReflectionSummary`` is a typed stub that raises until telemetry exists.
+- ``DeterministicReflectionSummary`` renders behavior-only copy from classified
+  drift events (Phase 4); it explains drift but never classifies it, and the
+  Phase 8 LLM adapter slots in behind the same surface.
 
 Enforcement:
 
@@ -37,7 +39,7 @@ under ``agentic_calendar.llm_nodes`` (and operator tools).
 
 from .base import LLMNode, LLMNodeError
 from .planner import FixturePlanner
-from .reflection_summary import ReflectionSummary, StubReflectionSummary
+from .reflection_summary import DeterministicReflectionSummary, ReflectionSummary
 from .strategist import FixtureStrategist
 from .user_facing_explanation import (
     DeterministicUserFacingExplanation,
@@ -45,12 +47,12 @@ from .user_facing_explanation import (
 )
 
 __all__ = [
+    "DeterministicReflectionSummary",
     "DeterministicUserFacingExplanation",
     "FixturePlanner",
     "FixtureStrategist",
     "LLMNode",
     "LLMNodeError",
     "ReflectionSummary",
-    "StubReflectionSummary",
     "UserExplanation",
 ]

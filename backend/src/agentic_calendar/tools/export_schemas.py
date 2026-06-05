@@ -25,6 +25,7 @@ from pydantic import BaseModel
 from agentic_calendar.contracts.approval_event import ApprovalEvent
 from agentic_calendar.contracts.calendar_event_mapping import CalendarEventMapping
 from agentic_calendar.contracts.draft_schedule import DraftSchedule
+from agentic_calendar.contracts.drift_event import DriftEvent
 from agentic_calendar.contracts.motivation_profile import MotivationProfile
 from agentic_calendar.contracts.notification_log import NotificationLog
 from agentic_calendar.contracts.plan_diff import PlanDiff
@@ -37,6 +38,8 @@ from agentic_calendar.contracts.sponsor_report import (
 )
 from agentic_calendar.contracts.syllabus_units import SyllabusUnits
 from agentic_calendar.contracts.task_plan import TaskPlan
+from agentic_calendar.contracts.telemetry import TelemetryEvent
+from agentic_calendar.contracts.user_duration_multipliers import UserDurationMultipliers
 from agentic_calendar.contracts.user_profile import UserProfile
 from agentic_calendar.contracts.validation_result import ValidationResult
 
@@ -56,6 +59,9 @@ CONTRACTS: dict[str, type[BaseModel]] = {
     "sponsor_report_input": SponsorReportInput,
     "sponsor_report_approval": SponsorReportApproval,
     "notification_log": NotificationLog,
+    "telemetry": TelemetryEvent,
+    "drift_event": DriftEvent,
+    "user_duration_multipliers": UserDurationMultipliers,
 }
 
 

@@ -1,0 +1,17 @@
+{
+  "drift_event_id": "drift_003",
+  "plan_version": "plan_v5",
+  "drift_detected": true,
+  "drift_type": "calendar_fragmentation",
+  "reason_code": "DRIFT_CALENDAR_FRAGMENTATION",
+  "confidence": 0.90,
+  "evidence": {
+    "trigger_metric": "largest_free_block_min",
+    "trigger_value": 22.0,
+    "threshold": 30.0,
+    "sample_size": 7,
+    "affected_categories": []
+  },
+  "recommended_policy_action": "reschedule_around_conflict",
+  "detected_at": "2026-05-18T07:30:00-07:00"
+}

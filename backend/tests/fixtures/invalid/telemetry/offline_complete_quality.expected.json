@@ -1,0 +1,3 @@
+{
+  "error_substrings": ["captured_offline event cannot have data_quality 'complete'"]
+}

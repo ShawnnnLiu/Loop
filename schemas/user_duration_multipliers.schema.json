@@ -1,0 +1,76 @@
+{
+  "$defs": {
+    "CategoryMultiplier": {
+      "additionalProperties": false,
+      "description": "A learned duration multiplier for one task category.",
+      "properties": {
+        "category": {
+          "$ref": "#/$defs/TaskCategory"
+        },
+        "multiplier": {
+          "exclusiveMinimum": 0.0,
+          "title": "Multiplier",
+          "type": "number"
+        },
+        "observed_ratio": {
+          "exclusiveMinimum": 0.0,
+          "title": "Observed Ratio",
+          "type": "number"
+        },
+        "sample_size": {
+          "minimum": 0,
+          "title": "Sample Size",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "category",
+        "multiplier",
+        "sample_size",
+        "observed_ratio"
+      ],
+      "title": "CategoryMultiplier",
+      "type": "object"
+    },
+    "TaskCategory": {
+      "description": "Allowed values for ``task.category`` (see task-plan spec).",
+      "enum": [
+        "concept_review",
+        "practice",
+        "mock_interview",
+        "project",
+        "reflection",
+        "review"
+      ],
+      "title": "TaskCategory",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Per-user, per-category duration multipliers learned from telemetry.",
+  "properties": {
+    "computed_at": {
+      "format": "date-time",
+      "title": "Computed At",
+      "type": "string"
+    },
+    "multipliers": {
+      "items": {
+        "$ref": "#/$defs/CategoryMultiplier"
+      },
+      "title": "Multipliers",
+      "type": "array"
+    },
+    "user_id": {
+      "minLength": 1,
+      "title": "User Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "user_id",
+    "computed_at"
+  ],
+  "title": "UserDurationMultipliers",
+  "type": "object"
+}

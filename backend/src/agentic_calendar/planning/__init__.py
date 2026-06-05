@@ -11,6 +11,7 @@ from .plan_version import (
     LifecycleState,
     PlanVersion,
 )
+from .replan import RecalibrationProposal, propose_recalibrated_plan
 from .store import (
     InMemoryPlanVersionStore,
     MultipleActivePlansError,
@@ -31,4 +32,6 @@ __all__ = [
     "PlanVersionNotFoundError",
     "PlanVersionStore",
     "PlanVersionStoreError",
+    "RecalibrationProposal",
+    "propose_recalibrated_plan",
 ]

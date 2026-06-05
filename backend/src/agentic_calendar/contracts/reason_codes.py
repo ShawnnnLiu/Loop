@@ -201,3 +201,40 @@ class ReasonCode(StrEnum):
     when the *whole contract* is off; at the Phase 3 generator level a
     sponsor-disabled profile blocks with ``SPONSOR_PERMISSION_MISSING`` instead.
     Ships in the enum now so the golden scenarios reference a defined code."""
+
+    # --- Drift classification (axiom 07 / drift-event spec; Phase 4) ---
+    #
+    # One ``DRIFT_*`` code per ``DriftType``, mapped 1:1 by
+    # ``contracts.drift_event.DRIFT_TYPE_TO_REASON_CODE``. These carry a
+    # deterministic drift classification into the system-wide typed vocabulary
+    # so replan routing, telemetry, and explanations all speak the same codes.
+    # All thresholds behind these are uncalibrated heuristic priors (axiom 07).
+    DRIFT_CAPACITY_MISMATCH = "DRIFT_CAPACITY_MISMATCH"
+    """User completes too little of scheduled weekly minutes across cycles."""
+
+    DRIFT_DURATION_UNDERESTIMATE = "DRIFT_DURATION_UNDERESTIMATE"
+    """Median ``actual / scheduled`` ratio runs high for a category; estimates
+    are too low. Feeds ``increase_duration_estimates_for_category``."""
+
+    DRIFT_DURATION_OVERESTIMATE = "DRIFT_DURATION_OVERESTIMATE"
+    """Median ``actual / scheduled`` ratio runs low for a category; estimates
+    are too high. Feeds ``decrease_duration_estimates_for_category``."""
+
+    DRIFT_TOPIC_AVOIDANCE = "DRIFT_TOPIC_AVOIDANCE"
+    """One category is repeatedly missed/rescheduled while others complete."""
+
+    DRIFT_EXTERNAL_CONFLICT = "DRIFT_EXTERNAL_CONFLICT"
+    """Misses correlate with external calendar conflicts / manual reschedules;
+    reschedule, do not change curriculum."""
+
+    DRIFT_LOW_ENGAGEMENT = "DRIFT_LOW_ENGAGEMENT"
+    """Many skipped tasks across categories; ask the user to adjust scope."""
+
+    DRIFT_DEPENDENCY_BLOCKED = "DRIFT_DEPENDENCY_BLOCKED"
+    """Downstream tasks blocked by an incomplete prerequisite; reschedule the
+    prerequisite first. Distinct from the scheduler's ``DEPENDENCY_BLOCKED``
+    (a placement failure) — this is a telemetry-observed execution pattern."""
+
+    DRIFT_CALENDAR_FRAGMENTATION = "DRIFT_CALENDAR_FRAGMENTATION"
+    """Total free time exists but the largest block is too small for deep-work
+    tasks; split tasks or ask the user to open larger blocks."""

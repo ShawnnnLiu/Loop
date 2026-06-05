@@ -28,6 +28,13 @@ class SupervisorState(StrEnum):
     CALENDAR_WRITE_IN_PROGRESS = "calendar_write_in_progress"
     CALENDAR_WRITE_VERIFIED = "calendar_write_verified"
     CALENDAR_WRITE_FAILED_STATE = "calendar_write_failed"
+    # Phase 4 (axiom 07): the post-write lifecycle. A verified write activates
+    # the plan; telemetry-driven drift may then route a replan back through the
+    # planner → validation → scheduler → approval pipeline (never a direct
+    # calendar write — that invalid edge is absent from TRANSITIONS).
+    ACTIVE_PLAN = "active_plan"
+    DRIFT_DETECTED = "drift_detected"
+    REPLAN_REQUIRED = "replan_required"
     ERROR_REQUIRES_USER = "error_requires_user"
     TERMINAL_SUCCESS = "terminal_success"
     TERMINAL_DISCARDED = "terminal_discarded"
@@ -58,4 +65,19 @@ class SupervisorSignal(StrEnum):
     CALENDAR_VERIFICATION_FAILED = "calendar_verification_failed"
     CALENDAR_ROLLBACK_REQUESTED = "calendar_rollback_requested"
     CALENDAR_ROLLBACK_COMPLETED = "calendar_rollback_completed"
+
+    # --- Active-plan / drift / replan loop (Phase 4, axiom 07) ---
+    # The drift classifier is deterministic; the caller emits DRIFT_DETECTED
+    # when classification returns at least one event, else NO_DRIFT. As with
+    # CALENDAR_WRITE_FAILED, DRIFT_DETECTED / REPLAN_REQUIRED share a string
+    # value with the like-named *state* — they live in different enums and the
+    # routing table keys on the (state, signal) pair, so there is no collision.
+    PLAN_ACTIVATED = "plan_activated"
+    PLAN_COMPLETED = "plan_completed"
+    DRIFT_DETECTED = "drift_detected"
+    NO_DRIFT = "no_drift"
+    REPLAN_REQUIRED = "replan_required"
+    REPLAN_NOT_REQUIRED = "replan_not_required"
+    REPLAN_STARTED = "replan_started"
+
     UNRECOVERABLE_ERROR = "unrecoverable_error"

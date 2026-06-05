@@ -1,0 +1,12 @@
+{
+  "telemetry_event_id": "tel_incomplete_001",
+  "task_id": "dp_003",
+  "scheduled_duration_min": 60,
+  "actual_duration_min": null,
+  "completed": false,
+  "completion_timestamp": null,
+  "user_reschedule_count": 0,
+  "data_quality": "complete",
+  "duration_estimated": false,
+  "captured_offline": false
+}

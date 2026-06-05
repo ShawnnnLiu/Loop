@@ -1,0 +1,199 @@
+{
+  "$defs": {
+    "DriftEvidence": {
+      "additionalProperties": false,
+      "description": "Uniform, validateable evidence for one drift classification.\n\nEvery drift type explains itself the same way: a ``trigger_metric`` whose\n``trigger_value`` crossed ``threshold`` over ``sample_size`` samples,\noptionally scoped to ``affected_categories``.",
+      "properties": {
+        "affected_categories": {
+          "items": {
+            "$ref": "#/$defs/TaskCategory"
+          },
+          "title": "Affected Categories",
+          "type": "array"
+        },
+        "sample_size": {
+          "minimum": 0,
+          "title": "Sample Size",
+          "type": "integer"
+        },
+        "threshold": {
+          "title": "Threshold",
+          "type": "number"
+        },
+        "trigger_metric": {
+          "minLength": 1,
+          "title": "Trigger Metric",
+          "type": "string"
+        },
+        "trigger_value": {
+          "title": "Trigger Value",
+          "type": "number"
+        }
+      },
+      "required": [
+        "trigger_metric",
+        "trigger_value",
+        "threshold",
+        "sample_size"
+      ],
+      "title": "DriftEvidence",
+      "type": "object"
+    },
+    "DriftType": {
+      "description": "Allowed drift classifications (drift-event spec).\n\nThe two accountability-coupled types in axiom 07\n(``accountability_mismatch``, ``sponsor_pressure_mismatch``) are\ndeliberately excluded \u2014 they belong to the Phase 7 Accountability Policy\nEngine, not the MVP drift classifier.",
+      "enum": [
+        "capacity_mismatch",
+        "duration_underestimate",
+        "duration_overestimate",
+        "topic_avoidance",
+        "external_conflict",
+        "low_engagement",
+        "dependency_blocked",
+        "calendar_fragmentation"
+      ],
+      "title": "DriftType",
+      "type": "string"
+    },
+    "ReasonCode": {
+      "description": "All typed failure / outcome codes in the system.\n\nCodes are uppercase ``SCREAMING_SNAKE_CASE`` strings so they survive a\nJSON round-trip unchanged and so they read identically in logs, telemetry,\nand user-facing explanations.",
+      "enum": [
+        "VALIDATION_FAILED",
+        "SCHEMA_INVALID",
+        "TASK_GRAPH_INVALID",
+        "MODULE_COVERAGE_INSUFFICIENT",
+        "USER_FIT_VIOLATED",
+        "SCHEDULING_PRECONDITION_FAILED",
+        "REPAIR_LIMIT_EXCEEDED",
+        "FORBIDDEN_FIELD_PRESENT",
+        "NO_VALID_CONTIGUOUS_BLOCK",
+        "INSUFFICIENT_WEEKLY_CAPACITY",
+        "DEPENDENCY_BLOCKED",
+        "OUTSIDE_ALLOWED_HOURS",
+        "DAILY_LOAD_EXCEEDED",
+        "DEEP_WORK_REQUIRED_UNAVAILABLE",
+        "TASK_TOO_LONG_UNSPLITTABLE",
+        "TASK_TOO_LONG_SPLITTABLE",
+        "INVALID_STATE_TRANSITION",
+        "USER_APPROVAL_REQUIRED",
+        "ERROR_REQUIRES_USER",
+        "PROFILE_MAJOR_CHANGE",
+        "CAPACITY_CHANGE",
+        "APPROVAL_MISSING",
+        "APPROVAL_EXPIRED",
+        "APPROVAL_HASH_MISMATCH",
+        "APPROVAL_HASH_ALGORITHM_UNSUPPORTED",
+        "CALENDAR_WRITE_LOCK_BUSY",
+        "CALENDAR_WRITE_LOCK_EXPIRED",
+        "CALENDAR_WRITE_DUPLICATE_DETECTED",
+        "CALENDAR_WRITE_FAILED",
+        "CALENDAR_VERIFICATION_FAILED",
+        "CALENDAR_ROLLBACK_FAILED",
+        "EXTERNAL_SYNC_FAILED",
+        "DEEP_WORK_WINDOW_CONFLICT",
+        "USER_DURATION_CALIBRATION",
+        "DEPENDENCY_RESCHEDULED",
+        "WEEKLY_CAPACITY_REBALANCE",
+        "EXTERNAL_CALENDAR_CONFLICT",
+        "USER_PROFILE_CHANGE",
+        "DRIFT_REMEDIATION",
+        "SPONSOR_REPORT_PENDING",
+        "SPONSOR_PERMISSION_MISSING",
+        "SPONSOR_VISIBILITY_VIOLATION",
+        "ACCOUNTABILITY_CONTRACT_INACTIVE",
+        "DRIFT_CAPACITY_MISMATCH",
+        "DRIFT_DURATION_UNDERESTIMATE",
+        "DRIFT_DURATION_OVERESTIMATE",
+        "DRIFT_TOPIC_AVOIDANCE",
+        "DRIFT_EXTERNAL_CONFLICT",
+        "DRIFT_LOW_ENGAGEMENT",
+        "DRIFT_DEPENDENCY_BLOCKED",
+        "DRIFT_CALENDAR_FRAGMENTATION"
+      ],
+      "title": "ReasonCode",
+      "type": "string"
+    },
+    "RecommendedPolicyAction": {
+      "description": "Deterministic next action the policy layer attaches to a drift event.\n\nThe full Accountability Policy Engine is Phase 7; ``drift/policy.py`` owns\nthe minimal MVP ``drift_type \u2192 action`` mapping.",
+      "enum": [
+        "reduce_weekly_load",
+        "extend_timeline",
+        "increase_duration_estimates_for_category",
+        "decrease_duration_estimates_for_category",
+        "add_review_block",
+        "split_topic_into_smaller_tasks",
+        "reschedule_around_conflict",
+        "reschedule_prerequisite_first",
+        "ask_user_to_adjust_goal"
+      ],
+      "title": "RecommendedPolicyAction",
+      "type": "string"
+    },
+    "TaskCategory": {
+      "description": "Allowed values for ``task.category`` (see task-plan spec).",
+      "enum": [
+        "concept_review",
+        "practice",
+        "mock_interview",
+        "project",
+        "reflection",
+        "review"
+      ],
+      "title": "TaskCategory",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A single detected, deterministically-classified plan drift.",
+  "properties": {
+    "confidence": {
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Confidence",
+      "type": "number"
+    },
+    "detected_at": {
+      "format": "date-time",
+      "title": "Detected At",
+      "type": "string"
+    },
+    "drift_detected": {
+      "title": "Drift Detected",
+      "type": "boolean"
+    },
+    "drift_event_id": {
+      "minLength": 1,
+      "title": "Drift Event Id",
+      "type": "string"
+    },
+    "drift_type": {
+      "$ref": "#/$defs/DriftType"
+    },
+    "evidence": {
+      "$ref": "#/$defs/DriftEvidence"
+    },
+    "plan_version": {
+      "minLength": 1,
+      "title": "Plan Version",
+      "type": "string"
+    },
+    "reason_code": {
+      "$ref": "#/$defs/ReasonCode"
+    },
+    "recommended_policy_action": {
+      "$ref": "#/$defs/RecommendedPolicyAction"
+    }
+  },
+  "required": [
+    "drift_event_id",
+    "plan_version",
+    "drift_detected",
+    "drift_type",
+    "reason_code",
+    "confidence",
+    "evidence",
+    "recommended_policy_action",
+    "detected_at"
+  ],
+  "title": "DriftEvent",
+  "type": "object"
+}

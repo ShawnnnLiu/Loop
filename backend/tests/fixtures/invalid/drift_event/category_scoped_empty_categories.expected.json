@@ -1,0 +1,3 @@
+{
+  "error_substrings": ["drift_type 'duration_underestimate' is category-scoped and requires non-empty evidence.affected_categories"]
+}

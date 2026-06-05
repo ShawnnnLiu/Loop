@@ -1,0 +1,119 @@
+{
+  "$defs": {
+    "DataQuality": {
+      "description": "How trustworthy an event's values are (telemetry spec \"Allowed Values\").\n\nThe calibration engine weights these differently: ``COMPLETE`` counts\nfully, ``MANUAL_BACKFILL`` at 0.5 weight; the drift classifier may exclude\n``PARTIAL_ESTIMATED`` when sample size is otherwise sufficient.",
+      "enum": [
+        "complete",
+        "partial_estimated",
+        "offline_synced",
+        "manual_backfill"
+      ],
+      "title": "DataQuality",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "One append-only record of a task's execution outcome.",
+  "properties": {
+    "actual_duration_min": {
+      "anyOf": [
+        {
+          "exclusiveMinimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Actual Duration Min"
+    },
+    "captured_offline": {
+      "default": false,
+      "title": "Captured Offline",
+      "type": "boolean"
+    },
+    "completed": {
+      "title": "Completed",
+      "type": "boolean"
+    },
+    "completion_timestamp": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Completion Timestamp"
+    },
+    "data_quality": {
+      "$ref": "#/$defs/DataQuality"
+    },
+    "duration_estimated": {
+      "default": false,
+      "title": "Duration Estimated",
+      "type": "boolean"
+    },
+    "scheduled_duration_min": {
+      "exclusiveMinimum": 0,
+      "title": "Scheduled Duration Min",
+      "type": "integer"
+    },
+    "subjective_difficulty": {
+      "anyOf": [
+        {
+          "maximum": 5,
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Subjective Difficulty"
+    },
+    "synced_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Synced At"
+    },
+    "task_id": {
+      "minLength": 1,
+      "title": "Task Id",
+      "type": "string"
+    },
+    "telemetry_event_id": {
+      "minLength": 1,
+      "title": "Telemetry Event Id",
+      "type": "string"
+    },
+    "user_reschedule_count": {
+      "minimum": 0,
+      "title": "User Reschedule Count",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "telemetry_event_id",
+    "task_id",
+    "scheduled_duration_min",
+    "completed",
+    "user_reschedule_count",
+    "data_quality"
+  ],
+  "title": "TelemetryEvent",
+  "type": "object"
+}

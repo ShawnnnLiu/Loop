@@ -7,7 +7,10 @@ requires-python = ">=3.11"
 license = { text = "Proprietary" }
 authors = [{ name = "Agentic Calendar" }]
 dependencies = [
-    "pydantic>=2.6,<3.0",
+    # Pinned exact: the committed JSON Schemas in /schemas are byte-stable only
+    # for this pydantic version, and `make schema-check` enforces that. Bump
+    # deliberately (update lock + `make schemas` + retest); see docs/axioms/18.
+    "pydantic==2.13.3",
 ]
 
 [project.optional-dependencies]

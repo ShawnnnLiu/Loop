@@ -1,0 +1,416 @@
+{
+  "$defs": {
+    "ConfidenceBucket": {
+      "description": "Coarse confidence band derived from ``confidence_score`` (axiom 08).",
+      "enum": [
+        "high",
+        "medium",
+        "low"
+      ],
+      "title": "ConfidenceBucket",
+      "type": "string"
+    },
+    "Day": {
+      "description": "Day-of-week token used everywhere a single weekday is referenced.",
+      "enum": [
+        "Mon",
+        "Tue",
+        "Wed",
+        "Thu",
+        "Fri",
+        "Sat",
+        "Sun"
+      ],
+      "title": "Day",
+      "type": "string"
+    },
+    "DeepWorkWindow": {
+      "additionalProperties": false,
+      "description": "A weekly recurring deep-work block.\n\n``start`` and ``end`` are local 24-hour times in the user's timezone;\ntimezone semantics are owned by the surrounding profile, not this object.",
+      "properties": {
+        "day": {
+          "$ref": "#/$defs/Day"
+        },
+        "end": {
+          "title": "End",
+          "type": "string"
+        },
+        "start": {
+          "title": "Start",
+          "type": "string"
+        }
+      },
+      "required": [
+        "day",
+        "start",
+        "end"
+      ],
+      "title": "DeepWorkWindow",
+      "type": "object"
+    },
+    "ExperienceLevel": {
+      "enum": [
+        "beginner",
+        "intermediate",
+        "advanced"
+      ],
+      "title": "ExperienceLevel",
+      "type": "string"
+    },
+    "HardConstraints": {
+      "additionalProperties": false,
+      "description": "Non-negotiable scheduling boundaries.",
+      "properties": {
+        "allow_weekends": {
+          "default": true,
+          "title": "Allow Weekends",
+          "type": "boolean"
+        },
+        "max_daily_study_min": {
+          "exclusiveMinimum": 0,
+          "maximum": 1440,
+          "title": "Max Daily Study Min",
+          "type": "integer"
+        },
+        "min_break_between_deep_blocks_min": {
+          "maximum": 720,
+          "minimum": 0,
+          "title": "Min Break Between Deep Blocks Min",
+          "type": "integer"
+        },
+        "no_events_after": {
+          "title": "No Events After",
+          "type": "string"
+        },
+        "no_events_before": {
+          "title": "No Events Before",
+          "type": "string"
+        }
+      },
+      "required": [
+        "no_events_before",
+        "no_events_after",
+        "max_daily_study_min",
+        "min_break_between_deep_blocks_min"
+      ],
+      "title": "HardConstraints",
+      "type": "object"
+    },
+    "Preferences": {
+      "additionalProperties": false,
+      "description": "Soft preferences used as tie-breakers when multiple schedules are valid.",
+      "properties": {
+        "avoid_back_to_back_deep_work": {
+          "default": false,
+          "title": "Avoid Back To Back Deep Work",
+          "type": "boolean"
+        },
+        "prefer_evening_sessions": {
+          "default": false,
+          "title": "Prefer Evening Sessions",
+          "type": "boolean"
+        },
+        "prefer_weekend_long_blocks": {
+          "default": false,
+          "title": "Prefer Weekend Long Blocks",
+          "type": "boolean"
+        }
+      },
+      "title": "Preferences",
+      "type": "object"
+    },
+    "Priority": {
+      "enum": [
+        "high",
+        "medium",
+        "low"
+      ],
+      "title": "Priority",
+      "type": "string"
+    },
+    "SourceClaim": {
+      "additionalProperties": false,
+      "description": "One auditable, deterministically-scored, expiring source claim.",
+      "properties": {
+        "claim_id": {
+          "minLength": 1,
+          "title": "Claim Id",
+          "type": "string"
+        },
+        "claim_text": {
+          "minLength": 1,
+          "title": "Claim Text",
+          "type": "string"
+        },
+        "confidence_bucket": {
+          "$ref": "#/$defs/ConfidenceBucket"
+        },
+        "confidence_score": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence Score",
+          "type": "number"
+        },
+        "contradicting_claim_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Contradicting Claim Ids",
+          "type": "array"
+        },
+        "corroborating_claim_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Corroborating Claim Ids",
+          "type": "array"
+        },
+        "date_collected": {
+          "format": "date",
+          "title": "Date Collected",
+          "type": "string"
+        },
+        "expires_at": {
+          "format": "date",
+          "title": "Expires At",
+          "type": "string"
+        },
+        "source_published_date": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Published Date"
+        },
+        "source_type": {
+          "$ref": "#/$defs/SourceType"
+        },
+        "source_url": {
+          "minLength": 1,
+          "title": "Source Url",
+          "type": "string"
+        }
+      },
+      "required": [
+        "claim_id",
+        "claim_text",
+        "source_url",
+        "source_type",
+        "date_collected",
+        "confidence_score",
+        "confidence_bucket",
+        "expires_at"
+      ],
+      "title": "SourceClaim",
+      "type": "object"
+    },
+    "SourceType": {
+      "description": "Deterministic source classification (axiom 08 table).\n\nClassified by domain / URL rules (``source_claims/classification.py``),\nnever by LLM judgment.",
+      "enum": [
+        "official_job_posting",
+        "company_engineering_blog",
+        "role_taxonomy",
+        "interview_postmortem",
+        "interview_report",
+        "personal_anecdote",
+        "unclassified",
+        "canonical_topic_module"
+      ],
+      "title": "SourceType",
+      "type": "string"
+    },
+    "StrategyConstraints": {
+      "additionalProperties": false,
+      "description": "Bounds on a Strategist proposal (spec defaults shown).",
+      "properties": {
+        "max_modules": {
+          "default": 12,
+          "exclusiveMinimum": 0,
+          "maximum": 100,
+          "title": "Max Modules",
+          "type": "integer"
+        },
+        "max_total_estimated_minutes": {
+          "default": 4800,
+          "exclusiveMinimum": 0,
+          "title": "Max Total Estimated Minutes",
+          "type": "integer"
+        },
+        "must_reference_claims_for_company_specific_modules": {
+          "default": true,
+          "title": "Must Reference Claims For Company Specific Modules",
+          "type": "boolean"
+        },
+        "required_priority_values": {
+          "items": {
+            "$ref": "#/$defs/Priority"
+          },
+          "title": "Required Priority Values",
+          "type": "array"
+        }
+      },
+      "title": "StrategyConstraints",
+      "type": "object"
+    },
+    "UserProfile": {
+      "additionalProperties": false,
+      "description": "Structured user profile (see ``docs/specs/user-profile.schema.md``).",
+      "properties": {
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "deep_work_windows": {
+          "items": {
+            "$ref": "#/$defs/DeepWorkWindow"
+          },
+          "title": "Deep Work Windows",
+          "type": "array"
+        },
+        "experience_level": {
+          "$ref": "#/$defs/ExperienceLevel"
+        },
+        "goal": {
+          "title": "Goal",
+          "type": "string"
+        },
+        "hard_constraints": {
+          "$ref": "#/$defs/HardConstraints"
+        },
+        "known_strengths": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Known Strengths",
+          "type": "array"
+        },
+        "known_weaknesses": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Known Weaknesses",
+          "type": "array"
+        },
+        "max_session_length_min": {
+          "exclusiveMinimum": 0,
+          "maximum": 720,
+          "title": "Max Session Length Min",
+          "type": "integer"
+        },
+        "motivation_profile_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Motivation Profile Id"
+        },
+        "preferences": {
+          "$ref": "#/$defs/Preferences"
+        },
+        "preferred_session_length_min": {
+          "exclusiveMinimum": 0,
+          "maximum": 720,
+          "title": "Preferred Session Length Min",
+          "type": "integer"
+        },
+        "profile_version": {
+          "title": "Profile Version",
+          "type": "string"
+        },
+        "target_companies": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Target Companies",
+          "type": "array"
+        },
+        "target_level": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target Level"
+        },
+        "target_role": {
+          "title": "Target Role",
+          "type": "string"
+        },
+        "timeline_weeks": {
+          "exclusiveMinimum": 0,
+          "title": "Timeline Weeks",
+          "type": "integer"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        },
+        "user_id": {
+          "title": "User Id",
+          "type": "string"
+        },
+        "weekly_hours": {
+          "exclusiveMinimum": 0,
+          "maximum": 40,
+          "title": "Weekly Hours",
+          "type": "number"
+        }
+      },
+      "required": [
+        "user_id",
+        "profile_version",
+        "goal",
+        "target_role",
+        "timeline_weeks",
+        "weekly_hours",
+        "experience_level",
+        "preferred_session_length_min",
+        "max_session_length_min",
+        "hard_constraints",
+        "created_at",
+        "updated_at"
+      ],
+      "title": "UserProfile",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Validated input bundle for the Strategist.",
+  "properties": {
+    "source_claims": {
+      "items": {
+        "$ref": "#/$defs/SourceClaim"
+      },
+      "title": "Source Claims",
+      "type": "array"
+    },
+    "strategy_constraints": {
+      "$ref": "#/$defs/StrategyConstraints"
+    },
+    "user_profile": {
+      "$ref": "#/$defs/UserProfile"
+    }
+  },
+  "required": [
+    "user_profile"
+  ],
+  "title": "StrategistInput",
+  "type": "object"
+}

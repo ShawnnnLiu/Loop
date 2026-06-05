@@ -27,6 +27,12 @@ Convert a `user_profile` and a set of `source_claim` objects into structured syl
 }
 ```
 
+In Phase 5 these inputs are formal contracts: `StrategistInput` bundles
+`user_profile` + `source_claims` (`SourceClaim`) + `strategy_constraints`
+(`StrategyConstraints`), validated at the node boundary. The Strategist gates its
+output against the constraints (module count, total minutes, and the
+company-specific-claim rule).
+
 ## JSON Example
 
 ```json

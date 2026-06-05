@@ -191,6 +191,16 @@ Expiry is measured from `source_published_date` when present, else
 `date_collected`. The boundary is inclusive (`expires_at <= now` is expired),
 matching every other expiry in the system.
 
+### Company context for classification (Phase 5)
+
+"Company careers domain" and "company engineering blog" are not decidable from a
+URL alone — they depend on which companies the user targets. `classify_source`
+and `SourceClaimIngestor` therefore accept optional `known_company_domains` /
+`engineering_blog_hosts`, supplied by the composition root from `CompanyTarget`
+objects (the same company context that feeds the cache's `company_target`, axiom
+18). Domains are declared explicitly by the operator; without them, such hosts
+fall through to `unclassified` rather than being guessed.
+
 ## Related Docs
 
 - `01-system-boundaries.md`

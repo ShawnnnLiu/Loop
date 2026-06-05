@@ -21,7 +21,8 @@ from __future__ import annotations
 
 import hashlib
 import json
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
+from typing import Any
 
 from agentic_calendar.common.errors import AgenticCalendarError
 
@@ -81,6 +82,20 @@ def verify_payload_hash(
 ) -> bool:
     """Return True if recomputing the hash under ``version`` equals ``expected_hash``."""
     return canonical_payload_hash(draft, version) == expected_hash
+
+
+def canonical_mapping_hash(payload: Mapping[str, Any], version: str = "v1") -> str:
+    """Return ``"sha256:<64-hex>"`` for an arbitrary JSON-serializable mapping.
+
+    Generalises the v1 canonicalization recipe (sorted keys, no whitespace) used
+    by :func:`canonical_payload_hash` to any mapping, so callers such as the
+    cache derive byte-stable keys without inventing their own hash. The payload
+    must be JSON-serializable; only ``v1`` is supported in the MVP.
+    """
+    if version != "v1":
+        raise UnsupportedCanonicalizationVersionError(version)
+    blob = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return f"sha256:{hashlib.sha256(blob).hexdigest()}"
 
 
 def _canonicalize_v1(draft: DraftSchedule) -> bytes:

@@ -22,8 +22,11 @@ from typing import Any
 
 from pydantic import BaseModel
 
+from agentic_calendar.cache.keys import CacheKey
+from agentic_calendar.cache.store import CacheEntry
 from agentic_calendar.contracts.approval_event import ApprovalEvent
 from agentic_calendar.contracts.calendar_event_mapping import CalendarEventMapping
+from agentic_calendar.contracts.company_target import CompanyTarget
 from agentic_calendar.contracts.draft_schedule import DraftSchedule
 from agentic_calendar.contracts.drift_event import DriftEvent
 from agentic_calendar.contracts.motivation_profile import MotivationProfile
@@ -37,6 +40,8 @@ from agentic_calendar.contracts.sponsor_report import (
     SponsorReportApproval,
     SponsorReportInput,
 )
+from agentic_calendar.contracts.strategist_input import StrategistInput
+from agentic_calendar.contracts.strategy_constraints import StrategyConstraints
 from agentic_calendar.contracts.syllabus_units import SyllabusUnits
 from agentic_calendar.contracts.task_plan import TaskPlan
 from agentic_calendar.contracts.telemetry import TelemetryEvent
@@ -49,6 +54,11 @@ CONTRACTS: dict[str, type[BaseModel]] = {
     "motivation_profile": MotivationProfile,
     "syllabus_units": SyllabusUnits,
     "source_claim": SourceClaim,
+    "strategy_constraints": StrategyConstraints,
+    "strategist_input": StrategistInput,
+    "company_target": CompanyTarget,
+    "cache_key": CacheKey,
+    "cache_entry": CacheEntry,
     "task_plan": TaskPlan,
     "validation_result": ValidationResult,
     "scheduler_output": SchedulerOutput,
@@ -95,7 +105,7 @@ def write_schemas(out_dir: Path) -> list[Path]:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Export Phase 1 Pydantic contracts to JSON Schema."
+        description="Export the project's Pydantic contracts to JSON Schema."
     )
     parser.add_argument(
         "--out",

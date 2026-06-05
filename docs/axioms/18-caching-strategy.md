@@ -55,6 +55,33 @@ Caching reduces LLM cost on stable role targets. Combined with the limits in `09
 - Telemetry. It must be append-only and tied to identifying metadata.
 - Source claims with expired `expires_at`.
 
+## Phase 5 Implementation
+
+The MVP realizes this in the `cache/` leaf kernel:
+
+- **Keys** (`cache/keys.py`): `CacheKey` carries exactly the dimensions above —
+  `target`, `role_target`, `company_target`, `freshness_window`,
+  `claim_version_set`, and the cached object's `object_schema_version` — plus a
+  `cache_schema_version` for the key format itself. Keys are byte-stable: the
+  claim set is sorted/de-duplicated and string dimensions normalised, so requests
+  differing only in claim order or casing collide. The freshness window is a
+  `YYYY-MM` month bucket derived from the injected clock. `fingerprint()` reuses
+  `contracts/hashing.canonical_mapping_hash` rather than inventing a hash.
+- **Cached units**: both the resolved source-claim set (`rag_retrieval`) and the
+  generated syllabus (`syllabus_units`) are cacheable behind one store, so a
+  stable `(role, company, freshness, claims)` reuses prior LLM work.
+- **Invalidation follows evidence** (`cache/invalidation.py`): each entry records
+  the `source_claim_ids` that justify it; `is_entry_valid` treats an entry as
+  stale when any referenced claim is missing, expired, or contradicted. The
+  composition root treats a stale hit as a miss. `now` always comes from the
+  injected clock.
+- **Company context**: a `CompanyTarget` (name + trusted careers/eng-blog
+  domains) feeds both the `company_target` key dimension and the source-claim
+  classifier's company context (axiom 08) from one place. Domains are declared
+  explicitly, never guessed from the company name.
+
+The store is in-memory only in the MVP (no Redis/persistence).
+
 ## Related Docs
 
 - `08-rag-source-claims.md`

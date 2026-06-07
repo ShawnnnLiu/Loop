@@ -21,7 +21,9 @@ def test_every_contract_registered() -> None:
     validation result, scheduler output. Phase 2 contracts: draft schedule,
     approval event, calendar event mapping, plan diff. Phase 3 contracts:
     sponsor, sponsor report (+ input, approval), notification log. Phase 4
-    contracts: telemetry, drift event, user duration multipliers.
+    contracts: telemetry, drift event, user duration multipliers. Phase 5
+    contracts: source claim, strategy constraints, strategist input, company
+    target, cache key, cache entry, milestone template.
     """
     expected = {
         # Phase 1
@@ -46,6 +48,14 @@ def test_every_contract_registered() -> None:
         "telemetry",
         "drift_event",
         "user_duration_multipliers",
+        # Phase 5
+        "source_claim",
+        "strategy_constraints",
+        "strategist_input",
+        "company_target",
+        "cache_key",
+        "cache_entry",
+        "milestone_template",
     }
     assert set(CONTRACTS.keys()) == expected
 

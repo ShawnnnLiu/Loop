@@ -27,6 +27,9 @@ source_modules =
     agentic_calendar.telemetry
     agentic_calendar.drift
     agentic_calendar.duration_estimation
+    agentic_calendar.source_claims
+    agentic_calendar.cache
+    agentic_calendar.templates
 forbidden_modules =
     openai
     anthropic
@@ -261,3 +264,95 @@ forbidden_modules =
     agentic_calendar.accountability
     agentic_calendar.telemetry
     agentic_calendar.drift
+    agentic_calendar.source_claims
+
+# ---------------------------------------------------------------------------
+# Contract 11: Source-claims kernel leaf-deps (Phase 5).
+#
+# `source_claims` is a shared kernel like `prerequisites`/`duration_estimation`:
+# it may depend only on `common` and `contracts`, and any region (notably the
+# future Strategist composition root, and `planning`) may import it. Nothing
+# inside it may reach back into a region or another kernel. It is intentionally
+# NOT in the independence set so regions can import it. It is the deterministic
+# confidence scorer (axiom 08) — an LLM never assigns confidence.
+# ---------------------------------------------------------------------------
+[importlinter:contract:source-claims-is-leaf]
+name = source_claims/ may only depend on common/ and contracts/.
+type = forbidden
+source_modules =
+    agentic_calendar.source_claims
+forbidden_modules =
+    agentic_calendar.supervisor
+    agentic_calendar.validation
+    agentic_calendar.scheduler
+    agentic_calendar.planning
+    agentic_calendar.llm_nodes
+    agentic_calendar.prerequisites
+    agentic_calendar.calendar_writer
+    agentic_calendar.approval
+    agentic_calendar.accountability
+    agentic_calendar.telemetry
+    agentic_calendar.drift
+    agentic_calendar.duration_estimation
+    agentic_calendar.cache
+    agentic_calendar.templates
+
+# ---------------------------------------------------------------------------
+# Contract 12: Cache kernel leaf-deps (Phase 5).
+#
+# `cache` (keys, store, invalidation) may depend only on `common` and
+# `contracts`. It reads source claims through the `ClaimRegistry` *protocol* and
+# the `SourceClaim` contract, never the `source_claims` kernel — so the two stay
+# independent. The composition root (operator CLIs / future app layer) wires the
+# cache to the claim store and Strategist from outside the region set.
+# ---------------------------------------------------------------------------
+[importlinter:contract:cache-is-leaf]
+name = cache/ may only depend on common/ and contracts/.
+type = forbidden
+source_modules =
+    agentic_calendar.cache
+forbidden_modules =
+    agentic_calendar.supervisor
+    agentic_calendar.validation
+    agentic_calendar.scheduler
+    agentic_calendar.planning
+    agentic_calendar.llm_nodes
+    agentic_calendar.prerequisites
+    agentic_calendar.calendar_writer
+    agentic_calendar.approval
+    agentic_calendar.accountability
+    agentic_calendar.telemetry
+    agentic_calendar.drift
+    agentic_calendar.duration_estimation
+    agentic_calendar.source_claims
+    agentic_calendar.templates
+
+# ---------------------------------------------------------------------------
+# Contract 13: Templates kernel leaf-deps (Phase 5c).
+#
+# `templates` (the milestone-template registry) is a shared kernel like
+# `source_claims`/`cache`: it may depend only on `common` and `contracts`, and a
+# composition root may import it. Nothing inside it may reach back into a region
+# or another kernel. Its canned templates are deterministic seeds; an LLM never
+# authors one.
+# ---------------------------------------------------------------------------
+[importlinter:contract:templates-is-leaf]
+name = templates/ may only depend on common/ and contracts/.
+type = forbidden
+source_modules =
+    agentic_calendar.templates
+forbidden_modules =
+    agentic_calendar.supervisor
+    agentic_calendar.validation
+    agentic_calendar.scheduler
+    agentic_calendar.planning
+    agentic_calendar.llm_nodes
+    agentic_calendar.prerequisites
+    agentic_calendar.calendar_writer
+    agentic_calendar.approval
+    agentic_calendar.accountability
+    agentic_calendar.telemetry
+    agentic_calendar.drift
+    agentic_calendar.duration_estimation
+    agentic_calendar.source_claims
+    agentic_calendar.cache

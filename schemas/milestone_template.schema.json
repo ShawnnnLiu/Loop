@@ -1,0 +1,103 @@
+{
+  "$defs": {
+    "GoalClass": {
+      "description": "Career-preparation goal classes that have a milestone template.",
+      "enum": [
+        "college_admissions",
+        "graduate_admissions",
+        "career_transition"
+      ],
+      "title": "GoalClass",
+      "type": "string"
+    },
+    "Milestone": {
+      "additionalProperties": false,
+      "description": "One deterministic seed milestone within a :class:`MilestoneTemplate`.\n\nA milestone is anchored relative to the goal deadline\n(``offset_days_before_deadline``) and carries the same ``priority`` and\n``target_outcomes`` shape as a ``SyllabusModule`` so it can later seed one.",
+      "properties": {
+        "default_estimated_total_min": {
+          "exclusiveMinimum": 0,
+          "title": "Default Estimated Total Min",
+          "type": "integer"
+        },
+        "milestone_id": {
+          "minLength": 1,
+          "title": "Milestone Id",
+          "type": "string"
+        },
+        "offset_days_before_deadline": {
+          "minimum": 0,
+          "title": "Offset Days Before Deadline",
+          "type": "integer"
+        },
+        "priority": {
+          "$ref": "#/$defs/Priority"
+        },
+        "target_outcomes": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Target Outcomes",
+          "type": "array"
+        },
+        "title": {
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "milestone_id",
+        "title",
+        "offset_days_before_deadline",
+        "target_outcomes",
+        "priority",
+        "default_estimated_total_min"
+      ],
+      "title": "Milestone",
+      "type": "object"
+    },
+    "Priority": {
+      "enum": [
+        "high",
+        "medium",
+        "low"
+      ],
+      "title": "Priority",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A canned, ordered set of milestones for one :class:`GoalClass`.",
+  "properties": {
+    "goal_class": {
+      "$ref": "#/$defs/GoalClass"
+    },
+    "milestones": {
+      "items": {
+        "$ref": "#/$defs/Milestone"
+      },
+      "minItems": 1,
+      "title": "Milestones",
+      "type": "array"
+    },
+    "template_id": {
+      "minLength": 1,
+      "title": "Template Id",
+      "type": "string"
+    },
+    "template_schema_version": {
+      "minLength": 1,
+      "title": "Template Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "template_id",
+    "goal_class",
+    "template_schema_version",
+    "milestones"
+  ],
+  "title": "MilestoneTemplate",
+  "type": "object"
+}

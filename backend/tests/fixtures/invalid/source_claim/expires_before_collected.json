@@ -1,0 +1,10 @@
+{
+  "claim_id": "claim_exp",
+  "claim_text": "A claim whose expiry precedes its collection date.",
+  "source_url": "https://example.com/x",
+  "source_type": "interview_report",
+  "date_collected": "2026-05-01",
+  "confidence_score": 0.6,
+  "confidence_bucket": "medium",
+  "expires_at": "2026-04-01"
+}

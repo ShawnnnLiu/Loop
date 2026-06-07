@@ -1,0 +1,30 @@
+{
+  "additionalProperties": false,
+  "description": "One target company and the domains trusted as its provenance.",
+  "properties": {
+    "careers_domains": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Careers Domains",
+      "type": "array"
+    },
+    "engineering_blog_hosts": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Engineering Blog Hosts",
+      "type": "array"
+    },
+    "name": {
+      "minLength": 1,
+      "title": "Name",
+      "type": "string"
+    }
+  },
+  "required": [
+    "name"
+  ],
+  "title": "CompanyTarget",
+  "type": "object"
+}

@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      # --frozen installs the exact locked versions (pydantic is pinned), so the
+      # generated JSON Schemas are byte-deterministic and `make schema-check`
+      # inside `make check` won't report false drift.
+      - name: Install dependencies (locked)
+        run: uv sync --extra dev --frozen
+
+      - name: Lint, typecheck, boundaries, schema-check, tests
+        run: make check

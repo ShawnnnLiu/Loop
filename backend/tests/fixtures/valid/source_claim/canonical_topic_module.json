@@ -1,0 +1,10 @@
+{
+  "claim_id": "claim_topic_dp",
+  "claim_text": "Dynamic programming is a standard module for algorithmic interview preparation.",
+  "source_url": "internal://canonical/topic/dynamic-programming",
+  "source_type": "canonical_topic_module",
+  "date_collected": "2026-01-10",
+  "confidence_score": 0.85,
+  "confidence_bucket": "high",
+  "expires_at": "2028-01-10"
+}

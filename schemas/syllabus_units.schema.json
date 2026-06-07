@@ -13,6 +13,11 @@
       "additionalProperties": false,
       "description": "One structured learning module.",
       "properties": {
+        "company_specific": {
+          "default": false,
+          "title": "Company Specific",
+          "type": "boolean"
+        },
         "difficulty": {
           "maximum": 5,
           "minimum": 1,

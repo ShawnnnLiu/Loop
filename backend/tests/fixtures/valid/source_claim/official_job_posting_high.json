@@ -1,0 +1,11 @@
+{
+  "claim_id": "claim_official_1",
+  "claim_text": "The role requires distributed systems design experience and Go proficiency.",
+  "source_url": "https://boards.greenhouse.io/acme/jobs/123",
+  "source_type": "official_job_posting",
+  "date_collected": "2026-05-20",
+  "source_published_date": "2026-05-15",
+  "confidence_score": 0.95,
+  "confidence_bucket": "high",
+  "expires_at": "2026-06-29"
+}

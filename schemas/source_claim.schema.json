@@ -1,0 +1,109 @@
+{
+  "$defs": {
+    "ConfidenceBucket": {
+      "description": "Coarse confidence band derived from ``confidence_score`` (axiom 08).",
+      "enum": [
+        "high",
+        "medium",
+        "low"
+      ],
+      "title": "ConfidenceBucket",
+      "type": "string"
+    },
+    "SourceType": {
+      "description": "Deterministic source classification (axiom 08 table).\n\nClassified by domain / URL rules (``source_claims/classification.py``),\nnever by LLM judgment.",
+      "enum": [
+        "official_job_posting",
+        "company_engineering_blog",
+        "role_taxonomy",
+        "interview_postmortem",
+        "interview_report",
+        "personal_anecdote",
+        "unclassified",
+        "canonical_topic_module"
+      ],
+      "title": "SourceType",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "One auditable, deterministically-scored, expiring source claim.",
+  "properties": {
+    "claim_id": {
+      "minLength": 1,
+      "title": "Claim Id",
+      "type": "string"
+    },
+    "claim_text": {
+      "minLength": 1,
+      "title": "Claim Text",
+      "type": "string"
+    },
+    "confidence_bucket": {
+      "$ref": "#/$defs/ConfidenceBucket"
+    },
+    "confidence_score": {
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Confidence Score",
+      "type": "number"
+    },
+    "contradicting_claim_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Contradicting Claim Ids",
+      "type": "array"
+    },
+    "corroborating_claim_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Corroborating Claim Ids",
+      "type": "array"
+    },
+    "date_collected": {
+      "format": "date",
+      "title": "Date Collected",
+      "type": "string"
+    },
+    "expires_at": {
+      "format": "date",
+      "title": "Expires At",
+      "type": "string"
+    },
+    "source_published_date": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Source Published Date"
+    },
+    "source_type": {
+      "$ref": "#/$defs/SourceType"
+    },
+    "source_url": {
+      "minLength": 1,
+      "title": "Source Url",
+      "type": "string"
+    }
+  },
+  "required": [
+    "claim_id",
+    "claim_text",
+    "source_url",
+    "source_type",
+    "date_collected",
+    "confidence_score",
+    "confidence_bucket",
+    "expires_at"
+  ],
+  "title": "SourceClaim",
+  "type": "object"
+}

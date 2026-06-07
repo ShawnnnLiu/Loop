@@ -1,0 +1,10 @@
+{
+  "claim_id": "claim_3",
+  "claim_text": "Some independently verifiable claim text.",
+  "source_url": "https://example.com/x",
+  "source_type": "interview_report",
+  "date_collected": "2026-05-01",
+  "confidence_score": 0.5,
+  "confidence_bucket": "high",
+  "expires_at": "2026-06-01"
+}

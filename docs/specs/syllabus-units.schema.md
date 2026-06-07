@@ -27,6 +27,12 @@ Convert a `user_profile` and a set of `source_claim` objects into structured syl
 }
 ```
 
+In Phase 5 these inputs are formal contracts: `StrategistInput` bundles
+`user_profile` + `source_claims` (`SourceClaim`) + `strategy_constraints`
+(`StrategyConstraints`), validated at the node boundary. The Strategist gates its
+output against the constraints (module count, total minutes, and the
+company-specific-claim rule).
+
 ## JSON Example
 
 ```json
@@ -78,6 +84,7 @@ Convert a `user_profile` and a set of `source_claim` objects into structured syl
 | `modules[].estimated_total_min` | Total estimated minutes for the module |
 | `modules[].difficulty` | Integer in `1..5` |
 | `modules[].source_claim_ids` | Claims that justify the module |
+| `modules[].company_specific` | Whether the module is tailored to a specific target company (default `false`). The Strategist proposes it; the validator uses it to enforce the claim-reference rule below. |
 
 ## Validation Rules
 
@@ -88,9 +95,9 @@ Convert a `user_profile` and a set of `source_claim` objects into structured syl
 - High-priority modules must have a non-empty `reason`.
 - `estimated_total_min` is a positive integer.
 - `difficulty` is an integer in `[1, 5]`.
-- `source_claim_ids` reference existing `claim_id` values.
+- `source_claim_ids` reference existing, non-expired `claim_id` values (checked in `validation/source_claims.py`; missing → `ORPHAN_SOURCE_CLAIM`, expired → `EXPIRED_SOURCE_CLAIM`).
 - Total estimated time must not exceed user capacity by an impossible margin.
-- Company-specific modules must reference at least one `source_claim_id` when `strategy_constraints.must_reference_claims_for_company_specific_modules` is true.
+- A module with `company_specific: true` must reference at least one `source_claim_id` when `strategy_constraints.must_reference_claims_for_company_specific_modules` is true (else → `COMPANY_MODULE_MISSING_CLAIM`). "Company-specific" is the explicit `company_specific` flag, not inferred from prose.
 
 ## Syllabus Staleness Rules
 

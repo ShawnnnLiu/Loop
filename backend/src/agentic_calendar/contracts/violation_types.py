@@ -46,3 +46,8 @@ class ViolationType(StrEnum):
 
     # --- Scheduling preconditions ---
     NO_ROOT_TASK = "no_root_task"
+
+    # --- Source claims (axiom 08; Phase 5) ---
+    ORPHAN_SOURCE_CLAIM = "orphan_source_claim"
+    EXPIRED_SOURCE_CLAIM = "expired_source_claim"
+    COMPANY_MODULE_MISSING_CLAIM = "company_module_missing_claim"

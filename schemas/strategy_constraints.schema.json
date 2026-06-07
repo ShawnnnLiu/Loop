@@ -1,0 +1,44 @@
+{
+  "$defs": {
+    "Priority": {
+      "enum": [
+        "high",
+        "medium",
+        "low"
+      ],
+      "title": "Priority",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Bounds on a Strategist proposal (spec defaults shown).",
+  "properties": {
+    "max_modules": {
+      "default": 12,
+      "exclusiveMinimum": 0,
+      "maximum": 100,
+      "title": "Max Modules",
+      "type": "integer"
+    },
+    "max_total_estimated_minutes": {
+      "default": 4800,
+      "exclusiveMinimum": 0,
+      "title": "Max Total Estimated Minutes",
+      "type": "integer"
+    },
+    "must_reference_claims_for_company_specific_modules": {
+      "default": true,
+      "title": "Must Reference Claims For Company Specific Modules",
+      "type": "boolean"
+    },
+    "required_priority_values": {
+      "items": {
+        "$ref": "#/$defs/Priority"
+      },
+      "title": "Required Priority Values",
+      "type": "array"
+    }
+  },
+  "title": "StrategyConstraints",
+  "type": "object"
+}

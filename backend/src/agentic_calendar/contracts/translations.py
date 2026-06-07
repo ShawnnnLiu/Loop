@@ -74,6 +74,15 @@ USER_FACING: dict[ViolationType, str] = {
     ViolationType.NUMERIC_OUT_OF_RANGE: (
         "A number was outside the allowed range. Re-generating."
     ),
+    ViolationType.ORPHAN_SOURCE_CLAIM: (
+        "A module cited a source that couldn't be found. Re-checking the evidence."
+    ),
+    ViolationType.EXPIRED_SOURCE_CLAIM: (
+        "A module relied on a source that's out of date. Refreshing the evidence."
+    ),
+    ViolationType.COMPANY_MODULE_MISSING_CLAIM: (
+        "A company-specific module had no supporting source. Adding evidence."
+    ),
 }
 
 

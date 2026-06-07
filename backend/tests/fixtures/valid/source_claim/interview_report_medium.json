@@ -1,0 +1,13 @@
+{
+  "claim_id": "claim_024",
+  "claim_text": "Stripe backend interviews commonly emphasize API design and product-oriented engineering tradeoffs.",
+  "source_url": "https://www.glassdoor.com/Interview/stripe-backend",
+  "source_type": "interview_report",
+  "date_collected": "2026-04-28",
+  "source_published_date": "2026-02-10",
+  "confidence_score": 0.62,
+  "confidence_bucket": "medium",
+  "expires_at": "2026-07-28",
+  "corroborating_claim_ids": ["claim_031", "claim_044"],
+  "contradicting_claim_ids": []
+}

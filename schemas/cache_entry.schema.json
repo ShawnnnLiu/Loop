@@ -1,0 +1,103 @@
+{
+  "$defs": {
+    "CacheKey": {
+      "additionalProperties": false,
+      "description": "Auditable, byte-stable cache key (axiom 18 dimensions).",
+      "properties": {
+        "cache_schema_version": {
+          "default": "cache-key-v1",
+          "title": "Cache Schema Version",
+          "type": "string"
+        },
+        "claim_version_set": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Claim Version Set",
+          "type": "array"
+        },
+        "company_target": {
+          "default": "",
+          "title": "Company Target",
+          "type": "string"
+        },
+        "freshness_window": {
+          "minLength": 1,
+          "title": "Freshness Window",
+          "type": "string"
+        },
+        "object_schema_version": {
+          "minLength": 1,
+          "title": "Object Schema Version",
+          "type": "string"
+        },
+        "role_target": {
+          "minLength": 1,
+          "title": "Role Target",
+          "type": "string"
+        },
+        "target": {
+          "$ref": "#/$defs/CacheTarget"
+        }
+      },
+      "required": [
+        "target",
+        "role_target",
+        "freshness_window",
+        "object_schema_version"
+      ],
+      "title": "CacheKey",
+      "type": "object"
+    },
+    "CacheTarget": {
+      "description": "The kinds of stable unit the cache stores (axiom 18).",
+      "enum": [
+        "company_interview_pattern",
+        "topic_module",
+        "rag_retrieval",
+        "task_template",
+        "skill_to_curriculum",
+        "syllabus_units"
+      ],
+      "title": "CacheTarget",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "One cached value plus the evidence that justifies it.",
+  "properties": {
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "key": {
+      "$ref": "#/$defs/CacheKey"
+    },
+    "source_claim_ids": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Source Claim Ids",
+      "type": "array"
+    },
+    "value_json": {
+      "additionalProperties": true,
+      "title": "Value Json",
+      "type": "object"
+    },
+    "value_kind": {
+      "$ref": "#/$defs/CacheTarget"
+    }
+  },
+  "required": [
+    "key",
+    "value_kind",
+    "value_json",
+    "created_at"
+  ],
+  "title": "CacheEntry",
+  "type": "object"
+}

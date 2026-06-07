@@ -1,0 +1,10 @@
+{
+  "claim_id": "claim_anec_1",
+  "claim_text": "A friend mentioned the onsite had five rounds.",
+  "source_url": "https://someones-personal.example.com/blog/post",
+  "source_type": "personal_anecdote",
+  "date_collected": "2026-05-01",
+  "confidence_score": 0.35,
+  "confidence_bucket": "low",
+  "expires_at": "2026-07-30"
+}

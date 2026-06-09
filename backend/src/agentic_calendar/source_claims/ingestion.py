@@ -10,8 +10,9 @@ Two entry points:
 
 * :meth:`SourceClaimIngestor.ingest` — for *retrieved* claims. ``source_type`` is
   derived by URL classification. The constructor may be given
-  ``known_company_domains`` / ``engineering_blog_hosts`` so a composition root can
-  supply company context (otherwise non-enumerable hosts fall through to
+  ``known_company_domains`` / ``engineering_blog_hosts`` / ``personal_blog_hosts``
+  so a composition root can supply operator-declared host context (otherwise
+  non-enumerable hosts — including every ``personal_anecdote`` — fall through to
   ``unclassified``, honestly).
 * :meth:`SourceClaimIngestor.ingest_curated` — for internally *curated* content
   (e.g. ``canonical_topic_module``) whose provenance is trusted and known. The
@@ -178,12 +179,14 @@ class SourceClaimIngestor:
         priors: ConfidencePriors = DEFAULT_CONFIDENCE_PRIORS,
         known_company_domains: frozenset[str] = frozenset(),
         engineering_blog_hosts: frozenset[str] = frozenset(),
+        personal_blog_hosts: frozenset[str] = frozenset(),
     ) -> None:
         self._clock = clock
         self._store = store
         self._priors = priors
         self._known_company_domains = known_company_domains
         self._engineering_blog_hosts = engineering_blog_hosts
+        self._personal_blog_hosts = personal_blog_hosts
 
     def ingest(self, raw: Mapping[str, Any]) -> ClaimIngestionOutcome:
         """Ingest one raw retrieved claim record (source type from URL)."""
@@ -194,6 +197,7 @@ class SourceClaimIngestor:
             prepared.source_url,
             known_company_domains=self._known_company_domains,
             engineering_blog_hosts=self._engineering_blog_hosts,
+            personal_blog_hosts=self._personal_blog_hosts,
         )
         return self._finish(prepared, source_type)
 

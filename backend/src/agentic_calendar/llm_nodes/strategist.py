@@ -86,14 +86,29 @@ def _check_against_constraints(
     """Raise ``LLMNodeError`` if the canned output violates the cheap constraints.
 
     Only constraints checkable against a fixture without external state: module
-    count, total estimated minutes, and the company-specific-module claim rule.
-    Orphan / expired claim resolution is the syllabus validator's job (it needs
-    the claim registry), not duplicated here.
+    count, allowed priority values, total estimated minutes, and the
+    company-specific-module claim rule. Orphan / expired claim resolution is the
+    syllabus validator's job (it needs the claim registry), not duplicated here.
     """
     if len(syllabus.modules) > constraints.max_modules:
         raise LLMNodeError(
             f"syllabus has {len(syllabus.modules)} modules, exceeds "
             f"max_modules={constraints.max_modules}"
+        )
+
+    allowed_priorities = set(constraints.required_priority_values)
+    disallowed = sorted(
+        {
+            m.priority.value
+            for m in syllabus.modules
+            if m.priority not in allowed_priorities
+        }
+    )
+    if disallowed:
+        raise LLMNodeError(
+            f"syllabus uses priority values {disallowed} not in "
+            f"required_priority_values="
+            f"{sorted(p.value for p in allowed_priorities)}"
         )
 
     total_min = sum(m.estimated_total_min for m in syllabus.modules)

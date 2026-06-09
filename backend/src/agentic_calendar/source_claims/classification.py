@@ -4,8 +4,12 @@
 the enumerable hosts from the axiom 08 table are recognised; everything else
 falls through to ``UNCLASSIFIED`` (honest — "company careers domain" / "company
 engineering blog" / "personal blog" are not decidable from a URL alone). A
-caller that *does* know the company context may inject ``known_company_domains``
-and ``engineering_blog_hosts`` without changing this signature later.
+caller that *does* know the context may inject ``known_company_domains``,
+``engineering_blog_hosts``, and ``personal_blog_hosts`` without changing this
+signature later. Without those injections the corresponding axiom-08 source
+types (``official_job_posting`` via company domain, ``company_engineering_blog``,
+``personal_anecdote``) are unreachable by design — they are declared by the
+operator, never guessed from a bare URL.
 """
 
 from __future__ import annotations
@@ -69,10 +73,14 @@ def classify_source(
     *,
     known_company_domains: frozenset[str] = frozenset(),
     engineering_blog_hosts: frozenset[str] = frozenset(),
+    personal_blog_hosts: frozenset[str] = frozenset(),
 ) -> SourceType:
     """Classify a source URL into a :class:`SourceType`, deterministically.
 
     Unknown or unparseable URLs return ``UNCLASSIFIED`` rather than raising.
+    Operator-declared host sets are checked after the enumerable high-trust
+    hosts; ``personal_blog_hosts`` is the only path to ``PERSONAL_ANECDOTE``
+    (a personal blog is not inferable from a bare URL, so it is never guessed).
     """
     host = _host(url)
     if host is None:
@@ -90,4 +98,6 @@ def classify_source(
         return SourceType.COMPANY_ENGINEERING_BLOG
     if known_company_domains and _matches(host, known_company_domains):
         return SourceType.OFFICIAL_JOB_POSTING
+    if personal_blog_hosts and _matches(host, personal_blog_hosts):
+        return SourceType.PERSONAL_ANECDOTE
     return SourceType.UNCLASSIFIED

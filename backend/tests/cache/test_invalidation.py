@@ -59,15 +59,35 @@ def _entry(claims: tuple[str, ...], **key_overrides: Any) -> CacheEntry:
 
 
 def test_live_claim() -> None:
-    assert is_claim_live(_claim("c1", date(2026, 12, 1)), NOW) is True
+    reg = _Registry([])
+    assert is_claim_live(_claim("c1", date(2026, 12, 1)), now=NOW, registry=reg) is True
 
 
 def test_expired_claim_not_live() -> None:
-    assert is_claim_live(_claim("c1", date(2026, 1, 1)), NOW) is False
+    reg = _Registry([])
+    assert is_claim_live(_claim("c1", date(2026, 1, 1)), now=NOW, registry=reg) is False
 
 
-def test_contradicted_claim_not_live() -> None:
-    assert is_claim_live(_claim("c1", date(2026, 12, 1), contradicting=("c9",)), NOW) is False
+def test_claim_with_live_contradictor_not_live() -> None:
+    contra = _claim("c9", date(2026, 12, 1))  # present and unexpired
+    claim = _claim("c1", date(2026, 12, 1), contradicting=("c9",))
+    reg = _Registry([claim, contra])
+    assert is_claim_live(claim, now=NOW, registry=reg) is False
+
+
+def test_claim_with_phantom_contradictor_stays_live() -> None:
+    # "c9" is not in the registry — a phantom/deleted contradictor no longer
+    # poisons the claim, even though it is retained in contradicting_claim_ids.
+    claim = _claim("c1", date(2026, 12, 1), contradicting=("c9",))
+    reg = _Registry([claim])
+    assert is_claim_live(claim, now=NOW, registry=reg) is True
+
+
+def test_claim_with_expired_contradictor_stays_live() -> None:
+    expired_contra = _claim("c9", date(2026, 1, 1))  # present but expired
+    claim = _claim("c1", date(2026, 12, 1), contradicting=("c9",))
+    reg = _Registry([claim, expired_contra])
+    assert is_claim_live(claim, now=NOW, registry=reg) is True
 
 
 def test_entry_valid_when_all_claims_live() -> None:
@@ -81,8 +101,25 @@ def test_entry_invalid_when_claim_missing() -> None:
 
 
 def test_entry_invalid_when_claim_contradicted() -> None:
-    reg = _Registry([_claim("c1", date(2026, 12, 1), contradicting=("c9",))])
+    # The contradictor must itself be live for the entry to be treated as stale.
+    reg = _Registry(
+        [
+            _claim("c1", date(2026, 12, 1), contradicting=("c9",)),
+            _claim("c9", date(2026, 12, 1)),
+        ]
+    )
     assert is_entry_valid(_entry(("c1",)), now=NOW, registry=reg) is False
+
+
+def test_entry_stays_valid_when_contradictor_expired() -> None:
+    # Contradictor present but expired → no longer blocks the entry.
+    reg = _Registry(
+        [
+            _claim("c1", date(2026, 12, 1), contradicting=("c9",)),
+            _claim("c9", date(2026, 1, 1)),
+        ]
+    )
+    assert is_entry_valid(_entry(("c1",)), now=NOW, registry=reg) is True
 
 
 def test_empty_refs_entry_is_trivially_valid() -> None:

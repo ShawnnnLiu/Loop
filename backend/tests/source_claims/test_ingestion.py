@@ -142,6 +142,30 @@ def test_ingest_uses_injected_company_context() -> None:
     assert careers.claim.source_type is SourceType.OFFICIAL_JOB_POSTING
 
 
+def test_ingest_uses_injected_personal_blog_hosts() -> None:
+    """A declared personal-blog host is the only way ingestion mints a
+    PERSONAL_ANECDOTE; confidence/expiry are still computed deterministically."""
+    store = InMemorySourceClaimStore()
+    ing = SourceClaimIngestor(
+        clock=FrozenClock(NOW),
+        store=store,
+        personal_blog_hosts=frozenset({"janedoe.example.com"}),
+    )
+    out = ing.ingest(
+        {
+            "claim_id": "a1",
+            "claim_text": "I was asked a graph problem in my onsite.",
+            "source_url": "https://janedoe.example.com/interview-notes",
+            "date_collected": "2026-06-01",
+        }
+    )
+    assert out.claim is not None
+    assert out.claim.source_type is SourceType.PERSONAL_ANECDOTE
+    # base 0.35 - anecdotal_penalty 0.10, no recency/stale terms here:
+    assert out.claim.confidence_score == 0.25
+    assert out.claim.confidence_bucket.value == "low"
+
+
 def test_ingest_curated_produces_canonical_topic_module() -> None:
     """The trusted curation path mints a source type URL classification can't —
     confidence/expiry still computed deterministically."""

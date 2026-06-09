@@ -29,7 +29,14 @@ Add auditable source claims, deterministic confidence scoring, expiration, and c
 - Confidence scores follow the documented formula and clamp to `[0, 1]`.
 - Expired claims do not drive new syllabus generation unless refreshed.
 - Syllabus units reference valid `source_claim_ids`.
-- Cache hits reduce repeated LLM work for stable role targets.
+- The cache *infrastructure* needed for cache hits to reduce repeated LLM work on
+  stable role targets is in place: byte-stable keys, an in-memory store, and
+  evidence-following invalidation (`cache/`). **Deferred:** no composition root
+  yet assembles a `Strategist` + cache lookup, so end-to-end "a cache hit avoids
+  a second LLM call" is not exercised in Phase 5. This is the same deferral
+  recorded in `../axioms/18-caching-strategy.md` ("No production caller assembles
+  `task_template` cache entries yet — that composition root is future work") and
+  lands with the real-SDK Strategist (Phase 8).
 
 ## Explicit Non-Goals
 

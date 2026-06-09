@@ -193,13 +193,17 @@ matching every other expiry in the system.
 
 ### Company context for classification (Phase 5)
 
-"Company careers domain" and "company engineering blog" are not decidable from a
-URL alone — they depend on which companies the user targets. `classify_source`
-and `SourceClaimIngestor` therefore accept optional `known_company_domains` /
-`engineering_blog_hosts`, supplied by the composition root from `CompanyTarget`
-objects (the same company context that feeds the cache's `company_target`, axiom
-18). Domains are declared explicitly by the operator; without them, such hosts
-fall through to `unclassified` rather than being guessed.
+"Company careers domain", "company engineering blog", and "personal blog" are
+not decidable from a URL alone — the first two depend on which companies the
+user targets, and any domain could be a personal blog. `classify_source` and
+`SourceClaimIngestor` therefore accept optional `known_company_domains` /
+`engineering_blog_hosts` (supplied by the composition root from `CompanyTarget`
+objects — the same company context that feeds the cache's `company_target`,
+axiom 18) and `personal_blog_hosts` (the only path to `personal_anecdote`).
+Hosts are declared explicitly by the operator; without them, such hosts fall
+through to `unclassified` rather than being guessed. In particular, no
+platform host (Medium, Substack, etc.) is hardcoded as a personal blog, because
+those same platforms also host official company engineering blogs.
 
 ## Related Docs
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 
+from agentic_calendar.contracts.common_types import Priority
 from agentic_calendar.contracts.strategy_constraints import StrategyConstraints
 from agentic_calendar.contracts.syllabus_units import SyllabusUnits
 from agentic_calendar.contracts.user_profile import UserProfile
@@ -84,6 +85,34 @@ def test_constraint_gate_rejects_over_minutes_budget() -> None:
             user_profile=user,
             strategy_constraints=StrategyConstraints(max_total_estimated_minutes=100),
         )
+
+
+def test_constraint_gate_rejects_disallowed_priority() -> None:
+    # The fixture has a "high" and a "medium" module; restrict to high-only.
+    user = _user_profile()
+    node = FixtureStrategist({user.target_role: _syllabus()})
+    with pytest.raises(LLMNodeError) as exc_info:
+        node.run(
+            run_id="r",
+            user_profile=user,
+            strategy_constraints=StrategyConstraints(
+                required_priority_values=[Priority.HIGH]
+            ),
+        )
+    assert "medium" in str(exc_info.value)
+
+
+def test_constraint_gate_allows_when_all_priorities_permitted() -> None:
+    user = _user_profile()
+    node = FixtureStrategist({user.target_role: _syllabus()})
+    out = node.run(
+        run_id="r",
+        user_profile=user,
+        strategy_constraints=StrategyConstraints(
+            required_priority_values=[Priority.HIGH, Priority.MEDIUM]
+        ),
+    )
+    assert isinstance(out, SyllabusUnits)
 
 
 def test_constraint_gate_can_be_disabled() -> None:

@@ -47,3 +47,19 @@ def test_injected_company_context() -> None:
         )
         is SourceType.COMPANY_ENGINEERING_BLOG
     )
+
+
+def test_personal_blog_host_classifies_as_anecdote() -> None:
+    # The only path to PERSONAL_ANECDOTE: an operator-declared personal-blog host.
+    assert (
+        classify_source(
+            "https://janedoe.example.com/interview-notes",
+            personal_blog_hosts=frozenset({"janedoe.example.com"}),
+        )
+        is SourceType.PERSONAL_ANECDOTE
+    )
+    # Without the injection the same host is unclassified, never guessed.
+    assert (
+        classify_source("https://janedoe.example.com/interview-notes")
+        is SourceType.UNCLASSIFIED
+    )

@@ -81,6 +81,23 @@ def test_append_history_returns_new_instance_with_record_appended() -> None:
     assert new.updated_at == _now() + timedelta(seconds=10)
 
 
+def test_append_history_rejects_now_before_created_at() -> None:
+    # model_copy would let a stale clock violate updated_at >= created_at;
+    # the evolution path must re-run validators (Pydantic v2 bypass guard).
+    pv = _draft()
+    record = GenerationStepRecord(
+        step=GenerationStep.PLANNER, occurred_at=_now(), detail="initial"
+    )
+    with pytest.raises(ValidationError, match="must not precede created_at"):
+        pv.append_history(record, now=_now() - timedelta(days=1))
+
+
+def test_transition_to_rejects_now_before_created_at() -> None:
+    pv = _draft()
+    with pytest.raises(ValidationError, match="must not precede created_at"):
+        pv.transition_to(LifecycleState.APPROVED, now=_now() - timedelta(days=1))
+
+
 def test_transitions_draft_to_approved_to_active_to_discarded() -> None:
     pv = _draft()
     approved = pv.transition_to(LifecycleState.APPROVED, now=_now())

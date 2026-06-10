@@ -9,10 +9,12 @@ rollback all rely on this mapping.
 Unlike the immutable contracts in this package, ``CalendarEventMapping`` is
 **not** ``frozen=True`` — the ``calendar_write_status`` and ``last_verified_at``
 fields change as a write progresses (e.g., ``dry_run`` → ``written`` →
-``verified``). The model still forbids unknown fields and re-runs invariants
-on any ``model_copy(update=...)``. Status-transition legality is enforced by
-``CalendarEventMappingStore``; this model only enforces single-record
-invariants.
+``verified``). The model forbids unknown fields. Beware: Pydantic v2
+``model_copy(update=...)`` does NOT re-run validators — use ``with_status()``
+for all status transitions; it rebuilds via ``model_validate`` so the
+single-record invariants are re-enforced. Status-transition legality is
+enforced by ``CalendarEventMappingStore``; this model only enforces
+single-record invariants.
 """
 
 from __future__ import annotations

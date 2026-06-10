@@ -11,9 +11,11 @@ of drift is an empty classifier result, not a ``drift_detected: false`` record.
 Determinism guarantees enforced here:
 
 * ``confidence`` is a number in ``[0, 1]`` (never an LLM string).
-* ``reason_code`` must be the ``DRIFT_*`` code that corresponds to
-  ``drift_type`` (the mapping is :data:`DRIFT_TYPE_TO_REASON_CODE`, exported so
-  the classifier stays the single source and never re-derives it).
+* ``reason_code`` must be the code that corresponds 1:1 to ``drift_type``
+  (the mapping is :data:`DRIFT_TYPE_TO_REASON_CODE`, exported so the
+  classifier stays the single source and never re-derives it). Phase 4 types
+  use the ``DRIFT_*`` family; the Phase 7 accountability-coupled types use the
+  accountability-family codes.
 * ``evidence`` always names the metric / threshold / sample size that fired.
 """
 
@@ -47,6 +49,10 @@ class DriftType(StrEnum):
     LOW_ENGAGEMENT = "low_engagement"
     DEPENDENCY_BLOCKED = "dependency_blocked"
     CALENDAR_FRAGMENTATION = "calendar_fragmentation"
+    # Accountability-coupled types (Phase 7) — observable behavior only; the
+    # classifier never reads the motivation profile.
+    ACCOUNTABILITY_MISMATCH = "accountability_mismatch"
+    SPONSOR_PRESSURE_MISMATCH = "sponsor_pressure_mismatch"
 
 
 class RecommendedPolicyAction(StrEnum):
@@ -65,6 +71,8 @@ class RecommendedPolicyAction(StrEnum):
     RESCHEDULE_AROUND_CONFLICT = "reschedule_around_conflict"
     RESCHEDULE_PREREQUISITE_FIRST = "reschedule_prerequisite_first"
     ASK_USER_TO_ADJUST_GOAL = "ask_user_to_adjust_goal"
+    REVISE_ACCOUNTABILITY_CONTRACT = "revise_accountability_contract"
+    SWITCH_TO_PRIVATE_RECOVERY = "switch_to_private_recovery"
 
 
 #: 1:1 map from ``drift_type`` to its ``DRIFT_*`` reason code. Exported so the
@@ -79,6 +87,10 @@ DRIFT_TYPE_TO_REASON_CODE: Mapping[DriftType, ReasonCode] = MappingProxyType(
         DriftType.LOW_ENGAGEMENT: ReasonCode.DRIFT_LOW_ENGAGEMENT,
         DriftType.DEPENDENCY_BLOCKED: ReasonCode.DRIFT_DEPENDENCY_BLOCKED,
         DriftType.CALENDAR_FRAGMENTATION: ReasonCode.DRIFT_CALENDAR_FRAGMENTATION,
+        # Accountability-coupled types use the accountability-family codes
+        # (ACCOUNTABILITY_MISMATCH is canonical in axiom 16; see drift-event spec).
+        DriftType.ACCOUNTABILITY_MISMATCH: ReasonCode.ACCOUNTABILITY_MISMATCH,
+        DriftType.SPONSOR_PRESSURE_MISMATCH: ReasonCode.SPONSOR_PRESSURE_MISMATCH,
     }
 )
 

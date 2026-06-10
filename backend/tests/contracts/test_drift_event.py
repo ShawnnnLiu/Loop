@@ -51,9 +51,20 @@ def test_drift_type_to_reason_code_mapping_complete() -> None:
         )
 
 
-def test_reason_code_family_is_drift() -> None:
-    """Every mapped reason code is in the DRIFT_* family."""
+def test_reason_code_families_match_spec() -> None:
+    """Phase 4 types map to DRIFT_* codes; the Phase 7 accountability-coupled
+    types use the accountability-family codes (drift-event spec, "Allowed
+    ``reason_code`` Values")."""
+    accountability_coupled = {
+        DriftType.ACCOUNTABILITY_MISMATCH,
+        DriftType.SPONSOR_PRESSURE_MISMATCH,
+    }
     for drift_type, reason_code in DRIFT_TYPE_TO_REASON_CODE.items():
-        assert reason_code.value.startswith("DRIFT_"), (
-            f"{drift_type!r} maps to non-DRIFT reason_code {reason_code!r}"
-        )
+        if drift_type in accountability_coupled:
+            assert reason_code.value == drift_type.value.upper(), (
+                f"{drift_type!r} maps to unexpected reason_code {reason_code!r}"
+            )
+        else:
+            assert reason_code.value.startswith("DRIFT_"), (
+                f"{drift_type!r} maps to non-DRIFT reason_code {reason_code!r}"
+            )

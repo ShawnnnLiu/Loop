@@ -1,0 +1,12 @@
+{
+  "nudge_id": "nudge_002",
+  "user_id": "user_123",
+  "plan_id": "plan_004",
+  "decision_id": "intv_002",
+  "reason_code": "CHECKIN_DUE",
+  "channel": "push",
+  "status": "deferred_quiet_hours",
+  "recommitment_requested": false,
+  "created_at": "2026-05-10T23:15:00-07:00",
+  "deliver_at": "2026-05-11T08:00:00-07:00"
+}

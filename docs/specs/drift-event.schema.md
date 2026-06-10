@@ -78,17 +78,36 @@ granularity.
 - `low_engagement`
 - `dependency_blocked`
 - `calendar_fragmentation`
+- `accountability_mismatch` (Phase 7)
+- `sponsor_pressure_mismatch` (Phase 7)
 
 See `../axioms/07-telemetry-and-drift.md` for triggers and recommended responses.
 
-The two accountability-coupled drift types in axiom 07 (`accountability_mismatch`,
-`sponsor_pressure_mismatch`) are **not** part of the MVP classifier; they belong
-to the Phase 7 Accountability Policy Engine and are intentionally excluded here.
+## Accountability-Coupled Drift Types (Phase 7)
+
+The two accountability-coupled types from the axiom 07 table land with the
+Phase 7 accountability layer. They classify from **observable behavior only**
+— the classifier still never reads the motivation profile
+(`motivation-profile.schema.md` consumer note); the caller derives the counts
+from stores:
+
+| Type | Trigger (deterministic, heuristic priors) | Evidence `trigger_metric` |
+| --- | --- | --- |
+| `accountability_mismatch` | Missed events ≥ `accountability_min_missed` (3) AND explicitly declined/ignored accountability interventions ≥ `accountability_min_declined` (1) in the window (caller-derived `declined_interventions`: revoked sponsors, unanswered recommitment requests) | `declined_interventions_with_repeated_misses` |
+| `sponsor_pressure_mismatch` | Sponsor reporting observably disabled in the window after ≥ `sponsor_pressure_min_reports` (2) reports were sent (caller-derived `sponsor_reports_sent_recent`, `sponsor_reporting_disabled`) | `sponsor_reports_before_disable` |
+
+The classifier identifies the mismatch; the Accountability Policy Engine
+(axiom 21), never the LLM, decides the response. Neither type ever produces a
+sponsor notification (golden scenario 23).
 
 ## Allowed `reason_code` Values
 
-`reason_code` is a member of the `DRIFT_*` family of the system-wide
-`ReasonCode` enum, mapping 1:1 to `drift_type`:
+`reason_code` is a member of the system-wide `ReasonCode` enum, mapping 1:1 to
+`drift_type`. The eight Phase 4 types use the `DRIFT_*` family; the two
+accountability-coupled types use the accountability-family names —
+`ACCOUNTABILITY_MISMATCH` is the canonical code from axiom 16's accountability
+set, and `SPONSOR_PRESSURE_MISMATCH` mirrors it (defined by this spec, per
+axiom 16's "other reason codes are defined in specs" note):
 
 - `DRIFT_CAPACITY_MISMATCH`
 - `DRIFT_DURATION_UNDERESTIMATE`
@@ -98,12 +117,14 @@ to the Phase 7 Accountability Policy Engine and are intentionally excluded here.
 - `DRIFT_LOW_ENGAGEMENT`
 - `DRIFT_DEPENDENCY_BLOCKED`
 - `DRIFT_CALENDAR_FRAGMENTATION`
+- `ACCOUNTABILITY_MISMATCH`
+- `SPONSOR_PRESSURE_MISMATCH`
 
 ## Invariants
 
 - Drift classification is deterministic in the MVP.
 - `drift_type` must be one of the allowed values.
-- `reason_code` must be the `DRIFT_*` code that corresponds to `drift_type`.
+- `reason_code` must be the code that corresponds 1:1 to `drift_type`.
 - Every event must include `evidence` with `sample_size` and the `trigger_metric`/`trigger_value`/`threshold` that triggered classification.
 - A `DriftEvent` always represents a *detected* drift: `drift_detected` is `true`, and `drift_type`, `reason_code`, `evidence`, and `recommended_policy_action` are all present. The absence of drift is an empty classifier result (no events), never a `drift_detected: false` record. This keeps the classifier's `list[DriftEvent]` contract unambiguous and drives the Supervisor `DRIFT_DETECTED` vs `NO_DRIFT` signal off list non-emptiness.
 - Drift events may recommend replanning but cannot approve calendar changes.
@@ -123,6 +144,8 @@ Examples of allowed `recommended_policy_action` values:
 - `reschedule_around_conflict`
 - `reschedule_prerequisite_first`
 - `ask_user_to_adjust_goal`
+- `revise_accountability_contract` (Phase 7: `accountability_mismatch`)
+- `switch_to_private_recovery` (Phase 7: `sponsor_pressure_mismatch` — reduce external reporting, recover privately)
 
 ## Invalid Examples
 

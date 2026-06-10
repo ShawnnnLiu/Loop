@@ -1,0 +1,5 @@
+{
+  "error_substrings": [
+    "weekly_checkin_day and weekly_checkin_time are required"
+  ]
+}

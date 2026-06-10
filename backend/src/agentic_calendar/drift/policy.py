@@ -34,5 +34,14 @@ DRIFT_TYPE_TO_ACTION: Mapping[DriftType, RecommendedPolicyAction] = MappingProxy
         DriftType.CALENDAR_FRAGMENTATION: (
             RecommendedPolicyAction.SPLIT_TOPIC_INTO_SMALLER_TASKS
         ),
+        # Phase 7 accountability-coupled types (axiom 07 "Response" column;
+        # golden scenario 23). The Accountability Policy Engine decides the
+        # concrete follow-through; neither ever notifies a sponsor.
+        DriftType.ACCOUNTABILITY_MISMATCH: (
+            RecommendedPolicyAction.REVISE_ACCOUNTABILITY_CONTRACT
+        ),
+        DriftType.SPONSOR_PRESSURE_MISMATCH: (
+            RecommendedPolicyAction.SWITCH_TO_PRIVATE_RECOVERY
+        ),
     }
 )

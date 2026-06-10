@@ -1,0 +1,8 @@
+{
+  "recommitment_event_id": "recommit_evt_001",
+  "recommitment_request_id": "recommit_req_001",
+  "user_id": "user_123",
+  "plan_version": "plan_004",
+  "choice": "revise_timeline",
+  "created_at": "2026-05-11T09:30:00-07:00"
+}

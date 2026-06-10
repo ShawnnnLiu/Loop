@@ -1,0 +1,5 @@
+{
+  "error_substrings": [
+    "week_end must be exactly 6 days after week_start"
+  ]
+}

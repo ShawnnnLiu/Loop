@@ -1,0 +1,12 @@
+{
+  "nudge_id": "nudge_x",
+  "user_id": "user_x",
+  "plan_id": "plan_x",
+  "decision_id": "intv_x",
+  "reason_code": "SPONSOR_REPORT_PENDING",
+  "channel": "in_app",
+  "status": "sent",
+  "recommitment_requested": false,
+  "created_at": "2026-05-10T20:00:06-07:00",
+  "deliver_at": "2026-05-10T20:00:06-07:00"
+}

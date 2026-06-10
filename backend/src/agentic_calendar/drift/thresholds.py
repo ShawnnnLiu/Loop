@@ -45,5 +45,14 @@ class DriftThresholds:
     # dependency_blocked (global)
     dependency_blocked_min: int = 1
 
+    # accountability_mismatch (global; Phase 7) — repeated misses plus
+    # explicitly declined/ignored accountability interventions
+    accountability_min_missed: int = 3
+    accountability_min_declined: int = 1
+
+    # sponsor_pressure_mismatch (global; Phase 7) — sponsor reporting disabled
+    # after this many reports were sent in the window
+    sponsor_pressure_min_reports: int = 2
+
 
 DEFAULT_DRIFT_THRESHOLDS = DriftThresholds()

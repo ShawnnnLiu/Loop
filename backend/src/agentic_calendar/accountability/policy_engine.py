@@ -140,13 +140,19 @@ class AccountabilityPolicyEngine:
     def _weekly_checkin_required(
         self, contract: AccountabilityContract, checkin_status: CheckinStatus
     ) -> _RuleResult:
-        """Fires while a check-in is outstanding (due or already missed).
+        """Fires while check-ins are enabled and one is outstanding (due or
+        already missed) — the spec condition is "check-ins enabled AND no
+        check-in this cycle", so a disabled cadence never prompts even if the
+        caller passes an inconsistent status.
 
         ``observed_value`` is 1.0 when outstanding, 0.0 otherwise, against a
         fixed threshold of 1.0 — the rule is boolean; the numbers keep the
         audit record uniform.
         """
-        outstanding = checkin_status in (CheckinStatus.DUE, CheckinStatus.MISSED)
+        outstanding = contract.weekly_checkin_enabled and checkin_status in (
+            CheckinStatus.DUE,
+            CheckinStatus.MISSED,
+        )
         return _RuleResult(
             evaluation=PolicyRuleEvaluation(
                 policy_name="weekly_checkin_required",

@@ -1,0 +1,5 @@
+{
+  "error_substrings": [
+    "reason_code without an action may only be ACCOUNTABILITY_CONTRACT_INACTIVE"
+  ]
+}

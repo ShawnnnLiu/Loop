@@ -20,7 +20,7 @@ from agentic_calendar.contracts.accountability_intervention import (
     AccountabilityAction,
 )
 from agentic_calendar.contracts.accountability_state import AccountabilityState
-from agentic_calendar.contracts.common_types import AccountabilityStatus
+from agentic_calendar.contracts.common_types import AccountabilityStatus, Day
 from agentic_calendar.contracts.motivation_profile import SponsorVisibility
 from agentic_calendar.contracts.reason_codes import ReasonCode
 
@@ -106,19 +106,36 @@ def test_scenario_18_sponsor_disabled_no_sponsor_draft() -> None:
 # -- golden scenario 21: check-in due, nothing else firing ------------------------
 
 
+def _checkin_contract():
+    return build_contract(
+        weekly_checkin_enabled=True, weekly_checkin_day=Day.SUN, weekly_checkin_time="19:00"
+    )
+
+
 def test_scenario_21_checkin_due_prompts_without_recovery_draft() -> None:
     state = _state(weekly_checkin_completed=False)
-    decision = _decide(state, checkin=CheckinStatus.DUE)
+    decision = _decide(state, _checkin_contract(), checkin=CheckinStatus.DUE)
     assert decision.action is AccountabilityAction.CREATE_WEEKLY_CHECKIN_PROMPT
     assert decision.reason_code is ReasonCode.CHECKIN_DUE
-    assert decision.action is not AccountabilityAction.GENERATE_RECOVERY_PLAN_DRAFT
+    recovery = next(e for e in decision.evaluations if e.policy_name == "recovery_plan")
+    assert recovery.matched is False
 
 
 def test_checkin_missed_escalates_reason_code_only() -> None:
     state = _state(weekly_checkin_completed=False)
-    decision = _decide(state, checkin=CheckinStatus.MISSED)
+    decision = _decide(state, _checkin_contract(), checkin=CheckinStatus.MISSED)
     assert decision.action is AccountabilityAction.CREATE_WEEKLY_CHECKIN_PROMPT
     assert decision.reason_code is ReasonCode.CHECKIN_MISSED
+
+
+def test_checkin_rule_suppressed_when_checkins_disabled() -> None:
+    """A disabled cadence never prompts, even on an inconsistent DUE status."""
+    state = _state(weekly_checkin_completed=False)
+    decision = _decide(state, checkin=CheckinStatus.DUE)
+    assert decision.action is None
+    assert decision.reason_code is None
+    checkin = next(e for e in decision.evaluations if e.policy_name == "weekly_checkin_required")
+    assert checkin.matched is False
 
 
 # -- golden scenario 22: behind-schedule recovery plan ----------------------------

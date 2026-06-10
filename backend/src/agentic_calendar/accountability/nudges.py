@@ -11,8 +11,9 @@ quiet-hours violations). Wording is rendered elsewhere (LLM-touchable); this
 service handles only when/where/whether, and writes an audit record for every
 attempt.
 
-The MVP records delivery intent and outcome; the concrete channel transport is
-wired in a later phase (same split as the sponsor delivery service).
+The MVP records delivery intent and outcome only; the concrete channel
+transport — including dispatch of deferred records at their ``deliver_at`` —
+is wired in a later phase (same split as the sponsor delivery service).
 """
 
 from __future__ import annotations
@@ -105,7 +106,9 @@ class NudgeDeliveryService:
             return None
         if decision.action is None or decision.action not in _NUDGE_ACTIONS:
             return None
-        assert decision.reason_code is not None  # paired by contract validator
+        if decision.reason_code is None:
+            # The decision validator pairs every action with a reason code.
+            raise ValueError("decision carries an action without its reason_code")
 
         now = self._clock.now()
         deliver_at, deferred = resolve_deliver_at(now, contract.quiet_hours, tz)

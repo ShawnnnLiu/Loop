@@ -26,6 +26,9 @@ dev = [
 [project.scripts]
 agentic-calendar-export-schemas = "agentic_calendar.tools.export_schemas:main"
 agentic-calendar-visualize = "agentic_calendar.tools.visualize:main"
+# show_accountability is deliberately module-only
+# (`uv run python -m agentic_calendar.tools.show_accountability`); it is an
+# operator replay/debug tool, not an installed entry point.
 
 [build-system]
 requires = ["hatchling>=1.24"]

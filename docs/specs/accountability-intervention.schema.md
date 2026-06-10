@@ -144,6 +144,9 @@ visibility must not get easier to trigger than the axiom's published floor.
   `sponsor_reason_code` `ACCOUNTABILITY_CONTRACT_INACTIVE`.
 - `action` null with `reason_code` null means "no intervention": every
   evaluation must have `matched: false` for the private-lane rules.
+- `action` null with any other non-null `reason_code` is invalid:
+  `ACCOUNTABILITY_CONTRACT_INACTIVE` is the only reason code that may appear
+  without an action.
 - `sponsor_action` non-null requires `sponsor_reason_code`
   `SPONSOR_REPORT_PENDING`.
 - Active-contract decisions carry exactly 5 evaluations (4 private + 1

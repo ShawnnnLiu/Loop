@@ -40,7 +40,7 @@
       "type": "object"
     },
     "DriftType": {
-      "description": "Allowed drift classifications (drift-event spec).\n\nThe two accountability-coupled types in axiom 07\n(``accountability_mismatch``, ``sponsor_pressure_mismatch``) are\ndeliberately excluded \u2014 they belong to the Phase 7 Accountability Policy\nEngine, not the MVP drift classifier.",
+      "description": "Allowed drift classifications (drift-event spec).",
       "enum": [
         "capacity_mismatch",
         "duration_underestimate",

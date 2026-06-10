@@ -99,7 +99,8 @@ class InterventionDecision(BaseModel):
 
     @model_validator(mode="after")
     def _private_lane_consistency(self) -> InterventionDecision:
-        """A private-lane action carries its policy name and a matching code."""
+        """A private-lane action carries its policy name and a matching code;
+        without an action, only the inactive short-circuit code may remain."""
         if self.action is not None:
             if self.policy_name is None or self.reason_code is None:
                 raise ValueError("a non-null action requires policy_name and reason_code")
@@ -116,6 +117,12 @@ class InterventionDecision(BaseModel):
                 )
         elif self.policy_name is not None:
             raise ValueError("policy_name must be null when no action was chosen")
+        elif self.reason_code is not None and self.reason_code is not (
+            ReasonCode.ACCOUNTABILITY_CONTRACT_INACTIVE
+        ):
+            raise ValueError(
+                "reason_code without an action may only be ACCOUNTABILITY_CONTRACT_INACTIVE"
+            )
         return self
 
     @model_validator(mode="after")

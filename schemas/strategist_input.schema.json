@@ -278,6 +278,7 @@
           "$ref": "#/$defs/ExperienceLevel"
         },
         "goal": {
+          "minLength": 1,
           "title": "Goal",
           "type": "string"
         },
@@ -326,6 +327,7 @@
           "type": "integer"
         },
         "profile_version": {
+          "minLength": 1,
           "title": "Profile Version",
           "type": "string"
         },
@@ -349,6 +351,7 @@
           "title": "Target Level"
         },
         "target_role": {
+          "minLength": 1,
           "title": "Target Role",
           "type": "string"
         },
@@ -363,6 +366,7 @@
           "type": "string"
         },
         "user_id": {
+          "minLength": 1,
           "title": "User Id",
           "type": "string"
         },

@@ -12,6 +12,7 @@ from datetime import datetime, time, timedelta
 
 from agentic_calendar.contracts.common_types import Day
 
+from .errors import HorizonNotTimezoneAwareError
 from .inputs import FreeBusyInterval
 from .policy import SchedulingPolicy
 
@@ -54,7 +55,7 @@ def enumerate_free_windows(
     rather than a single oversized one.
     """
     if horizon_start.tzinfo is None or horizon_end.tzinfo is None:
-        raise ValueError("horizon must be timezone-aware")
+        raise HorizonNotTimezoneAwareError("horizon must be timezone-aware")
 
     sorted_busy = sorted(
         (i for i in free_busy if i.end > horizon_start and i.start < horizon_end),

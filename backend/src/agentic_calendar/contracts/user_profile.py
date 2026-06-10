@@ -75,10 +75,10 @@ class UserProfile(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    user_id: str
-    profile_version: str
-    goal: str
-    target_role: str
+    user_id: str = Field(min_length=1)
+    profile_version: str = Field(min_length=1)
+    goal: str = Field(min_length=1)
+    target_role: str = Field(min_length=1)
     target_companies: list[str] = Field(default_factory=list)
     target_level: str | None = None
     timeline_weeks: int = Field(gt=0)

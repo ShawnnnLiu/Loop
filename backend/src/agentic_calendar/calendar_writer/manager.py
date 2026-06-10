@@ -36,11 +36,20 @@ from agentic_calendar.contracts.calendar_event_mapping import (
 from agentic_calendar.contracts.draft_schedule import DraftSchedule
 from agentic_calendar.contracts.hashing import (
     UnsupportedCanonicalizationVersionError,
-    verify_payload_hash,
+    canonical_payload_hash,
 )
 from agentic_calendar.contracts.reason_codes import ReasonCode
 
 from .adapter import ExternalCalendarAdapter
+from .errors import (
+    ApprovalExpiredError,
+    ApprovalHashAlgorithmUnsupportedError,
+    ApprovalHashMismatchError,
+    ApprovalMissingError,
+    CalendarWriteFailedError,
+    CalendarWriterError,
+    ExternalSyncFailedError,
+)
 from .lock import (
     CalendarWriteLockBusyError,
     CalendarWriteLockExpiredError,
@@ -158,8 +167,6 @@ class CalendarWriteManager:
             )
             for entry in draft.entries
         )
-        from agentic_calendar.contracts.hashing import canonical_payload_hash
-
         return PreviewResult(
             draft_schedule_id=draft.draft_schedule_id,
             planned_events=planned,
@@ -197,12 +204,12 @@ class CalendarWriteManager:
         7. Release the lock in ``finally``.
         """
         # --- Steps 1+2: load + validate approval, hash recheck ----------
-        approval, validation_failure = self._validate_approval(
-            approval_event_id=approval_event_id, draft=draft, run_id=None
-        )
-        if validation_failure is not None:
-            return validation_failure
-        assert approval is not None  # _validate_approval contract
+        try:
+            approval = self._validate_approval(
+                approval_event_id=approval_event_id, draft=draft
+            )
+        except CalendarWriterError as exc:
+            return self._translate_error(exc, run_id=None)
 
         # --- Step 3: acquire lock ---------------------------------------
         run_id = self._id_generator.new_id("run")
@@ -230,51 +237,21 @@ class CalendarWriteManager:
                 )
 
             # --- Step 5: per-task create + persist ----------------------
-            written, partial_create_failure = self._create_events(
+            written = self._create_events(
                 draft=draft,
                 run_id=run_id,
                 target_calendar_id=target_calendar_id,
                 token=token,
             )
 
-            if partial_create_failure:
-                # An adapter create raised; the run is doomed. Stop writing,
-                # mark verification step as not run, return PARTIAL_FAILURE.
-                return WriteResult(
-                    run_id=run_id,
-                    status=WriteStatus.PARTIAL_FAILURE,
-                    reason_code=ReasonCode.CALENDAR_WRITE_FAILED,
-                    written_mappings=tuple(written),
-                    verification=None,
-                )
-
             # --- Step 6: verify -----------------------------------------
-            verification = verify_run(
+            return self._finalize_run(
                 run_id=run_id,
                 expected_mappings=written,
-                adapter=self._adapter,
                 target_calendar_id=target_calendar_id,
-                clock=self._clock,
             )
-            updated = self._apply_verification(written, verification)
-
-            if verification.all_verified:
-                return WriteResult(
-                    run_id=run_id,
-                    status=WriteStatus.SUCCESS,
-                    reason_code=None,
-                    written_mappings=tuple(updated),
-                    verification=verification,
-                )
-
-            # No auto-retry per axiom 06 lines 226-232.
-            return WriteResult(
-                run_id=run_id,
-                status=WriteStatus.PARTIAL_FAILURE,
-                reason_code=ReasonCode.EXTERNAL_SYNC_FAILED,
-                written_mappings=tuple(updated),
-                verification=verification,
-            )
+        except CalendarWriterError as exc:
+            return self._translate_error(exc, run_id=run_id)
         finally:
             # --- Step 7: release lock -----------------------------------
             self._lock_manager.release(token)
@@ -376,12 +353,12 @@ class CalendarWriteManager:
         missing. Never creates duplicates; never auto-runs.
         """
         # --- Approval + hash recheck (axiom 06 lines 181-189) ----------
-        approval, validation_failure = self._validate_approval(
-            approval_event_id=approval_event_id, draft=draft, run_id=run_id
-        )
-        if validation_failure is not None:
-            return validation_failure
-        assert approval is not None  # _validate_approval contract
+        try:
+            approval = self._validate_approval(
+                approval_event_id=approval_event_id, draft=draft
+            )
+        except CalendarWriterError as exc:
+            return self._translate_error(exc, run_id=run_id)
 
         try:
             token = self._lock_manager.acquire(
@@ -426,7 +403,7 @@ class CalendarWriteManager:
                         scheduled_end=mapping.scheduled_end,
                         metadata=metadata,
                     )
-                except Exception:
+                except Exception as create_exc:
                     correlated(
                         _log,
                         run_id=run_id,
@@ -436,15 +413,10 @@ class CalendarWriteManager:
                         "adapter.create_event raised during reconcile_after_crash "
                         "(reason_code will be CALENDAR_WRITE_FAILED)"
                     )
-                    return WriteResult(
-                        run_id=run_id,
-                        status=WriteStatus.PARTIAL_FAILURE,
-                        reason_code=ReasonCode.CALENDAR_WRITE_FAILED,
-                        written_mappings=tuple(
-                            self._mapping_store.list_for_run(run_id)
-                        ),
-                        verification=None,
-                    )
+                    raise CalendarWriteFailedError(
+                        "adapter.create_event raised during reconcile_after_crash",
+                        written=tuple(self._mapping_store.list_for_run(run_id)),
+                    ) from create_exc
                 # `verification_failed -> written` is permitted only on this
                 # manual-retry path (axiom 06 lines 226-232).
                 self._mapping_store.update_status(
@@ -467,30 +439,13 @@ class CalendarWriteManager:
                         verification=None,
                     )
 
-            final_mappings = self._mapping_store.list_for_run(run_id)
-            verification = verify_run(
+            return self._finalize_run(
                 run_id=run_id,
-                expected_mappings=final_mappings,
-                adapter=self._adapter,
+                expected_mappings=self._mapping_store.list_for_run(run_id),
                 target_calendar_id=target_calendar_id,
-                clock=self._clock,
             )
-            updated = self._apply_verification(final_mappings, verification)
-            if verification.all_verified:
-                return WriteResult(
-                    run_id=run_id,
-                    status=WriteStatus.SUCCESS,
-                    reason_code=None,
-                    written_mappings=tuple(updated),
-                    verification=verification,
-                )
-            return WriteResult(
-                run_id=run_id,
-                status=WriteStatus.PARTIAL_FAILURE,
-                reason_code=ReasonCode.EXTERNAL_SYNC_FAILED,
-                written_mappings=tuple(updated),
-                verification=verification,
-            )
+        except CalendarWriterError as exc:
+            return self._translate_error(exc, run_id=run_id)
         finally:
             self._lock_manager.release(token)
 
@@ -503,50 +458,82 @@ class CalendarWriteManager:
         *,
         approval_event_id: str,
         draft: DraftSchedule,
-        run_id: str | None,
-    ) -> tuple[ApprovalEvent | None, WriteResult | None]:
+    ) -> ApprovalEvent:
         """Steps 1+2 of axiom 06 lines 181-189: load approval, check expiry/
         algorithm, recompute payload hash. Used by both ``approve_and_write``
         and ``reconcile_after_crash`` — the hash recheck is mandatory on every
         write path, not just the first attempt.
 
-        Returns ``(approval, None)`` on success or ``(approval_or_None, WriteResult)``
-        when validation fails; callers must short-circuit on a non-None
-        ``WriteResult``. The approval is ``None`` only when the lookup itself
-        failed. ``run_id`` is propagated into the failure ``WriteResult`` so
-        the caller can preserve the existing run identifier on a reconcile.
+        Raises the matching :class:`CalendarWriterError` subclass on any
+        failure; the public boundary translates it into a ``WriteResult``.
+
+        Every hash-check outcome (pass, mismatch, expired, unsupported
+        algorithm/version) emits a structured audit log carrying the approval
+        id, the approved hash, the recomputed hash, and the result
+        (approval-event spec, audit-logging section).
         """
         try:
             approval = self._approval_store.get(approval_event_id)
-        except ApprovalEventNotFoundError:
-            return None, self._aborted(ReasonCode.APPROVAL_MISSING, run_id=run_id)
+        except ApprovalEventNotFoundError as exc:
+            correlated(_log, approval_event_id=approval_event_id).warning(
+                "approval hash check: result=approval_missing"
+            )
+            raise ApprovalMissingError(
+                f"no approval event found for id {approval_event_id!r}"
+            ) from exc
+
+        audit = correlated(
+            _log,
+            approval_event_id=approval_event_id,
+            approved_hash=approval.approved_payload_hash,
+        )
 
         now = self._clock.now()
         if approval.expires_at <= now:
-            return approval, self._aborted(
-                ReasonCode.APPROVAL_EXPIRED, run_id=run_id
+            audit.warning(
+                "approval hash check: result=expired "
+                f"expires_at={approval.expires_at.isoformat()} now={now.isoformat()}"
+            )
+            raise ApprovalExpiredError(
+                f"approval {approval_event_id!r} expired at "
+                f"{approval.expires_at.isoformat()}"
             )
 
         if approval.hash_algorithm is not HashAlgorithm.SHA256:
-            return approval, self._aborted(
-                ReasonCode.APPROVAL_HASH_ALGORITHM_UNSUPPORTED, run_id=run_id
+            audit.warning(
+                "approval hash check: result=algorithm_unsupported "
+                f"hash_algorithm={approval.hash_algorithm}"
+            )
+            raise ApprovalHashAlgorithmUnsupportedError(
+                f"unsupported hash algorithm {approval.hash_algorithm!r}"
             )
 
         try:
-            hash_ok = verify_payload_hash(
-                draft,
-                approval.approved_payload_hash,
-                approval.hash_canonicalization_version,
+            recomputed = canonical_payload_hash(
+                draft, approval.hash_canonicalization_version
             )
-        except UnsupportedCanonicalizationVersionError:
-            return approval, self._aborted(
-                ReasonCode.APPROVAL_HASH_ALGORITHM_UNSUPPORTED, run_id=run_id
+        except UnsupportedCanonicalizationVersionError as exc:
+            audit.warning(
+                "approval hash check: result=canonicalization_unsupported "
+                f"version={approval.hash_canonicalization_version!r}"
             )
-        if not hash_ok:
-            return approval, self._aborted(
-                ReasonCode.APPROVAL_HASH_MISMATCH, run_id=run_id
+            raise ApprovalHashAlgorithmUnsupportedError(
+                "unsupported hash canonicalization version "
+                f"{approval.hash_canonicalization_version!r}"
+            ) from exc
+
+        if recomputed != approval.approved_payload_hash:
+            audit.error(
+                "approval hash check: result=mismatch "
+                f"recomputed_hash={recomputed} — P1 incident (axiom 06 line 208)"
             )
-        return approval, None
+            raise ApprovalHashMismatchError(
+                f"recomputed payload hash {recomputed} does not match approved "
+                f"hash for approval {approval_event_id!r}"
+            )
+
+        audit.info(f"approval hash check: result=pass recomputed_hash={recomputed}")
+        return approval
 
     def _create_events(
         self,
@@ -555,10 +542,15 @@ class CalendarWriteManager:
         run_id: str,
         target_calendar_id: str,
         token: LockToken,
-    ) -> tuple[list[CalendarEventMapping], bool]:
-        """Per-task create + persist loop. Returns (written, had_create_failure)."""
+    ) -> list[CalendarEventMapping]:
+        """Per-task create + persist loop.
+
+        Raises :class:`CalendarWriteFailedError` carrying the mappings written
+        so far when an adapter create raises or the lock heartbeat expires
+        mid-loop; the run is doomed and the boundary translates to
+        ``PARTIAL_FAILURE`` / ``CALENDAR_WRITE_FAILED``.
+        """
         written: list[CalendarEventMapping] = []
-        had_failure = False
 
         for entry in draft.entries:
             metadata = build_event_metadata(
@@ -573,7 +565,7 @@ class CalendarWriteManager:
                     scheduled_end=entry.end,
                     metadata=metadata,
                 )
-            except Exception:
+            except Exception as create_exc:
                 correlated(
                     _log,
                     run_id=run_id,
@@ -583,8 +575,10 @@ class CalendarWriteManager:
                     "adapter.create_event raised; aborting per-task loop "
                     "(reason_code will be CALENDAR_WRITE_FAILED)"
                 )
-                had_failure = True
-                break
+                raise CalendarWriteFailedError(
+                    "adapter.create_event raised mid-write",
+                    written=tuple(written),
+                ) from create_exc
 
             mapping = CalendarEventMapping(
                 task_id=entry.task_id,
@@ -602,11 +596,13 @@ class CalendarWriteManager:
 
             try:
                 token = self._lock_manager.heartbeat(token)
-            except CalendarWriteLockExpiredError:
-                had_failure = True
-                break
+            except CalendarWriteLockExpiredError as lock_exc:
+                raise CalendarWriteFailedError(
+                    "lock heartbeat expired mid-write",
+                    written=tuple(written),
+                ) from lock_exc
 
-        return written, had_failure
+        return written
 
     def _apply_verification(
         self,
@@ -653,6 +649,63 @@ class CalendarWriteManager:
                 new = mapping
             updated.append(new)
         return updated
+
+    def _finalize_run(
+        self,
+        *,
+        run_id: str,
+        expected_mappings: list[CalendarEventMapping]
+        | tuple[CalendarEventMapping, ...],
+        target_calendar_id: str,
+    ) -> WriteResult:
+        """Step 6: verify the run and translate the outcome.
+
+        Returns the ``SUCCESS`` result when everything verifies. Raises
+        :class:`ExternalSyncFailedError` (carrying the updated mappings and
+        the verification record) otherwise — no auto-retry per axiom 06
+        lines 226-232; the boundary translates it to ``PARTIAL_FAILURE``.
+        """
+        verification = verify_run(
+            run_id=run_id,
+            expected_mappings=list(expected_mappings),
+            adapter=self._adapter,
+            target_calendar_id=target_calendar_id,
+            clock=self._clock,
+        )
+        updated = self._apply_verification(list(expected_mappings), verification)
+        if verification.all_verified:
+            return WriteResult(
+                run_id=run_id,
+                status=WriteStatus.SUCCESS,
+                reason_code=None,
+                written_mappings=tuple(updated),
+                verification=verification,
+            )
+        raise ExternalSyncFailedError(
+            f"verification confirmed missing/mismatched events for run {run_id!r}",
+            written=tuple(updated),
+            verification=verification,
+        )
+
+    def _translate_error(
+        self, exc: CalendarWriterError, *, run_id: str | None
+    ) -> WriteResult:
+        """Boundary translation promised by ``errors.py``: each typed
+        exception becomes the ``WriteResult`` matching its ``reason_code``,
+        preserving any partial-progress state the exception carries."""
+        reason_code = type(exc).reason_code
+        status = (
+            WriteStatus.ABORTED_PRE_WRITE
+            if reason_code in _ABORT_REASONS
+            else WriteStatus.PARTIAL_FAILURE
+        )
+        return WriteResult(
+            run_id=run_id,
+            status=status,
+            reason_code=reason_code,
+            written_mappings=exc.written,
+            verification=exc.verification,
+        )
 
     def _aborted(
         self, reason_code: ReasonCode, *, run_id: str | None

@@ -11,6 +11,8 @@ from __future__ import annotations
 from datetime import UTC, date, datetime
 from typing import Any
 
+from agentic_calendar.contracts.accountability_contract import AccountabilityContract
+from agentic_calendar.contracts.checkin_event import CheckinEvent
 from agentic_calendar.contracts.common_types import AccountabilityStatus
 from agentic_calendar.contracts.motivation_profile import (
     MotivationProfile,
@@ -28,6 +30,7 @@ from agentic_calendar.contracts.sponsor_report import (
     SponsorReportInput,
     TaskCompletionSummary,
 )
+from agentic_calendar.contracts.telemetry import DataQuality, TelemetryEvent
 
 T0 = datetime(2026, 5, 10, 19, 0, 0, tzinfo=UTC)
 
@@ -87,3 +90,66 @@ def build_input(**overrides: Any) -> SponsorReportInput:
     }
     base.update(overrides)
     return SponsorReportInput(**base)
+
+
+def build_contract(**overrides: Any) -> AccountabilityContract:
+    """An active, no-sponsor, check-ins-disabled contract with spec defaults."""
+    base: dict[str, Any] = {
+        "contract_id": "acct_1",
+        "user_id": "user_123",
+        "motivation_profile_id": "mot_1",
+        "profile_version": "v1",
+        "active": True,
+        "weekly_checkin_enabled": False,
+        "effective_missed_task_escalation_threshold": 2,
+        "effective_behind_schedule_intervention_threshold_pct": 20,
+        "low_completion_rate_floor": 0.5,
+        "checkin_grace_hours": 48,
+        "recovery_mode_preference": "reschedule",
+        "sponsor_reporting_allowed": False,
+        "sponsor_visibility_level": SponsorVisibility.NONE,
+        "sponsor_id": None,
+        "nudge_channel_preference": NudgeChannel.IN_APP,
+        "quiet_hours": {"start": "22:00", "end": "08:00"},
+        "created_at": T0,
+        "updated_at": T0,
+    }
+    base.update(overrides)
+    return AccountabilityContract(**base)
+
+
+def build_telemetry_event(tid: str, **overrides: Any) -> TelemetryEvent:
+    """A completed, fully-trusted execution record for ``tid``."""
+    base: dict[str, Any] = {
+        "telemetry_event_id": f"tel_{tid}",
+        "task_id": tid,
+        "scheduled_duration_min": 60,
+        "actual_duration_min": 60,
+        "completed": True,
+        "completion_timestamp": T0,
+        "user_reschedule_count": 0,
+        "data_quality": DataQuality.COMPLETE,
+    }
+    base.update(overrides)
+    if not base["completed"]:
+        base["actual_duration_min"] = None
+        base["completion_timestamp"] = None
+    return TelemetryEvent(**base)
+
+
+def build_checkin_event(**overrides: Any) -> CheckinEvent:
+    """A submitted check-in for the week ending on T0's date."""
+    base: dict[str, Any] = {
+        "checkin_id": "checkin_1",
+        "user_id": "user_123",
+        "plan_id": "plan_004",
+        "week_start": date(2026, 5, 4),
+        "week_end": date(2026, 5, 10),
+        "completed_task_count": 4,
+        "scheduled_task_count": 6,
+        "completed_minutes": 240,
+        "scheduled_minutes": 360,
+        "created_at": T0,
+    }
+    base.update(overrides)
+    return CheckinEvent(**base)

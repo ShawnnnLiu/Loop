@@ -196,15 +196,16 @@ class DriftClassifier:
         return out
 
     def _capacity_rule(self, di: DriftInput) -> list[DriftEvent]:
-        cycles = list(di.weekly_cycles)
-        if len(cycles) < self.t.capacity_min_cycles:
+        # A cycle with no scheduled minutes (e.g. a planned break week) is
+        # not assessable. Skip it rather than abandoning the whole rule — a
+        # single empty week must not suppress detection of a collapse in the
+        # surrounding cycles. The rule still requires capacity_min_cycles
+        # assessable cycles before it may fire.
+        assessable = [c for c in di.weekly_cycles if c.scheduled_min > 0]
+        if len(assessable) < self.t.capacity_min_cycles:
             return []
-        recent = cycles[-self.t.capacity_min_cycles :]
-        ratios: list[float] = []
-        for c in recent:
-            if c.scheduled_min <= 0:
-                return []  # cannot assess a cycle with no scheduled minutes
-            ratios.append(c.completed_min / c.scheduled_min)
+        recent = assessable[-self.t.capacity_min_cycles :]
+        ratios = [c.completed_min / c.scheduled_min for c in recent]
         best_recent = max(ratios)  # all recent cycles below floor ⟺ best < floor
         if best_recent >= self.t.capacity_completion_floor:
             return []

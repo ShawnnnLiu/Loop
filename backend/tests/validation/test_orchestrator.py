@@ -112,6 +112,23 @@ def test_validation_does_not_mutate_artifact() -> None:
     assert plan.model_dump() == snapshot
 
 
+def test_unknown_module_summarised_as_coverage_insufficient() -> None:
+    """MISSING_MODULE_ID must route through ``_summarize_reason`` to the
+    ``MODULE_COVERAGE_INSUFFICIENT`` reason code end-to-end."""
+    syllabus = load_syllabus()
+    user = load_user_profile()
+    plan = make_plan(
+        make_task(task_id="dp_001", module_id="dp"),
+        make_task(task_id="ghost", module_id="not_in_syllabus"),
+    )
+    result = validate_task_plan(
+        plan, syllabus=syllabus, user_profile=user, run_id="run_cov"
+    )
+    assert result.valid is False
+    assert result.reason_code is ReasonCode.MODULE_COVERAGE_INSUFFICIENT
+    assert result.next_action is NextAction.PLANNER_REPAIR_RETRY
+
+
 def test_capacity_overflow_summarised_as_user_fit() -> None:
     syllabus = load_syllabus()
     user = load_user_profile()

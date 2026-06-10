@@ -23,6 +23,7 @@ from typing import Any
 
 import pytest
 
+from agentic_calendar.contracts.scheduler_output import ScheduledTask
 from agentic_calendar.contracts.syllabus_units import SyllabusUnits
 from agentic_calendar.contracts.task_plan import TaskPlan
 from agentic_calendar.contracts.user_profile import UserProfile
@@ -137,11 +138,16 @@ def assert_no_calendar_write_leaks(scheduler_output: Any) -> None:
 
     Per axiom 06, only the Calendar Write Manager (Phase 2) is allowed to
     mint a ``calendar_event_id``. Phase 1 must never expose one — any
-    scheduled task is ``DRAFT_ONLY``.
+    scheduled task is ``DRAFT_ONLY``. The field-level check inspects
+    ``model_fields`` (a ``hasattr`` probe on a frozen ``extra="forbid"``
+    model is vacuously false and would verify nothing).
     """
+    assert "calendar_event_id" not in ScheduledTask.model_fields, (
+        "ScheduledTask grew a calendar_event_id field — the Scheduler must "
+        "never carry calendar write identifiers (axiom 05/06)"
+    )
     for st in scheduler_output.scheduled_tasks:
         assert st.calendar_event_status.value == "draft_only"
-        assert not hasattr(st, "calendar_event_id")
 
 
 def deep_copy_plan(plan: TaskPlan) -> dict[str, Any]:

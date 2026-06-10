@@ -9,10 +9,12 @@ rollback all rely on this mapping.
 Unlike the immutable contracts in this package, ``CalendarEventMapping`` is
 **not** ``frozen=True`` — the ``calendar_write_status`` and ``last_verified_at``
 fields change as a write progresses (e.g., ``dry_run`` → ``written`` →
-``verified``). The model still forbids unknown fields and re-runs invariants
-on any ``model_copy(update=...)``. Status-transition legality is enforced by
-``CalendarEventMappingStore``; this model only enforces single-record
-invariants.
+``verified``). The model forbids unknown fields. Beware: Pydantic v2
+``model_copy(update=...)`` does NOT re-run validators — use ``with_status()``
+for all status transitions; it rebuilds via ``model_validate`` so the
+single-record invariants are re-enforced. Status-transition legality is
+enforced by ``CalendarEventMappingStore``; this model only enforces
+single-record invariants.
 """
 
 from __future__ import annotations
@@ -27,6 +29,15 @@ class CalendarWriteStatus(StrEnum):
     """Lifecycle of a single external calendar event (spec lines 43-51)."""
 
     DRY_RUN = "dry_run"
+    """Reserved (axiom 06 dry-run requirement). **No current producer.**
+
+    Today's dry-run surface is ``CalendarWriteManager.preview()``, which is
+    pure and persists no mappings. Persisted ``dry_run`` mappings (an audit
+    trail of exactly what a write *would* create, promotable to ``written``)
+    land with the operator dry-run flow when a real external adapter ships;
+    the ``dry_run -> written | rolled_back`` transitions are already speced
+    and enforced by the store for that arrival."""
+
     WRITTEN = "written"
     VERIFIED = "verified"
     VERIFICATION_FAILED = "verification_failed"

@@ -92,6 +92,16 @@ class PlanVersion(BaseModel):
             )
         return self
 
+    def _evolved(self, update: dict[str, object]) -> PlanVersion:
+        """Build the successor instance with validators re-run.
+
+        ``model_copy(update=...)`` skips validators in Pydantic v2, which
+        would let a stale ``now`` silently violate the
+        ``updated_at >= created_at`` invariant — so every evolution goes
+        through ``model_validate`` instead.
+        """
+        return PlanVersion.model_validate({**self.model_dump(), **update})
+
     def append_history(
         self, record: GenerationStepRecord, *, now: datetime
     ) -> PlanVersion:
@@ -100,9 +110,12 @@ class PlanVersion(BaseModel):
         ``updated_at`` is bumped to ``now``. The original instance is left
         untouched (axiom 15: append-only).
         """
-        return self.model_copy(
-            update={
-                "generation_history": [*self.generation_history, record],
+        return self._evolved(
+            {
+                "generation_history": [
+                    *(r.model_dump() for r in self.generation_history),
+                    record.model_dump(),
+                ],
                 "updated_at": now,
             }
         )
@@ -137,4 +150,4 @@ class PlanVersion(BaseModel):
             raise ValueError(
                 f"forbidden lifecycle transition {self.state.value} -> {new_state.value}"
             )
-        return self.model_copy(update={"state": new_state, "updated_at": now})
+        return self._evolved({"state": new_state, "updated_at": now})

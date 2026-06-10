@@ -18,6 +18,7 @@ from __future__ import annotations
 import hashlib
 import json
 from datetime import date, datetime
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -171,25 +172,14 @@ class SponsorReportApproval(BaseModel):
         return self
 
 
-def canonical_sponsor_report_hash(report: SponsorReport) -> str:
-    """Return ``"sha256:<64-hex>"`` over the approved content of ``report``.
-
-    Covers exactly the visibility-filtered body the sponsor would see plus the
-    routing identifiers, so the content a user approves is byte-for-byte the
-    content delivered. Volatile metadata (``generated_at``,
-    ``trigger_reason_code``, ``requires_user_approval_before_send``) is excluded
-    so two drafts with identical sponsor-visible content hash equal.
-
-    The Delivery Service recomputes this and compares it to the approval's
-    recorded hash; a mismatch means the draft changed after approval and blocks
-    delivery (sponsor-report spec "Approved Payload Hash").
-    """
-    body = {
-        "report_id": report.report_id,
-        "user_id": report.user_id,
-        "sponsor_id": report.sponsor_id,
-        "plan_id": report.plan_id,
-        "visibility_level": report.visibility_level.value,
+def sponsor_report_content_body(report: SponsorReport) -> dict[str, Any]:
+    """Serialize the sponsor-visible content of ``report`` — single source of
+    truth shared by :func:`canonical_sponsor_report_hash` and the Delivery
+    Service's send-time privacy re-scan, so the field set covered by the
+    approval hash and the field set re-scanned at send time can never drift
+    apart. Volatile metadata (``generated_at``, ``trigger_reason_code``,
+    ``requires_user_approval_before_send``) is excluded."""
+    return {
         "status": report.status.value,
         "completion_summary": {
             "completed_sessions": report.completion_summary.completed_sessions,
@@ -211,6 +201,29 @@ def canonical_sponsor_report_hash(report: SponsorReport) -> str:
         "next_checkpoint_date": (
             None if report.next_checkpoint_date is None else report.next_checkpoint_date.isoformat()
         ),
+    }
+
+
+def canonical_sponsor_report_hash(report: SponsorReport) -> str:
+    """Return ``"sha256:<64-hex>"`` over the approved content of ``report``.
+
+    Covers exactly the visibility-filtered body the sponsor would see plus the
+    routing identifiers, so the content a user approves is byte-for-byte the
+    content delivered. Volatile metadata (``generated_at``,
+    ``trigger_reason_code``, ``requires_user_approval_before_send``) is excluded
+    so two drafts with identical sponsor-visible content hash equal.
+
+    The Delivery Service recomputes this and compares it to the approval's
+    recorded hash; a mismatch means the draft changed after approval and blocks
+    delivery (sponsor-report spec "Approved Payload Hash").
+    """
+    body = {
+        "report_id": report.report_id,
+        "user_id": report.user_id,
+        "sponsor_id": report.sponsor_id,
+        "plan_id": report.plan_id,
+        "visibility_level": report.visibility_level.value,
+        **sponsor_report_content_body(report),
     }
     payload = json.dumps(body, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return f"sha256:{hashlib.sha256(payload).hexdigest()}"

@@ -80,6 +80,15 @@ def dependency_blocked_debug(*, blocked_by: list[str]) -> dict[str, Any]:
     }
 
 
+def scheduler_error_debug(*, error_type: str, detail: str) -> dict[str, Any]:
+    """Debug payload for failures translated from an internal ``SchedulerError``."""
+    return {
+        "error_type": error_type,
+        "detail": detail,
+        "suggested_repair": RepairOption.ASK_USER.value,
+    }
+
+
 def rejected_window(
     *, start: datetime, duration_min: int, rejection_reason: str
 ) -> dict[str, Any]:

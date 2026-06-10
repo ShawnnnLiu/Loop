@@ -41,8 +41,28 @@ class ViolationType(StrEnum):
     WEEKLY_LOAD_EXCEEDS_CAPACITY = "weekly_load_exceeds_capacity"
     COGNITIVE_LOAD_OUT_OF_RANGE = "cognitive_load_out_of_range"
     CATEGORY_INVALID = "category_invalid"
+    """Reserved defense-in-depth (axiom 04). **No current producer.**
+
+    ``Task.category`` is an enum, so Pydantic rejects bad values at the
+    schema layer (``SCHEMA_INVALID``) before any user-fit checker runs. This
+    type exists for a future validation path that checks raw LLM dicts
+    directly (pre-Pydantic); until that path lands it is structurally
+    unreachable. Kept because it ships in the validation spec, the
+    user-facing translation table, and the axiom-04 violation list."""
+
     FOCUS_LEVEL_INVALID = "focus_level_invalid"
+    """Reserved defense-in-depth (axiom 04). **No current producer.**
+
+    Same situation as ``CATEGORY_INVALID``: ``Task.required_focus_level`` is
+    enum-validated at the schema layer, so this cannot fire today."""
+
     HIGH_LOAD_TASKS_NOT_DISTRIBUTED = "high_load_tasks_not_distributed"
+    """Reserved (axiom 04). **No Phase 1 producer.**
+
+    The cognitive-load distribution checker is deferred — see the TODO in
+    ``validation/user_fit.py``: distribution can only be judged against a
+    concrete schedule, so the checker lands with the richer Scheduler
+    diagnostics (the same phase that activates ``DAILY_LOAD_EXCEEDED``)."""
 
     # --- Scheduling preconditions ---
     NO_ROOT_TASK = "no_root_task"

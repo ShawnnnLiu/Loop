@@ -33,6 +33,7 @@ from agentic_calendar.contracts.scheduler_output import (
 from agentic_calendar.contracts.task_plan import Task
 
 from . import debug as dbg
+from .errors import SchedulerError
 from .inputs import FreeBusyInterval, SchedulerInput
 from .ordering import topological_order
 from .windows import FreeWindow, enumerate_free_windows
@@ -52,7 +53,55 @@ def schedule(
     *,
     module_priority: Mapping[str, Priority] | None = None,
 ) -> SchedulerOutput:
-    """Public entry point. Always returns a ``SchedulerOutput`` (never raises)."""
+    """Public entry point. Always returns a ``SchedulerOutput`` (never raises).
+
+    Any internal :class:`SchedulerError` is caught here and translated into a
+    schema-valid ``schedule_status="failed"`` output carrying the exception's
+    typed ``reason_code`` (axiom 16) — no raw exception leaves the region.
+    """
+    try:
+        return _schedule_validated(inp, module_priority=module_priority)
+    except SchedulerError as exc:
+        return _scheduler_error_output(inp, exc)
+
+
+def _scheduler_error_output(
+    inp: SchedulerInput, exc: SchedulerError
+) -> SchedulerOutput:
+    """Translate an internal error into a typed, schema-valid FAILED output.
+
+    Every plan task becomes an ``UnscheduledTask`` carrying the exception's
+    ``reason_code`` (``TaskPlan`` guarantees at least one task, so the
+    failed-output list invariant always holds).
+    """
+    unscheduled = [
+        UnscheduledTask(
+            task_id=task.task_id,
+            reason_code=type(exc).reason_code,
+            debug=dbg.scheduler_error_debug(
+                error_type=type(exc).__name__, detail=str(exc)
+            ),
+        )
+        for task in inp.plan.tasks
+    ]
+    return SchedulerOutput(
+        run_id=inp.run_id,
+        plan_version=inp.plan_version,
+        schedule_status=ScheduleStatus.FAILED,
+        scheduled_tasks=[],
+        unscheduled_tasks=unscheduled,
+        available_capacity_min=0,
+        largest_available_block_min=0,
+        repair_options=_repair_options_for(unscheduled, ScheduleStatus.FAILED),
+    )
+
+
+def _schedule_validated(
+    inp: SchedulerInput,
+    *,
+    module_priority: Mapping[str, Priority] | None = None,
+) -> SchedulerOutput:
+    """Run the greedy placement loop on contract-valid input."""
     ordered_tasks = topological_order(inp.plan, module_priority=module_priority)
     free_windows = enumerate_free_windows(
         horizon_start=inp.horizon_start,

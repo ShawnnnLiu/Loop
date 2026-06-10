@@ -36,6 +36,7 @@ from agentic_calendar.contracts.sponsor_report import (
     SponsorReport,
     SponsorReportApproval,
     canonical_sponsor_report_hash,
+    sponsor_report_content_body,
 )
 
 from .notification_log_store import NotificationLogStore
@@ -194,22 +195,10 @@ class SponsorReportDeliveryService:
         return approval.approved_payload_hash == canonical_sponsor_report_hash(report)
 
     def _report_body_for_scan(self, report: SponsorReport) -> dict[str, object]:
-        return {
-            "status": report.status.value,
-            "milestone_summary": [
-                {"milestone": m.milestone, "status": m.status.value}
-                for m in report.milestone_summary
-            ],
-            "task_completion_summary": (
-                None
-                if report.task_completion_summary is None
-                else {
-                    "completed_tasks": report.task_completion_summary.completed_tasks,
-                    "total_tasks": report.task_completion_summary.total_tasks,
-                }
-            ),
-            "suggested_support_action": report.suggested_support_action,
-        }
+        # Delegates to the contract's shared serializer so the send-time
+        # re-scan covers exactly the field set the approval hash covers —
+        # the two can never silently drift apart.
+        return sponsor_report_content_body(report)
 
     def _blocked(
         self,

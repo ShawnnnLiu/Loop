@@ -53,6 +53,8 @@ Convert a vague career objective into machine-readable constraints. The profile 
 
 ## Required Fields
 
+- `user_id`
+- `profile_version`
 - `goal`
 - `target_role`
 - `timeline_weeks`
@@ -85,6 +87,7 @@ Motivation, accountability, sponsor visibility, and pressure tolerance live in a
 
 ## Validation Rules
 
+- `user_id`, `profile_version`, `goal`, and `target_role` must be non-empty strings.
 - `weekly_hours` must be `> 0` and `<= 40`.
 - `timeline_weeks` must be `> 0`.
 - `max_session_length_min` must be `>= preferred_session_length_min`.

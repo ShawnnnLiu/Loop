@@ -209,13 +209,34 @@ def test_repair_options_non_empty_on_failure() -> None:
 
 
 def test_completed_dependency_unlocks_task() -> None:
+    """Isolated: 'b' depends on 'a', which is NOT in the plan at all.
+
+    Only completed_task_ids can satisfy the dependency here, so this proves
+    the unlock comes from the completion marker — not from 'a' being placed
+    earlier in the same run.
+    """
+    plan = make_plan(make_task(task_id="b", dependencies=["a"]))
+
+    blocked = schedule(make_input(plan))
+    assert blocked.schedule_status is ScheduleStatus.FAILED
+    assert blocked.unscheduled_tasks[0].reason_code is ReasonCode.DEPENDENCY_BLOCKED
+    assert blocked.unscheduled_tasks[0].debug["blocked_by"] == ["a"]
+
+    unlocked = schedule(make_input(plan, completed_task_ids=["a"]))
+    assert unlocked.schedule_status is ScheduleStatus.SUCCESS
+    assert [st.task_id for st in unlocked.scheduled_tasks] == ["b"]
+
+
+def test_completed_tasks_in_plan_are_still_placed() -> None:
+    """Documented MVP behavior: completed_task_ids satisfies the dependency
+    relation only — it does NOT suppress placement of a task that is still in
+    the plan. The Planner is responsible for dropping done tasks from the
+    plan; if that division of labor changes, this test must change with it.
+    """
     plan = make_plan(
         make_task(task_id="a"),
         make_task(task_id="b", dependencies=["a"]),
     )
     out = schedule(make_input(plan, completed_task_ids=["a"]))
     assert out.schedule_status is ScheduleStatus.SUCCESS
-    # 'a' is treated as already done (completed) so the scheduler still places it
-    # AND 'b' since both are now eligible. The completed marker doesn't suppress
-    # placement; it just satisfies the dependency relation.
     assert {st.task_id for st in out.scheduled_tasks} == {"a", "b"}

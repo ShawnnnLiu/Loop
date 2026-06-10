@@ -42,6 +42,7 @@ pythonpath = ["src"]
 markers = [
     "golden: required deterministic golden test cases (docs/golden-test-cases.md)",
     "boundary: enforced architectural boundary checks",
+    "subprocess: smoke tests that spawn real subprocesses (excluded from test-fast)",
 ]
 
 [tool.ruff]

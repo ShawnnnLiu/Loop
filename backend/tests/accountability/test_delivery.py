@@ -9,13 +9,16 @@ from agentic_calendar.accountability.notification_log_store import (
 from agentic_calendar.accountability.report_generator import SponsorReportGenerator
 from agentic_calendar.common.clock import FrozenClock
 from agentic_calendar.common.ids import DeterministicIdGenerator
+from agentic_calendar.contracts.common_types import AccountabilityStatus
 from agentic_calendar.contracts.notification_log import NotificationStatus
 from agentic_calendar.contracts.reason_codes import ReasonCode
 from agentic_calendar.contracts.sponsor import SponsorStatus
 from agentic_calendar.contracts.sponsor_report import (
+    MilestoneStatus,
     SponsorReport,
     SponsorReportApproval,
     canonical_sponsor_report_hash,
+    sponsor_report_content_body,
 )
 
 from ._builders import T0, build_input, build_profile, build_sponsor
@@ -165,6 +168,55 @@ def test_send_safety_privacy_recheck_blocks_leaky_wording() -> None:
     assert out.delivered is False
     assert out.reason_code is ReasonCode.SPONSOR_VISIBILITY_VIOLATION
     assert out.log.engineering_review is True
+
+
+def test_send_safety_privacy_recheck_blocks_leaky_milestone() -> None:
+    """The send-time re-scan must catch denylisted content in milestone
+    wording, not just in ``suggested_support_action``."""
+    svc, _ = _service()
+    report = _drafted_report()
+    leaky = report.model_copy(
+        update={
+            "milestone_summary": [
+                MilestoneStatus(
+                    milestone="Diagnosis: anxiety around essay draft",
+                    status=AccountabilityStatus.BEHIND,
+                )
+            ]
+        }
+    )
+    approval = SponsorReportApproval(
+        approval_event_id="appr_4",
+        report_id=leaky.report_id,
+        user_id=leaky.user_id,
+        sponsor_id=leaky.sponsor_id,
+        approved_payload_hash=canonical_sponsor_report_hash(leaky),
+        created_at=T0,
+    )
+    out = svc.deliver(
+        report=leaky,
+        sponsor=build_sponsor(),
+        profile=build_profile(),
+        approval=approval,
+    )
+    assert out.delivered is False
+    assert out.reason_code is ReasonCode.SPONSOR_VISIBILITY_VIOLATION
+    assert out.log.engineering_review is True
+
+
+def test_delivery_scan_field_set_matches_generator_scan_body() -> None:
+    """Parity guard: the send-time re-scan (shared with the approval hash via
+    ``sponsor_report_content_body``) must cover exactly the content fields the
+    generator scanned at draft time, so a field added to the report model can
+    never be scanned at one stage and skipped at the other."""
+    content_keys = set(sponsor_report_content_body(_drafted_report()))
+    gen = SponsorReportGenerator(
+        clock=FrozenClock(T0),
+        id_generator=DeterministicIdGenerator(),
+        log_store=InMemoryNotificationLogStore(),
+    )
+    candidate_keys = set(gen._candidate_body(build_input(), include_task=True))
+    assert content_keys == candidate_keys
 
 
 def test_record_approval_writes_approved_log() -> None:

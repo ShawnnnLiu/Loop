@@ -63,8 +63,11 @@ def test_terminal_states_have_no_outgoing_transitions() -> None:
 
 
 def test_initial_only_accepts_user_profile_collected() -> None:
+    # UNRECOVERABLE_ERROR is the typed panic edge, allowed from every
+    # non-terminal state (see test_transitions_table).
     assert allowed_signals(SupervisorState.INITIAL) == {
-        SupervisorSignal.USER_PROFILE_COLLECTED
+        SupervisorSignal.USER_PROFILE_COLLECTED,
+        SupervisorSignal.UNRECOVERABLE_ERROR,
     }
 
 
@@ -73,6 +76,7 @@ def test_planner_validating_can_repair_or_advance_or_escalate() -> None:
         SupervisorSignal.VALIDATION_PASSED,
         SupervisorSignal.VALIDATION_FAILED_REPAIRABLE,
         SupervisorSignal.REPAIR_LIMIT_EXCEEDED,
+        SupervisorSignal.UNRECOVERABLE_ERROR,
     }
 
 

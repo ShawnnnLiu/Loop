@@ -214,6 +214,34 @@ def test_capacity_needs_two_cycles_and_uses_most_recent_two() -> None:
     assert DriftType.CAPACITY_MISMATCH not in _types(recovered)
 
 
+def test_capacity_zero_scheduled_cycle_does_not_suppress_collapse() -> None:
+    # A planned break week (scheduled_min=0) between two collapse cycles must
+    # not veto the rule: the assessable cycles still show total collapse.
+    res = _classify(
+        [_task("t1")],
+        [],
+        weekly_cycles=[
+            WeeklyCapacity(600, 0),
+            WeeklyCapacity(0, 0),  # break week — not assessable
+            WeeklyCapacity(600, 0),
+        ],
+    )
+    e = _of(res, DriftType.CAPACITY_MISMATCH)
+    assert e.evidence.sample_size == 2
+    assert e.evidence.trigger_value == 0.0
+
+
+def test_capacity_requires_min_assessable_cycles() -> None:
+    # One assessable collapse cycle + one break week: only a single
+    # assessable cycle exists, below capacity_min_cycles -> no fire.
+    res = _classify(
+        [_task("t1")],
+        [],
+        weekly_cycles=[WeeklyCapacity(0, 0), WeeklyCapacity(600, 0)],
+    )
+    assert DriftType.CAPACITY_MISMATCH not in _types(res)
+
+
 # --------------------------------------------------------------------------- #
 # topic_avoidance
 # --------------------------------------------------------------------------- #

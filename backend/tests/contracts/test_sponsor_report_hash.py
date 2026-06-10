@@ -57,7 +57,9 @@ def _summary_report(**overrides: object) -> SponsorReport:
         trigger_reason_code=ReasonCode.SPONSOR_REPORT_PENDING,
         generated_at=datetime(2026, 5, 10, 19, tzinfo=UTC),
     )
-    return base.model_copy(update=overrides)
+    # model_copy skips validators (Pydantic v2); rebuild via model_validate so
+    # an override can never produce a structurally invalid fixture.
+    return SponsorReport.model_validate({**base.model_dump(), **overrides})
 
 
 def _task_report(**overrides: object) -> SponsorReport:
@@ -86,7 +88,9 @@ def _task_report(**overrides: object) -> SponsorReport:
         trigger_reason_code=ReasonCode.SPONSOR_REPORT_PENDING,
         generated_at=datetime(2026, 5, 10, 19, tzinfo=UTC),
     )
-    return base.model_copy(update=overrides)
+    # model_copy skips validators (Pydantic v2); rebuild via model_validate so
+    # an override can never produce a structurally invalid fixture.
+    return SponsorReport.model_validate({**base.model_dump(), **overrides})
 
 
 # ---------------------------------------------------------------------------

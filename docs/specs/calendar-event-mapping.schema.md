@@ -62,7 +62,7 @@ store rolls the bucket back to its prior value so it remains queryable.
 | `written` | `verified`, `verification_failed`, `rollback_pending` |
 | `verification_failed` | `rollback_pending`, `written` (manual retry only — never automatic) |
 | `rollback_pending` | `rolled_back`, `rollback_failed` |
-| `verified` | (terminal) |
+| `verified` | `rollback_pending` (axiom 06 lines 132-137: every successful write must remain rollback-able) |
 | `rolled_back` | (terminal) |
 | `rollback_failed` | (terminal; escalates to user attention per axiom 06 line 136) |
 

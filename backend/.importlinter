@@ -37,8 +37,9 @@ forbidden_modules =
     mistralai
 # Note: import-linter does not support subpackages of external packages in
 # ``forbidden_modules`` (so ``google.generativeai`` / ``google.genai`` cannot
-# be listed here directly). When/if a Google LLM SDK lands, add a dedicated
-# top-level forbidden module or a custom contract via the import-linter API.
+# be listed here directly). Those — plus a broader SDK list — are enforced by
+# the grep test ``tests/boundaries/test_import_linter_contracts.py``
+# (``test_no_llm_sdk_imports_outside_llm_nodes_or_tools``).
 
 # ---------------------------------------------------------------------------
 # Contract 2: Layered architecture.

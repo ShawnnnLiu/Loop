@@ -83,7 +83,18 @@ class ReasonCode(StrEnum):
 
     DEEP_WORK_REQUIRED_UNAVAILABLE = "DEEP_WORK_REQUIRED_UNAVAILABLE"
     TASK_TOO_LONG_UNSPLITTABLE = "TASK_TOO_LONG_UNSPLITTABLE"
+
     TASK_TOO_LONG_SPLITTABLE = "TASK_TOO_LONG_SPLITTABLE"
+    """Reserved (axiom 05 / 16). **No Phase 1 producer.**
+
+    The greedy MVP never splits: a splittable task that exceeds every window
+    falls through to ``NO_VALID_CONTIGUOUS_BLOCK`` with
+    ``suggested_repair=SPLIT_TASK`` in its debug payload, and the user
+    approves the split via the repair loop. Emitting this code requires a
+    scheduler that actually performs splits — which also needs a contract
+    change, since ``SchedulerOutput._scheduled_task_ids_unique`` forbids the
+    multiple placements per ``task_id`` a split would produce. Both land
+    together in the Phase 3 scheduler upgrade (OR-Tools swap, axiom 05)."""
 
     # --- Supervisor / state machine (axiom 02 + axiom 16) ---
     INVALID_STATE_TRANSITION = "INVALID_STATE_TRANSITION"

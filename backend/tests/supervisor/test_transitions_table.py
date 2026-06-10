@@ -56,6 +56,23 @@ def test_repair_limit_always_routes_to_error_requires_user() -> None:
             assert nxt is SupervisorState.ERROR_REQUIRES_USER
 
 
+def test_unrecoverable_error_routes_every_nonterminal_state_to_user() -> None:
+    """The typed panic signal must be available from every non-terminal
+    state and must always land on ERROR_REQUIRES_USER; terminals and the
+    error state itself stay sinks."""
+    sinks = {
+        SupervisorState.TERMINAL_SUCCESS,
+        SupervisorState.TERMINAL_DISCARDED,
+        SupervisorState.ERROR_REQUIRES_USER,
+    }
+    for state in SupervisorState:
+        pair = (state, SupervisorSignal.UNRECOVERABLE_ERROR)
+        if state in sinks:
+            assert pair not in TRANSITIONS
+        else:
+            assert TRANSITIONS[pair] is SupervisorState.ERROR_REQUIRES_USER
+
+
 def test_valid_signals_index_matches_table() -> None:
     rebuilt: dict[SupervisorState, set[SupervisorSignal]] = {}
     for (state, sig), _ in TRANSITIONS.items():

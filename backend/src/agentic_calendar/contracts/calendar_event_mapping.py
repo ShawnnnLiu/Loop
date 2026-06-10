@@ -29,6 +29,15 @@ class CalendarWriteStatus(StrEnum):
     """Lifecycle of a single external calendar event (spec lines 43-51)."""
 
     DRY_RUN = "dry_run"
+    """Reserved (axiom 06 dry-run requirement). **No current producer.**
+
+    Today's dry-run surface is ``CalendarWriteManager.preview()``, which is
+    pure and persists no mappings. Persisted ``dry_run`` mappings (an audit
+    trail of exactly what a write *would* create, promotable to ``written``)
+    land with the operator dry-run flow when a real external adapter ships;
+    the ``dry_run -> written | rolled_back`` transitions are already speced
+    and enforced by the store for that arrival."""
+
     WRITTEN = "written"
     VERIFIED = "verified"
     VERIFICATION_FAILED = "verification_failed"

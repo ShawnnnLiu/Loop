@@ -76,8 +76,8 @@ def test_rollback_failure_for_one_event_marks_failed() -> None:
     failing_id = mappings[0].calendar_event_id
     assert failing_id is not None
     # Re-wire adapter with the failure mode on the first event id.
-    adapter._failure_modes = FailureModes(  # type: ignore[attr-defined]
-        fail_delete_for_event_ids=frozenset({failing_id})
+    adapter.set_failure_modes(
+        FailureModes(fail_delete_for_event_ids=frozenset({failing_id}))
     )
     result = rollback_run(
         run_id="run_001",
@@ -158,8 +158,8 @@ def test_partial_rollback_continues_after_failure() -> None:
     adapter, mappings = _setup(task_ids=("t1", "t2", "t3"))
     failing_id = mappings[0].calendar_event_id
     assert failing_id is not None
-    adapter._failure_modes = FailureModes(  # type: ignore[attr-defined]
-        fail_delete_for_event_ids=frozenset({failing_id})
+    adapter.set_failure_modes(
+        FailureModes(fail_delete_for_event_ids=frozenset({failing_id}))
     )
     result = rollback_run(
         run_id="run_001",

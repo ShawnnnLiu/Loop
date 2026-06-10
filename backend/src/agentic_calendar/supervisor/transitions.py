@@ -77,6 +77,20 @@ TRANSITIONS: Mapping[tuple[S, Sig], S] = {
     (S.DRIFT_DETECTED, Sig.REPLAN_NOT_REQUIRED): S.ACTIVE_PLAN,
 
     (S.REPLAN_REQUIRED, Sig.REPLAN_STARTED): S.PLANNER_RUNNING,
+
+    # ---- TYPED PANIC (axiom 16) ----
+    # Every non-terminal state takes UNRECOVERABLE_ERROR straight to user
+    # attention. Deterministic node wrappers emit it when a node fails in a
+    # way no repair loop covers (unexpected exception, corrupted artifact) —
+    # the typed escape hatch that keeps "crashed" from becoming an implicit,
+    # unroutable state. Terminal states and ERROR_REQUIRES_USER itself stay
+    # sinks.
+    **{
+        (state, Sig.UNRECOVERABLE_ERROR): S.ERROR_REQUIRES_USER
+        for state in S
+        if state
+        not in (S.TERMINAL_SUCCESS, S.TERMINAL_DISCARDED, S.ERROR_REQUIRES_USER)
+    },
 }
 """All allowed (state, signal) → next-state edges.
 

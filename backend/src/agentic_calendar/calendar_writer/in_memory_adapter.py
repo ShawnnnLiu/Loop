@@ -63,6 +63,14 @@ class InMemoryCalendarAdapter:
         self._order: list[str] = []
         self._lock = threading.RLock()
 
+    def set_failure_modes(self, modes: FailureModes) -> None:
+        """Swap the active failure modes mid-test (stored events survive).
+
+        Reconcile/retry tests flip failures off after a partial write to
+        simulate the external service recovering; this is the supported way
+        to do that — not reassigning the private ``_failure_modes``."""
+        self._failure_modes = modes
+
     def create_event(
         self,
         *,

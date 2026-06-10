@@ -424,8 +424,8 @@ def test_rollback_with_failing_delete_marks_rollback_failed() -> None:
     # Inject delete failure for one event.
     failing_id = mapping_store.list_for_run(write_result.run_id)[0].calendar_event_id
     assert failing_id is not None
-    adapter._failure_modes = FailureModes(  # type: ignore[attr-defined]
-        fail_delete_for_event_ids=frozenset({failing_id})
+    adapter.set_failure_modes(
+        FailureModes(fail_delete_for_event_ids=frozenset({failing_id}))
     )
 
     rollback = mgr.rollback(
@@ -464,7 +464,7 @@ def test_reconcile_writes_only_missing_tasks() -> None:
     assert write_result.status is WriteStatus.PARTIAL_FAILURE
 
     # Clear failure modes; reconcile should now succeed for t1.
-    adapter._failure_modes = FailureModes()  # type: ignore[attr-defined]
+    adapter.set_failure_modes(FailureModes())
     reconcile_result = mgr.reconcile_after_crash(
         approval_event_id=approval.approval_event_id,
         draft=draft,
@@ -508,7 +508,7 @@ def test_reconcile_rejects_mismatched_draft_hash() -> None:
             ),
         )
     )
-    adapter._failure_modes = FailureModes()  # type: ignore[attr-defined]
+    adapter.set_failure_modes(FailureModes())
     events_before = len(adapter.all_events())
     result = mgr.reconcile_after_crash(
         approval_event_id=approval.approval_event_id,

@@ -1,0 +1,8 @@
+{
+  "recommitment_request_id": "recommit_req_001",
+  "user_id": "user_123",
+  "plan_version": "plan_004",
+  "decision_id": "intv_002",
+  "reason_code": "USER_RECOMMITMENT_REQUIRED",
+  "requested_at": "2026-05-10T20:00:06-07:00"
+}

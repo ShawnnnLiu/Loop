@@ -86,6 +86,12 @@ class DriftInput:
     absent. ``external_conflict_task_ids`` marks tasks the caller knows hit an
     external calendar conflict (telemetry reschedule counts are also used, so
     this rule can fire without it).
+
+    The accountability signals (Phase 7) are caller-derived *observable
+    behavior* — explicit declines of accountability interventions (revoked
+    sponsors, unanswered recommitment requests) and sponsor-report counts from
+    the notification log. The classifier never reads the motivation profile
+    (motivation-profile spec consumer note).
     """
 
     plan: TaskPlan
@@ -93,6 +99,9 @@ class DriftInput:
     weekly_cycles: Sequence[WeeklyCapacity] = ()
     fragmentation: FragmentationSignal | None = None
     external_conflict_task_ids: frozenset[str] = field(default_factory=frozenset)
+    declined_interventions: int = 0
+    sponsor_reports_sent_recent: int = 0
+    sponsor_reporting_disabled: bool = False
 
 
 class DriftClassifier:
@@ -121,6 +130,8 @@ class DriftClassifier:
         events += self._low_engagement_rule(drift_input, task_category)
         events += self._dependency_blocked_rule(drift_input)
         events += self._fragmentation_rule(drift_input)
+        events += self._accountability_mismatch_rule(drift_input)
+        events += self._sponsor_pressure_rule(drift_input)
 
         events.sort(
             key=lambda e: (
@@ -404,6 +415,69 @@ class DriftClassifier:
                 magnitude=magnitude,
                 sample_size=unplaceable,
                 sample_target=3,
+                plan_version=di.plan.plan_version,
+            )
+        ]
+
+    def _accountability_mismatch_rule(self, di: DriftInput) -> list[DriftEvent]:
+        """Repeated misses plus explicitly declined interventions (axiom 07).
+
+        Both inputs are observable behavior: misses come from telemetry, and
+        ``declined_interventions`` is the caller-derived count of explicit
+        declines (revoked sponsor, unanswered recommitment request). The
+        motivation profile is never consulted.
+        """
+        missed = sum(1 for e in di.events if not e.completed)
+        if missed < self.t.accountability_min_missed:
+            return []
+        if di.declined_interventions < self.t.accountability_min_declined:
+            return []
+        magnitude = di.declined_interventions / (
+            2 * self.t.accountability_min_declined
+        )
+        return [
+            self._event(
+                DriftType.ACCOUNTABILITY_MISMATCH,
+                evidence=DriftEvidence(
+                    trigger_metric="declined_interventions_with_repeated_misses",
+                    trigger_value=float(di.declined_interventions),
+                    threshold=float(self.t.accountability_min_declined),
+                    sample_size=missed,
+                ),
+                magnitude=magnitude,
+                sample_size=missed,
+                sample_target=2 * self.t.accountability_min_missed,
+                plan_version=di.plan.plan_version,
+            )
+        ]
+
+    def _sponsor_pressure_rule(self, di: DriftInput) -> list[DriftEvent]:
+        """Sponsor reporting disabled after repeated reports (axiom 07).
+
+        The disable itself is the observable signal (sponsor revoked /
+        reporting turned off in the window); the report count comes from the
+        notification log. Firing recommends reducing external reporting and
+        recovering privately — never another sponsor notification.
+        """
+        if not di.sponsor_reporting_disabled:
+            return []
+        if di.sponsor_reports_sent_recent < self.t.sponsor_pressure_min_reports:
+            return []
+        magnitude = di.sponsor_reports_sent_recent / (
+            2 * self.t.sponsor_pressure_min_reports
+        )
+        return [
+            self._event(
+                DriftType.SPONSOR_PRESSURE_MISMATCH,
+                evidence=DriftEvidence(
+                    trigger_metric="sponsor_reports_before_disable",
+                    trigger_value=float(di.sponsor_reports_sent_recent),
+                    threshold=float(self.t.sponsor_pressure_min_reports),
+                    sample_size=di.sponsor_reports_sent_recent,
+                ),
+                magnitude=magnitude,
+                sample_size=di.sponsor_reports_sent_recent,
+                sample_target=2 * self.t.sponsor_pressure_min_reports,
                 plan_version=di.plan.plan_version,
             )
         ]

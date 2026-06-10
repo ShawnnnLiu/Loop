@@ -1,0 +1,106 @@
+{
+  "$defs": {
+    "RecoveryAction": {
+      "description": "A concrete recovery choice the user can select.\n\nDeliberately excludes the motivation profile's ``ask_each_time``: that is\na *preference* about when to ask, not an answer.",
+      "enum": [
+        "reschedule",
+        "scope_reduction",
+        "extend_timeline"
+      ],
+      "title": "RecoveryAction",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "One submitted weekly check-in (append-only).",
+  "properties": {
+    "checkin_id": {
+      "minLength": 1,
+      "title": "Checkin Id",
+      "type": "string"
+    },
+    "completed_minutes": {
+      "minimum": 0,
+      "title": "Completed Minutes",
+      "type": "integer"
+    },
+    "completed_task_count": {
+      "minimum": 0,
+      "title": "Completed Task Count",
+      "type": "integer"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "plan_id": {
+      "minLength": 1,
+      "title": "Plan Id",
+      "type": "string"
+    },
+    "scheduled_minutes": {
+      "minimum": 0,
+      "title": "Scheduled Minutes",
+      "type": "integer"
+    },
+    "scheduled_task_count": {
+      "minimum": 0,
+      "title": "Scheduled Task Count",
+      "type": "integer"
+    },
+    "user_id": {
+      "minLength": 1,
+      "title": "User Id",
+      "type": "string"
+    },
+    "user_reported_blockers": {
+      "anyOf": [
+        {
+          "maxLength": 2000,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "User Reported Blockers"
+    },
+    "user_selected_recovery_action": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RecoveryAction"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "week_end": {
+      "format": "date",
+      "title": "Week End",
+      "type": "string"
+    },
+    "week_start": {
+      "format": "date",
+      "title": "Week Start",
+      "type": "string"
+    }
+  },
+  "required": [
+    "checkin_id",
+    "user_id",
+    "plan_id",
+    "week_start",
+    "week_end",
+    "completed_task_count",
+    "scheduled_task_count",
+    "completed_minutes",
+    "scheduled_minutes",
+    "created_at"
+  ],
+  "title": "CheckinEvent",
+  "type": "object"
+}

@@ -1,0 +1,217 @@
+{
+  "$defs": {
+    "AccountabilityAction": {
+      "description": "Deterministic actions the policy engine may select (axiom 21).",
+      "enum": [
+        "send_user_nudge",
+        "generate_recovery_plan_draft",
+        "create_weekly_checkin_prompt",
+        "generate_sponsor_summary_draft",
+        "suggest_scope_reduction"
+      ],
+      "title": "AccountabilityAction",
+      "type": "string"
+    },
+    "PolicyRuleEvaluation": {
+      "additionalProperties": false,
+      "description": "Audit record of one policy-rule check (axiom 21: every evaluation logged).",
+      "properties": {
+        "matched": {
+          "title": "Matched",
+          "type": "boolean"
+        },
+        "observed_value": {
+          "title": "Observed Value",
+          "type": "number"
+        },
+        "policy_name": {
+          "minLength": 1,
+          "title": "Policy Name",
+          "type": "string"
+        },
+        "threshold_value": {
+          "title": "Threshold Value",
+          "type": "number"
+        }
+      },
+      "required": [
+        "policy_name",
+        "matched",
+        "observed_value",
+        "threshold_value"
+      ],
+      "title": "PolicyRuleEvaluation",
+      "type": "object"
+    },
+    "ReasonCode": {
+      "description": "All typed failure / outcome codes in the system.\n\nCodes are uppercase ``SCREAMING_SNAKE_CASE`` strings so they survive a\nJSON round-trip unchanged and so they read identically in logs, telemetry,\nand user-facing explanations.",
+      "enum": [
+        "VALIDATION_FAILED",
+        "SCHEMA_INVALID",
+        "TASK_GRAPH_INVALID",
+        "MODULE_COVERAGE_INSUFFICIENT",
+        "USER_FIT_VIOLATED",
+        "SCHEDULING_PRECONDITION_FAILED",
+        "REPAIR_LIMIT_EXCEEDED",
+        "FORBIDDEN_FIELD_PRESENT",
+        "NO_VALID_CONTIGUOUS_BLOCK",
+        "INSUFFICIENT_WEEKLY_CAPACITY",
+        "DEPENDENCY_BLOCKED",
+        "OUTSIDE_ALLOWED_HOURS",
+        "DAILY_LOAD_EXCEEDED",
+        "DEEP_WORK_REQUIRED_UNAVAILABLE",
+        "TASK_TOO_LONG_UNSPLITTABLE",
+        "TASK_TOO_LONG_SPLITTABLE",
+        "INVALID_STATE_TRANSITION",
+        "USER_APPROVAL_REQUIRED",
+        "ERROR_REQUIRES_USER",
+        "PROFILE_MAJOR_CHANGE",
+        "CAPACITY_CHANGE",
+        "APPROVAL_MISSING",
+        "APPROVAL_EXPIRED",
+        "APPROVAL_HASH_MISMATCH",
+        "APPROVAL_HASH_ALGORITHM_UNSUPPORTED",
+        "CALENDAR_WRITE_LOCK_BUSY",
+        "CALENDAR_WRITE_LOCK_EXPIRED",
+        "CALENDAR_WRITE_DUPLICATE_DETECTED",
+        "CALENDAR_WRITE_FAILED",
+        "CALENDAR_VERIFICATION_FAILED",
+        "CALENDAR_ROLLBACK_FAILED",
+        "EXTERNAL_SYNC_FAILED",
+        "DEEP_WORK_WINDOW_CONFLICT",
+        "USER_DURATION_CALIBRATION",
+        "DEPENDENCY_RESCHEDULED",
+        "WEEKLY_CAPACITY_REBALANCE",
+        "EXTERNAL_CALENDAR_CONFLICT",
+        "USER_PROFILE_CHANGE",
+        "DRIFT_REMEDIATION",
+        "SPONSOR_REPORT_PENDING",
+        "SPONSOR_PERMISSION_MISSING",
+        "SPONSOR_VISIBILITY_VIOLATION",
+        "ACCOUNTABILITY_CONTRACT_INACTIVE",
+        "CHECKIN_DUE",
+        "CHECKIN_MISSED",
+        "MISSED_TASK_THRESHOLD_REACHED",
+        "BEHIND_SCHEDULE_THRESHOLD_REACHED",
+        "LOW_COMPLETION_RATE",
+        "RECOVERY_PLAN_REQUIRED",
+        "ACCOUNTABILITY_MISMATCH",
+        "SPONSOR_PRESSURE_MISMATCH",
+        "USER_RECOMMITMENT_REQUIRED",
+        "DRIFT_CAPACITY_MISMATCH",
+        "DRIFT_DURATION_UNDERESTIMATE",
+        "DRIFT_DURATION_OVERESTIMATE",
+        "DRIFT_TOPIC_AVOIDANCE",
+        "DRIFT_EXTERNAL_CONFLICT",
+        "DRIFT_LOW_ENGAGEMENT",
+        "DRIFT_DEPENDENCY_BLOCKED",
+        "DRIFT_CALENDAR_FRAGMENTATION",
+        "SOURCE_CLAIM_VALIDATION_FAILED",
+        "SOURCE_CLAIM_EXPIRED"
+      ],
+      "title": "ReasonCode",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "The auditable outcome of one policy-engine evaluation.",
+  "properties": {
+    "action": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AccountabilityAction"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "contract_id": {
+      "minLength": 1,
+      "title": "Contract Id",
+      "type": "string"
+    },
+    "decided_at": {
+      "format": "date-time",
+      "title": "Decided At",
+      "type": "string"
+    },
+    "decision_id": {
+      "minLength": 1,
+      "title": "Decision Id",
+      "type": "string"
+    },
+    "evaluations": {
+      "items": {
+        "$ref": "#/$defs/PolicyRuleEvaluation"
+      },
+      "title": "Evaluations",
+      "type": "array"
+    },
+    "plan_id": {
+      "minLength": 1,
+      "title": "Plan Id",
+      "type": "string"
+    },
+    "policy_name": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Policy Name"
+    },
+    "reason_code": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ReasonCode"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "sponsor_action": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AccountabilityAction"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "sponsor_reason_code": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ReasonCode"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "user_id": {
+      "minLength": 1,
+      "title": "User Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "decision_id",
+    "user_id",
+    "plan_id",
+    "contract_id",
+    "decided_at"
+  ],
+  "title": "InterventionDecision",
+  "type": "object"
+}

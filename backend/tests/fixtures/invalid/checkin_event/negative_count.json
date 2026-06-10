@@ -1,0 +1,12 @@
+{
+  "checkin_id": "checkin_x",
+  "user_id": "user_x",
+  "plan_id": "plan_x",
+  "week_start": "2026-05-04",
+  "week_end": "2026-05-10",
+  "completed_task_count": -1,
+  "scheduled_task_count": 6,
+  "completed_minutes": 240,
+  "scheduled_minutes": 360,
+  "created_at": "2026-05-10T19:00:00-07:00"
+}

@@ -1,0 +1,56 @@
+{
+  "$defs": {
+    "RecommitmentChoice": {
+      "enum": [
+        "keep_plan",
+        "revise_timeline",
+        "revise_intensity",
+        "revise_goal"
+      ],
+      "title": "RecommitmentChoice",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "The user's explicit, append-only recommitment answer.",
+  "properties": {
+    "choice": {
+      "$ref": "#/$defs/RecommitmentChoice"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "plan_version": {
+      "minLength": 1,
+      "title": "Plan Version",
+      "type": "string"
+    },
+    "recommitment_event_id": {
+      "minLength": 1,
+      "title": "Recommitment Event Id",
+      "type": "string"
+    },
+    "recommitment_request_id": {
+      "minLength": 1,
+      "title": "Recommitment Request Id",
+      "type": "string"
+    },
+    "user_id": {
+      "minLength": 1,
+      "title": "User Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "recommitment_event_id",
+    "recommitment_request_id",
+    "user_id",
+    "plan_version",
+    "choice",
+    "created_at"
+  ],
+  "title": "RecommitmentEvent",
+  "type": "object"
+}

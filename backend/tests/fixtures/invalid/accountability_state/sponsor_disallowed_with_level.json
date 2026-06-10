@@ -1,0 +1,15 @@
+{
+  "user_id": "user_x",
+  "plan_id": "plan_x",
+  "completion_rate_7d": 0.62,
+  "completion_rate_14d": 0.55,
+  "missed_tasks_7d": 3,
+  "reschedule_count_7d": 4,
+  "behind_schedule_percent": 18,
+  "weekly_checkin_completed": false,
+  "current_status": "slightly_behind",
+  "recommended_intervention": null,
+  "sponsor_report_allowed": false,
+  "sponsor_report_level": "summary_only",
+  "computed_at": "2026-05-10T20:00:00-07:00"
+}

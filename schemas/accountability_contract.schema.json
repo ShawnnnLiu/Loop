@@ -1,0 +1,205 @@
+{
+  "$defs": {
+    "Day": {
+      "description": "Day-of-week token used everywhere a single weekday is referenced.",
+      "enum": [
+        "Mon",
+        "Tue",
+        "Wed",
+        "Thu",
+        "Fri",
+        "Sat",
+        "Sun"
+      ],
+      "title": "Day",
+      "type": "string"
+    },
+    "NudgeChannel": {
+      "enum": [
+        "in_app",
+        "email",
+        "push"
+      ],
+      "title": "NudgeChannel",
+      "type": "string"
+    },
+    "QuietHours": {
+      "additionalProperties": false,
+      "description": "A single contiguous quiet-hours window in HH:MM local time.\n\n``end`` may legitimately be before ``start`` (overnight quiet hours), so\nwe do **not** enforce ordering here \u2014 see the spec.",
+      "properties": {
+        "end": {
+          "title": "End",
+          "type": "string"
+        },
+        "start": {
+          "title": "Start",
+          "type": "string"
+        }
+      },
+      "required": [
+        "start",
+        "end"
+      ],
+      "title": "QuietHours",
+      "type": "object"
+    },
+    "RecoveryPreference": {
+      "enum": [
+        "reschedule",
+        "scope_reduction",
+        "extend_timeline",
+        "ask_each_time"
+      ],
+      "title": "RecoveryPreference",
+      "type": "string"
+    },
+    "SponsorVisibility": {
+      "enum": [
+        "none",
+        "summary_only",
+        "milestone_progress",
+        "task_completion"
+      ],
+      "title": "SponsorVisibility",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Effective accountability terms derived from one motivation profile.",
+  "properties": {
+    "active": {
+      "title": "Active",
+      "type": "boolean"
+    },
+    "checkin_grace_hours": {
+      "maximum": 168,
+      "minimum": 1,
+      "title": "Checkin Grace Hours",
+      "type": "integer"
+    },
+    "contract_id": {
+      "minLength": 1,
+      "title": "Contract Id",
+      "type": "string"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "effective_behind_schedule_intervention_threshold_pct": {
+      "maximum": 50,
+      "minimum": 5,
+      "title": "Effective Behind Schedule Intervention Threshold Pct",
+      "type": "integer"
+    },
+    "effective_missed_task_escalation_threshold": {
+      "maximum": 14,
+      "minimum": 1,
+      "title": "Effective Missed Task Escalation Threshold",
+      "type": "integer"
+    },
+    "low_completion_rate_floor": {
+      "exclusiveMaximum": 1.0,
+      "exclusiveMinimum": 0.0,
+      "title": "Low Completion Rate Floor",
+      "type": "number"
+    },
+    "motivation_profile_id": {
+      "minLength": 1,
+      "title": "Motivation Profile Id",
+      "type": "string"
+    },
+    "nudge_channel_preference": {
+      "$ref": "#/$defs/NudgeChannel"
+    },
+    "profile_version": {
+      "minLength": 1,
+      "title": "Profile Version",
+      "type": "string"
+    },
+    "quiet_hours": {
+      "$ref": "#/$defs/QuietHours"
+    },
+    "recovery_mode_preference": {
+      "$ref": "#/$defs/RecoveryPreference"
+    },
+    "sponsor_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Sponsor Id"
+    },
+    "sponsor_reporting_allowed": {
+      "title": "Sponsor Reporting Allowed",
+      "type": "boolean"
+    },
+    "sponsor_visibility_level": {
+      "$ref": "#/$defs/SponsorVisibility"
+    },
+    "updated_at": {
+      "format": "date-time",
+      "title": "Updated At",
+      "type": "string"
+    },
+    "user_id": {
+      "minLength": 1,
+      "title": "User Id",
+      "type": "string"
+    },
+    "weekly_checkin_day": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Day"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "weekly_checkin_enabled": {
+      "title": "Weekly Checkin Enabled",
+      "type": "boolean"
+    },
+    "weekly_checkin_time": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Weekly Checkin Time"
+    }
+  },
+  "required": [
+    "contract_id",
+    "user_id",
+    "motivation_profile_id",
+    "profile_version",
+    "active",
+    "weekly_checkin_enabled",
+    "effective_missed_task_escalation_threshold",
+    "effective_behind_schedule_intervention_threshold_pct",
+    "low_completion_rate_floor",
+    "checkin_grace_hours",
+    "recovery_mode_preference",
+    "sponsor_reporting_allowed",
+    "sponsor_visibility_level",
+    "nudge_channel_preference",
+    "quiet_hours",
+    "created_at",
+    "updated_at"
+  ],
+  "title": "AccountabilityContract",
+  "type": "object"
+}

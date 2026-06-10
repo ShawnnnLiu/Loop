@@ -1,0 +1,13 @@
+{
+  "decision_id": "intv_003",
+  "user_id": "user_789",
+  "plan_id": "plan_020",
+  "contract_id": "acct_003",
+  "action": null,
+  "reason_code": "ACCOUNTABILITY_CONTRACT_INACTIVE",
+  "policy_name": null,
+  "sponsor_action": null,
+  "sponsor_reason_code": "ACCOUNTABILITY_CONTRACT_INACTIVE",
+  "evaluations": [],
+  "decided_at": "2026-05-10T20:00:05-07:00"
+}

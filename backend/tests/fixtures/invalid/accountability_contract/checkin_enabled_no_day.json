@@ -1,0 +1,22 @@
+{
+  "contract_id": "acct_x",
+  "user_id": "user_x",
+  "motivation_profile_id": "mot_x",
+  "profile_version": "mot_v1",
+  "active": true,
+  "weekly_checkin_enabled": true,
+  "weekly_checkin_day": null,
+  "weekly_checkin_time": "19:00",
+  "effective_missed_task_escalation_threshold": 2,
+  "effective_behind_schedule_intervention_threshold_pct": 20,
+  "low_completion_rate_floor": 0.5,
+  "checkin_grace_hours": 48,
+  "recovery_mode_preference": "reschedule",
+  "sponsor_reporting_allowed": false,
+  "sponsor_visibility_level": "none",
+  "sponsor_id": null,
+  "nudge_channel_preference": "in_app",
+  "quiet_hours": { "start": "22:00", "end": "08:00" },
+  "created_at": "2026-05-01T12:00:00-07:00",
+  "updated_at": "2026-05-01T12:00:00-07:00"
+}

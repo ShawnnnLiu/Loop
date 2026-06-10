@@ -1,0 +1,20 @@
+{
+  "decision_id": "intv_x",
+  "user_id": "user_x",
+  "plan_id": "plan_x",
+  "contract_id": "acct_x",
+  "action": null,
+  "reason_code": "ACCOUNTABILITY_CONTRACT_INACTIVE",
+  "policy_name": null,
+  "sponsor_action": null,
+  "sponsor_reason_code": "ACCOUNTABILITY_CONTRACT_INACTIVE",
+  "evaluations": [
+    {
+      "policy_name": "missed_task_warning",
+      "matched": false,
+      "observed_value": 0,
+      "threshold_value": 2
+    }
+  ],
+  "decided_at": "2026-05-10T20:00:05-07:00"
+}

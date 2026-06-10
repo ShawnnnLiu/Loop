@@ -11,6 +11,7 @@ from .plan_version import (
     LifecycleState,
     PlanVersion,
 )
+from .recovery import RecoveryProposal, RecoveryRoute, propose_recovery_plan
 from .replan import RecalibrationProposal, propose_recalibrated_plan
 from .store import (
     InMemoryPlanVersionStore,
@@ -33,5 +34,8 @@ __all__ = [
     "PlanVersionStore",
     "PlanVersionStoreError",
     "RecalibrationProposal",
+    "RecoveryProposal",
+    "RecoveryRoute",
     "propose_recalibrated_plan",
+    "propose_recovery_plan",
 ]

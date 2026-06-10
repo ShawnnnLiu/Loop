@@ -24,15 +24,24 @@ from pydantic import BaseModel
 
 from agentic_calendar.cache.keys import CacheKey
 from agentic_calendar.cache.store import CacheEntry
+from agentic_calendar.contracts.accountability_contract import AccountabilityContract
+from agentic_calendar.contracts.accountability_intervention import InterventionDecision
+from agentic_calendar.contracts.accountability_state import AccountabilityState
 from agentic_calendar.contracts.approval_event import ApprovalEvent
 from agentic_calendar.contracts.calendar_event_mapping import CalendarEventMapping
+from agentic_calendar.contracts.checkin_event import CheckinEvent
 from agentic_calendar.contracts.company_target import CompanyTarget
 from agentic_calendar.contracts.draft_schedule import DraftSchedule
 from agentic_calendar.contracts.drift_event import DriftEvent
 from agentic_calendar.contracts.milestone_template import MilestoneTemplate
 from agentic_calendar.contracts.motivation_profile import MotivationProfile
 from agentic_calendar.contracts.notification_log import NotificationLog
+from agentic_calendar.contracts.nudge import NudgeRecord
 from agentic_calendar.contracts.plan_diff import PlanDiff
+from agentic_calendar.contracts.recommitment import (
+    RecommitmentEvent,
+    RecommitmentRequest,
+)
 from agentic_calendar.contracts.scheduler_output import SchedulerOutput
 from agentic_calendar.contracts.source_claim import SourceClaim
 from agentic_calendar.contracts.sponsor import Sponsor
@@ -76,6 +85,13 @@ CONTRACTS: dict[str, type[BaseModel]] = {
     "telemetry": TelemetryEvent,
     "drift_event": DriftEvent,
     "user_duration_multipliers": UserDurationMultipliers,
+    "checkin_event": CheckinEvent,
+    "accountability_contract": AccountabilityContract,
+    "accountability_state": AccountabilityState,
+    "accountability_intervention": InterventionDecision,
+    "nudge": NudgeRecord,
+    "recommitment_request": RecommitmentRequest,
+    "recommitment_event": RecommitmentEvent,
 }
 
 

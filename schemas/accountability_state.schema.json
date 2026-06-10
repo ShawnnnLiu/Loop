@@ -1,0 +1,126 @@
+{
+  "$defs": {
+    "AccountabilityAction": {
+      "description": "Deterministic actions the policy engine may select (axiom 21).",
+      "enum": [
+        "send_user_nudge",
+        "generate_recovery_plan_draft",
+        "create_weekly_checkin_prompt",
+        "generate_sponsor_summary_draft",
+        "suggest_scope_reduction"
+      ],
+      "title": "AccountabilityAction",
+      "type": "string"
+    },
+    "AccountabilityStatus": {
+      "description": "Deterministic accountability/progress status (axiom 21 ``current_status``).\n\nShared by the sponsor report (Phase 3) and, later, the Accountability State\nprojection and Policy Engine (Phase 7). Computed deterministically from\nthresholds; never inferred by the LLM.",
+      "enum": [
+        "on_track",
+        "slightly_behind",
+        "behind",
+        "far_behind",
+        "disengaged"
+      ],
+      "title": "AccountabilityStatus",
+      "type": "string"
+    },
+    "SponsorVisibility": {
+      "enum": [
+        "none",
+        "summary_only",
+        "milestone_progress",
+        "task_completion"
+      ],
+      "title": "SponsorVisibility",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Deterministic accountability projection for one user and plan.",
+  "properties": {
+    "behind_schedule_percent": {
+      "maximum": 100,
+      "minimum": 0,
+      "title": "Behind Schedule Percent",
+      "type": "integer"
+    },
+    "completion_rate_14d": {
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Completion Rate 14D",
+      "type": "number"
+    },
+    "completion_rate_7d": {
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Completion Rate 7D",
+      "type": "number"
+    },
+    "computed_at": {
+      "format": "date-time",
+      "title": "Computed At",
+      "type": "string"
+    },
+    "current_status": {
+      "$ref": "#/$defs/AccountabilityStatus"
+    },
+    "missed_tasks_7d": {
+      "minimum": 0,
+      "title": "Missed Tasks 7D",
+      "type": "integer"
+    },
+    "plan_id": {
+      "minLength": 1,
+      "title": "Plan Id",
+      "type": "string"
+    },
+    "recommended_intervention": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AccountabilityAction"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "reschedule_count_7d": {
+      "minimum": 0,
+      "title": "Reschedule Count 7D",
+      "type": "integer"
+    },
+    "sponsor_report_allowed": {
+      "title": "Sponsor Report Allowed",
+      "type": "boolean"
+    },
+    "sponsor_report_level": {
+      "$ref": "#/$defs/SponsorVisibility"
+    },
+    "user_id": {
+      "minLength": 1,
+      "title": "User Id",
+      "type": "string"
+    },
+    "weekly_checkin_completed": {
+      "title": "Weekly Checkin Completed",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "user_id",
+    "plan_id",
+    "completion_rate_7d",
+    "completion_rate_14d",
+    "missed_tasks_7d",
+    "reschedule_count_7d",
+    "behind_schedule_percent",
+    "weekly_checkin_completed",
+    "current_status",
+    "sponsor_report_allowed",
+    "sponsor_report_level",
+    "computed_at"
+  ],
+  "title": "AccountabilityState",
+  "type": "object"
+}

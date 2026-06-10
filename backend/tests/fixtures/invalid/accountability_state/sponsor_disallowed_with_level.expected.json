@@ -1,0 +1,7 @@
+{
+  "error_substrings": [
+    "sponsor_report_level",
+    "must be 'none'",
+    "sponsor_report_allowed is false"
+  ]
+}

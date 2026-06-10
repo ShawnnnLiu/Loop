@@ -1,0 +1,15 @@
+{
+  "user_id": "user_456",
+  "plan_id": "plan_010",
+  "completion_rate_7d": 1.0,
+  "completion_rate_14d": 0.95,
+  "missed_tasks_7d": 0,
+  "reschedule_count_7d": 0,
+  "behind_schedule_percent": 0,
+  "weekly_checkin_completed": true,
+  "current_status": "on_track",
+  "recommended_intervention": null,
+  "sponsor_report_allowed": false,
+  "sponsor_report_level": "none",
+  "computed_at": "2026-05-10T20:00:00-07:00"
+}

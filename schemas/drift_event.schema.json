@@ -49,7 +49,9 @@
         "external_conflict",
         "low_engagement",
         "dependency_blocked",
-        "calendar_fragmentation"
+        "calendar_fragmentation",
+        "accountability_mismatch",
+        "sponsor_pressure_mismatch"
       ],
       "title": "DriftType",
       "type": "string"
@@ -100,6 +102,15 @@
         "SPONSOR_PERMISSION_MISSING",
         "SPONSOR_VISIBILITY_VIOLATION",
         "ACCOUNTABILITY_CONTRACT_INACTIVE",
+        "CHECKIN_DUE",
+        "CHECKIN_MISSED",
+        "MISSED_TASK_THRESHOLD_REACHED",
+        "BEHIND_SCHEDULE_THRESHOLD_REACHED",
+        "LOW_COMPLETION_RATE",
+        "RECOVERY_PLAN_REQUIRED",
+        "ACCOUNTABILITY_MISMATCH",
+        "SPONSOR_PRESSURE_MISMATCH",
+        "USER_RECOMMITMENT_REQUIRED",
         "DRIFT_CAPACITY_MISMATCH",
         "DRIFT_DURATION_UNDERESTIMATE",
         "DRIFT_DURATION_OVERESTIMATE",
@@ -125,7 +136,9 @@
         "split_topic_into_smaller_tasks",
         "reschedule_around_conflict",
         "reschedule_prerequisite_first",
-        "ask_user_to_adjust_goal"
+        "ask_user_to_adjust_goal",
+        "revise_accountability_contract",
+        "switch_to_private_recovery"
       ],
       "title": "RecommendedPolicyAction",
       "type": "string"

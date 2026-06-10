@@ -56,6 +56,14 @@ def test_every_contract_registered() -> None:
         "cache_key",
         "cache_entry",
         "milestone_template",
+        # Phase 7
+        "checkin_event",
+        "accountability_contract",
+        "accountability_state",
+        "accountability_intervention",
+        "nudge",
+        "recommitment_request",
+        "recommitment_event",
     }
     assert set(CONTRACTS.keys()) == expected
 

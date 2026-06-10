@@ -207,11 +207,63 @@ class ReasonCode(StrEnum):
 
     ACCOUNTABILITY_CONTRACT_INACTIVE = "ACCOUNTABILITY_CONTRACT_INACTIVE"
     """The accountability contract is disabled, so no intervention or sponsor
-    report fires (axiom 16 line 41; golden scenarios 18, 24). **No Phase 3
-    producer.** This is the Phase 7 Accountability Policy Engine's classification
-    when the *whole contract* is off; at the Phase 3 generator level a
-    sponsor-disabled profile blocks with ``SPONSOR_PERMISSION_MISSING`` instead.
-    Ships in the enum now so the golden scenarios reference a defined code."""
+    report fires (axiom 16 line 41; golden scenarios 18, 24). This is the
+    Phase 7 Accountability Policy Engine's short-circuit classification when
+    the *whole contract* is off; at the Phase 3 generator level a
+    sponsor-disabled profile blocks with ``SPONSOR_PERMISSION_MISSING`` instead."""
+
+    CHECKIN_DUE = "CHECKIN_DUE"
+    """The weekly check-in instant has passed for this cycle, no
+    ``CheckinEvent`` exists yet, and the grace window is still open (axiom 16
+    accountability set; golden scenario 21). Produces a check-in prompt, never
+    a recovery draft."""
+
+    CHECKIN_MISSED = "CHECKIN_MISSED"
+    """The grace window after the check-in due instant elapsed with no
+    ``CheckinEvent`` (axiom 16 accountability set). Same
+    ``create_weekly_checkin_prompt`` action as ``CHECKIN_DUE``; the distinct
+    code keeps prompt-vs-overdue observable in audit and telemetry."""
+
+    MISSED_TASK_THRESHOLD_REACHED = "MISSED_TASK_THRESHOLD_REACHED"
+    """``missed_tasks_7d`` reached the contract's effective escalation
+    threshold (axiom 21 ``missed_task_warning``; golden scenario 16). Triggers
+    a private user nudge only — never a sponsor notification."""
+
+    BEHIND_SCHEDULE_THRESHOLD_REACHED = "BEHIND_SCHEDULE_THRESHOLD_REACHED"
+    """``behind_schedule_percent`` reached the contract's effective
+    intervention threshold (axiom 21 ``recovery_plan``; golden scenario 22).
+    Triggers a recovery-plan draft; the active plan is never mutated in
+    place."""
+
+    LOW_COMPLETION_RATE = "LOW_COMPLETION_RATE"
+    """``completion_rate_14d`` fell below the contract's
+    ``low_completion_rate_floor`` (axiom 21 ``scope_reduction``). Triggers a
+    scope-reduction suggestion routed through the plan-version pipeline."""
+
+    RECOVERY_PLAN_REQUIRED = "RECOVERY_PLAN_REQUIRED"
+    """The recovery flow produced (or requires) a recovery artifact: the
+    deterministic reschedule fast path's draft version, or the typed planner
+    request for ``scope_reduction`` / ``extend_timeline`` modes (axiom 16
+    accountability set; axiom 15 — always a new draft plan version)."""
+
+    ACCOUNTABILITY_MISMATCH = "ACCOUNTABILITY_MISMATCH"
+    """The drift classifier observed repeated misses *plus* declined
+    accountability interventions (axiom 07 drift table; golden scenario 23).
+    Maps 1:1 from ``DriftType.ACCOUNTABILITY_MISMATCH``; the policy response is
+    ``revise_accountability_contract``, never a sponsor notification."""
+
+    SPONSOR_PRESSURE_MISMATCH = "SPONSOR_PRESSURE_MISMATCH"
+    """The drift classifier observed sponsor reporting being disabled after
+    repeated reports (axiom 07 drift table: external pressure is not helping).
+    Defined by the drift-event spec, mirroring ``ACCOUNTABILITY_MISMATCH``.
+    Maps 1:1 from ``DriftType.SPONSOR_PRESSURE_MISMATCH``; the policy response
+    is ``switch_to_private_recovery``."""
+
+    USER_RECOMMITMENT_REQUIRED = "USER_RECOMMITMENT_REQUIRED"
+    """The escalation-level (direct) nudge or accountability reset asks the
+    user to explicitly recommit to plan, timeline, or intensity (axiom 16
+    accountability set; recommitment-event spec). Recorded on the
+    ``RecommitmentRequest``; the user's answer is a ``RecommitmentEvent``."""
 
     # --- Drift classification (axiom 07 / drift-event spec; Phase 4) ---
     #

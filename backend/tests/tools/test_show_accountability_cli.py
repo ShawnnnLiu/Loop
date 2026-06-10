@@ -87,7 +87,13 @@ def test_json_mode_round_trips(tmp_path: Path, capsys) -> None:
     data = json.loads(capsys.readouterr().out)
     assert data["state"]["missed_tasks_7d"] == 2
     assert data["decision"]["reason_code"] == "MISSED_TASK_THRESHOLD_REACHED"
-    assert len(data["decision"]["evaluations"]) == 5
+    assert {e["policy_name"]: e["matched"] for e in data["decision"]["evaluations"]} == {
+        "missed_task_warning": True,
+        "recovery_plan": False,
+        "weekly_checkin_required": False,
+        "scope_reduction": False,
+        "sponsor_summary": False,
+    }
 
 
 def test_inactive_flag_short_circuits(tmp_path: Path, capsys) -> None:

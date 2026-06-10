@@ -133,7 +133,6 @@
           "type": "null"
         }
       ],
-      "default": null,
       "title": "Sponsor Id"
     },
     "sponsor_reporting_allowed": {
@@ -161,8 +160,7 @@
         {
           "type": "null"
         }
-      ],
-      "default": null
+      ]
     },
     "weekly_checkin_enabled": {
       "title": "Weekly Checkin Enabled",
@@ -177,7 +175,6 @@
           "type": "null"
         }
       ],
-      "default": null,
       "title": "Weekly Checkin Time"
     }
   },
@@ -188,6 +185,8 @@
     "profile_version",
     "active",
     "weekly_checkin_enabled",
+    "weekly_checkin_day",
+    "weekly_checkin_time",
     "effective_missed_task_escalation_threshold",
     "effective_behind_schedule_intervention_threshold_pct",
     "low_completion_rate_floor",
@@ -195,6 +194,7 @@
     "recovery_mode_preference",
     "sponsor_reporting_allowed",
     "sponsor_visibility_level",
+    "sponsor_id",
     "nudge_channel_preference",
     "quiet_hours",
     "created_at",

@@ -41,8 +41,8 @@ class AccountabilityContract(BaseModel):
     profile_version: str = Field(min_length=1)
     active: bool
     weekly_checkin_enabled: bool
-    weekly_checkin_day: Day | None = None
-    weekly_checkin_time: HHMM | None = None
+    weekly_checkin_day: Day | None
+    weekly_checkin_time: HHMM | None
     effective_missed_task_escalation_threshold: int = Field(ge=1, le=14)
     effective_behind_schedule_intervention_threshold_pct: int = Field(ge=5, le=50)
     low_completion_rate_floor: float = Field(gt=0.0, lt=1.0)
@@ -50,7 +50,7 @@ class AccountabilityContract(BaseModel):
     recovery_mode_preference: RecoveryPreference
     sponsor_reporting_allowed: bool
     sponsor_visibility_level: SponsorVisibility
-    sponsor_id: str | None = None
+    sponsor_id: str | None
     nudge_channel_preference: NudgeChannel
     quiet_hours: QuietHours
     created_at: datetime

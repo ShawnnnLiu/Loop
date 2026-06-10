@@ -432,8 +432,9 @@ class DriftClassifier:
             return []
         if di.declined_interventions < self.t.accountability_min_declined:
             return []
-        magnitude = di.declined_interventions / (
-            2 * self.t.accountability_min_declined
+        magnitude = min(
+            1.0,
+            di.declined_interventions / (2 * self.t.accountability_min_declined),
         )
         return [
             self._event(
@@ -463,8 +464,9 @@ class DriftClassifier:
             return []
         if di.sponsor_reports_sent_recent < self.t.sponsor_pressure_min_reports:
             return []
-        magnitude = di.sponsor_reports_sent_recent / (
-            2 * self.t.sponsor_pressure_min_reports
+        magnitude = min(
+            1.0,
+            di.sponsor_reports_sent_recent / (2 * self.t.sponsor_pressure_min_reports),
         )
         return [
             self._event(

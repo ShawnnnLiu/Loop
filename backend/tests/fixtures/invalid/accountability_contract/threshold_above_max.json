@@ -5,6 +5,8 @@
   "profile_version": "mot_v1",
   "active": true,
   "weekly_checkin_enabled": false,
+  "weekly_checkin_day": null,
+  "weekly_checkin_time": null,
   "effective_missed_task_escalation_threshold": 2,
   "effective_behind_schedule_intervention_threshold_pct": 60,
   "low_completion_rate_floor": 0.5,

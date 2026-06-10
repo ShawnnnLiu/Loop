@@ -33,13 +33,7 @@ from .reason_codes import ReasonCode
 
 
 class DriftType(StrEnum):
-    """Allowed drift classifications (drift-event spec).
-
-    The two accountability-coupled types in axiom 07
-    (``accountability_mismatch``, ``sponsor_pressure_mismatch``) are
-    deliberately excluded — they belong to the Phase 7 Accountability Policy
-    Engine, not the MVP drift classifier.
-    """
+    """Allowed drift classifications (drift-event spec)."""
 
     CAPACITY_MISMATCH = "capacity_mismatch"
     DURATION_UNDERESTIMATE = "duration_underestimate"

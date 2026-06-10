@@ -101,6 +101,8 @@ def build_contract(**overrides: Any) -> AccountabilityContract:
         "profile_version": "v1",
         "active": True,
         "weekly_checkin_enabled": False,
+        "weekly_checkin_day": None,
+        "weekly_checkin_time": None,
         "effective_missed_task_escalation_threshold": 2,
         "effective_behind_schedule_intervention_threshold_pct": 20,
         "low_completion_rate_floor": 0.5,

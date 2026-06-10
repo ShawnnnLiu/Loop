@@ -65,7 +65,7 @@ class NudgeRecord(BaseModel):
     reason_code: ReasonCode
     channel: NudgeChannel
     status: NudgeStatus
-    recommitment_requested: bool = False
+    recommitment_requested: bool
     created_at: datetime
     deliver_at: datetime
 

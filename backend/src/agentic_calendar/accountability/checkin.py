@@ -63,9 +63,9 @@ def most_recent_due_instant(
     """
     if not contract.weekly_checkin_enabled:
         return None
-    # The contract validator guarantees day/time are set when enabled.
-    assert contract.weekly_checkin_day is not None
-    assert contract.weekly_checkin_time is not None
+    if contract.weekly_checkin_day is None or contract.weekly_checkin_time is None:
+        # The contract validator guarantees day/time are set when enabled.
+        raise ValueError("weekly_checkin_enabled contract is missing its cadence day/time")
 
     now_local = now.astimezone(tz)
     hour, minute = (int(p) for p in contract.weekly_checkin_time.split(":"))

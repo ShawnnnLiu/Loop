@@ -2,7 +2,45 @@
 
 ## Status
 
-**Not yet scheduled.** This document is a placeholder so that work consciously deferred from Phases 1 and 2 has a single home and does not fall through the cracks. Insert a phase number once the team slots this work into the sequence.
+**Stage 0 scheduled after Phase 9; full scope not yet scheduled.** This
+document is the single home for user-facing work deferred from Phases 1 and
+2. The sequencing decision (2026-06-10) is: Phase 8 (real LLM adapters +
+eval) → Phase 9 (`phase-9-dogfood-backbone.md`: persistence, composition
+root, real Google adapter, calibration instrumentation) → **Stage 0 below**
+(thin local dogfooding app) → 2–4 week dogfood calibration cycle → the full
+frontend scope in this document. The "Adapter Work Required Before The UI
+Lands" section now lives in Phase 9.
+
+## Stage 0: Thin Local Dogfooding App
+
+A deliberately disposable, single-user, localhost-only surface whose only
+job is making daily dogfooding ergonomic enough to sustain for 2–4 weeks.
+It is the seed of — not a substitute for — the full frontend below. Branch
+`frontend-stage0`, after Phase 9 merges; one commit per part.
+
+- **F0a — Local API over the Phase 9 composition root.** FastAPI + uvicorn
+  (new dependencies — require explicit user approval), no auth, localhost
+  only, living in the composition-root layer (never inside regions).
+  Endpoints mirror `run_cycle`: onboarding (typed validation errors with
+  `reason_code`s), propose, draft preview (canonical payload hash shown),
+  approve (creates the approval event through the same service — the UI
+  structurally cannot bypass `approval_event_id` or the hash recheck),
+  write/verify/rollback, telemetry + check-in + recommitment ingestion,
+  accountability dashboard, data controls (view/export/delete).
+- **F0b — Server-rendered pages.** Jinja2, minimal styling, no JS
+  framework: Today view (scheduled tasks with complete/missed actions
+  feeding telemetry), Draft review + Approve, Accountability dashboard
+  (reusing the `show_accountability` projection), Check-in and
+  Recommitment forms, read-only Thresholds page (effective tuning values +
+  change history from the Phase 9 change log).
+- **F0c — Dogfood protocol.** `docs/dogfooding.md`: run for 2–4 weeks;
+  tune only via `tuning.toml` (auto-journaled by the Phase 9 change log);
+  weekly review ritual comparing fired drift/accountability events against
+  felt reality; adjust one knob at a time with a written justification.
+
+Stage 0 acceptance: every flow it exposes goes through the same services
+the operator CLIs use; no axiom 06 invariant is bypassable from the UI; the
+app restarts cleanly against the Phase 9 SQLite state.
 
 ## Goal
 
@@ -37,8 +75,11 @@ Per `../axioms/10-mvp-roadmap.md` Phase 2 deliverables; explicitly excluded from
 
 ## Adapter Work Required Before The UI Lands
 
-- **Real `GoogleCalendarAdapter`.** `backend/src/agentic_calendar/calendar_writer/google_adapter.py` currently raises `NotImplementedError` for every Protocol method. The four methods (`create_event`, `read_event`, `delete_event`, `query_events_by_metadata`) must be implemented against `google-api-python-client` (or equivalent) without breaking the existing Phase 2 invariants: metadata keys, duplicate detection by `run_id`, verification read-back, and rollback by `calendar_event_id`.
-- **Persistent storage.** `InMemoryApprovalEventStore`, `InMemoryCalendarEventMappingStore`, and `InMemoryPlanVersionStore` need persistent backings (SQL/Firestore) so approvals and mappings survive process restart. The Protocol-level interfaces are already in place; only the implementations need to change.
+**Moved to `phase-9-dogfood-backbone.md` (2026-06-10).** The real
+`GoogleCalendarAdapter`, persistent storage behind the existing store
+Protocols, and the composition root are now Phase 9 deliverables; Stage 0
+above depends on them. The Protocol-level interfaces remain unchanged —
+only implementations are added.
 
 ## Acceptance Criteria
 

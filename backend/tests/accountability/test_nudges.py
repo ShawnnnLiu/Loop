@@ -197,6 +197,64 @@ def test_recovery_action_speaks_through_approval_not_nudge() -> None:
     assert store.all() == []
 
 
+def test_channel_preference_respected_for_every_channel() -> None:
+    """Phase 7 acceptance: the record's channel is always the contract's
+    preference, for every channel the contract can express."""
+    for channel in NudgeChannel:
+        service, store = _service(NOON)
+        record = service.maybe_deliver(
+            decision=_decision(),
+            contract=build_contract(nudge_channel_preference=channel),
+            tz=LA,
+        )
+        assert record is not None
+        assert record.channel is channel
+        assert all(r.channel is channel for r in store.all())
+
+
+def test_deferred_nudge_is_audited() -> None:
+    """A quiet-hours deferral is an attempt too: it must land in the audit
+    store, never be silently parked."""
+    late = datetime(2026, 5, 10, 23, 15, tzinfo=LA)
+    service, store = _service(late)
+    record = service.maybe_deliver(decision=_decision(), contract=build_contract(), tz=LA)
+    assert record is not None
+    assert store.all() == [record]
+    assert record.status is NudgeStatus.DEFERRED_QUIET_HOURS
+
+
+def test_every_nudge_bearing_action_writes_one_linked_audit_record() -> None:
+    """Each intervention that reaches the user as a nudge appends exactly one
+    record carrying the decision linkage and the decision's reason code."""
+    cases = [
+        (
+            AccountabilityAction.SEND_USER_NUDGE,
+            ReasonCode.MISSED_TASK_THRESHOLD_REACHED,
+            "missed_task_warning",
+        ),
+        (
+            AccountabilityAction.CREATE_WEEKLY_CHECKIN_PROMPT,
+            ReasonCode.CHECKIN_DUE,
+            "weekly_checkin_required",
+        ),
+        (
+            AccountabilityAction.SUGGEST_SCOPE_REDUCTION,
+            ReasonCode.LOW_COMPLETION_RATE,
+            "scope_reduction",
+        ),
+    ]
+    for action, reason, policy in cases:
+        service, store = _service(NOON)
+        decision = _decision(action=action, reason=reason, policy=policy)
+        record = service.maybe_deliver(decision=decision, contract=build_contract(), tz=LA)
+        assert record is not None
+        assert store.all() == [record]
+        assert record.decision_id == decision.decision_id
+        assert record.user_id == decision.user_id
+        assert record.plan_id == decision.plan_id
+        assert record.reason_code is reason
+
+
 def test_direct_nudge_requests_recommitment() -> None:
     service, _ = _service(NOON)
     record = service.maybe_deliver(decision=_decision(), contract=build_contract(), tz=LA)

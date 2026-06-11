@@ -211,6 +211,102 @@ def test_same_inputs_same_decision_sequence() -> None:
     assert a == b
 
 
+# -- per-rule pass/fail boundaries (Phase 7: unit tests for each policy rule) -------
+
+
+def _rule(decision, name: str):
+    return next(e for e in decision.evaluations if e.policy_name == name)
+
+
+def test_missed_task_warning_below_threshold_does_not_fire() -> None:
+    state = _state(missed_tasks_7d=1, current_status=AccountabilityStatus.SLIGHTLY_BEHIND)
+    decision = _decide(state)
+    assert decision.action is None
+    rule = _rule(decision, "missed_task_warning")
+    assert rule.matched is False
+    assert rule.observed_value == 1.0
+    assert rule.threshold_value == 2.0
+
+
+def test_missed_task_warning_honors_contract_scaled_threshold() -> None:
+    """The engine reads the contract's *effective* threshold, so a
+    pressure-tolerance-scaled contract shifts the boundary with it."""
+    contract = build_contract(effective_missed_task_escalation_threshold=3)
+    below = _decide(
+        _state(missed_tasks_7d=2, current_status=AccountabilityStatus.SLIGHTLY_BEHIND), contract
+    )
+    assert below.action is None
+    at = _decide(
+        _state(missed_tasks_7d=3, current_status=AccountabilityStatus.SLIGHTLY_BEHIND), contract
+    )
+    assert at.action is AccountabilityAction.SEND_USER_NUDGE
+    assert _rule(at, "missed_task_warning").threshold_value == 3.0
+
+
+def test_recovery_plan_threshold_boundary_is_inclusive() -> None:
+    below = _decide(
+        _state(behind_schedule_percent=19, current_status=AccountabilityStatus.SLIGHTLY_BEHIND)
+    )
+    assert below.action is None
+    assert _rule(below, "recovery_plan").matched is False
+    at = _decide(_state(behind_schedule_percent=20, current_status=AccountabilityStatus.BEHIND))
+    assert at.action is AccountabilityAction.GENERATE_RECOVERY_PLAN_DRAFT
+    assert at.reason_code is ReasonCode.BEHIND_SCHEDULE_THRESHOLD_REACHED
+
+
+def test_scope_reduction_floor_is_strict() -> None:
+    """``completion_rate_14d`` exactly at the floor does not fire (strict <)."""
+    at_floor = _decide(
+        _state(completion_rate_14d=0.5, current_status=AccountabilityStatus.SLIGHTLY_BEHIND)
+    )
+    assert at_floor.action is None
+    assert _rule(at_floor, "scope_reduction").matched is False
+    below = _decide(
+        _state(completion_rate_14d=0.49, current_status=AccountabilityStatus.SLIGHTLY_BEHIND)
+    )
+    assert below.action is AccountabilityAction.SUGGEST_SCOPE_REDUCTION
+    assert below.reason_code is ReasonCode.LOW_COMPLETION_RATE
+
+
+def _sponsor_contract(**overrides: object):
+    return build_contract(
+        sponsor_reporting_allowed=True,
+        sponsor_visibility_level=SponsorVisibility.SUMMARY_ONLY,
+        sponsor_id="sponsor_001",
+        **overrides,
+    )
+
+
+def _sponsor_state(missed: int) -> AccountabilityState:
+    return _state(
+        missed_tasks_7d=missed,
+        current_status=AccountabilityStatus.BEHIND,
+        sponsor_report_allowed=True,
+        sponsor_report_level=SponsorVisibility.SUMMARY_ONLY,
+    )
+
+
+def test_sponsor_floor_boundary() -> None:
+    below = _decide(_sponsor_state(3), _sponsor_contract())
+    assert below.sponsor_action is None
+    assert below.sponsor_reason_code is None
+    assert _rule(below, "sponsor_summary").matched is False
+    at = _decide(_sponsor_state(4), _sponsor_contract())
+    assert at.sponsor_action is AccountabilityAction.GENERATE_SPONSOR_SUMMARY_DRAFT
+    assert at.sponsor_reason_code is ReasonCode.SPONSOR_REPORT_PENDING
+
+
+def test_sponsor_floor_is_fixed_not_contract_scaled() -> None:
+    """External visibility must never get easier to trigger than the axiom's
+    published floor: a contract scaled down to a private threshold of 1 still
+    needs 4 misses before the sponsor lane fires."""
+    contract = _sponsor_contract(effective_missed_task_escalation_threshold=1)
+    decision = _decide(_sponsor_state(3), contract)
+    assert decision.action is AccountabilityAction.SEND_USER_NUDGE  # private lane: scaled
+    assert decision.sponsor_action is None  # sponsor lane: fixed floor
+    assert _rule(decision, "sponsor_summary").threshold_value == 4.0
+
+
 # -- composed evaluation -------------------------------------------------------------
 
 

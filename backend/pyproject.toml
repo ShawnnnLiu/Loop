@@ -7,6 +7,7 @@ requires-python = ">=3.11"
 license = { text = "Proprietary" }
 authors = [{ name = "Agentic Calendar" }]
 dependencies = [
+    "anthropic>=0.109.1",
     # Pinned exact: the committed JSON Schemas in /schemas are byte-stable only
     # for this pydantic version, and `make schema-check` enforces that. Bump
     # deliberately (update lock + `make schemas` + retest); see docs/axioms/18.

@@ -68,6 +68,7 @@ def test_every_contract_registered() -> None:
         # Phase 6
         "consent_record",
         "data_access_audit",
+        "pooled_duration_model",
     }
     assert set(CONTRACTS.keys()) == expected
 

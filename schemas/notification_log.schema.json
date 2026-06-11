@@ -90,7 +90,9 @@
         "CONSENT_MISSING",
         "CONSENT_REVOKED",
         "DATA_EXPORTED",
-        "DATA_DELETED"
+        "DATA_DELETED",
+        "POOLED_MODEL_UNAVAILABLE",
+        "POOLED_BUCKET_SPARSE"
       ],
       "title": "ReasonCode",
       "type": "string"

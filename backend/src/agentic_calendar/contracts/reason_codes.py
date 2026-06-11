@@ -352,3 +352,18 @@ class ReasonCode(StrEnum):
     """The user's data was deleted from every registered store. Recorded on
     the ``allowed`` audit entry, which is itself retained — the deletion's
     audit trail survives the deletion (data-access-audit spec)."""
+
+    # --- Pooled duration model (ADR-0007; Phase 6b) ---
+    #
+    # Serving fallback codes defined by the pooled-duration-model spec.
+    # Pooled failure never blocks planning: each code marks why the pooled
+    # tier was skipped before the chain fell back deterministically.
+    POOLED_MODEL_UNAVAILABLE = "POOLED_MODEL_UNAVAILABLE"
+    """No pooled artifact exists, or the artifact failed contract validation
+    (e.g. ``content_hash`` mismatch). The serving chain falls back to the
+    per-user category multiplier, then the heuristic baseline."""
+
+    POOLED_BUCKET_SPARSE = "POOLED_BUCKET_SPARSE"
+    """The pooled artifact has no bucket matching the serving query, or the
+    combined weighted sample is below the serving floor (heuristic prior).
+    Same deterministic fallback as ``POOLED_MODEL_UNAVAILABLE``."""

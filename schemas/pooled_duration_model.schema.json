@@ -1,0 +1,204 @@
+{
+  "$defs": {
+    "CompletionRateBand": {
+      "description": "Recent-completion-rate band; boundaries are heuristic priors.",
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "title": "CompletionRateBand",
+      "type": "string"
+    },
+    "DayOfWeek": {
+      "enum": [
+        "mon",
+        "tue",
+        "wed",
+        "thu",
+        "fri",
+        "sat",
+        "sun"
+      ],
+      "title": "DayOfWeek",
+      "type": "string"
+    },
+    "ExperienceLevel": {
+      "enum": [
+        "beginner",
+        "intermediate",
+        "advanced"
+      ],
+      "title": "ExperienceLevel",
+      "type": "string"
+    },
+    "MultiplierBand": {
+      "description": "Historical per-category multiplier band; boundaries are heuristic priors.",
+      "enum": [
+        "faster",
+        "baseline",
+        "slower"
+      ],
+      "title": "MultiplierBand",
+      "type": "string"
+    },
+    "PooledBucket": {
+      "additionalProperties": false,
+      "description": "Aggregate statistics for one observed feature tuple.",
+      "properties": {
+        "category": {
+          "$ref": "#/$defs/TaskCategory"
+        },
+        "cognitive_load": {
+          "maximum": 5,
+          "minimum": 1,
+          "title": "Cognitive Load",
+          "type": "integer"
+        },
+        "completion_rate_band": {
+          "$ref": "#/$defs/CompletionRateBand"
+        },
+        "day_of_week": {
+          "$ref": "#/$defs/DayOfWeek"
+        },
+        "experience_level": {
+          "$ref": "#/$defs/ExperienceLevel"
+        },
+        "multiplier": {
+          "exclusiveMinimum": 0.0,
+          "title": "Multiplier",
+          "type": "number"
+        },
+        "multiplier_band": {
+          "$ref": "#/$defs/MultiplierBand"
+        },
+        "observed_ratio": {
+          "exclusiveMinimum": 0.0,
+          "title": "Observed Ratio",
+          "type": "number"
+        },
+        "sample_size": {
+          "minimum": 1,
+          "title": "Sample Size",
+          "type": "integer"
+        },
+        "time_of_day_band": {
+          "$ref": "#/$defs/TimeOfDayBand"
+        },
+        "weighted_sample": {
+          "exclusiveMinimum": 0.0,
+          "title": "Weighted Sample",
+          "type": "number"
+        }
+      },
+      "required": [
+        "category",
+        "cognitive_load",
+        "experience_level",
+        "time_of_day_band",
+        "day_of_week",
+        "completion_rate_band",
+        "multiplier_band",
+        "multiplier",
+        "sample_size",
+        "weighted_sample",
+        "observed_ratio"
+      ],
+      "title": "PooledBucket",
+      "type": "object"
+    },
+    "TaskCategory": {
+      "description": "Allowed values for ``task.category`` (see task-plan spec).",
+      "enum": [
+        "concept_review",
+        "practice",
+        "mock_interview",
+        "project",
+        "reflection",
+        "review"
+      ],
+      "title": "TaskCategory",
+      "type": "string"
+    },
+    "TimeOfDayBand": {
+      "description": "Local-time band of the completion timestamp (spec feature table).",
+      "enum": [
+        "morning",
+        "afternoon",
+        "evening",
+        "night"
+      ],
+      "title": "TimeOfDayBand",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Versioned deterministic pooled-duration artifact (axiom 17 Phase 3).",
+  "properties": {
+    "buckets": {
+      "items": {
+        "$ref": "#/$defs/PooledBucket"
+      },
+      "title": "Buckets",
+      "type": "array"
+    },
+    "content_hash": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Content Hash",
+      "type": "string"
+    },
+    "feature_schema_version": {
+      "minLength": 1,
+      "title": "Feature Schema Version",
+      "type": "string"
+    },
+    "global_prior_multiplier": {
+      "exclusiveMinimum": 0.0,
+      "title": "Global Prior Multiplier",
+      "type": "number"
+    },
+    "global_prior_weighted_sample": {
+      "minimum": 0.0,
+      "title": "Global Prior Weighted Sample",
+      "type": "number"
+    },
+    "model_version": {
+      "minLength": 1,
+      "title": "Model Version",
+      "type": "string"
+    },
+    "multiplier_max": {
+      "exclusiveMinimum": 0.0,
+      "title": "Multiplier Max",
+      "type": "number"
+    },
+    "multiplier_min": {
+      "exclusiveMinimum": 0.0,
+      "title": "Multiplier Min",
+      "type": "number"
+    },
+    "shrinkage_strength": {
+      "minimum": 0.0,
+      "title": "Shrinkage Strength",
+      "type": "number"
+    },
+    "trained_at": {
+      "format": "date-time",
+      "title": "Trained At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "model_version",
+    "feature_schema_version",
+    "trained_at",
+    "global_prior_multiplier",
+    "global_prior_weighted_sample",
+    "shrinkage_strength",
+    "multiplier_min",
+    "multiplier_max",
+    "content_hash"
+  ],
+  "title": "PooledDurationModel",
+  "type": "object"
+}

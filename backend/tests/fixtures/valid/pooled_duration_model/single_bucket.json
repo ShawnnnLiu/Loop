@@ -1,0 +1,26 @@
+{
+  "model_version": "pooled-fixture-1",
+  "feature_schema_version": "1",
+  "trained_at": "2026-06-10T16:00:00Z",
+  "global_prior_multiplier": 1.4416666666666667,
+  "global_prior_weighted_sample": 6.0,
+  "shrinkage_strength": 5.0,
+  "multiplier_min": 0.5,
+  "multiplier_max": 2.0,
+  "buckets": [
+    {
+      "category": "practice",
+      "cognitive_load": 4,
+      "experience_level": "beginner",
+      "time_of_day_band": "evening",
+      "day_of_week": "tue",
+      "completion_rate_band": "medium",
+      "multiplier_band": "baseline",
+      "multiplier": 1.4416666666666667,
+      "sample_size": 6,
+      "weighted_sample": 6.0,
+      "observed_ratio": 1.4416666666666667
+    }
+  ],
+  "content_hash": "sha256:466d65f30023c6860f4e4958bc94c6378cedefeea8c99919411758948dcc613e"
+}

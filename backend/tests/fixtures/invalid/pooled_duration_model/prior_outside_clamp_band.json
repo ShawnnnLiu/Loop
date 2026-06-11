@@ -1,0 +1,12 @@
+{
+  "model_version": "pooled-fixture-prior-oob",
+  "feature_schema_version": "1",
+  "trained_at": "2026-06-10T16:00:00Z",
+  "global_prior_multiplier": 2.5,
+  "global_prior_weighted_sample": 6.0,
+  "shrinkage_strength": 5.0,
+  "multiplier_min": 0.5,
+  "multiplier_max": 2.0,
+  "buckets": [],
+  "content_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+}

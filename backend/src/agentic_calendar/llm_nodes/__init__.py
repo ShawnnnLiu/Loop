@@ -37,7 +37,28 @@ The repository's ``import-linter`` configuration includes an
 under ``agentic_calendar.llm_nodes`` (and operator tools).
 """
 
+from .anthropic_adapter import (
+    AdapterConfig,
+    AnthropicMessagesTransport,
+    AnthropicPlanner,
+    AnthropicReflectionSummary,
+    AnthropicStrategist,
+    AnthropicTransport,
+    AnthropicUserFacingExplanation,
+    LLMGenerationError,
+    TransportError,
+    TransportResult,
+)
 from .base import LLMNode, LLMNodeError
+from .call_log import (
+    InMemoryLlmCallLogStore,
+    LlmCallLog,
+    LlmCallLogAlreadyExistsError,
+    LlmCallLogStore,
+    LlmCallLogStoreError,
+    LlmNodeName,
+    ValidationOutcome,
+)
 from .planner import FixturePlanner
 from .reflection_summary import DeterministicReflectionSummary, ReflectionSummary
 from .strategist import FixtureStrategist
@@ -47,12 +68,29 @@ from .user_facing_explanation import (
 )
 
 __all__ = [
+    "AdapterConfig",
+    "AnthropicMessagesTransport",
+    "AnthropicPlanner",
+    "AnthropicReflectionSummary",
+    "AnthropicStrategist",
+    "AnthropicTransport",
+    "AnthropicUserFacingExplanation",
     "DeterministicReflectionSummary",
     "DeterministicUserFacingExplanation",
     "FixturePlanner",
     "FixtureStrategist",
+    "InMemoryLlmCallLogStore",
+    "LLMGenerationError",
     "LLMNode",
     "LLMNodeError",
+    "LlmCallLog",
+    "LlmCallLogAlreadyExistsError",
+    "LlmCallLogStore",
+    "LlmCallLogStoreError",
+    "LlmNodeName",
     "ReflectionSummary",
+    "TransportError",
+    "TransportResult",
     "UserExplanation",
+    "ValidationOutcome",
 ]

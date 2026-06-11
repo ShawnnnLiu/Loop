@@ -1,0 +1,14 @@
+{
+  "llm_call_log_id": "llmcall_min_001",
+  "run_id": "run_min",
+  "node": "user_facing_explanation",
+  "prompt_version": "explainer-2026-06-01",
+  "model_name": "claude-haiku-4-5-20251001",
+  "attempt": 0,
+  "input_tokens": 950,
+  "output_tokens": 280,
+  "cost_estimate_usd": 0.0003,
+  "latency_ms": 1200,
+  "validation_outcome": "pass",
+  "created_at": "2026-06-10T14:06:00-07:00"
+}

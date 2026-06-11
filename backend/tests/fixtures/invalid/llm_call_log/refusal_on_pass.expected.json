@@ -1,0 +1,3 @@
+{
+  "error_substrings": ["refusal may be true only when validation_outcome is 'fail'"]
+}

@@ -1,0 +1,132 @@
+{
+  "prompt_version": "fixture-improved-2026-06-10",
+  "model_name": "recorded-fixtures",
+  "outputs": {
+    "strategist_backend_swe": [
+      {
+        "syllabus_version": "syl_003",
+        "goal_summary": "Prepare for backend SWE interviews at Meta and Stripe over 10 weeks.",
+        "modules": [
+          {
+            "module_id": "dp",
+            "title": "Dynamic Programming",
+            "priority": "high",
+            "reason": "User listed DP as a weakness and target companies commonly test algorithmic reasoning.",
+            "target_outcomes": [
+              "Recognize common DP state definitions",
+              "Solve 1D and 2D DP problems under interview constraints"
+            ],
+            "estimated_total_min": 720,
+            "difficulty": 5,
+            "source_claim_ids": ["claim_012", "claim_018"]
+          },
+          {
+            "module_id": "api_design",
+            "title": "API Design and Product-Oriented Backend Design",
+            "priority": "medium",
+            "reason": "Relevant for Stripe-style backend interviews.",
+            "target_outcomes": [
+              "Design clean API surfaces",
+              "Explain tradeoffs between consistency, latency, and developer experience"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 4,
+            "source_claim_ids": ["claim_024"]
+          }
+        ]
+      }
+    ],
+    "strategist_constraint_probe": [
+      {
+        "syllabus_version": "syl_probe_ok",
+        "goal_summary": "Constraint-heavy profile handled with a single high-priority module.",
+        "modules": [
+          {
+            "module_id": "systems",
+            "title": "Systems Design Fundamentals",
+            "priority": "high",
+            "reason": "The constraint set leaves room for exactly one deep module.",
+            "target_outcomes": ["Explain partitioning, replication, and consistency tradeoffs"],
+            "estimated_total_min": 480,
+            "difficulty": 4,
+            "source_claim_ids": ["claim_031"]
+          }
+        ]
+      }
+    ],
+    "planner_dp_chain": [
+      {
+        "plan_version": "plan_004",
+        "tasks": [
+          {
+            "task_id": "dp_001",
+            "module_id": "dp",
+            "title": "Review DP state definitions",
+            "description": "Study how to define state, transition, base case, and answer extraction.",
+            "dependencies": [],
+            "estimated_duration_min": 60,
+            "cognitive_load": 4,
+            "category": "concept_review",
+            "required_focus_level": "deep",
+            "splittable": false
+          },
+          {
+            "task_id": "dp_002",
+            "module_id": "dp",
+            "title": "Solve 3 one-dimensional DP problems",
+            "description": "Practice climbing stairs, house robber, and min cost climbing stairs.",
+            "dependencies": ["dp_001"],
+            "estimated_duration_min": 90,
+            "cognitive_load": 5,
+            "category": "practice",
+            "required_focus_level": "deep",
+            "splittable": true
+          }
+        ]
+      }
+    ],
+    "planner_repair_probe": [
+      {
+        "plan_version": "plan_x_repaired",
+        "tasks": [
+          {
+            "task_id": "dp_001",
+            "module_id": "dp",
+            "title": "Review DP",
+            "dependencies": [],
+            "estimated_duration_min": 60,
+            "cognitive_load": 3,
+            "category": "concept_review",
+            "required_focus_level": "deep",
+            "splittable": false
+          },
+          {
+            "task_id": "dp_002",
+            "module_id": "dp",
+            "title": "Review DP again",
+            "dependencies": ["dp_001"],
+            "estimated_duration_min": 60,
+            "cognitive_load": 3,
+            "category": "review",
+            "required_focus_level": "medium",
+            "splittable": false
+          }
+        ]
+      }
+    ],
+    "reflection_duration_drift": [
+      {
+        "summary": "1 adjustment suggested based on your recent activity.",
+        "detail": [
+          "Practice tasks are taking longer than planned; their time estimates will be increased."
+        ]
+      }
+    ],
+    "explanation_validation_pass": [
+      {
+        "summary": "Plan looks good.",
+        "detail": []
+      }
+    ]
+  }
+}

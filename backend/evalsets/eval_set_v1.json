@@ -1,0 +1,38 @@
+{
+  "eval_set_version": "v1",
+  "cases": [
+    {
+      "case_id": "strategist_backend_swe",
+      "node": "strategist",
+      "description": "Backend SWE interview prep syllabus; must cover the DP weakness the profile lists.",
+      "required_substrings": ["Dynamic Programming"]
+    },
+    {
+      "case_id": "strategist_constraint_probe",
+      "node": "strategist",
+      "description": "Constraint-heavy profile that historically provokes malformed module lists."
+    },
+    {
+      "case_id": "planner_dp_chain",
+      "node": "planner",
+      "description": "Two-module syllabus decomposed into a dependency-ordered task chain.",
+      "required_substrings": ["dp_001"]
+    },
+    {
+      "case_id": "planner_repair_probe",
+      "node": "planner",
+      "description": "Case that historically provokes duplicate task ids; exercises the repair loop."
+    },
+    {
+      "case_id": "reflection_duration_drift",
+      "node": "reflection_summary",
+      "description": "Duration-underestimate drift; summary must describe behavior and mention estimates.",
+      "required_substrings": ["estimates"]
+    },
+    {
+      "case_id": "explanation_validation_pass",
+      "node": "user_facing_explanation",
+      "description": "A passing validation result explained in plain language."
+    }
+  ]
+}

@@ -71,6 +71,8 @@ def test_every_contract_registered() -> None:
         "pooled_duration_model",
         "power_user_eligibility",
         "per_user_refinement",
+        # Phase 8
+        "llm_call_log",
     }
     assert set(CONTRACTS.keys()) == expected
 

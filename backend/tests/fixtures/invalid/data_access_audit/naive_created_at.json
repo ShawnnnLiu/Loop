@@ -1,0 +1,9 @@
+{
+  "audit_entry_id": "audit_inv_007",
+  "user_id": "user_123",
+  "purpose": "data_view",
+  "accessor": "operator_cli",
+  "outcome": "allowed",
+  "reason_code": null,
+  "created_at": "2026-06-10T09:30:00"
+}

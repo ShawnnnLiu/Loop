@@ -23,7 +23,8 @@ def test_every_contract_registered() -> None:
     sponsor, sponsor report (+ input, approval), notification log. Phase 4
     contracts: telemetry, drift event, user duration multipliers. Phase 5
     contracts: source claim, strategy constraints, strategist input, company
-    target, cache key, cache entry, milestone template.
+    target, cache key, cache entry, milestone template. Phase 6 contracts:
+    consent record, data access audit.
     """
     expected = {
         # Phase 1
@@ -64,6 +65,9 @@ def test_every_contract_registered() -> None:
         "nudge",
         "recommitment_request",
         "recommitment_event",
+        # Phase 6
+        "consent_record",
+        "data_access_audit",
     }
     assert set(CONTRACTS.keys()) == expected
 

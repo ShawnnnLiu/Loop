@@ -31,6 +31,8 @@ from agentic_calendar.contracts.approval_event import ApprovalEvent
 from agentic_calendar.contracts.calendar_event_mapping import CalendarEventMapping
 from agentic_calendar.contracts.checkin_event import CheckinEvent
 from agentic_calendar.contracts.company_target import CompanyTarget
+from agentic_calendar.contracts.consent_record import ConsentRecord
+from agentic_calendar.contracts.data_access_audit import DataAccessAuditEntry
 from agentic_calendar.contracts.draft_schedule import DraftSchedule
 from agentic_calendar.contracts.drift_event import DriftEvent
 from agentic_calendar.contracts.milestone_template import MilestoneTemplate
@@ -92,6 +94,8 @@ CONTRACTS: dict[str, type[BaseModel]] = {
     "nudge": NudgeRecord,
     "recommitment_request": RecommitmentRequest,
     "recommitment_event": RecommitmentEvent,
+    "consent_record": ConsentRecord,
+    "data_access_audit": DataAccessAuditEntry,
 }
 
 

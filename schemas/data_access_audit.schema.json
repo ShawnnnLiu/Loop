@@ -1,25 +1,36 @@
 {
   "$defs": {
-    "NotificationStatus": {
-      "description": "Terminal outcome of a delivery attempt (spec \"Status Semantics\").",
+    "DataAccessOutcome": {
+      "description": "Whether the access proceeded.",
       "enum": [
-        "drafted",
-        "approved",
-        "sent",
-        "dry_run",
-        "blocked",
-        "failed"
+        "allowed",
+        "denied"
       ],
-      "title": "NotificationStatus",
+      "title": "DataAccessOutcome",
       "type": "string"
     },
-    "NudgeChannel": {
+    "DataAccessPurpose": {
+      "description": "Why the data was touched (spec \"Allowed ``purpose`` Values\").",
       "enum": [
-        "in_app",
-        "email",
-        "push"
+        "pooled_training",
+        "pooled_serving",
+        "cohort_retrieval",
+        "data_view",
+        "data_export",
+        "data_delete"
       ],
-      "title": "NudgeChannel",
+      "title": "DataAccessPurpose",
+      "type": "string"
+    },
+    "DataAccessor": {
+      "description": "Which system component performed the access. Never a person.",
+      "enum": [
+        "operator_cli",
+        "training_pipeline",
+        "serving_pipeline",
+        "retrieval_pipeline"
+      ],
+      "title": "DataAccessor",
       "type": "string"
     },
     "ReasonCode": {
@@ -94,43 +105,29 @@
       ],
       "title": "ReasonCode",
       "type": "string"
-    },
-    "SponsorVisibility": {
-      "enum": [
-        "none",
-        "summary_only",
-        "milestone_progress",
-        "task_completion"
-      ],
-      "title": "SponsorVisibility",
-      "type": "string"
     }
   },
   "additionalProperties": false,
-  "description": "Append-only audit record for one sponsor report delivery attempt.",
+  "description": "Append-only audit record for one data access or data-control op.",
   "properties": {
-    "channel": {
-      "$ref": "#/$defs/NudgeChannel"
+    "accessor": {
+      "$ref": "#/$defs/DataAccessor"
+    },
+    "audit_entry_id": {
+      "minLength": 1,
+      "title": "Audit Entry Id",
+      "type": "string"
     },
     "created_at": {
       "format": "date-time",
       "title": "Created At",
       "type": "string"
     },
-    "dry_run": {
-      "default": false,
-      "title": "Dry Run",
-      "type": "boolean"
+    "outcome": {
+      "$ref": "#/$defs/DataAccessOutcome"
     },
-    "engineering_review": {
-      "default": false,
-      "title": "Engineering Review",
-      "type": "boolean"
-    },
-    "notification_log_id": {
-      "minLength": 1,
-      "title": "Notification Log Id",
-      "type": "string"
+    "purpose": {
+      "$ref": "#/$defs/DataAccessPurpose"
     },
     "reason_code": {
       "anyOf": [
@@ -143,38 +140,20 @@
       ],
       "default": null
     },
-    "report_id": {
-      "minLength": 1,
-      "title": "Report Id",
-      "type": "string"
-    },
-    "sponsor_id": {
-      "minLength": 1,
-      "title": "Sponsor Id",
-      "type": "string"
-    },
-    "status": {
-      "$ref": "#/$defs/NotificationStatus"
-    },
     "user_id": {
       "minLength": 1,
       "title": "User Id",
       "type": "string"
-    },
-    "visibility_level": {
-      "$ref": "#/$defs/SponsorVisibility"
     }
   },
   "required": [
-    "notification_log_id",
-    "report_id",
-    "sponsor_id",
+    "audit_entry_id",
     "user_id",
-    "visibility_level",
-    "channel",
-    "status",
+    "purpose",
+    "accessor",
+    "outcome",
     "created_at"
   ],
-  "title": "NotificationLog",
+  "title": "DataAccessAuditEntry",
   "type": "object"
 }

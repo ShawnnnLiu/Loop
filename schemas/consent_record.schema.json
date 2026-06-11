@@ -1,0 +1,87 @@
+{
+  "$defs": {
+    "ConsentScope": {
+      "description": "The single data-use a consent record covers (spec \"Field Definitions\").\n\nOne record covers exactly one scope; consenting to both scopes produces\ntwo records.",
+      "enum": [
+        "pooled_training",
+        "cohort_retrieval"
+      ],
+      "title": "ConsentScope",
+      "type": "string"
+    },
+    "ConsentStatus": {
+      "description": "Lifecycle state (spec \"Lifecycle\").",
+      "enum": [
+        "granted",
+        "revoked"
+      ],
+      "title": "ConsentStatus",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "One user's grant (or revocation) of one explicit data-use scope.",
+  "properties": {
+    "consent_record_id": {
+      "minLength": 1,
+      "title": "Consent Record Id",
+      "type": "string"
+    },
+    "consent_version": {
+      "minLength": 1,
+      "title": "Consent Version",
+      "type": "string"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "granted_at": {
+      "format": "date-time",
+      "title": "Granted At",
+      "type": "string"
+    },
+    "revoked_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Revoked At"
+    },
+    "scope": {
+      "$ref": "#/$defs/ConsentScope"
+    },
+    "status": {
+      "$ref": "#/$defs/ConsentStatus"
+    },
+    "updated_at": {
+      "format": "date-time",
+      "title": "Updated At",
+      "type": "string"
+    },
+    "user_id": {
+      "minLength": 1,
+      "title": "User Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "consent_record_id",
+    "user_id",
+    "scope",
+    "status",
+    "consent_version",
+    "granted_at",
+    "created_at",
+    "updated_at"
+  ],
+  "title": "ConsentRecord",
+  "type": "object"
+}

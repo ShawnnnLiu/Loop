@@ -1,0 +1,9 @@
+{
+  "audit_entry_id": "audit_inv_003",
+  "user_id": "user_123",
+  "purpose": "pooled_training",
+  "accessor": "training_pipeline",
+  "outcome": "allowed",
+  "reason_code": "DATA_EXPORTED",
+  "created_at": "2026-06-10T09:30:00-07:00"
+}

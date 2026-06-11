@@ -324,3 +324,31 @@ class ReasonCode(StrEnum):
     explanations. The syllabus validator summarizes with
     ``SOURCE_CLAIM_VALIDATION_FAILED``. **No Phase 5 validator producer** — it
     ships for the claim-refresh job and explanation surface."""
+
+    # --- Consent and data controls (ADR-0007; Phase 6) ---
+    #
+    # Cross-user data use is consent-gated (axiom 07: no cross-user training
+    # data without opt-in). The consent gate and the data-control operations
+    # carry these codes on every ``data_access_audit`` entry, defined by the
+    # consent-record / data-access-audit specs (per axiom 16's "other reason
+    # codes are defined in specs" note).
+    CONSENT_MISSING = "CONSENT_MISSING"
+    """A consent-scoped access found no ``ConsentRecord`` for the user and
+    scope (or none for the required consent version). The access is denied
+    and the caller falls back deterministically; pooled absence never blocks
+    planning (ADR-0007)."""
+
+    CONSENT_REVOKED = "CONSENT_REVOKED"
+    """The latest ``ConsentRecord`` for the user and scope is ``revoked``.
+    Denied at training time and serving time alike — revocation takes effect
+    on the very next gate check (consent-record spec lifecycle)."""
+
+    DATA_EXPORTED = "DATA_EXPORTED"
+    """The user's data was exported as JSON by the data-control path. Recorded
+    on the ``allowed`` audit entry so every export is provable from the audit
+    log alone (data-access-audit spec)."""
+
+    DATA_DELETED = "DATA_DELETED"
+    """The user's data was deleted from every registered store. Recorded on
+    the ``allowed`` audit entry, which is itself retained — the deletion's
+    audit trail survives the deletion (data-access-audit spec)."""

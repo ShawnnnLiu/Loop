@@ -1,0 +1,3 @@
+{
+  "error_substrings": ["allowed data_delete requires reason_code DATA_DELETED"]
+}

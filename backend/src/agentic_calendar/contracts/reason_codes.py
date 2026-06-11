@@ -396,3 +396,36 @@ class ReasonCode(StrEnum):
     """A refinement artifact was offered to serving but had no usable entry
     for the query (band unknown to the artifact, or category not refined).
     The Phase 6b chain proceeds unchanged."""
+
+    # --- LLM generation (axiom 22; Phase 8) ---
+    #
+    # Generation-side failures are distinct from validation-layer failures:
+    # the deterministic repair loop (axiom 04) handles *contract* violations,
+    # these codes handle *call* failures. Each maps to a deterministic next
+    # action; exhaustion always routes to ``error_requires_user`` — no model
+    # failure may produce a calendar write (ADR-0006). Every occurrence is
+    # recorded on an ``LlmCallLog`` row (llm-call-log spec).
+    LLM_CALL_FAILED = "LLM_CALL_FAILED"
+    """Network, timeout, or provider error before any output was produced.
+    Transient: retry within the bounded SDK retry cap."""
+
+    LLM_MALFORMED_OUTPUT = "LLM_MALFORMED_OUTPUT"
+    """The response could not be parsed into the target shape (not JSON, or
+    no tool-use block). Retry within the SDK cap."""
+
+    LLM_SCHEMA_REJECTED = "LLM_SCHEMA_REJECTED"
+    """Parsed, but failed boundary contract re-validation. Enters the bounded
+    validation repair loop (axiom 04) — never trusted past the boundary."""
+
+    LLM_REFUSAL = "LLM_REFUSAL"
+    """The model refused or returned a safety stop. Not retried with the same
+    input; routes toward ``error_requires_user``."""
+
+    LLM_TRUNCATED = "LLM_TRUNCATED"
+    """Output was cut off (max-tokens / incomplete). Transient: retry within
+    the SDK cap."""
+
+    LLM_RETRY_LIMIT_EXCEEDED = "LLM_RETRY_LIMIT_EXCEEDED"
+    """SDK-level retries exhausted; deterministic fallback engaged. Distinct
+    from the validation loop's ``REPAIR_LIMIT_EXCEEDED``, which counts repair
+    re-prompts (axiom 22). Routes to ``error_requires_user``."""

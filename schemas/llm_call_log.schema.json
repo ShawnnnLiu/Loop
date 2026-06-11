@@ -1,5 +1,16 @@
 {
   "$defs": {
+    "LlmNodeName": {
+      "description": "The four allowed LLM nodes (axiom 01); no other caller may log here.",
+      "enum": [
+        "strategist",
+        "planner",
+        "reflection_summary",
+        "user_facing_explanation"
+      ],
+      "title": "LlmNodeName",
+      "type": "string"
+    },
     "ReasonCode": {
       "description": "All typed failure / outcome codes in the system.\n\nCodes are uppercase ``SCREAMING_SNAKE_CASE`` strings so they survive a\nJSON round-trip unchanged and so they read identically in logs, telemetry,\nand user-facing explanations.",
       "enum": [
@@ -85,48 +96,162 @@
       ],
       "title": "ReasonCode",
       "type": "string"
+    },
+    "ValidationOutcome": {
+      "description": "Whether the call yielded output that passed boundary re-validation.",
+      "enum": [
+        "pass",
+        "fail"
+      ],
+      "title": "ValidationOutcome",
+      "type": "string"
     }
   },
   "additionalProperties": false,
-  "description": "The system's explicit recommitment ask.",
+  "description": "One append-only observability record per provider API call.",
   "properties": {
-    "decision_id": {
-      "minLength": 1,
-      "title": "Decision Id",
+    "attempt": {
+      "minimum": 0,
+      "title": "Attempt",
+      "type": "integer"
+    },
+    "cache_hit": {
+      "default": false,
+      "title": "Cache Hit",
+      "type": "boolean"
+    },
+    "cost_estimate_usd": {
+      "minimum": 0,
+      "title": "Cost Estimate Usd",
+      "type": "number"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
       "type": "string"
     },
-    "plan_version": {
+    "input_tokens": {
+      "minimum": 0,
+      "title": "Input Tokens",
+      "type": "integer"
+    },
+    "latency_ms": {
+      "minimum": 0,
+      "title": "Latency Ms",
+      "type": "integer"
+    },
+    "llm_call_log_id": {
       "minLength": 1,
-      "title": "Plan Version",
+      "title": "Llm Call Log Id",
+      "type": "string"
+    },
+    "model_name": {
+      "minLength": 1,
+      "title": "Model Name",
+      "type": "string"
+    },
+    "node": {
+      "$ref": "#/$defs/LlmNodeName"
+    },
+    "output_tokens": {
+      "minimum": 0,
+      "title": "Output Tokens",
+      "type": "integer"
+    },
+    "plan_version": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Plan Version"
+    },
+    "prompt_hash": {
+      "anyOf": [
+        {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Prompt Hash"
+    },
+    "prompt_version": {
+      "minLength": 1,
+      "title": "Prompt Version",
       "type": "string"
     },
     "reason_code": {
-      "$ref": "#/$defs/ReasonCode"
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ReasonCode"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     },
-    "recommitment_request_id": {
+    "refusal": {
+      "default": false,
+      "title": "Refusal",
+      "type": "boolean"
+    },
+    "response_hash": {
+      "anyOf": [
+        {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Response Hash"
+    },
+    "run_id": {
       "minLength": 1,
-      "title": "Recommitment Request Id",
+      "title": "Run Id",
       "type": "string"
     },
-    "requested_at": {
-      "format": "date-time",
-      "title": "Requested At",
-      "type": "string"
+    "sdk_retry": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Sdk Retry",
+      "type": "integer"
     },
-    "user_id": {
-      "minLength": 1,
-      "title": "User Id",
-      "type": "string"
+    "truncated": {
+      "default": false,
+      "title": "Truncated",
+      "type": "boolean"
+    },
+    "validation_outcome": {
+      "$ref": "#/$defs/ValidationOutcome"
     }
   },
   "required": [
-    "recommitment_request_id",
-    "user_id",
-    "plan_version",
-    "decision_id",
-    "reason_code",
-    "requested_at"
+    "llm_call_log_id",
+    "run_id",
+    "node",
+    "prompt_version",
+    "model_name",
+    "attempt",
+    "input_tokens",
+    "output_tokens",
+    "cost_estimate_usd",
+    "latency_ms",
+    "validation_outcome",
+    "created_at"
   ],
-  "title": "RecommitmentRequest",
+  "title": "LlmCallLog",
   "type": "object"
 }

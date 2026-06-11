@@ -1,0 +1,15 @@
+{
+  "llm_call_log_id": "llmcall_inv_001",
+  "run_id": "run_inv",
+  "node": "planner",
+  "prompt_version": "planner-2026-06-01",
+  "model_name": "claude-haiku-4-5-20251001",
+  "attempt": 0,
+  "input_tokens": 6000,
+  "output_tokens": 7000,
+  "cost_estimate_usd": 0.005,
+  "latency_ms": 9000,
+  "validation_outcome": "pass",
+  "reason_code": "LLM_REFUSAL",
+  "created_at": "2026-06-10T14:05:00-07:00"
+}

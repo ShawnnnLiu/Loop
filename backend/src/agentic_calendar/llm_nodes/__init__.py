@@ -38,6 +38,15 @@ under ``agentic_calendar.llm_nodes`` (and operator tools).
 """
 
 from .base import LLMNode, LLMNodeError
+from .call_log import (
+    InMemoryLlmCallLogStore,
+    LlmCallLog,
+    LlmCallLogAlreadyExistsError,
+    LlmCallLogStore,
+    LlmCallLogStoreError,
+    LlmNodeName,
+    ValidationOutcome,
+)
 from .planner import FixturePlanner
 from .reflection_summary import DeterministicReflectionSummary, ReflectionSummary
 from .strategist import FixtureStrategist
@@ -51,8 +60,15 @@ __all__ = [
     "DeterministicUserFacingExplanation",
     "FixturePlanner",
     "FixtureStrategist",
+    "InMemoryLlmCallLogStore",
     "LLMNode",
     "LLMNodeError",
+    "LlmCallLog",
+    "LlmCallLogAlreadyExistsError",
+    "LlmCallLogStore",
+    "LlmCallLogStoreError",
+    "LlmNodeName",
     "ReflectionSummary",
     "UserExplanation",
+    "ValidationOutcome",
 ]

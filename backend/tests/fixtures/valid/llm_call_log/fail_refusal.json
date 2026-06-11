@@ -1,0 +1,22 @@
+{
+  "llm_call_log_id": "llmcall_refusal_001",
+  "run_id": "run_456",
+  "plan_version": null,
+  "node": "user_facing_explanation",
+  "prompt_version": "explainer-2026-06-01",
+  "model_name": "claude-haiku-4-5-20251001",
+  "attempt": 0,
+  "sdk_retry": 0,
+  "input_tokens": 1000,
+  "output_tokens": 45,
+  "cost_estimate_usd": 0.0002,
+  "latency_ms": 800,
+  "validation_outcome": "fail",
+  "reason_code": "LLM_REFUSAL",
+  "cache_hit": false,
+  "truncated": false,
+  "refusal": true,
+  "prompt_hash": null,
+  "response_hash": null,
+  "created_at": "2026-06-10T14:09:00-07:00"
+}

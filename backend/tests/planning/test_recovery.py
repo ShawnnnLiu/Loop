@@ -109,3 +109,149 @@ def test_proposal_is_deterministic() -> None:
     assert a.draft is not None and b.draft is not None
     assert a.draft.model_dump() == b.draft.model_dump()
     assert a.diff.model_dump() == b.diff.model_dump()
+
+
+# -- the draft flows through validation and approval before any calendar change ----
+#
+# Phase 7 test expectation: "recovery-plan tests that prove the draft goes
+# through validation and approval before any calendar change". These compose
+# planning with validation and the Calendar Write Manager the way the
+# composition root does; src-level region boundaries are untouched.
+
+
+def _coverage_valid_active_plan() -> PlanVersion:
+    from tests.validation._helpers import make_plan, make_task
+
+    plan = make_plan(
+        make_task(task_id="dp_001", module_id="dp"),
+        make_task(task_id="api_001", module_id="api_design"),
+        plan_version="plan_v1",
+    )
+    return PlanVersion(
+        plan_version="plan_v1",
+        user_id="u1",
+        state=LifecycleState.ACTIVE,
+        plan=plan,
+        created_at=TS,
+        updated_at=TS,
+    )
+
+
+def test_recovery_draft_passes_full_validation() -> None:
+    from agentic_calendar.contracts.validation_result import NextAction
+    from agentic_calendar.validation import validate_task_plan
+    from tests.validation._helpers import load_syllabus, load_user_profile
+
+    proposal = _propose(_coverage_valid_active_plan(), RecoveryAction.RESCHEDULE)
+    assert proposal.draft is not None
+    result = validate_task_plan(
+        proposal.draft.plan,
+        syllabus=load_syllabus(),
+        user_profile=load_user_profile(),
+        run_id="run_recovery",
+    )
+    assert result.valid is True
+    assert result.violations == []
+    assert result.next_action is NextAction.SCHEDULER
+
+
+def _recovery_draft_schedule():
+    from agentic_calendar.contracts.draft_schedule import (
+        DraftSchedule,
+        DraftScheduleEntry,
+    )
+
+    proposal = _propose(_coverage_valid_active_plan(), RecoveryAction.RESCHEDULE)
+    assert proposal.draft is not None
+    start = datetime(2026, 5, 13, 18, 0, tzinfo=UTC)
+    entries = tuple(
+        DraftScheduleEntry(
+            task_id=task.task_id,
+            start=start.replace(hour=18 + i * 2),
+            end=start.replace(hour=19 + i * 2),
+        )
+        for i, task in enumerate(proposal.draft.plan.tasks)
+    )
+    return DraftSchedule(
+        draft_schedule_id="draft_recovery_1",
+        plan_version=proposal.draft.plan_version,
+        entries=entries,
+        created_at=TS,
+    )
+
+
+def _write_manager():
+    from agentic_calendar.approval.store import InMemoryApprovalEventStore
+    from agentic_calendar.calendar_writer.in_memory_adapter import (
+        InMemoryCalendarAdapter,
+    )
+    from agentic_calendar.calendar_writer.lock import CalendarWriteLockManager
+    from agentic_calendar.calendar_writer.manager import CalendarWriteManager
+    from agentic_calendar.calendar_writer.store import (
+        InMemoryCalendarEventMappingStore,
+    )
+
+    clock = FrozenClock(TS)
+    id_gen = DeterministicIdGenerator()
+    adapter = InMemoryCalendarAdapter(id_generator=id_gen)
+    approval_store = InMemoryApprovalEventStore()
+    manager = CalendarWriteManager(
+        adapter=adapter,
+        mapping_store=InMemoryCalendarEventMappingStore(),
+        approval_store=approval_store,
+        lock_manager=CalendarWriteLockManager(clock=clock),
+        id_generator=id_gen,
+        clock=clock,
+    )
+    return manager, adapter, approval_store
+
+
+def test_recovery_draft_write_blocked_without_approval() -> None:
+    from agentic_calendar.calendar_writer.manager import WriteStatus
+
+    manager, adapter, _ = _write_manager()
+    schedule = _recovery_draft_schedule()
+    result = manager.approve_and_write(
+        approval_event_id="does_not_exist",
+        draft=schedule,
+        target_calendar_id="primary",
+    )
+    assert result.status is WriteStatus.ABORTED_PRE_WRITE
+    assert result.reason_code is ReasonCode.APPROVAL_MISSING
+    assert adapter.all_events() == []  # no calendar change without approval
+
+
+def test_recovery_draft_write_succeeds_with_recorded_approval() -> None:
+    from datetime import timedelta
+
+    from agentic_calendar.calendar_writer.manager import WriteStatus
+    from agentic_calendar.contracts.approval_event import (
+        ApprovalActionType,
+        ApprovalEvent,
+        HashAlgorithm,
+    )
+    from agentic_calendar.contracts.hashing import canonical_payload_hash
+
+    manager, adapter, approval_store = _write_manager()
+    schedule = _recovery_draft_schedule()
+    approval_store.save(
+        ApprovalEvent(
+            approval_event_id="approval_recovery_1",
+            user_id="u1",
+            plan_id=schedule.plan_version,
+            draft_schedule_id=schedule.draft_schedule_id,
+            action_type=ApprovalActionType.ADD_TO_CALENDAR,
+            approved_payload_hash=canonical_payload_hash(schedule, "v1"),
+            hash_algorithm=HashAlgorithm.SHA256,
+            hash_canonicalization_version="v1",
+            created_at=TS,
+            expires_at=TS + timedelta(hours=24),
+        )
+    )
+    result = manager.approve_and_write(
+        approval_event_id="approval_recovery_1",
+        draft=schedule,
+        target_calendar_id="primary",
+    )
+    assert result.status is WriteStatus.SUCCESS
+    assert len(adapter.all_events()) == len(schedule.entries)

@@ -1,60 +1,55 @@
 {
   "$defs": {
-    "DriftEvidence": {
+    "EligibilityCriterion": {
+      "description": "The four gate criteria (spec \"Eligibility Criteria\").",
+      "enum": [
+        "total_completions",
+        "category_completions",
+        "assessable_weeks",
+        "completion_rate_stability"
+      ],
+      "title": "EligibilityCriterion",
+      "type": "string"
+    },
+    "EligibilityCriterionEvaluation": {
       "additionalProperties": false,
-      "description": "Uniform, validateable evidence for one drift classification.\n\nEvery drift type explains itself the same way: a ``trigger_metric`` whose\n``trigger_value`` crossed ``threshold`` over ``sample_size`` samples,\noptionally scoped to ``affected_categories``.",
+      "description": "Audit record of one criterion check (PolicyRuleEvaluation pattern).",
       "properties": {
-        "affected_categories": {
-          "items": {
-            "$ref": "#/$defs/TaskCategory"
-          },
-          "title": "Affected Categories",
-          "type": "array"
+        "criterion": {
+          "$ref": "#/$defs/EligibilityCriterion"
         },
-        "sample_size": {
-          "minimum": 0,
-          "title": "Sample Size",
-          "type": "integer"
+        "met": {
+          "title": "Met",
+          "type": "boolean"
         },
-        "threshold": {
-          "title": "Threshold",
+        "observed_value": {
+          "title": "Observed Value",
           "type": "number"
         },
-        "trigger_metric": {
-          "minLength": 1,
-          "title": "Trigger Metric",
-          "type": "string"
+        "reason_code": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ReasonCode"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
-        "trigger_value": {
-          "title": "Trigger Value",
+        "threshold_value": {
+          "title": "Threshold Value",
           "type": "number"
         }
       },
       "required": [
-        "trigger_metric",
-        "trigger_value",
-        "threshold",
-        "sample_size"
+        "criterion",
+        "observed_value",
+        "threshold_value",
+        "met"
       ],
-      "title": "DriftEvidence",
+      "title": "EligibilityCriterionEvaluation",
       "type": "object"
-    },
-    "DriftType": {
-      "description": "Allowed drift classifications (drift-event spec).",
-      "enum": [
-        "capacity_mismatch",
-        "duration_underestimate",
-        "duration_overestimate",
-        "topic_avoidance",
-        "external_conflict",
-        "low_engagement",
-        "dependency_blocked",
-        "calendar_fragmentation",
-        "accountability_mismatch",
-        "sponsor_pressure_mismatch"
-      ],
-      "title": "DriftType",
-      "type": "string"
     },
     "ReasonCode": {
       "description": "All typed failure / outcome codes in the system.\n\nCodes are uppercase ``SCREAMING_SNAKE_CASE`` strings so they survive a\nJSON round-trip unchanged and so they read identically in logs, telemetry,\nand user-facing explanations.",
@@ -136,24 +131,6 @@
       "title": "ReasonCode",
       "type": "string"
     },
-    "RecommendedPolicyAction": {
-      "description": "Deterministic next action the policy layer attaches to a drift event.\n\nThe full Accountability Policy Engine is Phase 7; ``drift/policy.py`` owns\nthe minimal MVP ``drift_type \u2192 action`` mapping.",
-      "enum": [
-        "reduce_weekly_load",
-        "extend_timeline",
-        "increase_duration_estimates_for_category",
-        "decrease_duration_estimates_for_category",
-        "add_review_block",
-        "split_topic_into_smaller_tasks",
-        "reschedule_around_conflict",
-        "reschedule_prerequisite_first",
-        "ask_user_to_adjust_goal",
-        "revise_accountability_contract",
-        "switch_to_private_recovery"
-      ],
-      "title": "RecommendedPolicyAction",
-      "type": "string"
-    },
     "TaskCategory": {
       "description": "Allowed values for ``task.category`` (see task-plan spec).",
       "enum": [
@@ -169,57 +146,40 @@
     }
   },
   "additionalProperties": false,
-  "description": "A single detected, deterministically-classified plan drift.",
+  "description": "The auditable power-user gate decision for one ``(user, category)``.",
   "properties": {
-    "confidence": {
-      "maximum": 1.0,
-      "minimum": 0.0,
-      "title": "Confidence",
-      "type": "number"
+    "category": {
+      "$ref": "#/$defs/TaskCategory"
     },
-    "detected_at": {
-      "format": "date-time",
-      "title": "Detected At",
-      "type": "string"
+    "criteria": {
+      "items": {
+        "$ref": "#/$defs/EligibilityCriterionEvaluation"
+      },
+      "title": "Criteria",
+      "type": "array"
     },
-    "drift_detected": {
-      "title": "Drift Detected",
+    "eligible": {
+      "title": "Eligible",
       "type": "boolean"
     },
-    "drift_event_id": {
-      "minLength": 1,
-      "title": "Drift Event Id",
+    "evaluated_at": {
+      "format": "date-time",
+      "title": "Evaluated At",
       "type": "string"
     },
-    "drift_type": {
-      "$ref": "#/$defs/DriftType"
-    },
-    "evidence": {
-      "$ref": "#/$defs/DriftEvidence"
-    },
-    "plan_version": {
+    "user_id": {
       "minLength": 1,
-      "title": "Plan Version",
+      "title": "User Id",
       "type": "string"
-    },
-    "reason_code": {
-      "$ref": "#/$defs/ReasonCode"
-    },
-    "recommended_policy_action": {
-      "$ref": "#/$defs/RecommendedPolicyAction"
     }
   },
   "required": [
-    "drift_event_id",
-    "plan_version",
-    "drift_detected",
-    "drift_type",
-    "reason_code",
-    "confidence",
-    "evidence",
-    "recommended_policy_action",
-    "detected_at"
+    "user_id",
+    "category",
+    "evaluated_at",
+    "eligible",
+    "criteria"
   ],
-  "title": "DriftEvent",
+  "title": "PowerUserEligibility",
   "type": "object"
 }

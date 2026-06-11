@@ -1,0 +1,97 @@
+{
+  "$defs": {
+    "RefinementEntry": {
+      "additionalProperties": false,
+      "description": "One refined multiplier for ``(category, time_of_day_band)``.",
+      "properties": {
+        "category": {
+          "$ref": "#/$defs/TaskCategory"
+        },
+        "multiplier": {
+          "exclusiveMinimum": 0.0,
+          "title": "Multiplier",
+          "type": "number"
+        },
+        "observed_ratio": {
+          "exclusiveMinimum": 0.0,
+          "title": "Observed Ratio",
+          "type": "number"
+        },
+        "sample_size": {
+          "minimum": 1,
+          "title": "Sample Size",
+          "type": "integer"
+        },
+        "time_of_day_band": {
+          "$ref": "#/$defs/TimeOfDayBand"
+        },
+        "weighted_sample": {
+          "exclusiveMinimum": 0.0,
+          "title": "Weighted Sample",
+          "type": "number"
+        }
+      },
+      "required": [
+        "category",
+        "time_of_day_band",
+        "multiplier",
+        "sample_size",
+        "weighted_sample",
+        "observed_ratio"
+      ],
+      "title": "RefinementEntry",
+      "type": "object"
+    },
+    "TaskCategory": {
+      "description": "Allowed values for ``task.category`` (see task-plan spec).",
+      "enum": [
+        "concept_review",
+        "practice",
+        "mock_interview",
+        "project",
+        "reflection",
+        "review"
+      ],
+      "title": "TaskCategory",
+      "type": "string"
+    },
+    "TimeOfDayBand": {
+      "description": "Local-time band of the completion timestamp (spec feature table).",
+      "enum": [
+        "morning",
+        "afternoon",
+        "evening",
+        "night"
+      ],
+      "title": "TimeOfDayBand",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Finer per-user multipliers; exists only behind the power-user gate.",
+  "properties": {
+    "computed_at": {
+      "format": "date-time",
+      "title": "Computed At",
+      "type": "string"
+    },
+    "entries": {
+      "items": {
+        "$ref": "#/$defs/RefinementEntry"
+      },
+      "title": "Entries",
+      "type": "array"
+    },
+    "user_id": {
+      "minLength": 1,
+      "title": "User Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "user_id",
+    "computed_at"
+  ],
+  "title": "PerUserRefinement",
+  "type": "object"
+}

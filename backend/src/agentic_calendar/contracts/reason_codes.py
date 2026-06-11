@@ -367,3 +367,32 @@ class ReasonCode(StrEnum):
     """The pooled artifact has no bucket matching the serving query, or the
     combined weighted sample is below the serving floor (heuristic prior).
     Same deterministic fallback as ``POOLED_MODEL_UNAVAILABLE``."""
+
+    # --- Power-user gate / per-user refinement (ADR-0007; Phase 6c) ---
+    #
+    # One code per unmet eligibility criterion (power-user-eligibility spec),
+    # so the gate decision is auditable like the policy engine. Thresholds
+    # are axiom 17 Phase 4 values, uncalibrated heuristic priors.
+    POWER_USER_TOTAL_COMPLETIONS_BELOW_THRESHOLD = (
+        "POWER_USER_TOTAL_COMPLETIONS_BELOW_THRESHOLD"
+    )
+    """Fewer than 200 total completed tasks; per-user refinement would
+    overfit (axiom 17 Phase 4)."""
+
+    POWER_USER_CATEGORY_COMPLETIONS_BELOW_THRESHOLD = (
+        "POWER_USER_CATEGORY_COMPLETIONS_BELOW_THRESHOLD"
+    )
+    """Fewer than 30 completions in the candidate category."""
+
+    POWER_USER_INSUFFICIENT_ASSESSABLE_WEEKS = "POWER_USER_INSUFFICIENT_ASSESSABLE_WEEKS"
+    """Fewer than 4 weeks with enough scheduled tasks to yield a meaningful
+    weekly completion rate; stability cannot be assessed yet."""
+
+    POWER_USER_COMPLETION_RATE_UNSTABLE = "POWER_USER_COMPLETION_RATE_UNSTABLE"
+    """Week-over-week completion-rate variance exceeds the clamped stability
+    threshold; behavior is not yet stable across weeks."""
+
+    PER_USER_REFINEMENT_UNAVAILABLE = "PER_USER_REFINEMENT_UNAVAILABLE"
+    """A refinement artifact was offered to serving but had no usable entry
+    for the query (band unknown to the artifact, or category not refined).
+    The Phase 6b chain proceeds unchanged."""

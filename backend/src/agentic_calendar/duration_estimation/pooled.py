@@ -36,6 +36,7 @@ from agentic_calendar.contracts.pooled_duration_model import (
     PooledDurationModel,
     TimeOfDayBand,
 )
+from agentic_calendar.contracts.power_user import PerUserRefinement
 from agentic_calendar.contracts.reason_codes import ReasonCode
 from agentic_calendar.contracts.telemetry import DataQuality, TelemetryEvent
 from agentic_calendar.contracts.user_duration_multipliers import (
@@ -276,6 +277,7 @@ def train_pooled_model(
 class DurationSource(StrEnum):
     """Which tier of the fallback chain produced the multiplier."""
 
+    PER_USER_REFINED = "per_user_refined"
     POOLED = "pooled"
     PER_USER_CATEGORY = "per_user_category"
     HEURISTIC_BASELINE = "heuristic_baseline"
@@ -315,6 +317,8 @@ def resolve_duration_multiplier(
     per_user: UserDurationMultipliers | None,
     model: PooledDurationModel | None,
     pooled_denial_reason: ReasonCode | None = None,
+    refinement: PerUserRefinement | None = None,
+    time_of_day_band: TimeOfDayBand | None = None,
     config: PooledServingConfig = DEFAULT_POOLED_SERVING_CONFIG,
 ) -> DurationResolution:
     """Resolve one category's effective multiplier via the fallback chain.
@@ -325,6 +329,12 @@ def resolve_duration_multiplier(
     to the composition root. ``model`` is None when no artifact exists or it
     failed contract validation (``POOLED_MODEL_UNAVAILABLE``).
 
+    Phase 6c: when the caller offers a :class:`PerUserRefinement` (trained
+    only behind the power-user gate) *and* knows the time-of-day band, a
+    matching refined entry outranks every other tier — the most specific
+    knowledge wins. With no refinement offered, or no usable entry
+    (``PER_USER_REFINEMENT_UNAVAILABLE``), behavior is identical to Phase 6b.
+
     At replan time the scheduled slot and per-task load are unknown, so the
     pooled query marginalizes over ``cognitive_load``, ``time_of_day_band``,
     and ``day_of_week`` (spec "Serving And Fallback Chain").
@@ -333,18 +343,38 @@ def resolve_duration_multiplier(
     historical = per_user_map.get(category, 1.0)
     completion_band = derive_completion_rate_band(recent_completion_rate)
     multiplier_band = derive_multiplier_band(historical)
+    query: dict[str, object] = {
+        "category": category.value,
+        "experience_level": experience_level.value,
+        "completion_rate_band": completion_band.value,
+        "multiplier_band": multiplier_band.value,
+    }
     debug: dict[str, object] = {
-        "query": {
-            "category": category.value,
-            "experience_level": experience_level.value,
-            "completion_rate_band": completion_band.value,
-            "multiplier_band": multiplier_band.value,
-        },
+        "query": query,
         "serving_floor": config.serving_floor,
         "matched_bucket_count": 0,
         "combined_weighted_sample": 0.0,
     }
     fallback_reasons: list[ReasonCode] = []
+
+    if refinement is not None:
+        entry = (
+            refinement.lookup(category, time_of_day_band)
+            if time_of_day_band is not None
+            else None
+        )
+        if entry is not None and time_of_day_band is not None:
+            query["time_of_day_band"] = time_of_day_band.value
+            debug["refined_weighted_sample"] = entry.weighted_sample
+            debug["source"] = DurationSource.PER_USER_REFINED.value
+            return DurationResolution(
+                category=category,
+                multiplier=entry.multiplier,
+                source=DurationSource.PER_USER_REFINED,
+                fallback_reasons=(),
+                debug=debug,
+            )
+        fallback_reasons.append(ReasonCode.PER_USER_REFINEMENT_UNAVAILABLE)
 
     pooled_skip: ReasonCode | None
     if pooled_denial_reason is not None:

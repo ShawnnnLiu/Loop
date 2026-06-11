@@ -1,0 +1,22 @@
+{
+  "user_id": "user_123",
+  "computed_at": "2026-06-10T16:00:00Z",
+  "entries": [
+    {
+      "category": "practice",
+      "time_of_day_band": "evening",
+      "multiplier": 1.35,
+      "sample_size": 14,
+      "weighted_sample": 13.0,
+      "observed_ratio": 1.35
+    },
+    {
+      "category": "practice",
+      "time_of_day_band": "evening",
+      "multiplier": 1.2,
+      "sample_size": 6,
+      "weighted_sample": 6.0,
+      "observed_ratio": 1.2
+    }
+  ]
+}

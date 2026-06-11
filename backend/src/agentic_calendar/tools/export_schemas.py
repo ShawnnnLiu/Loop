@@ -41,6 +41,10 @@ from agentic_calendar.contracts.notification_log import NotificationLog
 from agentic_calendar.contracts.nudge import NudgeRecord
 from agentic_calendar.contracts.plan_diff import PlanDiff
 from agentic_calendar.contracts.pooled_duration_model import PooledDurationModel
+from agentic_calendar.contracts.power_user import (
+    PerUserRefinement,
+    PowerUserEligibility,
+)
 from agentic_calendar.contracts.recommitment import (
     RecommitmentEvent,
     RecommitmentRequest,
@@ -98,6 +102,8 @@ CONTRACTS: dict[str, type[BaseModel]] = {
     "consent_record": ConsentRecord,
     "data_access_audit": DataAccessAuditEntry,
     "pooled_duration_model": PooledDurationModel,
+    "power_user_eligibility": PowerUserEligibility,
+    "per_user_refinement": PerUserRefinement,
 }
 
 

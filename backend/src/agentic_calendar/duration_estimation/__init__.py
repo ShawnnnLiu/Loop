@@ -35,22 +35,38 @@ from .pooled import (
     resolve_effective_multipliers,
     train_pooled_model,
 )
+from .power_user import (
+    DEFAULT_ELIGIBILITY_CONFIG,
+    DEFAULT_REFINEMENT_CONFIG,
+    EligibilityConfig,
+    RefinementConfig,
+    WeeklyActivity,
+    evaluate_power_user_eligibility,
+    train_per_user_refinement,
+)
 from .transform import CalibrationResult, apply_duration_calibration
 
 __all__ = [
+    "DEFAULT_ELIGIBILITY_CONFIG",
     "DEFAULT_POOLED_SERVING_CONFIG",
     "DEFAULT_POOLED_TRAINING_CONFIG",
+    "DEFAULT_REFINEMENT_CONFIG",
     "CalibrationResult",
     "DurationResolution",
     "DurationSource",
+    "EligibilityConfig",
     "PooledServingConfig",
     "PooledTrainingConfig",
     "PooledTrainingInput",
+    "RefinementConfig",
+    "WeeklyActivity",
     "apply_duration_calibration",
     "derive_completion_rate_band",
     "derive_multiplier_band",
     "derive_time_of_day_band",
+    "evaluate_power_user_eligibility",
     "resolve_duration_multiplier",
     "resolve_effective_multipliers",
+    "train_per_user_refinement",
     "train_pooled_model",
 ]

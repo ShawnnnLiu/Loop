@@ -69,6 +69,8 @@ def test_every_contract_registered() -> None:
         "consent_record",
         "data_access_audit",
         "pooled_duration_model",
+        "power_user_eligibility",
+        "per_user_refinement",
     }
     assert set(CONTRACTS.keys()) == expected
 

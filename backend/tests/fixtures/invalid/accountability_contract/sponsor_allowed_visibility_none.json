@@ -16,7 +16,11 @@
   "sponsor_visibility_level": "none",
   "sponsor_id": "sponsor_001",
   "nudge_channel_preference": "in_app",
-  "quiet_hours": { "start": "22:00", "end": "08:00" },
+  "nudge_tone_tier": "standard",
+  "quiet_hours": {
+    "start": "22:00",
+    "end": "08:00"
+  },
   "created_at": "2026-05-01T12:00:00-07:00",
   "updated_at": "2026-05-01T12:00:00-07:00"
 }

@@ -45,7 +45,8 @@ def test_order_and_casing_collide() -> None:
     ("field", "value"),
     [
         ("object_schema_version", "syl-v2"),
-        ("cache_schema_version", "cache-key-v2"),
+        ("cache_schema_version", "cache-key-v3"),
+        ("cohort_id", "intermediate|backend swe"),
         ("role_target", "frontend swe"),
         ("company_target", "meta"),
         ("freshness_window", "2026-07"),

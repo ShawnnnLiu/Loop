@@ -5,6 +5,7 @@
   "decision_id": "intv_x",
   "reason_code": "MISSED_TASK_THRESHOLD_REACHED",
   "channel": "in_app",
+  "tone_tier": "standard",
   "status": "sent",
   "recommitment_requested": false,
   "created_at": "2026-05-10T23:15:00-07:00",

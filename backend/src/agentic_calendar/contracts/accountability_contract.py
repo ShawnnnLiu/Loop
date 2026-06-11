@@ -28,6 +28,7 @@ from .motivation_profile import (
     RecoveryPreference,
     SponsorVisibility,
 )
+from .nudge import NudgeToneTier
 
 
 class AccountabilityContract(BaseModel):
@@ -52,6 +53,7 @@ class AccountabilityContract(BaseModel):
     sponsor_visibility_level: SponsorVisibility
     sponsor_id: str | None
     nudge_channel_preference: NudgeChannel
+    nudge_tone_tier: NudgeToneTier
     quiet_hours: QuietHours
     created_at: datetime
     updated_at: datetime

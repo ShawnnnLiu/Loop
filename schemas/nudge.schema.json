@@ -18,6 +18,16 @@
       "title": "NudgeStatus",
       "type": "string"
     },
+    "NudgeToneTier": {
+      "description": "Deterministic tone tier the LLM must render within (Phase 6d).\n\nSelected from ``pressure_tolerance`` by contract derivation\n(accountability-contract spec \"Tone Tier\"); never chosen by the LLM,\nnever free text, never a psychological label.",
+      "enum": [
+        "gentle",
+        "standard",
+        "direct"
+      ],
+      "title": "NudgeToneTier",
+      "type": "string"
+    },
     "ReasonCode": {
       "description": "All typed failure / outcome codes in the system.\n\nCodes are uppercase ``SCREAMING_SNAKE_CASE`` strings so they survive a\nJSON round-trip unchanged and so they read identically in logs, telemetry,\nand user-facing explanations.",
       "enum": [
@@ -140,6 +150,9 @@
     "status": {
       "$ref": "#/$defs/NudgeStatus"
     },
+    "tone_tier": {
+      "$ref": "#/$defs/NudgeToneTier"
+    },
     "user_id": {
       "minLength": 1,
       "title": "User Id",
@@ -153,6 +166,7 @@
     "decision_id",
     "reason_code",
     "channel",
+    "tone_tier",
     "status",
     "recommitment_requested",
     "created_at",

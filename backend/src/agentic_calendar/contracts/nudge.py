@@ -33,6 +33,19 @@ class NudgeStatus(StrEnum):
     DRY_RUN = "dry_run"
 
 
+class NudgeToneTier(StrEnum):
+    """Deterministic tone tier the LLM must render within (Phase 6d).
+
+    Selected from ``pressure_tolerance`` by contract derivation
+    (accountability-contract spec "Tone Tier"); never chosen by the LLM,
+    never free text, never a psychological label.
+    """
+
+    GENTLE = "gentle"
+    STANDARD = "standard"
+    DIRECT = "direct"
+
+
 #: The only reason codes a private nudge may carry (spec "Field Definitions").
 ALLOWED_NUDGE_REASON_CODES: frozenset[ReasonCode] = frozenset(
     {
@@ -64,6 +77,7 @@ class NudgeRecord(BaseModel):
     decision_id: str = Field(min_length=1)
     reason_code: ReasonCode
     channel: NudgeChannel
+    tone_tier: NudgeToneTier
     status: NudgeStatus
     recommitment_requested: bool
     created_at: datetime

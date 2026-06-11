@@ -17,6 +17,7 @@ from agentic_calendar.common.clock import Clock
 from agentic_calendar.common.ids import IdGenerator
 from agentic_calendar.contracts.accountability_contract import AccountabilityContract
 from agentic_calendar.contracts.motivation_profile import Level, MotivationProfile
+from agentic_calendar.contracts.nudge import NudgeToneTier
 
 #: Threshold offset per pressure tolerance (spec scaling table). Low tolerance
 #: intervenes later (softer); high tolerance earlier.
@@ -25,6 +26,19 @@ _PRESSURE_OFFSET: dict[Level, int] = {
     Level.MEDIUM: 0,
     Level.HIGH: -1,
 }
+
+#: Deterministic tone tier per pressure tolerance (spec "Tone Tier", Phase
+#: 6d). The LLM renders nudge phrasing within the tier; it never picks one.
+NUDGE_TONE_TIER_BY_PRESSURE: dict[Level, NudgeToneTier] = {
+    Level.LOW: NudgeToneTier.GENTLE,
+    Level.MEDIUM: NudgeToneTier.STANDARD,
+    Level.HIGH: NudgeToneTier.DIRECT,
+}
+
+
+def derive_nudge_tone_tier(pressure_tolerance: Level) -> NudgeToneTier:
+    """Deterministic ``pressure_tolerance → tone tier`` mapping (Phase 6d)."""
+    return NUDGE_TONE_TIER_BY_PRESSURE[pressure_tolerance]
 
 #: ``scope_reduction`` floor (axiom 21 policy table) — heuristic prior.
 LOW_COMPLETION_RATE_FLOOR: float = 0.5
@@ -75,6 +89,7 @@ def derive_accountability_contract(
         sponsor_visibility_level=profile.sponsor_visibility_level,
         sponsor_id=profile.sponsor_id,
         nudge_channel_preference=profile.nudge_channel_preference,
+        nudge_tone_tier=derive_nudge_tone_tier(profile.pressure_tolerance),
         quiet_hours=profile.quiet_hours,
         created_at=now,
         updated_at=now,

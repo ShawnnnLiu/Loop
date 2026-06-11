@@ -49,6 +49,7 @@ object.
   "sponsor_visibility_level": "none",
   "sponsor_id": null,
   "nudge_channel_preference": "in_app",
+  "nudge_tone_tier": "standard",
   "quiet_hours": { "start": "22:00", "end": "08:00" },
   "created_at": "2026-05-01T12:00:00-07:00",
   "updated_at": "2026-05-01T12:00:00-07:00"
@@ -76,6 +77,7 @@ object.
 | `sponsor_visibility_level` | enum `SponsorVisibility` | Snapshot. |
 | `sponsor_id` | string or null | Snapshot. |
 | `nudge_channel_preference` | enum `NudgeChannel` | Snapshot. |
+| `nudge_tone_tier` | enum: `gentle`, `standard`, `direct` | Deterministic tone tier derived from `pressure_tolerance` (Phase 6d, "Tone Tier" below). The LLM renders nudge phrasing within this tier; the tier itself never comes from prose. |
 | `quiet_hours` | `QuietHours` | Snapshot. |
 | `created_at` / `updated_at` | datetime | Timezone-aware. |
 
@@ -96,6 +98,46 @@ Results clamp to the profile's own valid ranges (`1–14`, `5–50`). Low pressu
 tolerance intervenes *later* (softer), high tolerance *earlier*. These offsets
 are heuristic priors until calibrated (axiom: validation and drift thresholds
 are priors until telemetry justifies tuning).
+
+## Tone Tier (Phase 6d, Deterministic)
+
+The contract carries the tone tier the LLM must render nudge phrasing within
+(`UserFacingExplanationNode` lane). Selection is a deterministic mapping from
+`pressure_tolerance`; the LLM never picks the tier:
+
+| `pressure_tolerance` | `nudge_tone_tier` |
+| --- | --- |
+| `low` | `gentle` |
+| `medium` | `standard` |
+| `high` | `direct` |
+
+Tier values are a closed enum, never free text and never a psychological
+label. The delivery service stamps the tier onto each `NudgeRecord`
+(`nudge.schema.md`), and the privacy filter still scans rendered output.
+
+## Threshold Adaptation (Phase 6d, Deterministic, Heuristic Priors)
+
+Observed behavior may adapt the effective private-lane thresholds — within
+the same clamps as derivation, and never touching the sponsor lane:
+
+- Repeatedly declined accountability interventions (the caller-derived
+  `declined_interventions` count, same observable the drift classifier
+  reads) raise the private nudge thresholds: at **2+** declines the
+  missed-task threshold rises by 1 and the behind-schedule threshold by 5
+  percentage points; at **4+** declines, by 2 and 10 (the cap).
+- Adapted values clamp to `[1, 14]` / `[5, 50]` — the derivation clamps.
+- Adaptation produces a **new contract snapshot** (new `contract_id`, fresh
+  timestamps) rebuilt through full validation; the prior snapshot is never
+  mutated.
+- The **sponsor floor of 4 is fixed** — it is a policy-engine constant, not
+  a contract field, and adaptation cannot reach it.
+- Every adaptation is auditable: the result records the observed count, the
+  offsets applied, and the before/after thresholds. The policy engine itself
+  is untouched; it reads effective thresholds exactly as before, so equal
+  thresholds produce identical decisions.
+
+All adaptation offsets and decline boundaries are uncalibrated heuristic
+priors.
 
 ## Required Fields
 

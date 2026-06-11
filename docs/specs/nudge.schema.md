@@ -17,9 +17,16 @@ engine. Nudges are user-private: no sponsor, parent, or external party is ever
 addressed (golden scenario 16: "a private in-app nudge only").
 
 The record stores **identifiers and outcome metadata only**. Nudge wording may
-be LLM-generated at render time (tone may read `pressure_tolerance` and
-`procrastination_risk`), but the message body is never stored here and never
-becomes control-plane state.
+be LLM-generated at render time, but the message body is never stored here and
+never becomes control-plane state.
+
+Phase 6d makes tone deterministic at the selection level: the contract carries
+a `nudge_tone_tier` derived from `pressure_tolerance`
+(`accountability-contract.schema.md` "Tone Tier"), the delivery service stamps
+that tier onto the record, and the LLM renders phrasing **within** the tier
+(`UserFacingExplanationNode` lane). The tier is a closed enum — `gentle`,
+`standard`, `direct` — never free text and never a psychological label; the
+privacy filter still scans whatever the LLM renders.
 
 ## Quiet Hours And Channel (Deterministic)
 
@@ -48,6 +55,7 @@ notifications there is no rollback status; safety is enforced before send
   "decision_id": "intv_001",
   "reason_code": "MISSED_TASK_THRESHOLD_REACHED",
   "channel": "in_app",
+  "tone_tier": "standard",
   "status": "deferred_quiet_hours",
   "recommitment_requested": false,
   "created_at": "2026-05-10T23:15:00-07:00",
@@ -65,6 +73,7 @@ notifications there is no rollback status; safety is enforced before send
 | `decision_id` | string | The `InterventionDecision` that triggered this nudge. |
 | `reason_code` | enum `ReasonCode` | Trigger: `MISSED_TASK_THRESHOLD_REACHED`, `CHECKIN_DUE`, `CHECKIN_MISSED`, `LOW_COMPLETION_RATE`, or `USER_RECOMMITMENT_REQUIRED`. |
 | `channel` | enum `NudgeChannel` | Always the contract's `nudge_channel_preference`. |
+| `tone_tier` | enum: `gentle`, `standard`, `direct` | The contract's `nudge_tone_tier` at delivery time; the LLM renders within it (Phase 6d). |
 | `status` | enum: `sent`, `deferred_quiet_hours`, `dry_run` | Outcome. |
 | `recommitment_requested` | boolean | True when the nudge asks for explicit recommitment (direct nudge at/above the escalation threshold). |
 | `created_at` | datetime | Request instant. |

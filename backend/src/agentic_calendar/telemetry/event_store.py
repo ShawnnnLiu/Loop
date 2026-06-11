@@ -43,6 +43,8 @@ class TelemetryEventStore(Protocol):
 
     def all(self) -> list[TelemetryEvent]: ...
 
+    def delete_for_tasks(self, task_ids: set[str]) -> int: ...
+
 
 class InMemoryTelemetryEventStore:
     """Default Phase 4 store. Thread-safe, ephemeral, non-persistent."""
@@ -76,3 +78,20 @@ class InMemoryTelemetryEventStore:
         """Return every event in insertion order."""
         with self._lock:
             return [self._by_id[i] for i in self._order]
+
+    def delete_for_tasks(self, task_ids: set[str]) -> int:
+        """Remove every event for ``task_ids``; return the count removed.
+
+        The only caller is the user data-delete control (ADR-0007), which
+        scopes a user's events by their task ids and writes a ``DATA_DELETED``
+        audit entry. This is the explicit, audited exception to the
+        append-only invariant — a user-requested erasure is not a *silent*
+        mutation (telemetry spec: "never silently mutated").
+        """
+        with self._lock:
+            doomed = [i for i in self._order if self._by_id[i].task_id in task_ids]
+            for event_id in doomed:
+                del self._by_id[event_id]
+            doomed_set = set(doomed)
+            self._order = [i for i in self._order if i not in doomed_set]
+            return len(doomed)

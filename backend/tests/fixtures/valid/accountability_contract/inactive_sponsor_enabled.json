@@ -16,7 +16,11 @@
   "sponsor_visibility_level": "summary_only",
   "sponsor_id": "sponsor_001",
   "nudge_channel_preference": "email",
-  "quiet_hours": { "start": "23:00", "end": "07:00" },
+  "nudge_tone_tier": "standard",
+  "quiet_hours": {
+    "start": "23:00",
+    "end": "07:00"
+  },
   "created_at": "2026-05-01T12:00:00-07:00",
   "updated_at": "2026-05-02T08:00:00-07:00"
 }

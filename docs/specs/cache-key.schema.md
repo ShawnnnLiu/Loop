@@ -28,7 +28,8 @@ differing only in claim order or casing collide.
   "freshness_window": "2026-06",
   "claim_version_set": ["a", "b"],
   "object_schema_version": "syl-v1",
-  "cache_schema_version": "cache-key-v1"
+  "cohort_id": "",
+  "cache_schema_version": "cache-key-v2"
 }
 ```
 
@@ -42,7 +43,25 @@ differing only in claim order or casing collide.
 | `freshness_window` | `YYYY-MM` month bucket derived from the injected clock (non-empty) |
 | `claim_version_set` | Sorted, de-duplicated source-claim id set (default `[]`) |
 | `object_schema_version` | Schema version of the cached object; a contract change forces a miss (non-empty) |
-| `cache_schema_version` | Key-format version; a bump invalidates every key (default `cache-key-v1`) |
+| `cohort_id` | Normalised cohort dimension (default `""` = the global, non-cohort namespace). Non-empty only behind `cohort_retrieval` consent (Phase 6d, "Cohort Dimension" below). |
+| `cache_schema_version` | Key-format version; a bump invalidates every key (default `cache-key-v2`; the `v1 → v2` bump added `cohort_id`) |
+
+## Cohort Dimension (Phase 6d, Consent-Gated)
+
+Cohort retrieval gives consented users a shared cache namespace per cohort.
+The cohort assignment is deterministic — `derive_cohort_id(experience_level,
+role_target)` buckets by experience level and normalised goal (e.g.
+`"intermediate|backend swe"`); no LLM and no free text.
+
+- The `cohort_id` dimension may be non-empty **only** when the consent gate
+  allowed the `cohort_retrieval` purpose for this user (consent-record spec).
+  Without consent the dimension stays `""` and behavior is exactly the
+  pre-Phase-6d global namespace.
+- Lookup order for a consented user is deterministic: the cohort-scoped key
+  first, then the global key (`cache/cohort.py` `cohort_lookup`); the result
+  names which namespace won, so retrieval stays explainable.
+- Source-claim invalidation and deterministic confidence scoring (axiom 08)
+  are unchanged — cohort entries carry `source_claim_ids` like any other.
 
 ## Allowed `target` Values
 

@@ -5,6 +5,7 @@
   "decision_id": "intv_002",
   "reason_code": "CHECKIN_DUE",
   "channel": "push",
+  "tone_tier": "standard",
   "status": "deferred_quiet_hours",
   "recommitment_requested": false,
   "created_at": "2026-05-10T23:15:00-07:00",

@@ -31,6 +31,8 @@ from agentic_calendar.contracts.approval_event import ApprovalEvent
 from agentic_calendar.contracts.calendar_event_mapping import CalendarEventMapping
 from agentic_calendar.contracts.checkin_event import CheckinEvent
 from agentic_calendar.contracts.company_target import CompanyTarget
+from agentic_calendar.contracts.consent_record import ConsentRecord
+from agentic_calendar.contracts.data_access_audit import DataAccessAuditEntry
 from agentic_calendar.contracts.draft_schedule import DraftSchedule
 from agentic_calendar.contracts.drift_event import DriftEvent
 from agentic_calendar.contracts.milestone_template import MilestoneTemplate
@@ -38,6 +40,11 @@ from agentic_calendar.contracts.motivation_profile import MotivationProfile
 from agentic_calendar.contracts.notification_log import NotificationLog
 from agentic_calendar.contracts.nudge import NudgeRecord
 from agentic_calendar.contracts.plan_diff import PlanDiff
+from agentic_calendar.contracts.pooled_duration_model import PooledDurationModel
+from agentic_calendar.contracts.power_user import (
+    PerUserRefinement,
+    PowerUserEligibility,
+)
 from agentic_calendar.contracts.recommitment import (
     RecommitmentEvent,
     RecommitmentRequest,
@@ -92,6 +99,11 @@ CONTRACTS: dict[str, type[BaseModel]] = {
     "nudge": NudgeRecord,
     "recommitment_request": RecommitmentRequest,
     "recommitment_event": RecommitmentEvent,
+    "consent_record": ConsentRecord,
+    "data_access_audit": DataAccessAuditEntry,
+    "pooled_duration_model": PooledDurationModel,
+    "power_user_eligibility": PowerUserEligibility,
+    "per_user_refinement": PerUserRefinement,
 }
 
 

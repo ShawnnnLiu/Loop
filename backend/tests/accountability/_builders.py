@@ -112,6 +112,7 @@ def build_contract(**overrides: Any) -> AccountabilityContract:
         "sponsor_visibility_level": SponsorVisibility.NONE,
         "sponsor_id": None,
         "nudge_channel_preference": NudgeChannel.IN_APP,
+        "nudge_tone_tier": "standard",
         "quiet_hours": {"start": "22:00", "end": "08:00"},
         "created_at": T0,
         "updated_at": T0,

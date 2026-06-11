@@ -324,3 +324,75 @@ class ReasonCode(StrEnum):
     explanations. The syllabus validator summarizes with
     ``SOURCE_CLAIM_VALIDATION_FAILED``. **No Phase 5 validator producer** — it
     ships for the claim-refresh job and explanation surface."""
+
+    # --- Consent and data controls (ADR-0007; Phase 6) ---
+    #
+    # Cross-user data use is consent-gated (axiom 07: no cross-user training
+    # data without opt-in). The consent gate and the data-control operations
+    # carry these codes on every ``data_access_audit`` entry, defined by the
+    # consent-record / data-access-audit specs (per axiom 16's "other reason
+    # codes are defined in specs" note).
+    CONSENT_MISSING = "CONSENT_MISSING"
+    """A consent-scoped access found no ``ConsentRecord`` for the user and
+    scope (or none for the required consent version). The access is denied
+    and the caller falls back deterministically; pooled absence never blocks
+    planning (ADR-0007)."""
+
+    CONSENT_REVOKED = "CONSENT_REVOKED"
+    """The latest ``ConsentRecord`` for the user and scope is ``revoked``.
+    Denied at training time and serving time alike — revocation takes effect
+    on the very next gate check (consent-record spec lifecycle)."""
+
+    DATA_EXPORTED = "DATA_EXPORTED"
+    """The user's data was exported as JSON by the data-control path. Recorded
+    on the ``allowed`` audit entry so every export is provable from the audit
+    log alone (data-access-audit spec)."""
+
+    DATA_DELETED = "DATA_DELETED"
+    """The user's data was deleted from every registered store. Recorded on
+    the ``allowed`` audit entry, which is itself retained — the deletion's
+    audit trail survives the deletion (data-access-audit spec)."""
+
+    # --- Pooled duration model (ADR-0007; Phase 6b) ---
+    #
+    # Serving fallback codes defined by the pooled-duration-model spec.
+    # Pooled failure never blocks planning: each code marks why the pooled
+    # tier was skipped before the chain fell back deterministically.
+    POOLED_MODEL_UNAVAILABLE = "POOLED_MODEL_UNAVAILABLE"
+    """No pooled artifact exists, or the artifact failed contract validation
+    (e.g. ``content_hash`` mismatch). The serving chain falls back to the
+    per-user category multiplier, then the heuristic baseline."""
+
+    POOLED_BUCKET_SPARSE = "POOLED_BUCKET_SPARSE"
+    """The pooled artifact has no bucket matching the serving query, or the
+    combined weighted sample is below the serving floor (heuristic prior).
+    Same deterministic fallback as ``POOLED_MODEL_UNAVAILABLE``."""
+
+    # --- Power-user gate / per-user refinement (ADR-0007; Phase 6c) ---
+    #
+    # One code per unmet eligibility criterion (power-user-eligibility spec),
+    # so the gate decision is auditable like the policy engine. Thresholds
+    # are axiom 17 Phase 4 values, uncalibrated heuristic priors.
+    POWER_USER_TOTAL_COMPLETIONS_BELOW_THRESHOLD = (
+        "POWER_USER_TOTAL_COMPLETIONS_BELOW_THRESHOLD"
+    )
+    """Fewer than 200 total completed tasks; per-user refinement would
+    overfit (axiom 17 Phase 4)."""
+
+    POWER_USER_CATEGORY_COMPLETIONS_BELOW_THRESHOLD = (
+        "POWER_USER_CATEGORY_COMPLETIONS_BELOW_THRESHOLD"
+    )
+    """Fewer than 30 completions in the candidate category."""
+
+    POWER_USER_INSUFFICIENT_ASSESSABLE_WEEKS = "POWER_USER_INSUFFICIENT_ASSESSABLE_WEEKS"
+    """Fewer than 4 weeks with enough scheduled tasks to yield a meaningful
+    weekly completion rate; stability cannot be assessed yet."""
+
+    POWER_USER_COMPLETION_RATE_UNSTABLE = "POWER_USER_COMPLETION_RATE_UNSTABLE"
+    """Week-over-week completion-rate variance exceeds the clamped stability
+    threshold; behavior is not yet stable across weeks."""
+
+    PER_USER_REFINEMENT_UNAVAILABLE = "PER_USER_REFINEMENT_UNAVAILABLE"
+    """A refinement artifact was offered to serving but had no usable entry
+    for the query (band unknown to the artifact, or category not refined).
+    The Phase 6b chain proceeds unchanged."""

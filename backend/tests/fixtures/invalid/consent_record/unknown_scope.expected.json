@@ -1,0 +1,3 @@
+{
+  "error_substrings": ["Input should be 'pooled_training' or 'cohort_retrieval'"]
+}

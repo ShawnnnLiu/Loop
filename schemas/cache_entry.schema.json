@@ -5,7 +5,7 @@
       "description": "Auditable, byte-stable cache key (axiom 18 dimensions).",
       "properties": {
         "cache_schema_version": {
-          "default": "cache-key-v1",
+          "default": "cache-key-v2",
           "title": "Cache Schema Version",
           "type": "string"
         },
@@ -16,6 +16,11 @@
           },
           "title": "Claim Version Set",
           "type": "array"
+        },
+        "cohort_id": {
+          "default": "",
+          "title": "Cohort Id",
+          "type": "string"
         },
         "company_target": {
           "default": "",

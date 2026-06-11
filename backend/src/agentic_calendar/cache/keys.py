@@ -24,7 +24,8 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from agentic_calendar.contracts.hashing import canonical_mapping_hash
 
 #: Version of the cache-key format itself. Bump to invalidate every key.
-CACHE_SCHEMA_VERSION = "cache-key-v1"
+#: v1 → v2 added the consent-gated ``cohort_id`` dimension (Phase 6d).
+CACHE_SCHEMA_VERSION = "cache-key-v2"
 
 
 class CacheTarget(StrEnum):
@@ -64,6 +65,7 @@ class CacheKey(BaseModel):
     freshness_window: str = Field(min_length=1)
     claim_version_set: tuple[str, ...] = ()
     object_schema_version: str = Field(min_length=1)
+    cohort_id: str = ""
     cache_schema_version: str = CACHE_SCHEMA_VERSION
 
     @model_validator(mode="before")
@@ -71,7 +73,7 @@ class CacheKey(BaseModel):
     def _normalize(cls, data: Any) -> Any:
         if isinstance(data, dict):
             data = dict(data)
-            for field in ("role_target", "company_target"):
+            for field in ("role_target", "company_target", "cohort_id"):
                 value = data.get(field)
                 if isinstance(value, str):
                     data[field] = value.strip().casefold()

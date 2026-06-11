@@ -1,0 +1,12 @@
+{
+  "model_version": "pooled-fixture-naive",
+  "feature_schema_version": "1",
+  "trained_at": "2026-06-10T16:00:00",
+  "global_prior_multiplier": 1.0,
+  "global_prior_weighted_sample": 0.0,
+  "shrinkage_strength": 5.0,
+  "multiplier_min": 0.5,
+  "multiplier_max": 2.0,
+  "buckets": [],
+  "content_hash": "sha256:0bfccfbf4ee47b0c64168ee0497ab5e63fdb5ca524510bfd7b9ae72205661401"
+}

@@ -1,0 +1,36 @@
+{
+  "user_id": "user_123",
+  "category": "practice",
+  "evaluated_at": "2026-06-10T16:00:00Z",
+  "eligible": false,
+  "criteria": [
+    {
+      "criterion": "total_completions",
+      "observed_value": 199.0,
+      "threshold_value": 200.0,
+      "met": false,
+      "reason_code": "POWER_USER_TOTAL_COMPLETIONS_BELOW_THRESHOLD"
+    },
+    {
+      "criterion": "category_completions",
+      "observed_value": 29.0,
+      "threshold_value": 30.0,
+      "met": false,
+      "reason_code": "POWER_USER_CATEGORY_COMPLETIONS_BELOW_THRESHOLD"
+    },
+    {
+      "criterion": "assessable_weeks",
+      "observed_value": 6.0,
+      "threshold_value": 4.0,
+      "met": true,
+      "reason_code": null
+    },
+    {
+      "criterion": "completion_rate_stability",
+      "observed_value": 0.011,
+      "threshold_value": 0.02,
+      "met": true,
+      "reason_code": null
+    }
+  ]
+}

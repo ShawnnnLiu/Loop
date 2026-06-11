@@ -127,6 +127,7 @@ class NudgeDeliveryService:
             decision_id=decision.decision_id,
             reason_code=decision.reason_code,
             channel=contract.nudge_channel_preference,
+            tone_tier=contract.nudge_tone_tier,
             status=status,
             recommitment_requested=_NUDGE_ACTIONS[decision.action],
             created_at=now,

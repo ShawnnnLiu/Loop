@@ -1,0 +1,11 @@
+{
+  "consent_record_id": "consent_003",
+  "user_id": "user_456",
+  "scope": "pooled_training",
+  "status": "granted",
+  "consent_version": "2026-07",
+  "granted_at": "2026-07-02T10:00:00+01:00",
+  "revoked_at": null,
+  "created_at": "2026-07-02T10:00:00+01:00",
+  "updated_at": "2026-07-02T10:00:00+01:00"
+}

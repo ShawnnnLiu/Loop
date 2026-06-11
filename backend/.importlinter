@@ -30,6 +30,7 @@ source_modules =
     agentic_calendar.source_claims
     agentic_calendar.cache
     agentic_calendar.templates
+    agentic_calendar.consent
 forbidden_modules =
     openai
     anthropic
@@ -63,6 +64,7 @@ modules =
     agentic_calendar.accountability
     agentic_calendar.telemetry
     agentic_calendar.drift
+    agentic_calendar.consent
 
 # Note: `calendar_writer` is intentionally NOT in the independence set above.
 # The Calendar Write Manager must import :class:`ApprovalEventStore` from
@@ -266,6 +268,7 @@ forbidden_modules =
     agentic_calendar.telemetry
     agentic_calendar.drift
     agentic_calendar.source_claims
+    agentic_calendar.consent
 
 # ---------------------------------------------------------------------------
 # Contract 11: Source-claims kernel leaf-deps (Phase 5).
@@ -297,6 +300,7 @@ forbidden_modules =
     agentic_calendar.duration_estimation
     agentic_calendar.cache
     agentic_calendar.templates
+    agentic_calendar.consent
 
 # ---------------------------------------------------------------------------
 # Contract 12: Cache kernel leaf-deps (Phase 5).
@@ -327,6 +331,7 @@ forbidden_modules =
     agentic_calendar.duration_estimation
     agentic_calendar.source_claims
     agentic_calendar.templates
+    agentic_calendar.consent
 
 # ---------------------------------------------------------------------------
 # Contract 13: Templates kernel leaf-deps (Phase 5c).
@@ -357,3 +362,35 @@ forbidden_modules =
     agentic_calendar.duration_estimation
     agentic_calendar.source_claims
     agentic_calendar.cache
+    agentic_calendar.consent
+
+# ---------------------------------------------------------------------------
+# Contract 14: Consent leaf-deps (Phase 6a).
+#
+# `consent` (consent records, data-access audit log, consent gate, data
+# controls — ADR-0007) may depend only on `common` and `contracts`. It is a
+# pure leaf: pooled training (6b) receives the consented user-id set from the
+# composition root rather than importing this region, and the data-control
+# CLIs pass user-scoped store views in from outside the region set.
+# ---------------------------------------------------------------------------
+[importlinter:contract:consent-is-leaf]
+name = consent/ may only depend on common/ and contracts/.
+type = forbidden
+source_modules =
+    agentic_calendar.consent
+forbidden_modules =
+    agentic_calendar.supervisor
+    agentic_calendar.validation
+    agentic_calendar.scheduler
+    agentic_calendar.planning
+    agentic_calendar.llm_nodes
+    agentic_calendar.prerequisites
+    agentic_calendar.calendar_writer
+    agentic_calendar.approval
+    agentic_calendar.accountability
+    agentic_calendar.telemetry
+    agentic_calendar.drift
+    agentic_calendar.duration_estimation
+    agentic_calendar.source_claims
+    agentic_calendar.cache
+    agentic_calendar.templates

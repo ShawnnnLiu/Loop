@@ -23,6 +23,7 @@ from outside the region set.
 
 from __future__ import annotations
 
+from .adaptation import ThresholdAdaptation, adapt_contract_thresholds
 from .checkin import (
     CheckinAssessment,
     CheckinStatus,
@@ -38,7 +39,9 @@ from .checkin_store import (
 from .contract import (
     CHECKIN_GRACE_HOURS,
     LOW_COMPLETION_RATE_FLOOR,
+    NUDGE_TONE_TIER_BY_PRESSURE,
     derive_accountability_contract,
+    derive_nudge_tone_tier,
 )
 from .delivery import DeliveryOutcome, SponsorReportDeliveryService
 from .notification_log_store import (
@@ -99,6 +102,7 @@ __all__ = [
     "DENYLIST_KEYS",
     "DISENGAGED_COMPLETION_FLOOR",
     "LOW_COMPLETION_RATE_FLOOR",
+    "NUDGE_TONE_TIER_BY_PRESSURE",
     "RECOMMITMENT_CHOICE_TO_RECOVERY_MODE",
     "SPONSOR_SUMMARY_MISSED_TASK_FLOOR",
     "AccountabilityOutcome",
@@ -137,8 +141,11 @@ __all__ = [
     "SponsorReportGenerator",
     "SponsorStore",
     "SponsorStoreError",
+    "ThresholdAdaptation",
+    "adapt_contract_thresholds",
     "behind_schedule_percent",
     "derive_accountability_contract",
+    "derive_nudge_tone_tier",
     "evaluate_accountability",
     "evaluate_checkin",
     "most_recent_due_instant",

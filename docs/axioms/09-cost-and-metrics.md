@@ -1,14 +1,18 @@
 # 09: Cost and Metrics
 
-## Pricing Assumptions (April 2026)
+## Pricing Assumptions (June 2026)
 
-All estimates assume current pricing as of April 2026 and must be revalidated quarterly:
+All estimates assume current pricing as of June 2026 and must be revalidated quarterly:
 
-- **Frontier model** (Strategist): ~$3.00 per 1M input tokens, ~$15.00 per 1M output tokens.
-- **Mid-tier model** (Planner, Reflection, user-facing explanations): ~$0.15 per 1M input tokens, ~$0.60 per 1M output tokens.
-- **Embedding**: ~$0.02 per 1M tokens.
+- **Frontier model** (Strategist; `claude-opus-4-8` in the Phase 8 adapters): $5.00 per 1M input tokens, $25.00 per 1M output tokens.
+- **Mid-tier model** (Planner, Reflection, user-facing explanations; `claude-haiku-4-5`): $1.00 per 1M input tokens, $5.00 per 1M output tokens.
+- **Embedding**: ~$0.02 per 1M tokens (assumption unchanged; not yet exercised).
 
 If pricing changes by more than 25%, the cost tables below must be regenerated and the change recorded with effective date.
+
+Change log:
+
+- **2026-06-11**: tables regenerated from the April 2026 assumptions ($3.00/$15.00 frontier, $0.15/$0.60 mid-tier) after >25% drift. First live measurement the same day (Phase 8 smoke test, one call per node, small sample inputs): 3,878 input / 2,382 output tokens, $0.0528 estimated — dominated by Strategist output tokens.
 
 ## Token Budget per Operation
 
@@ -16,59 +20,59 @@ If pricing changes by more than 25%, the cost tables below must be regenerated a
 
 | Operation | Model | Input tokens | Output tokens | Cost |
 | --- | --- | --- | --- | --- |
-| Strategist (initial syllabus) | Frontier | 8,000 | 4,000 | $0.084 |
-| Planner (initial task plan) | Mid-tier | 6,000 | 8,000 | $0.0057 |
+| Strategist (initial syllabus) | Frontier | 8,000 | 4,000 | $0.140 |
+| Planner (initial task plan) | Mid-tier | 6,000 | 8,000 | $0.046 |
 | RAG retrieval (8 queries) | Embedding | 2,000 | — | $0.00004 |
-| **Total onboarding** | | | | **~$0.090** |
+| **Total onboarding** | | | | **~$0.19** |
 
 ### Replan Cycle (drift-triggered, ~weekly per active user)
 
 | Operation | Model | Input tokens | Output tokens | Cost |
 | --- | --- | --- | --- | --- |
-| Reflection (telemetry → drift summary) | Mid-tier | 2,000 | 500 | $0.0006 |
-| Strategist (incremental syllabus update) | Frontier | 6,000 | 3,000 | $0.063 |
-| Planner (revised tasks) | Mid-tier | 5,000 | 6,000 | $0.0044 |
-| **Total per replan** | | | | **~$0.068** |
+| Reflection (telemetry → drift summary) | Mid-tier | 2,000 | 500 | $0.0045 |
+| Strategist (incremental syllabus update) | Frontier | 6,000 | 3,000 | $0.105 |
+| Planner (revised tasks) | Mid-tier | 5,000 | 6,000 | $0.035 |
+| **Total per replan** | | | | **~$0.145** |
 
 ### Validation Repair Retry
 
 | Operation | Model | Input tokens | Output tokens | Cost |
 | --- | --- | --- | --- | --- |
-| Planner (re-prompt with violations) | Mid-tier | 6,500 | 6,000 | $0.0046 |
+| Planner (re-prompt with violations) | Mid-tier | 6,500 | 6,000 | $0.0365 |
 
-Hard-capped at **2 repair attempts** per cycle. Maximum additional cost: **$0.0092**.
+Hard-capped at **2 repair attempts** per cycle. Maximum additional cost: **$0.073**.
 
 ### Reflection-Only Cycle (daily batch)
 
 | Operation | Model | Input tokens | Output tokens | Cost |
 | --- | --- | --- | --- | --- |
-| Reflection per user | Mid-tier | 1,500 | 400 | $0.00047 |
+| Reflection per user | Mid-tier | 1,500 | 400 | $0.0035 |
 
 ### User-Facing Explanation Generation
 
 | Operation | Model | Input tokens | Output tokens | Cost |
 | --- | --- | --- | --- | --- |
-| Explanation (per call) | Mid-tier | 1,000 | 300 | $0.00033 |
+| Explanation (per call) | Mid-tier | 1,000 | 300 | $0.0025 |
 
-Approximately 3–5 explanations per active week → **~$0.0015 / week**.
+Approximately 3–5 explanations per active week → **~$0.010 / week**.
 
 ## Per-User Monthly LLM Cost Estimate (Active User)
 
 | Component | Frequency | Monthly Cost |
 | --- | --- | --- |
-| Onboarding (amortized over 6 months) | 1 / 6 mo | $0.015 |
-| Replan cycles | ~4 / mo | $0.272 |
-| Validation retries | ~3 / mo | $0.028 |
-| Reflection batch | ~30 / mo | $0.014 |
-| Explanations | ~15 / mo | $0.005 |
-| **Total monthly LLM cost** | | **~$0.33 – $0.45** |
+| Onboarding (amortized over 6 months) | 1 / 6 mo | $0.031 |
+| Replan cycles | ~4 / mo | $0.578 |
+| Validation retries | ~3 / mo | $0.110 |
+| Reflection batch | ~30 / mo | $0.105 |
+| Explanations | ~15 / mo | $0.038 |
+| **Total monthly LLM cost** | | **~$0.86** |
 
 ## Sensitivity Analysis
 
 If assumptions are off by 2× in either direction:
 
-- **Conservative (high-usage power user)**: ~$0.90 / month.
-- **Aggressive (low-usage casual user)**: ~$0.15 / month.
+- **Conservative (high-usage power user)**: ~$1.75 / month.
+- **Aggressive (low-usage casual user)**: ~$0.45 / month.
 
 These numbers are order-of-magnitude estimates with explicit assumptions. Real numbers must be measured in production. They must not be used for pricing decisions without validation.
 
@@ -76,29 +80,44 @@ These numbers are order-of-magnitude estimates with explicit assumptions. Real n
 
 | Component | Monthly Range |
 | --- | --- |
-| LLM | $0.33 – $0.90 |
+| LLM | $0.86 – $1.75 |
 | Database (Postgres + pgvector) | $0.10 – $0.30 |
 | Background workers and queues | $0.05 – $0.15 |
 | Calendar API (free at current scale) | $0 |
 | Logging, observability, embedding refresh | $0.10 – $0.25 |
-| **Total per active user per month** | **$0.60 – $1.60** |
+| **Total per active user per month** | **$1.10 – $2.45** |
 
-Earlier informal targets ("$1 – $3 per active user per month, ceiling $5 – $10") are superseded by the table above. The new range reflects measured token budgets and the cost controls below.
+Earlier informal targets ("$1 – $3 per active user per month, ceiling $5 – $10") are superseded by the table above. The range reflects the June 2026 regeneration and the cost controls below.
 
 ## At-Scale Estimates (Caveats Apply)
 
 | Active Users | Estimated Monthly Infrastructure |
 | --- | --- |
-| 1,000 | $600 – $1,600 |
-| 10,000 | $6,000 – $16,000 |
-| 100,000 | Requires renegotiated LLM pricing; likely $30,000 – $80,000 |
+| 1,000 | $1,100 – $2,450 |
+| 10,000 | $11,000 – $24,500 |
+| 100,000 | Requires renegotiated LLM pricing; likely $50,000 – $120,000 before discounts |
 
 These are order-of-magnitude estimates with explicit assumptions. They are not pricing inputs.
+
+## Plan Pricing (product decision, 2026-06-11)
+
+- **Monthly plan: $39 / month.**
+- **Annual plan: $33 / month, billed yearly ($396 / year).**
+
+Against the infrastructure estimate above, serving cost is roughly **3–7% of
+revenue** per active user ($1.10 – $2.45 of $33 – $39), with the LLM share at
+~2–5%. That headroom is the budget for everything else (support, payment
+fees, acquisition) and for the usage estimates being wrong — the sensitivity
+band, not the base case, is the planning number.
+
+Plan prices are the recorded product decision; the *cost* figures they are
+compared against remain estimates pending production measurement. Re-check
+this section whenever the cost tables are regenerated.
 
 ## Cost Control Enforcement
 
 - **Per-user hourly cap:** 5 LLM calls per hour.
-- **Per-user monthly cap:** $2.00 LLM spend (5× expected; alert at 80%).
+- **Per-user monthly cap:** $4.00 LLM spend (~5× the expected ~$0.86; alert at 80%). Raised from $2.00 in the 2026-06-11 regeneration to preserve the 5× headroom intent.
 - **Per-user retry caps:** 2 validation repair attempts; 2 Scheduler-Planner iterations.
 - **Model tiering:** frontier model only for `StrategistNode`; mid-tier for `PlannerNode`, `ReflectionSummaryNode`, and `UserFacingExplanationNode`.
 - **Aggressive caching:** identical `user_profile` inputs hit cache for 7 days; see `18-caching-strategy.md`.
@@ -166,7 +185,7 @@ If approval rate sustains below **60%** or manual edit rate sustains above **30%
 
 ## Disclosure
 
-The token budgets and cost ranges in this document are computed from current pricing and assumed usage. Internal documentation must label them as estimates pending production validation. Do not use them for external pricing claims, customer commitments, or financial models without measured production data.
+The token budgets and cost ranges in this document are computed from current pricing and assumed usage. Internal documentation must label them as estimates pending production validation. Do not present them as measured costs in customer commitments or financial models without production data. The plan prices in "Plan Pricing" are the recorded product decision and may be stated externally; the margin math comparing them to estimated costs may not.
 
 ## Related Docs
 

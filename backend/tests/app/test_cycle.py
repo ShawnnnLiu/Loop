@@ -1,0 +1,872 @@
+"""End-to-end tests for :class:`agentic_calendar.app.cycle.CycleService`.
+
+Every test drives the real supervisor routing table over a fully wired
+:func:`build_environment` with fixture LLM nodes, a ``FrozenClock`` anchored to
+the golden-test Monday (2026-05-04), and a ``DeterministicIdGenerator`` — so
+every assertion below pins deterministic states, typed reason codes, and store
+contents, never prompt text.
+
+Fixture facts these tests rely on (verified against ``tests/fixtures/valid``):
+
+* ``user_profile`` → ``user_123``, target_role ``"Backend SWE"``,
+  max_session_length_min 120, deep-work windows Mon 18-21 / Wed 19-21:30.
+* ``syllabus_units`` → ``syl_003`` with modules ``dp`` (claims ``claim_012``,
+  ``claim_018``) and ``api_design`` (claim ``claim_024``).
+* ``task_plan`` → ``plan_004`` with tasks ``dp_001`` (concept_review, 60 min)
+  and ``dp_002`` (practice, 90 min, depends on ``dp_001``); validates against
+  ``syl_003`` + ``user_123``.
+* ``motivation_profile`` (first fixture) → ``mot_001`` for ``user_123`` with
+  ``recovery_mode_preference="reschedule"``,
+  ``missed_task_escalation_threshold=2``, and
+  ``behind_schedule_intervention_threshold_pct=20``.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Mapping
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
+from typing import Any
+
+import pytest
+
+from agentic_calendar.app.cycle import (
+    HASH_CANONICALIZATION_VERSION,
+    CycleError,
+    CycleService,
+)
+from agentic_calendar.app.environment import (
+    AppEnvironment,
+    LlmNodeBundle,
+    NodeDependencies,
+    build_environment,
+)
+from agentic_calendar.app.state import ReplanKind, RunRecord
+from agentic_calendar.calendar_writer.in_memory_adapter import (
+    FailureModes,
+    InMemoryCalendarAdapter,
+)
+from agentic_calendar.common.clock import FrozenClock
+from agentic_calendar.common.ids import DeterministicIdGenerator
+from agentic_calendar.contracts.checkin_event import RecoveryAction
+from agentic_calendar.contracts.data_access_audit import (
+    DataAccessOutcome,
+    DataAccessPurpose,
+)
+from agentic_calendar.contracts.draft_schedule import DraftSchedule, DraftScheduleEntry
+from agentic_calendar.contracts.drift_event import DriftType
+from agentic_calendar.contracts.hashing import canonical_payload_hash
+from agentic_calendar.contracts.reason_codes import ReasonCode
+from agentic_calendar.contracts.source_claim import SourceClaim
+from agentic_calendar.contracts.syllabus_units import SyllabusUnits
+from agentic_calendar.contracts.task_plan import TaskPlan
+from agentic_calendar.contracts.user_profile import UserProfile
+from agentic_calendar.llm_nodes.planner import FixturePlanner
+from agentic_calendar.llm_nodes.reflection_summary import DeterministicReflectionSummary
+from agentic_calendar.llm_nodes.strategist import FixtureStrategist
+from agentic_calendar.llm_nodes.user_facing_explanation import (
+    DeterministicUserFacingExplanation,
+)
+from agentic_calendar.planning.plan_version import LifecycleState
+from agentic_calendar.supervisor.state import SupervisorState as S
+from tests._fixture_loader import iter_valid
+
+USER_ID = "user_123"
+
+#: Monday noon UTC, matching the golden-suite HORIZON_START anchor (Mon
+#: 2026-05-04) so deep-work day-of-week math is deterministic.
+HAPPY_NOW = datetime(2026, 5, 4, 12, 0, tzinfo=UTC)
+
+#: Claims referenced by the canonical syllabus ``syl_003``.
+SYLLABUS_CLAIM_IDS = ("claim_012", "claim_018", "claim_024")
+
+PLAN_TASK_IDS = ("dp_001", "dp_002")
+
+
+# --------------------------------------------------------------------------- #
+# harness
+# --------------------------------------------------------------------------- #
+
+
+def _canonical_profile() -> UserProfile:
+    return UserProfile.model_validate(next(iter_valid("user_profile")).payload)
+
+
+def _canonical_syllabus() -> SyllabusUnits:
+    return SyllabusUnits.model_validate(next(iter_valid("syllabus_units")).payload)
+
+
+def _canonical_plan() -> TaskPlan:
+    return TaskPlan.model_validate(next(iter_valid("task_plan")).payload)
+
+
+def _motivation_profile_payload() -> dict[str, Any]:
+    """First motivation-profile fixture: ``mot_001`` for ``user_123``."""
+    payload = dict(next(iter_valid("motivation_profile")).payload)
+    assert payload["user_id"] == USER_ID
+    return payload
+
+
+def _seed_claims(env: AppEnvironment) -> None:
+    """Append the three claims ``syl_003`` references to the claim store.
+
+    ``claim_024`` exists as a fixture; ``claim_012``/``claim_018`` are built
+    from the long-lived ``claim_topic_dp`` fixture payload with the id
+    overridden (full re-validation through the ``SourceClaim`` contract).
+    """
+    payloads = {
+        str(fixture.payload["claim_id"]): fixture.payload
+        for fixture in iter_valid("source_claim")
+    }
+    base = payloads["claim_topic_dp"]
+    for claim_id in ("claim_012", "claim_018"):
+        env.claim_store.append(SourceClaim.model_validate({**base, "claim_id": claim_id}))
+    env.claim_store.append(SourceClaim.model_validate(payloads["claim_024"]))
+
+
+class CountingPlanner:
+    """Delegating planner that counts ``run`` invocations (loop-bound proof)."""
+
+    def __init__(self, inner: FixturePlanner) -> None:
+        self._inner = inner
+        self.calls = 0
+
+    def run(self, *, run_id: str, syllabus: SyllabusUnits) -> TaskPlan:
+        self.calls += 1
+        return self._inner.run(run_id=run_id, syllabus=syllabus)
+
+
+def make_service(
+    *,
+    motivation_profile: Mapping[str, Any] | None = None,
+    calendar_adapter: InMemoryCalendarAdapter | None = None,
+    db_path: Path | None = None,
+    strategist_fixtures: Mapping[str, SyllabusUnits] | None = None,
+    planner_fixtures: Mapping[str, TaskPlan] | None = None,
+    planner: CountingPlanner | None = None,
+    seed_claims: bool = True,
+    onboard: bool = True,
+    now: datetime = HAPPY_NOW,
+) -> tuple[CycleService, AppEnvironment, FrozenClock]:
+    """Build a fully wired service over fixture nodes.
+
+    ``onboard=False`` + ``seed_claims=False`` rebuilds over an existing SQLite
+    file without re-writing persisted state (restart-survival tests).
+    """
+    clock = FrozenClock(now)
+    ids = DeterministicIdGenerator()
+    profile = _canonical_profile()
+    syllabus = _canonical_syllabus()
+    plan = _canonical_plan()
+
+    def factory(deps: NodeDependencies) -> LlmNodeBundle:
+        del deps
+        return LlmNodeBundle(
+            strategist=FixtureStrategist(
+                strategist_fixtures or {profile.target_role: syllabus}
+            ),
+            planner=planner
+            or FixturePlanner(planner_fixtures or {syllabus.syllabus_version: plan}),
+            reflection=DeterministicReflectionSummary(),
+            explanation=DeterministicUserFacingExplanation(),
+        )
+
+    env = build_environment(
+        nodes_factory=factory,
+        clock=clock,
+        id_generator=ids,
+        calendar_adapter=calendar_adapter,
+        db_path=db_path,
+    )
+    if seed_claims:
+        _seed_claims(env)
+    service = CycleService(env)
+    if onboard:
+        service.onboard(
+            {
+                "user_profile": profile.model_dump(mode="json"),
+                "timezone": "UTC",
+                "motivation_profile": motivation_profile,
+            }
+        )
+    return service, env, clock
+
+
+def _activate_plan(service: CycleService) -> Any:
+    """Drive propose → approve → write to ACTIVE_PLAN; return the ProposeResult."""
+    proposed = service.propose(USER_ID)
+    assert proposed.state is S.AWAITING_USER_APPROVAL
+    service.approve(USER_ID)
+    written = service.write(USER_ID)
+    assert written.state is S.ACTIVE_PLAN
+    return proposed
+
+
+def _advance_past_draft(
+    env: AppEnvironment, clock: FrozenClock, draft_schedule_id: str
+) -> DraftSchedule:
+    """Advance the frozen clock 1h past the last draft entry's end.
+
+    The cycle's accountability/projection logic only counts a task as "due"
+    once its draft entry has ended, and the drafts are scheduled in the
+    future at propose time.
+    """
+    draft = env.state.get_draft(draft_schedule_id)
+    assert draft is not None
+    latest_end = max(entry.end for entry in draft.entries)
+    delta_seconds = int((latest_end - clock.now()).total_seconds()) + 3600
+    assert delta_seconds > 0
+    clock.advance(seconds=delta_seconds)
+    return draft
+
+
+def _completed_event(
+    event_id: str,
+    task_id: str,
+    *,
+    completed_at: datetime,
+    scheduled: int = 60,
+    actual: int | None = None,
+) -> dict[str, Any]:
+    """A fully user-reported completion (data_quality stays ``complete``)."""
+    return {
+        "telemetry_event_id": event_id,
+        "task_id": task_id,
+        "scheduled_duration_min": scheduled,
+        "actual_duration_min": actual if actual is not None else scheduled,
+        "completed": True,
+        "completion_timestamp": completed_at,
+        "user_reschedule_count": 0,
+        "data_quality": "complete",
+    }
+
+
+def _missed_event(event_id: str, task_id: str, *, scheduled: int = 60) -> dict[str, Any]:
+    """An incomplete event: no actuals, no completion timestamp (contract-legal)."""
+    return {
+        "telemetry_event_id": event_id,
+        "task_id": task_id,
+        "scheduled_duration_min": scheduled,
+        "actual_duration_min": None,
+        "completed": False,
+        "user_reschedule_count": 0,
+        "data_quality": "complete",
+    }
+
+
+# --------------------------------------------------------------------------- #
+# A. propose happy path
+# --------------------------------------------------------------------------- #
+
+
+def test_propose_happy_path_parks_run_awaiting_approval() -> None:
+    """Propose ends in AWAITING_USER_APPROVAL with a DRAFT plan version, a
+    stored hashable draft, a persisted run record, and the validated syllabus
+    saved for later replans."""
+    service, env, _clock = make_service()
+
+    result = service.propose(USER_ID)
+
+    assert result.state is S.AWAITING_USER_APPROVAL
+    assert result.reason_code is None
+    assert result.scheduled_task_count == len(PLAN_TASK_IDS)
+    assert result.unscheduled_tasks == []
+
+    plan_version = env.plan_store.get(USER_ID, result.plan_version)
+    assert plan_version.state is LifecycleState.DRAFT
+    assert plan_version.generation_history
+
+    draft = env.state.get_draft(result.draft_schedule_id)
+    assert draft is not None
+    assert result.draft_payload_hash == canonical_payload_hash(
+        draft, HASH_CANONICALIZATION_VERSION
+    )
+
+    run = env.state.get_run(result.run_id)
+    assert run is not None
+    assert run.state is S.AWAITING_USER_APPROVAL
+    assert run.plan_version == result.plan_version
+    assert run.draft_schedule_id == result.draft_schedule_id
+
+    syllabus = env.state.get_syllabus(USER_ID)
+    assert syllabus is not None
+    assert syllabus.syllabus_version == "syl_003"
+
+
+# --------------------------------------------------------------------------- #
+# B. propose without onboarding
+# --------------------------------------------------------------------------- #
+
+
+def test_propose_without_onboarding_raises_cycle_error() -> None:
+    """Propose for a user who never onboarded is a command-precondition error,
+    not a workflow failure."""
+    service, _env, _clock = make_service()
+
+    with pytest.raises(CycleError):
+        service.propose("user_never_onboarded")
+
+
+# --------------------------------------------------------------------------- #
+# C. strategist failure
+# --------------------------------------------------------------------------- #
+
+
+def test_strategist_failure_routes_to_error_with_llm_call_failed() -> None:
+    """An LLMNodeError from the strategist becomes the typed panic edge:
+    ERROR_REQUIRES_USER with reason_code LLM_CALL_FAILED, persisted on the run."""
+    service, env, _clock = make_service(
+        strategist_fixtures={"Other Role": _canonical_syllabus()}
+    )
+
+    result = service.propose(USER_ID)
+
+    assert result.state is S.ERROR_REQUIRES_USER
+    assert result.reason_code is ReasonCode.LLM_CALL_FAILED
+
+    run = env.state.get_run(result.run_id)
+    assert run is not None
+    assert run.state is S.ERROR_REQUIRES_USER
+    assert run.reason_code is ReasonCode.LLM_CALL_FAILED
+
+
+# --------------------------------------------------------------------------- #
+# D. syllabus validation repair exhaustion
+# --------------------------------------------------------------------------- #
+
+
+def test_orphan_claims_exhaust_strategist_repairs_with_typed_reason() -> None:
+    """With an empty claim store the syllabus's claim refs are orphans; after
+    two strategist repair attempts the run lands in ERROR_REQUIRES_USER with
+    SOURCE_CLAIM_VALIDATION_FAILED and a user-facing explanation attached."""
+    service, env, _clock = make_service(seed_claims=False)
+
+    result = service.propose(USER_ID)
+
+    assert result.state is S.ERROR_REQUIRES_USER
+    assert result.reason_code is ReasonCode.SOURCE_CLAIM_VALIDATION_FAILED
+    assert result.explanation is not None
+
+    run = env.state.get_run(result.run_id)
+    assert run is not None
+    assert run.state is S.ERROR_REQUIRES_USER
+    assert run.reason_code is ReasonCode.SOURCE_CLAIM_VALIDATION_FAILED
+
+
+# --------------------------------------------------------------------------- #
+# E. planner validation repair exhaustion
+# --------------------------------------------------------------------------- #
+
+
+def test_invalid_plan_exhausts_planner_repairs_with_typed_reason() -> None:
+    """A plan referencing a module absent from the syllabus fails validation on
+    every pass; the bounded planner repair loop (2 attempts) exhausts into
+    ERROR_REQUIRES_USER with a typed reason and an explanation attached."""
+    bad_plan = TaskPlan.model_validate(
+        {
+            "plan_version": "plan_bad",
+            "tasks": [
+                {
+                    "task_id": "ghost_001",
+                    "module_id": "nonexistent",
+                    "title": "task in a module the syllabus does not define",
+                    "dependencies": [],
+                    "estimated_duration_min": 60,
+                    "cognitive_load": 3,
+                    "category": "practice",
+                    "required_focus_level": "medium",
+                    "splittable": False,
+                }
+            ],
+        }
+    )
+    service, env, _clock = make_service(planner_fixtures={"syl_003": bad_plan})
+
+    result = service.propose(USER_ID)
+
+    assert result.state is S.ERROR_REQUIRES_USER
+    assert result.reason_code is not None
+    assert isinstance(result.reason_code, ReasonCode)
+    assert result.explanation is not None
+
+    run = env.state.get_run(result.run_id)
+    assert run is not None
+    assert run.state is S.ERROR_REQUIRES_USER
+    assert run.reason_code is result.reason_code
+
+
+# --------------------------------------------------------------------------- #
+# F. scheduler exhaustion
+# --------------------------------------------------------------------------- #
+
+
+def test_blocked_horizon_exhausts_scheduler_planner_iterations() -> None:
+    """A fully busy horizon makes every scheduler pass fail; the loop is bounded
+    at two scheduler→planner iterations and exhaustion preserves the typed
+    per-task reasons, debug payloads, and repair options."""
+    counting = CountingPlanner(FixturePlanner({"syl_003": _canonical_plan()}))
+    service, env, clock = make_service(planner=counting)
+    busy = [{"start": clock.now(), "end": clock.now() + timedelta(days=14)}]
+
+    result = service.propose(USER_ID, free_busy=busy)
+
+    assert result.state is S.ERROR_REQUIRES_USER
+    assert counting.calls == 2  # axiom 05 bound: at most two planner passes
+    assert result.reason_code is not None
+    assert result.unscheduled_tasks
+    for unscheduled in result.unscheduled_tasks:
+        assert isinstance(unscheduled.reason_code, ReasonCode)
+        assert unscheduled.debug
+    assert result.repair_options
+
+    run = env.state.get_run(result.run_id)
+    assert run is not None
+    assert run.state is S.ERROR_REQUIRES_USER
+    assert run.reason_code is result.unscheduled_tasks[0].reason_code
+
+
+# --------------------------------------------------------------------------- #
+# G. approve
+# --------------------------------------------------------------------------- #
+
+
+def test_approve_records_hash_locked_approval_and_promotes_plan() -> None:
+    """Approve stores an ApprovalEvent whose approved_payload_hash equals the
+    canonical hash of the stored draft, and the plan version moves to APPROVED."""
+    service, env, _clock = make_service()
+    proposed = service.propose(USER_ID)
+
+    approved = service.approve(USER_ID)
+
+    assert approved.state is S.CALENDAR_WRITE_APPROVED
+    assert approved.rejected is False
+    assert approved.approval_event_id is not None
+
+    approval = env.approval_store.get(approved.approval_event_id)
+    draft = env.state.get_draft(proposed.draft_schedule_id)
+    assert draft is not None
+    expected_hash = canonical_payload_hash(draft, HASH_CANONICALIZATION_VERSION)
+    assert approval.approved_payload_hash == expected_hash
+    assert approved.approved_payload_hash == expected_hash
+
+    plan_version = env.plan_store.get(USER_ID, proposed.plan_version)
+    assert plan_version.state is LifecycleState.APPROVED
+
+
+def test_reject_discards_run_and_plan() -> None:
+    """approve(reject=True) terminates the run in TERMINAL_DISCARDED and
+    discards the draft plan version."""
+    service, env, _clock = make_service()
+    proposed = service.propose(USER_ID)
+
+    rejected = service.approve(USER_ID, reject=True)
+
+    assert rejected.state is S.TERMINAL_DISCARDED
+    assert rejected.rejected is True
+    plan_version = env.plan_store.get(USER_ID, proposed.plan_version)
+    assert plan_version.state is LifecycleState.DISCARDED
+
+
+# --------------------------------------------------------------------------- #
+# H. command guards
+# --------------------------------------------------------------------------- #
+
+
+def test_approve_before_propose_raises() -> None:
+    """Approve without any run is a command-precondition error."""
+    service, _env, _clock = make_service()
+    with pytest.raises(CycleError):
+        service.approve(USER_ID)
+
+
+def test_write_before_approve_raises() -> None:
+    """Write while the run still awaits approval is rejected (approval gate)."""
+    service, _env, _clock = make_service()
+    service.propose(USER_ID)
+    with pytest.raises(CycleError):
+        service.write(USER_ID)
+
+
+def test_double_approve_raises() -> None:
+    """A second approve fails: the run already left AWAITING_USER_APPROVAL."""
+    service, _env, _clock = make_service()
+    service.propose(USER_ID)
+    service.approve(USER_ID)
+    with pytest.raises(CycleError):
+        service.approve(USER_ID)
+
+
+# --------------------------------------------------------------------------- #
+# I. write
+# --------------------------------------------------------------------------- #
+
+
+def test_dry_run_previews_without_side_effects_then_write_activates() -> None:
+    """dry-run leaves the state machine untouched and creates no mappings;
+    the real write verifies every event and activates the plan."""
+    service, env, _clock = make_service()
+    proposed = service.propose(USER_ID)
+    service.approve(USER_ID)
+    draft = env.state.get_draft(proposed.draft_schedule_id)
+    assert draft is not None
+
+    dry = service.write(USER_ID, dry_run=True)
+
+    assert dry.dry_run is True
+    assert dry.state is S.CALENDAR_WRITE_APPROVED
+    assert dry.planned_event_count == len(draft.entries)
+    for task_id in PLAN_TASK_IDS:
+        assert env.mapping_store.list_for_task(task_id) == []
+    run = env.state.get_run(proposed.run_id)
+    assert run is not None
+    assert run.state is S.CALENDAR_WRITE_APPROVED
+
+    written = service.write(USER_ID)
+
+    assert written.dry_run is False
+    assert written.state is S.ACTIVE_PLAN
+    assert written.write_status == "success"
+    assert set(written.mapping_status_by_task) == set(PLAN_TASK_IDS)
+    assert all(v == "verified" for v in written.mapping_status_by_task.values())
+
+    active = env.plan_store.get_active(USER_ID)
+    assert active is not None
+    assert active.plan_version == proposed.plan_version
+    assert active.state is LifecycleState.ACTIVE
+
+
+# --------------------------------------------------------------------------- #
+# J. write failure
+# --------------------------------------------------------------------------- #
+
+
+def test_adapter_create_failure_preserves_reason_and_blocks_activation() -> None:
+    """An injected create_event failure lands the run in
+    CALENDAR_WRITE_FAILED_STATE with reason_code CALENDAR_WRITE_FAILED and the
+    plan never becomes active."""
+    adapter = InMemoryCalendarAdapter(
+        id_generator=DeterministicIdGenerator(),
+        failure_modes=FailureModes(fail_create_for_task_ids=frozenset({"dp_001"})),
+    )
+    service, env, _clock = make_service(calendar_adapter=adapter)
+    proposed = service.propose(USER_ID)
+    service.approve(USER_ID)
+
+    written = service.write(USER_ID)
+
+    assert written.state is S.CALENDAR_WRITE_FAILED_STATE
+    assert written.reason_code is ReasonCode.CALENDAR_WRITE_FAILED
+    assert env.plan_store.get_active(USER_ID) is None
+    assert env.plan_store.get(USER_ID, proposed.plan_version).state is (
+        LifecycleState.APPROVED
+    )
+
+    run = env.state.get_run(proposed.run_id)
+    assert run is not None
+    assert run.state is S.CALENDAR_WRITE_FAILED_STATE
+    assert run.reason_code is ReasonCode.CALENDAR_WRITE_FAILED
+
+
+# --------------------------------------------------------------------------- #
+# K. hash recheck at the cycle level
+# --------------------------------------------------------------------------- #
+
+
+def test_hash_recheck_blocks_write_when_run_points_at_different_draft() -> None:
+    """If the run record is doctored to reference a draft other than the one
+    approved, the manager's mandatory hash recheck aborts pre-write: typed
+    failure state, no mappings, no external events."""
+    service, env, clock = make_service()
+    proposed = service.propose(USER_ID)
+    service.approve(USER_ID)
+
+    now = clock.now()
+    doctored = DraftSchedule(
+        draft_schedule_id="draft_doctored",
+        plan_version=proposed.plan_version,
+        entries=(
+            DraftScheduleEntry(
+                task_id="dp_001",
+                start=now + timedelta(days=1),
+                end=now + timedelta(days=1, hours=1),
+            ),
+        ),
+        created_at=now,
+    )
+    env.state.save_draft(USER_ID, doctored)
+    run = env.state.get_run(proposed.run_id)
+    assert run is not None
+    env.state.save_run(
+        RunRecord.model_validate(
+            run.model_dump() | {"draft_schedule_id": doctored.draft_schedule_id}
+        )
+    )
+
+    written = service.write(USER_ID)
+
+    assert written.state is S.CALENDAR_WRITE_FAILED_STATE
+    assert written.reason_code is not None
+    assert written.reason_code is ReasonCode.APPROVAL_HASH_MISMATCH
+    assert written.written_task_ids == []
+    assert written.mapping_status_by_task == {}
+    for task_id in PLAN_TASK_IDS:
+        assert env.mapping_store.list_for_task(task_id) == []
+    assert isinstance(env.calendar_adapter, InMemoryCalendarAdapter)
+    assert env.calendar_adapter.all_events() == []
+
+
+# --------------------------------------------------------------------------- #
+# L. ingest before any active plan
+# --------------------------------------------------------------------------- #
+
+
+def test_ingest_before_active_plan_stores_telemetry_without_assessment() -> None:
+    """Telemetry ingested with no active plan is stored but never assessed."""
+    service, env, clock = make_service()
+
+    result = service.ingest(
+        USER_ID, [_completed_event("evt_001", "dp_001", completed_at=clock.now())]
+    )
+
+    assert result.ingested_count == 1
+    assert result.assessed is False
+    assert result.run_id is None
+    assert result.state is None
+    assert len(env.telemetry_store.all()) == 1
+
+
+# --------------------------------------------------------------------------- #
+# M. plan completion
+# --------------------------------------------------------------------------- #
+
+
+def test_completing_every_task_reaches_terminal_success() -> None:
+    """Completed events covering every plan task end the journey in
+    TERMINAL_SUCCESS with plan_completed=True."""
+    service, env, clock = make_service()
+    proposed = _activate_plan(service)
+
+    result = service.ingest(
+        USER_ID,
+        [
+            _completed_event("evt_001", "dp_001", completed_at=clock.now()),
+            _completed_event(
+                "evt_002", "dp_002", scheduled=90, completed_at=clock.now()
+            ),
+        ],
+    )
+
+    assert result.assessed is True
+    assert result.plan_completed is True
+    assert result.state is S.TERMINAL_SUCCESS
+    run = env.state.get_run(proposed.run_id)
+    assert run is not None
+    assert run.state is S.TERMINAL_SUCCESS
+
+
+# --------------------------------------------------------------------------- #
+# N. NO_DRIFT self-loop
+# --------------------------------------------------------------------------- #
+
+
+def test_partial_completion_without_drift_self_loops_active_plan() -> None:
+    """One completed task out of two fires no drift rule: the run takes the
+    NO_DRIFT self-loop and stays in ACTIVE_PLAN."""
+    service, _env, clock = make_service()
+    _activate_plan(service)
+
+    result = service.ingest(
+        USER_ID, [_completed_event("evt_001", "dp_001", completed_at=clock.now())]
+    )
+
+    assert result.assessed is True
+    assert result.plan_completed is False
+    assert result.drift_events == []
+    assert result.replan_required is False
+    assert result.state is S.ACTIVE_PLAN
+
+
+# --------------------------------------------------------------------------- #
+# O. duration drift → recalibration replan → continuation
+# --------------------------------------------------------------------------- #
+
+
+def test_duration_drift_requires_recalibration_replan_then_continuation() -> None:
+    """Five completed dp_001 events at 2x the scheduled duration (ratio 2.0 >=
+    the 1.3 underestimate threshold, sample 5 >= duration_min_sample, and 5.0
+    weighted calibration evidence) classify DURATION_UNDERESTIMATE and require
+    a recalibration replan. The pooled-serving consent gate is consulted (and
+    denied — no consent record exists) with an audit entry either way. The
+    continuation propose produces a child plan version whose concept_review
+    duration is recalibrated to 120 minutes."""
+    service, env, clock = make_service()
+    proposed = _activate_plan(service)
+    _advance_past_draft(env, clock, proposed.draft_schedule_id)
+
+    events = [
+        _completed_event(
+            f"evt_{i:03d}",
+            "dp_001",
+            scheduled=60,
+            actual=120,
+            completed_at=clock.now(),
+        )
+        for i in range(1, 6)
+    ]
+    result = service.ingest(USER_ID, events)
+
+    assert result.ingested_count == 5
+    assert result.assessed is True
+    drift_types = {event.drift_type for event in result.drift_events}
+    assert DriftType.DURATION_UNDERESTIMATE in drift_types
+    underestimate = next(
+        event
+        for event in result.drift_events
+        if event.drift_type is DriftType.DURATION_UNDERESTIMATE
+    )
+    assert underestimate.reason_code is ReasonCode.DRIFT_DURATION_UNDERESTIMATE
+    assert result.replan_required is True
+    assert result.replan_kind is ReplanKind.RECALIBRATION
+    assert result.recovery_mode_pending_user_choice is False
+    assert result.state is S.REPLAN_REQUIRED
+
+    pooled_checks = [
+        entry
+        for entry in env.audit_store.list_for_user(USER_ID)
+        if entry.purpose is DataAccessPurpose.POOLED_SERVING
+    ]
+    assert pooled_checks
+    assert all(entry.outcome is DataAccessOutcome.DENIED for entry in pooled_checks)
+
+    continuation = service.propose(USER_ID)
+
+    assert continuation.state is S.AWAITING_USER_APPROVAL
+    assert continuation.parent_plan_version == proposed.plan_version
+    assert continuation.plan_version != proposed.plan_version
+    assert continuation.replan_kind is ReplanKind.RECALIBRATION
+
+    parent = env.plan_store.get(USER_ID, proposed.plan_version)
+    child = env.plan_store.get(USER_ID, continuation.plan_version)
+    parent_durations = {t.task_id: t.estimated_duration_min for t in parent.plan.tasks}
+    child_durations = {t.task_id: t.estimated_duration_min for t in child.plan.tasks}
+    assert child_durations != parent_durations
+    assert child_durations["dp_001"] == 120  # 60 min x observed 2.0 ratio
+    assert child_durations["dp_002"] == parent_durations["dp_002"]  # uncalibrated
+
+
+# --------------------------------------------------------------------------- #
+# P. accountability recovery replan
+# --------------------------------------------------------------------------- #
+
+
+def test_behind_schedule_accountability_drives_recovery_replan() -> None:
+    """Pinned deterministic behavior with the canonical motivation profile
+    (mot_001: missed-task threshold 2, behind-schedule threshold 20%,
+    recovery preference "reschedule"):
+
+    With both draft entries due and exactly ONE missed event (dp_001),
+    ``missed_tasks_7d`` is 1 < 2, so the first private-lane rule does not fire,
+    and ``behind_schedule_percent`` is 100% >= 20%, so the second rule selects
+    GENERATE_RECOVERY_PLAN_DRAFT. Drift fires deterministically alongside it
+    via DEPENDENCY_BLOCKED (dp_002 depends on the missed dp_001), which makes
+    the ACTIVE_PLAN → DRIFT_DETECTED → REPLAN_REQUIRED route reachable. The
+    accountability decision wins replan precedence; the profile's preference
+    maps directly to RECOVERY/reschedule with no pending user choice, and the
+    continuation reschedules identical plan content under a new version."""
+    service, env, clock = make_service(motivation_profile=_motivation_profile_payload())
+    proposed = _activate_plan(service)
+    _advance_past_draft(env, clock, proposed.draft_schedule_id)
+
+    result = service.ingest(USER_ID, [_missed_event("evt_001", "dp_001")])
+
+    assert result.assessed is True
+    assert result.accountability_action == "generate_recovery_plan_draft"
+    assert result.accountability_reason_code is (
+        ReasonCode.BEHIND_SCHEDULE_THRESHOLD_REACHED
+    )
+    assert result.nudge_id is None  # recovery drafts speak via approval, not nudges
+    assert result.recommitment_request_id is None
+    drift_types = {event.drift_type for event in result.drift_events}
+    assert DriftType.DEPENDENCY_BLOCKED in drift_types
+    assert result.replan_required is True
+    assert result.replan_kind is ReplanKind.RECOVERY
+    assert result.recovery_mode is RecoveryAction.RESCHEDULE
+    assert result.recovery_mode_pending_user_choice is False
+    assert result.state is S.REPLAN_REQUIRED
+
+    continuation = service.propose(USER_ID)
+
+    assert continuation.state is S.AWAITING_USER_APPROVAL
+    assert continuation.parent_plan_version == proposed.plan_version
+    assert continuation.replan_kind is ReplanKind.RECOVERY
+    assert continuation.recovery_mode is RecoveryAction.RESCHEDULE
+
+    parent = env.plan_store.get(USER_ID, proposed.plan_version)
+    child = env.plan_store.get(USER_ID, continuation.plan_version)
+    assert [t.estimated_duration_min for t in child.plan.tasks] == [
+        t.estimated_duration_min for t in parent.plan.tasks
+    ]  # reschedule changes placement only, never content
+
+
+# --------------------------------------------------------------------------- #
+# Q. restart survival (SQLite)
+# --------------------------------------------------------------------------- #
+
+
+def test_restart_survival_resumes_approve_and_write_from_sqlite(
+    tmp_path: Path,
+) -> None:
+    """A brand-new service over the same SQLite file — without re-onboarding —
+    resumes the persisted run: approve and write succeed and status shows the
+    active plan. This is the cross-process resumability guarantee."""
+    db_path = tmp_path / "cycle.db"
+    service, env, _clock = make_service(db_path=db_path)
+    proposed = service.propose(USER_ID)
+    assert proposed.state is S.AWAITING_USER_APPROVAL
+    assert env.db is not None
+    env.db.close()
+
+    service2, env2, _clock2 = make_service(
+        db_path=db_path,
+        onboard=False,
+        seed_claims=False,
+        now=HAPPY_NOW + timedelta(hours=1),
+    )
+
+    approved = service2.approve(USER_ID)
+    assert approved.state is S.CALENDAR_WRITE_APPROVED
+    assert approved.plan_version == proposed.plan_version
+
+    written = service2.write(USER_ID)
+    assert written.state is S.ACTIVE_PLAN
+    assert written.write_status == "success"
+
+    status = service2.status(USER_ID)
+    assert status.onboarded is True
+    assert status.state is S.ACTIVE_PLAN
+    assert status.active_plan_version == proposed.plan_version
+    active = env2.plan_store.get_active(USER_ID)
+    assert active is not None
+    assert active.plan_version == proposed.plan_version
+
+
+# --------------------------------------------------------------------------- #
+# R. status is read-only
+# --------------------------------------------------------------------------- #
+
+
+def test_status_is_read_only_and_repeatable() -> None:
+    """Two consecutive status calls return identical results and perform no
+    state transition."""
+    service, env, _clock = make_service()
+    proposed = service.propose(USER_ID)
+
+    first = service.status(USER_ID)
+    second = service.status(USER_ID)
+
+    assert first == second
+    assert first.state is S.AWAITING_USER_APPROVAL
+    assert first.plan_version == proposed.plan_version
+    run = env.state.get_run(proposed.run_id)
+    assert run is not None
+    assert run.state is S.AWAITING_USER_APPROVAL

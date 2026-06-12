@@ -1,9 +1,15 @@
-"""Unit tests for ``InMemoryNotificationLogStore`` (Phase 3)."""
+"""Tests for the ``NotificationLogStore`` implementations.
+
+The behavioral suite is parametrized over the in-memory and SQLite
+implementations (Phase 9a): both must satisfy the protocol identically.
+The restart-survival test at the bottom is SQLite-only by nature.
+"""
 
 from __future__ import annotations
 
 import threading
 from datetime import UTC, datetime
+from pathlib import Path
 
 import pytest
 
@@ -12,6 +18,10 @@ from agentic_calendar.accountability.notification_log_store import (
     NotificationLogAlreadyExistsError,
     NotificationLogStore,
 )
+from agentic_calendar.accountability.sqlite_notification_log_store import (
+    SqliteNotificationLogStore,
+)
+from agentic_calendar.common.sqlite import SqliteDatabase
 from agentic_calendar.contracts.motivation_profile import NudgeChannel, SponsorVisibility
 from agentic_calendar.contracts.notification_log import NotificationLog, NotificationStatus
 
@@ -35,13 +45,20 @@ def _log(**overrides: object) -> NotificationLog:
     return NotificationLog(**defaults)  # type: ignore[arg-type]
 
 
+@pytest.fixture(params=["in_memory", "sqlite"])
+def store(request: pytest.FixtureRequest, tmp_path: Path) -> NotificationLogStore:
+    if request.param == "sqlite":
+        return SqliteNotificationLogStore(SqliteDatabase(tmp_path / "store.db"))
+    return InMemoryNotificationLogStore()
+
+
 # ---------------------------------------------------------------------------
 # 1. Protocol conformance
 # ---------------------------------------------------------------------------
 
 
-def test_satisfies_protocol() -> None:
-    assert isinstance(InMemoryNotificationLogStore(), NotificationLogStore)
+def test_satisfies_protocol(store: NotificationLogStore) -> None:
+    assert isinstance(store, NotificationLogStore)
 
 
 # ---------------------------------------------------------------------------
@@ -49,15 +66,13 @@ def test_satisfies_protocol() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_append_then_list_for_report() -> None:
-    store = InMemoryNotificationLogStore()
+def test_append_then_list_for_report(store: NotificationLogStore) -> None:
     log = _log()
     store.append(log)
     assert store.list_for_report("rpt_1") == [log]
 
 
-def test_append_then_list_for_user() -> None:
-    store = InMemoryNotificationLogStore()
+def test_append_then_list_for_user(store: NotificationLogStore) -> None:
     log = _log()
     store.append(log)
     assert store.list_for_user("user_1") == [log]
@@ -68,8 +83,7 @@ def test_append_then_list_for_user() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_duplicate_id_raises() -> None:
-    store = InMemoryNotificationLogStore()
+def test_duplicate_id_raises(store: NotificationLogStore) -> None:
     log = _log()
     store.append(log)
     with pytest.raises(NotificationLogAlreadyExistsError):
@@ -81,8 +95,7 @@ def test_duplicate_id_raises() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_insertion_order_preserved_list_for_report() -> None:
-    store = InMemoryNotificationLogStore()
+def test_insertion_order_preserved_list_for_report(store: NotificationLogStore) -> None:
     log_a = _log(notification_log_id="notif_a")
     log_b = _log(notification_log_id="notif_b")
     log_c = _log(notification_log_id="notif_c")
@@ -96,8 +109,7 @@ def test_insertion_order_preserved_list_for_report() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_list_for_report_filters_other_report_ids() -> None:
-    store = InMemoryNotificationLogStore()
+def test_list_for_report_filters_other_report_ids(store: NotificationLogStore) -> None:
     log_rpt1 = _log(notification_log_id="notif_1", report_id="rpt_1")
     log_rpt2 = _log(notification_log_id="notif_2", report_id="rpt_2")
     store.append(log_rpt1)
@@ -106,8 +118,7 @@ def test_list_for_report_filters_other_report_ids() -> None:
     assert store.list_for_report("rpt_2") == [log_rpt2]
 
 
-def test_list_for_user_filters_other_user_ids() -> None:
-    store = InMemoryNotificationLogStore()
+def test_list_for_user_filters_other_user_ids(store: NotificationLogStore) -> None:
     log_u1 = _log(notification_log_id="notif_1", user_id="user_1")
     log_u2 = _log(notification_log_id="notif_2", user_id="user_2")
     store.append(log_u1)
@@ -121,13 +132,11 @@ def test_list_for_user_filters_other_user_ids() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_list_for_report_empty_store() -> None:
-    store = InMemoryNotificationLogStore()
+def test_list_for_report_empty_store(store: NotificationLogStore) -> None:
     assert store.list_for_report("rpt_1") == []
 
 
-def test_list_for_user_empty_store() -> None:
-    store = InMemoryNotificationLogStore()
+def test_list_for_user_empty_store(store: NotificationLogStore) -> None:
     assert store.list_for_user("user_1") == []
 
 
@@ -136,8 +145,7 @@ def test_list_for_user_empty_store() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_thread_safety() -> None:
-    store = InMemoryNotificationLogStore()
+def test_thread_safety(store: NotificationLogStore) -> None:
     threads_count = 8
     logs_per_thread = 50
     errors: list[Exception] = []
@@ -160,15 +168,37 @@ def test_thread_safety() -> None:
 
 
 # ---------------------------------------------------------------------------
-# 8. Append-only / no-mutation: list_for_report returns exact same object
+# 8. Append-only / no-mutation: list_for_report returns an equal record
 # ---------------------------------------------------------------------------
 
 
-def test_store_does_not_copy_or_alter_log() -> None:
-    store = InMemoryNotificationLogStore()
+def test_store_does_not_alter_log(store: NotificationLogStore) -> None:
     log = _log()
     store.append(log)
     retrieved = store.list_for_report("rpt_1")
     assert len(retrieved) == 1
-    # Must be the identical object — the store must not wrap or copy it.
-    assert retrieved[0] is log
+    # Must round-trip unchanged — the store must not wrap or alter it.
+    assert retrieved[0] == log
+
+
+# --------------------------------------------------------------------------- #
+# Restart survival (SQLite-only by nature): state written before a process
+# exit must be fully recovered by a fresh store instance on the same file.
+# --------------------------------------------------------------------------- #
+
+
+def test_sqlite_state_survives_restart(tmp_path: Path) -> None:
+    db_path = tmp_path / "store.db"
+    db = SqliteDatabase(db_path)
+    first = SqliteNotificationLogStore(db)
+    log_a = _log(notification_log_id="notif_a")
+    log_b = _log(notification_log_id="notif_b", report_id="rpt_2", user_id="user_2")
+    first.append(log_a)
+    first.append(log_b)
+    db.close()
+
+    reopened = SqliteNotificationLogStore(SqliteDatabase(db_path))
+    assert reopened.list_for_report("rpt_1") == [log_a]
+    assert reopened.list_for_report("rpt_2") == [log_b]
+    assert reopened.list_for_user("user_1") == [log_a]
+    assert reopened.list_for_user("user_2") == [log_b]

@@ -43,6 +43,11 @@ from agentic_calendar.app.environment import (
     NodeDependencies,
     build_environment,
 )
+from agentic_calendar.calendar_writer.adapter import ExternalCalendarAdapter
+from agentic_calendar.calendar_writer.google_adapter import (
+    GoogleApiHttpTransport,
+    GoogleCalendarAdapter,
+)
 from agentic_calendar.common.errors import AgenticCalendarError
 from agentic_calendar.contracts.checkin_event import RecoveryAction
 from agentic_calendar.contracts.syllabus_units import SyllabusUnits
@@ -56,6 +61,10 @@ from agentic_calendar.llm_nodes import (
     DeterministicUserFacingExplanation,
     FixturePlanner,
     FixtureStrategist,
+)
+from agentic_calendar.tools.google_calendar_auth import (
+    DEFAULT_TOKEN_PATH,
+    build_calendar_service,
 )
 from agentic_calendar.tools.llm_smoke import sample_fixture_inputs
 
@@ -119,11 +128,30 @@ def _live_bundle(deps: NodeDependencies) -> LlmNodeBundle:
     )
 
 
+def _calendar_adapter(args: argparse.Namespace) -> ExternalCalendarAdapter | None:
+    """The real Google adapter for ``--calendar google``; ``None`` keeps the
+    in-memory default. The dedicated secondary calendar id must be passed
+    explicitly — the adapter itself additionally refuses ``primary``."""
+    if getattr(args, "calendar", "memory") != "google":
+        return None
+    if args.target_calendar_id == DEFAULT_TARGET_CALENDAR_ID:
+        raise CycleError(
+            "--calendar google requires an explicit --target-calendar-id "
+            "(the id of your dedicated secondary calendar)"
+        )
+    service = build_calendar_service(token_path=args.google_token)
+    return GoogleCalendarAdapter(
+        transport=GoogleApiHttpTransport(service),
+        dedicated_calendar_id=args.target_calendar_id,
+    )
+
+
 def _build(args: argparse.Namespace) -> CycleService:
     llm = getattr(args, "llm", "fixture")
     env: AppEnvironment = build_environment(
         nodes_factory=_live_bundle if llm == "live" else _fixture_bundle,
         db_path=Path(args.db),
+        calendar_adapter=_calendar_adapter(args),
     )
     return CycleService(env)
 
@@ -236,6 +264,15 @@ def main(argv: list[str] | None = None) -> int:
     p_write.add_argument("--run", default=None, help="run id (default: latest)")
     p_write.add_argument("--target-calendar-id", default=DEFAULT_TARGET_CALENDAR_ID)
     p_write.add_argument("--dry-run", action="store_true")
+    p_write.add_argument(
+        "--calendar",
+        choices=("memory", "google"),
+        default="memory",
+        help="calendar backend; google requires a stored OAuth token "
+        "(see tools/google_calendar_auth.py) and an explicit "
+        "--target-calendar-id for the dedicated secondary calendar",
+    )
+    p_write.add_argument("--google-token", type=Path, default=DEFAULT_TOKEN_PATH)
     p_write.set_defaults(func=_cmd_write)
 
     p_ingest = sub.add_parser("ingest", help="store telemetry and assess the plan")

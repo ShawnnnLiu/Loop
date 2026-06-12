@@ -453,6 +453,7 @@ class CycleService:
             {t.task_id: t.category for t in active.plan.tasks},
             user_id=onboarding.user_id,
             now=now,
+            config=env.tuning.calibration,
         )
         gate_decision = env.consent_gate.check(
             onboarding.user_id,
@@ -470,6 +471,7 @@ class CycleService:
             pooled_denial_reason=(
                 None if gate_decision.allowed else gate_decision.reason_code
             ),
+            config=env.tuning.pooled_serving,
         )
         proposal = propose_recalibrated_plan(
             active, multipliers, id_generator=env.id_generator, clock=env.clock

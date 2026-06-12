@@ -1,0 +1,60 @@
+# Tuning file for Agentic Calendar (axiom 07 "Threshold Change Log").
+#
+# Changes made here are the ONLY supported path for tuning a deterministic
+# threshold. Every effective override is journaled to the threshold change
+# log (docs/specs/threshold-change-log.schema.md) before anything serves it
+# — no silent threshold changes between releases.
+#
+# To activate an override: uncomment the section header and the field,
+# change the value, and uncomment + fill in the two prose fields below.
+# Both are REQUIRED whenever at least one override is active.
+# All values shown are the current defaults — uncommenting them unchanged
+# journals nothing (idempotent re-load). Every default is an uncalibrated
+# heuristic prior (axiom 07 "MVP Disclosure").
+#
+# justification = "why the value moved (1-500 chars)"
+# dataset_reference = "what data motivated it, e.g. 'telemetry through 2026-06-10' or 'manual prior'"
+
+# [drift_thresholds]
+# duration_underestimate_ratio = 1.3
+# duration_overestimate_ratio = 0.7
+# duration_min_sample = 5
+# capacity_completion_floor = 0.6
+# capacity_min_cycles = 2
+# topic_avoidance_min_events = 3
+# low_engagement_skip_rate = 0.5
+# low_engagement_min_categories = 3
+# low_engagement_min_sample = 4
+# external_conflict_reschedule_threshold = 2
+# external_conflict_min_misses = 3
+# external_conflict_correlation = 0.5
+# dependency_blocked_min = 1
+# accountability_min_missed = 3
+# accountability_min_declined = 1
+# sponsor_pressure_min_reports = 2
+
+# [calibration]
+# min_weighted_sample = 5.0
+# multiplier_min = 0.5
+# multiplier_max = 2.0
+# (quality_weights is structured, not a scalar tunable — not overridable here)
+
+# [pooled_training]
+# shrinkage_strength = 5.0
+# multiplier_min = 0.5
+# multiplier_max = 2.0
+
+# [pooled_serving]
+# serving_floor = 5.0
+
+# [power_user_eligibility]
+# min_total_completions = 200
+# min_category_completions = 30
+# min_assessable_weeks = 4
+# min_weekly_scheduled = 3
+# max_completion_rate_variance = 0.02
+
+# [per_user_refinement]
+# min_weighted_sample = 5.0
+# multiplier_min = 0.5
+# multiplier_max = 2.0

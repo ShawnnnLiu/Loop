@@ -1,0 +1,72 @@
+{
+  "additionalProperties": false,
+  "description": "Append-only audit record for one tuning-value change (axiom 07).",
+  "properties": {
+    "change_id": {
+      "minLength": 1,
+      "title": "Change Id",
+      "type": "string"
+    },
+    "config_section": {
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "title": "Config Section",
+      "type": "string"
+    },
+    "dataset_reference": {
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Dataset Reference",
+      "type": "string"
+    },
+    "effective_at": {
+      "format": "date-time",
+      "title": "Effective At",
+      "type": "string"
+    },
+    "justification": {
+      "maxLength": 500,
+      "minLength": 1,
+      "title": "Justification",
+      "type": "string"
+    },
+    "new_value": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        }
+      ],
+      "title": "New Value"
+    },
+    "prior_value": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        }
+      ],
+      "title": "Prior Value"
+    },
+    "threshold_field": {
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "title": "Threshold Field",
+      "type": "string"
+    }
+  },
+  "required": [
+    "change_id",
+    "config_section",
+    "threshold_field",
+    "prior_value",
+    "new_value",
+    "effective_at",
+    "justification",
+    "dataset_reference"
+  ],
+  "title": "ThresholdChange",
+  "type": "object"
+}

@@ -78,7 +78,6 @@ from agentic_calendar.contracts.task_plan import TaskPlan
 from agentic_calendar.contracts.user_profile import UserProfile
 from agentic_calendar.contracts.validation_result import ValidationResult
 from agentic_calendar.drift.classifier import DriftClassifier
-from agentic_calendar.drift.thresholds import DEFAULT_DRIFT_THRESHOLDS, DriftThresholds
 from agentic_calendar.llm_nodes.call_log import InMemoryLlmCallLogStore, LlmCallLogStore
 from agentic_calendar.llm_nodes.reflection_summary import ReflectionSummary
 from agentic_calendar.llm_nodes.sqlite_call_log import SqliteLlmCallLogStore
@@ -98,6 +97,12 @@ from agentic_calendar.telemetry.ingestion import TelemetryIngestor
 from agentic_calendar.telemetry.sqlite_event_store import SqliteTelemetryEventStore
 
 from .state import AppStateStore, InMemoryAppStateStore, SqliteAppStateStore
+from .threshold_log import (
+    InMemoryThresholdChangeLogStore,
+    SqliteThresholdChangeLogStore,
+    ThresholdChangeLogStore,
+)
+from .tuning import EffectiveTuning, apply_tuning, load_tuning_file
 
 
 @runtime_checkable
@@ -186,6 +191,8 @@ class AppEnvironment:
     sponsor_store: SponsorStore
     call_log_store: LlmCallLogStore
     claim_store: SourceClaimStore
+    threshold_log_store: ThresholdChangeLogStore
+    tuning: EffectiveTuning
     calendar_adapter: ExternalCalendarAdapter
     lock_manager: CalendarWriteLockManager
     write_manager: CalendarWriteManager
@@ -203,7 +210,7 @@ def build_environment(
     clock: Clock | None = None,
     id_generator: IdGenerator | None = None,
     calendar_adapter: ExternalCalendarAdapter | None = None,
-    drift_thresholds: DriftThresholds = DEFAULT_DRIFT_THRESHOLDS,
+    tuning_path: str | Path | None = None,
 ) -> AppEnvironment:
     """Wire one complete environment.
 
@@ -212,6 +219,12 @@ def build_environment(
     persisted store becomes its Phase 9a twin. The default calendar adapter
     is the in-memory one — the real Google adapter (Phase 9c) is injected
     here by the operator CLI, never constructed implicitly.
+
+    ``tuning_path`` is the only supported way to change a tuning value:
+    overrides are validated against the registry and journaled to the
+    threshold change log before anything serves them (axiom 07 "no silent
+    threshold changes"); omitted, every config keeps its default and the
+    journal is untouched.
     """
     clock = clock if clock is not None else SystemClock()
     ids = id_generator if id_generator is not None else UuidIdGenerator()
@@ -232,6 +245,9 @@ def build_environment(
         sponsor_store: SponsorStore = InMemorySponsorStore(clock)
         call_log_store: LlmCallLogStore = InMemoryLlmCallLogStore()
         claim_store: SourceClaimStore = InMemorySourceClaimStore()
+        threshold_log_store: ThresholdChangeLogStore = (
+            InMemoryThresholdChangeLogStore()
+        )
     else:
         db = SqliteDatabase(db_path)
         state = SqliteAppStateStore(db)
@@ -248,6 +264,14 @@ def build_environment(
         sponsor_store = SqliteSponsorStore(db, clock)
         call_log_store = SqliteLlmCallLogStore(db)
         claim_store = SqliteSourceClaimStore(db)
+        threshold_log_store = SqliteThresholdChangeLogStore(db)
+
+    tuning = apply_tuning(
+        parsed=load_tuning_file(tuning_path) if tuning_path is not None else None,
+        store=threshold_log_store,
+        clock=clock,
+        id_generator=ids,
+    )
 
     adapter = (
         calendar_adapter
@@ -284,12 +308,14 @@ def build_environment(
         sponsor_store=sponsor_store,
         call_log_store=call_log_store,
         claim_store=claim_store,
+        threshold_log_store=threshold_log_store,
+        tuning=tuning,
         calendar_adapter=adapter,
         lock_manager=lock_manager,
         write_manager=write_manager,
         telemetry_ingestor=TelemetryIngestor(clock=clock, store=telemetry_store),
         drift_classifier=DriftClassifier(
-            clock=clock, id_generator=ids, thresholds=drift_thresholds
+            clock=clock, id_generator=ids, thresholds=tuning.drift_thresholds
         ),
         consent_gate=ConsentGate(
             consent_store, audit_store, clock=clock, id_generator=ids

@@ -19,9 +19,12 @@ LLM backend (``propose`` / ``ingest`` only): ``--llm fixture`` (default) uses
 the deterministic nodes over the smoke-test sample data — offline, no API
 key, intended for demos and tests with the sample "Backend SWE" profile.
 ``--llm live`` uses the real Anthropic adapters (Phase 8) and requires
-``ANTHROPIC_API_KEY``. The calendar adapter is in-memory until Phase 9c lands
-the real Google adapter; writes are therefore safe but not yet externally
-visible.
+``ANTHROPIC_API_KEY``. The calendar backend defaults to in-memory; pass
+``write --calendar google --target-calendar-id <id>`` after running the
+one-time ``tools/google_calendar_auth.py`` flow to write to the dedicated
+secondary Google calendar (Phase 9c). Tuning overrides load from
+``tuning.toml`` (or ``--tuning``) and are journaled to the threshold change
+log (Phase 9d).
 """
 
 from __future__ import annotations
@@ -146,12 +149,25 @@ def _calendar_adapter(args: argparse.Namespace) -> ExternalCalendarAdapter | Non
     )
 
 
+def _tuning_path(args: argparse.Namespace) -> Path | None:
+    """An explicit ``--tuning`` flag wins; otherwise a backend-relative
+    ``tuning.toml`` is picked up only when it exists. Either way every
+    override is journaled to the threshold change log before serving
+    (axiom 07: no silent threshold changes)."""
+    explicit: Path | None = getattr(args, "tuning", None)
+    if explicit is not None:
+        return explicit
+    default = Path("tuning.toml")
+    return default if default.exists() else None
+
+
 def _build(args: argparse.Namespace) -> CycleService:
     llm = getattr(args, "llm", "fixture")
     env: AppEnvironment = build_environment(
         nodes_factory=_live_bundle if llm == "live" else _fixture_bundle,
         db_path=Path(args.db),
         calendar_adapter=_calendar_adapter(args),
+        tuning_path=_tuning_path(args),
     )
     return CycleService(env)
 
@@ -226,6 +242,13 @@ def main(argv: list[str] | None = None) -> int:
 
     def common(p: argparse.ArgumentParser, *, user: bool = True) -> None:
         p.add_argument("--db", required=True, help="SQLite database path")
+        p.add_argument(
+            "--tuning",
+            type=Path,
+            default=None,
+            help="tuning.toml path (default: ./tuning.toml when it exists); "
+            "overrides are journaled to the threshold change log",
+        )
         if user:
             p.add_argument("--user", required=True, help="user id")
 

@@ -147,6 +147,7 @@ def make_service(
     seed_claims: bool = True,
     onboard: bool = True,
     now: datetime = HAPPY_NOW,
+    tuning_path: Path | None = None,
 ) -> tuple[CycleService, AppEnvironment, FrozenClock]:
     """Build a fully wired service over fixture nodes.
 
@@ -177,6 +178,7 @@ def make_service(
         id_generator=ids,
         calendar_adapter=calendar_adapter,
         db_path=db_path,
+        tuning_path=tuning_path,
     )
     if seed_claims:
         _seed_claims(env)
@@ -870,3 +872,30 @@ def test_status_is_read_only_and_repeatable() -> None:
     run = env.state.get_run(proposed.run_id)
     assert run is not None
     assert run.state is S.AWAITING_USER_APPROVAL
+
+
+# --------------------------------------------------------------------------- #
+# S. tuning file consumption (Phase 9d)
+# --------------------------------------------------------------------------- #
+
+
+def test_tuning_file_overrides_drift_thresholds_and_journals(tmp_path: Path) -> None:
+    """The composition root actually consumes the tuning file: the classifier
+    serves the overridden threshold and the change is journaled (axiom 07
+    'no silent threshold changes')."""
+    tuning_file = tmp_path / "tuning.toml"
+    tuning_file.write_text(
+        'justification = "Solo dogfooding: act on a single observation."\n'
+        'dataset_reference = "manual prior"\n'
+        "[drift_thresholds]\n"
+        "duration_min_sample = 1\n",
+        encoding="utf-8",
+    )
+    _service, env, _clock = make_service(tuning_path=tuning_file)
+    assert env.tuning.drift_thresholds.duration_min_sample == 1
+    entries = env.threshold_log_store.list_all()
+    assert len(entries) == 1
+    assert entries[0].config_section == "drift_thresholds"
+    assert entries[0].threshold_field == "duration_min_sample"
+    assert entries[0].prior_value == 5
+    assert entries[0].new_value == 1

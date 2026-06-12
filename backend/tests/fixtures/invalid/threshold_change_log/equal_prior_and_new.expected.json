@@ -1,0 +1,5 @@
+{
+  "error_substrings": [
+    "new_value must differ from prior_value"
+  ]
+}

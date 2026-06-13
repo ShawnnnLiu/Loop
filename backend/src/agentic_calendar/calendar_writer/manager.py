@@ -99,6 +99,14 @@ class WriteResult:
     reason_code: ReasonCode | None
     written_mappings: tuple[CalendarEventMapping, ...]
     verification: VerificationResult | None
+    error: str | None = None
+    """Human-readable failure detail for operator diagnosability.
+
+    ``str(exc)`` of the typed exception the boundary translated (e.g. the
+    Google adapter's enriched provider detail), so the operator sees more
+    than the bare ``reason_code``. Adapters guarantee these messages are
+    typed error prose only — never raw calendar content or secrets.
+    ``None`` on success."""
 
 
 # Reason codes that map to ABORTED_PRE_WRITE (no external API call was made).
@@ -217,13 +225,14 @@ class CalendarWriteManager:
             token = self._lock_manager.acquire(
                 user_id=approval.user_id, run_id=run_id
             )
-        except CalendarWriteLockBusyError:
+        except CalendarWriteLockBusyError as exc:
             return WriteResult(
                 run_id=run_id,
                 status=WriteStatus.LOCK_BUSY,
                 reason_code=ReasonCode.CALENDAR_WRITE_LOCK_BUSY,
                 written_mappings=(),
                 verification=None,
+                error=str(exc),
             )
 
         try:
@@ -364,13 +373,14 @@ class CalendarWriteManager:
             token = self._lock_manager.acquire(
                 user_id=approval.user_id, run_id=run_id
             )
-        except CalendarWriteLockBusyError:
+        except CalendarWriteLockBusyError as exc:
             return WriteResult(
                 run_id=run_id,
                 status=WriteStatus.LOCK_BUSY,
                 reason_code=ReasonCode.CALENDAR_WRITE_LOCK_BUSY,
                 written_mappings=(),
                 verification=None,
+                error=str(exc),
             )
         try:
             existing = self._adapter.query_events_by_metadata(
@@ -428,7 +438,7 @@ class CalendarWriteManager:
                 )
                 try:
                     token = self._lock_manager.heartbeat(token)
-                except CalendarWriteLockExpiredError:
+                except CalendarWriteLockExpiredError as heartbeat_exc:
                     return WriteResult(
                         run_id=run_id,
                         status=WriteStatus.PARTIAL_FAILURE,
@@ -437,6 +447,7 @@ class CalendarWriteManager:
                             self._mapping_store.list_for_run(run_id)
                         ),
                         verification=None,
+                        error=str(heartbeat_exc),
                     )
 
             return self._finalize_run(
@@ -692,7 +703,13 @@ class CalendarWriteManager:
     ) -> WriteResult:
         """Boundary translation promised by ``errors.py``: each typed
         exception becomes the ``WriteResult`` matching its ``reason_code``,
-        preserving any partial-progress state the exception carries."""
+        preserving any partial-progress state the exception carries.
+
+        ``error`` carries ``str(exc)`` so enriched adapter detail (e.g. the
+        Google adapter's "events.list failed ...: HTTP 403" prose) reaches
+        the operator instead of collapsing to the bare ``reason_code``.
+        Exception messages here are typed error prose only — adapters never
+        embed raw calendar content or secrets."""
         reason_code = type(exc).reason_code
         status = (
             WriteStatus.ABORTED_PRE_WRITE
@@ -705,6 +722,7 @@ class CalendarWriteManager:
             reason_code=reason_code,
             written_mappings=exc.written,
             verification=exc.verification,
+            error=str(exc),
         )
 
     def _aborted(

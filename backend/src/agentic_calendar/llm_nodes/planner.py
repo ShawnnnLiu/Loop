@@ -12,6 +12,8 @@ from collections.abc import Mapping
 
 from agentic_calendar.contracts.syllabus_units import SyllabusUnits
 from agentic_calendar.contracts.task_plan import TaskPlan
+from agentic_calendar.contracts.user_profile import UserProfile
+from agentic_calendar.contracts.validation_result import ValidationResult
 
 from .base import LLMNodeError
 
@@ -24,8 +26,22 @@ class FixturePlanner:
             raise ValueError("FixturePlanner requires at least one fixture")
         self._fixtures = dict(fixtures)
 
-    def run(self, *, run_id: str, syllabus: SyllabusUnits) -> TaskPlan:
-        del run_id
+    def run(
+        self,
+        *,
+        run_id: str,
+        syllabus: SyllabusUnits,
+        user_profile: UserProfile | None = None,
+        repair: ValidationResult | None = None,
+    ) -> TaskPlan:
+        """Return the canned plan for ``syllabus.syllabus_version``.
+
+        ``user_profile`` and ``repair`` exist for protocol parity with
+        ``AnthropicPlanner`` (the real adapter embeds the profile's scheduling
+        constraints and the failed ``ValidationResult`` in its prompt). Canned
+        output cannot honor either, so both are accepted and ignored.
+        """
+        del run_id, user_profile, repair
         key = syllabus.syllabus_version
         if key not in self._fixtures:
             raise LLMNodeError(

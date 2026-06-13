@@ -15,6 +15,13 @@ from agentic_calendar.contracts.reason_codes import ReasonCode
 from agentic_calendar.contracts.strategy_constraints import StrategyConstraints
 from agentic_calendar.contracts.syllabus_units import SyllabusUnits
 from agentic_calendar.contracts.user_profile import UserProfile
+from agentic_calendar.contracts.validation_result import (
+    ArtifactType,
+    NextAction,
+    ValidationResult,
+    Violation,
+)
+from agentic_calendar.contracts.violation_types import ViolationType
 from agentic_calendar.llm_nodes.anthropic_adapter import (
     AnthropicPlanner,
     AnthropicReflectionSummary,
@@ -290,6 +297,65 @@ def test_debug_raw_sink_receives_raw_but_store_does_not() -> None:
 def _profile() -> UserProfile:
     fixture = next(f for f in iter_valid("user_profile") if f.name == "backend_swe_intermediate")
     return UserProfile.model_validate(fixture.payload)
+
+
+def test_planner_prompt_carries_profile_constraints_as_canonical_json() -> None:
+    """With a profile, the planner prompt embeds the typed scheduling limits
+    (the values user-fit validation enforces), derived only from the profile."""
+    planner, _store, transport = _planner([_ok(_VALID_PLAN)])
+    planner.run(
+        run_id="run_t",
+        syllabus=SyllabusUnits.model_validate(_SYLLABUS),
+        plan_version="v1",
+        user_profile=_profile(),
+    )
+    prompt = transport.requests[0]["user_prompt"]
+    assert "Planning constraints (hard limits enforced by validation):" in prompt
+    # backend_swe_intermediate fixture: max 120, preferred 60, 8h x 10wk.
+    assert '"max_session_length_min": 120' in prompt
+    assert '"preferred_session_length_min": 60' in prompt
+    assert '"total_capacity_min": 4800' in prompt
+    assert '"weekly_hours": 8.0' in prompt
+    assert '"timeline_weeks": 10' in prompt
+    assert '"splittable_rule"' in prompt
+
+
+def test_planner_prompt_has_no_constraints_block_without_profile() -> None:
+    planner, _store, transport = _planner([_ok(_VALID_PLAN)])
+    _run_planner(planner)
+    assert "Planning constraints" not in transport.requests[0]["user_prompt"]
+
+
+def test_planner_prompt_embeds_repair_violations_and_reason_code() -> None:
+    """A caller-supplied failed ValidationResult reaches the prompt as the
+    typed violation type and reason_code — structured repair, not prose."""
+    repair = ValidationResult(
+        run_id="run_t",
+        artifact_type=ArtifactType.TASK_PLAN,
+        valid=False,
+        repairable=True,
+        reason_code=ReasonCode.USER_FIT_VIOLATED,
+        violations=[
+            Violation(
+                type=ViolationType.DURATION_EXCEEDS_USER_MAX_SESSION,
+                task_id="dp_001",
+                details={"duration_min": 150, "max_session_length_min": 120},
+            )
+        ],
+        repair_attempt=1,
+        next_action=NextAction.PLANNER_REPAIR_RETRY,
+    )
+    planner, _store, transport = _planner([_ok(_VALID_PLAN)])
+    planner.run(
+        run_id="run_t",
+        syllabus=SyllabusUnits.model_validate(_SYLLABUS),
+        plan_version="v1",
+        repair=repair,
+    )
+    prompt = transport.requests[0]["user_prompt"]
+    assert "failed deterministic validation" in prompt
+    assert ViolationType.DURATION_EXCEEDS_USER_MAX_SESSION.value in prompt
+    assert ReasonCode.USER_FIT_VIOLATED.value in prompt
 
 
 def test_strategist_constraint_violation_enters_repair_loop() -> None:

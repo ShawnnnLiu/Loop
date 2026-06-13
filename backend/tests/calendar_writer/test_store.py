@@ -1,12 +1,21 @@
-"""Tests for ``InMemoryCalendarEventMappingStore`` (Phase 2)."""
+"""Tests for the ``CalendarEventMappingStore`` implementations.
+
+The behavioral suite is parametrized over the in-memory and SQLite
+implementations (Phase 9a): both must satisfy the protocol identically.
+Restart-survival tests at the bottom are SQLite-only by nature.
+"""
 
 from __future__ import annotations
 
 from datetime import UTC, datetime
 from itertools import product
+from pathlib import Path
 
 import pytest
 
+from agentic_calendar.calendar_writer.sqlite_store import (
+    SqliteCalendarEventMappingStore,
+)
 from agentic_calendar.calendar_writer.store import (
     CalendarEventMappingNotFoundError,
     CalendarEventMappingStore,
@@ -14,10 +23,20 @@ from agentic_calendar.calendar_writer.store import (
     InvalidStatusTransitionError,
     legal_next_states,
 )
+from agentic_calendar.common.sqlite import SqliteDatabase
 from agentic_calendar.contracts.calendar_event_mapping import (
     CalendarEventMapping,
     CalendarWriteStatus,
 )
+
+
+@pytest.fixture(params=["in_memory", "sqlite"])
+def store(
+    request: pytest.FixtureRequest, tmp_path: Path
+) -> CalendarEventMappingStore:
+    if request.param == "sqlite":
+        return SqliteCalendarEventMappingStore(SqliteDatabase(tmp_path / "store.db"))
+    return InMemoryCalendarEventMappingStore()
 
 
 def _mapping(
@@ -48,34 +67,32 @@ _NOW = datetime(2026, 5, 4, 17, 55, tzinfo=UTC)
 # --------------------------------------------------------------------------- #
 
 
-def test_in_memory_store_satisfies_protocol() -> None:
-    assert isinstance(InMemoryCalendarEventMappingStore(), CalendarEventMappingStore)
+def test_satisfies_protocol(store: CalendarEventMappingStore) -> None:
+    assert isinstance(store, CalendarEventMappingStore)
 
 
-def test_save_then_get() -> None:
-    store = InMemoryCalendarEventMappingStore()
+def test_save_then_get(store: CalendarEventMappingStore) -> None:
     m = _mapping()
     store.save(m)
     assert store.get("run_001", "dp_001") == m
 
 
-def test_get_missing_raises() -> None:
-    store = InMemoryCalendarEventMappingStore()
+def test_get_missing_raises(store: CalendarEventMappingStore) -> None:
     with pytest.raises(CalendarEventMappingNotFoundError):
         store.get("run_x", "task_x")
 
 
-def test_save_replaces_existing_bucket() -> None:
+def test_save_replaces_existing_bucket(store: CalendarEventMappingStore) -> None:
     """First save inserts; subsequent saves are accepted (transitions go through
     ``update_status``)."""
-    store = InMemoryCalendarEventMappingStore()
     store.save(_mapping(calendar_event_id="gcal_evt_a"))
     store.save(_mapping(calendar_event_id="gcal_evt_b"))
     assert store.get("run_001", "dp_001").calendar_event_id == "gcal_evt_b"
 
 
-def test_list_for_run_returns_insertion_order() -> None:
-    store = InMemoryCalendarEventMappingStore()
+def test_list_for_run_returns_insertion_order(
+    store: CalendarEventMappingStore,
+) -> None:
     store.save(_mapping(task_id="b"))
     store.save(_mapping(task_id="a"))
     store.save(_mapping(task_id="c"))
@@ -83,15 +100,13 @@ def test_list_for_run_returns_insertion_order() -> None:
     assert [m.task_id for m in listed] == ["b", "a", "c"]
 
 
-def test_list_for_run_filters_run_id() -> None:
-    store = InMemoryCalendarEventMappingStore()
+def test_list_for_run_filters_run_id(store: CalendarEventMappingStore) -> None:
     store.save(_mapping(task_id="a", run_id="run_a"))
     store.save(_mapping(task_id="b", run_id="run_b"))
     assert [m.task_id for m in store.list_for_run("run_a")] == ["a"]
 
 
-def test_list_for_task_filters_task_id() -> None:
-    store = InMemoryCalendarEventMappingStore()
+def test_list_for_task_filters_task_id(store: CalendarEventMappingStore) -> None:
     store.save(_mapping(task_id="a", run_id="run_1"))
     store.save(_mapping(task_id="b", run_id="run_1"))
     store.save(_mapping(task_id="a", run_id="run_2"))
@@ -120,9 +135,10 @@ _LEGAL_TRANSITIONS: list[tuple[CalendarWriteStatus, CalendarWriteStatus]] = [
 
 @pytest.mark.parametrize("from_status,to_status", _LEGAL_TRANSITIONS)
 def test_legal_transition_accepted(
-    from_status: CalendarWriteStatus, to_status: CalendarWriteStatus
+    store: CalendarEventMappingStore,
+    from_status: CalendarWriteStatus,
+    to_status: CalendarWriteStatus,
 ) -> None:
-    store = InMemoryCalendarEventMappingStore()
     # VERIFIED requires non-null event id; ROLLED_BACK after dry_run has no
     # event id by definition. Pick event-id presence per the destination.
     needs_event_id = to_status is CalendarWriteStatus.VERIFIED
@@ -148,9 +164,10 @@ def test_legal_transition_accepted(
     ],
 )
 def test_illegal_transition_rejected(
-    from_status: CalendarWriteStatus, to_status: CalendarWriteStatus
+    store: CalendarEventMappingStore,
+    from_status: CalendarWriteStatus,
+    to_status: CalendarWriteStatus,
 ) -> None:
-    store = InMemoryCalendarEventMappingStore()
     needs_event_id = from_status is CalendarWriteStatus.VERIFIED
     m = _mapping(
         status=from_status,
@@ -167,8 +184,9 @@ def test_illegal_transition_rejected(
     assert store.get("run_001", "dp_001").calendar_write_status is from_status
 
 
-def test_update_status_missing_mapping_raises() -> None:
-    store = InMemoryCalendarEventMappingStore()
+def test_update_status_missing_mapping_raises(
+    store: CalendarEventMappingStore,
+) -> None:
     with pytest.raises(CalendarEventMappingNotFoundError):
         store.update_status(
             "run_x",
@@ -178,8 +196,9 @@ def test_update_status_missing_mapping_raises() -> None:
         )
 
 
-def test_update_status_sets_last_verified_at() -> None:
-    store = InMemoryCalendarEventMappingStore()
+def test_update_status_sets_last_verified_at(
+    store: CalendarEventMappingStore,
+) -> None:
     store.save(_mapping())
     updated = store.update_status(
         "run_001",
@@ -190,8 +209,9 @@ def test_update_status_sets_last_verified_at() -> None:
     assert updated.last_verified_at == _NOW
 
 
-def test_update_status_verified_preserves_event_id() -> None:
-    store = InMemoryCalendarEventMappingStore()
+def test_update_status_verified_preserves_event_id(
+    store: CalendarEventMappingStore,
+) -> None:
     store.save(_mapping(calendar_event_id="gcal_evt_42"))
     updated = store.update_status(
         "run_001",
@@ -202,8 +222,7 @@ def test_update_status_verified_preserves_event_id() -> None:
     assert updated.calendar_event_id == "gcal_evt_42"
 
 
-def test_update_status_can_set_event_id() -> None:
-    store = InMemoryCalendarEventMappingStore()
+def test_update_status_can_set_event_id(store: CalendarEventMappingStore) -> None:
     store.save(
         _mapping(
             calendar_event_id=None,
@@ -220,10 +239,11 @@ def test_update_status_can_set_event_id() -> None:
     assert updated.calendar_event_id == "gcal_evt_first"
 
 
-def test_update_status_invariant_failure_rolls_back() -> None:
+def test_update_status_invariant_failure_rolls_back(
+    store: CalendarEventMappingStore,
+) -> None:
     """If the resulting mapping fails Pydantic validation, the bucket
     must remain at its prior value."""
-    store = InMemoryCalendarEventMappingStore()
     # Start with WRITTEN + valid event id; try to transition to VERIFIED
     # while concurrently clearing the event id is impossible via
     # update_status, so we exercise the invariant via the validator:
@@ -267,3 +287,30 @@ def test_legal_next_states_written() -> None:
         CalendarWriteStatus.VERIFICATION_FAILED,
         CalendarWriteStatus.ROLLBACK_PENDING,
     }
+
+
+# --------------------------------------------------------------------------- #
+# Restart survival (SQLite-only by nature): state written before a process
+# exit must be fully recovered by a fresh store instance on the same file.
+# --------------------------------------------------------------------------- #
+
+
+def test_sqlite_state_survives_restart(tmp_path: Path) -> None:
+    db_path = tmp_path / "store.db"
+    db = SqliteDatabase(db_path)
+    first = SqliteCalendarEventMappingStore(db)
+    first.save(_mapping(task_id="a"))
+    first.save(_mapping(task_id="b"))
+    # A status transition must also survive the restart, not just raw saves.
+    verified = first.update_status(
+        "run_001", "a", new_status=CalendarWriteStatus.VERIFIED, now=_NOW
+    )
+    db.close()
+
+    reopened = SqliteCalendarEventMappingStore(SqliteDatabase(db_path))
+    assert reopened.list_for_run("run_001") == [verified, _mapping(task_id="b")]
+    assert reopened.list_for_task("a") == [verified]
+    got = reopened.get("run_001", "a")
+    assert got == verified
+    assert got.calendar_write_status is CalendarWriteStatus.VERIFIED
+    assert got.last_verified_at == _NOW

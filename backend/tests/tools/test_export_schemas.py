@@ -73,6 +73,8 @@ def test_every_contract_registered() -> None:
         "per_user_refinement",
         # Phase 8
         "llm_call_log",
+        # Phase 9
+        "threshold_change_log",
     }
     assert set(CONTRACTS.keys()) == expected
 

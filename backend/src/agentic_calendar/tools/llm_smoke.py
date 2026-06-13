@@ -256,6 +256,19 @@ _SAMPLE_VALIDATION_RESULT: dict[str, object] = {
 }
 
 
+def sample_fixture_inputs() -> tuple[UserProfile, SyllabusUnits, TaskPlan]:
+    """The validated canned smoke inputs, for reuse by other operator CLIs.
+
+    ``run_cycle --llm fixture`` builds its fixture node bundle from these so
+    the demo loop and the smoke exercise the same sample data.
+    """
+    return (
+        UserProfile.model_validate(_SAMPLE_USER_PROFILE),
+        SyllabusUnits.model_validate(_SAMPLE_SYLLABUS),
+        TaskPlan.model_validate(_SAMPLE_TASK_PLAN),
+    )
+
+
 def _run_fixture_mode() -> int:
     """Offline default: prove the wiring with the deterministic nodes."""
     profile = UserProfile.model_validate(_SAMPLE_USER_PROFILE)

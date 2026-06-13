@@ -511,7 +511,9 @@ _PLANNER_SYSTEM = (
     "must be unique; dependencies may only reference task ids defined in the "
     "same plan; every syllabus module must be covered by at least one task. "
     "Never include a prerequisites_met field — the system computes that "
-    "deterministically. Return only the structured object."
+    "deterministically. When the input includes a planning-constraints block, "
+    "every task must satisfy every limit it lists. Return only the structured "
+    "object."
 )
 
 _REFLECTION_SYSTEM = (
@@ -619,12 +621,59 @@ class AnthropicPlanner:
         run_id: str,
         syllabus: SyllabusUnits,
         plan_version: str | None = None,
+        user_profile: UserProfile | None = None,
+        repair: ValidationResult | None = None,
     ) -> TaskPlan:
+        """Generate a ``TaskPlan`` from the validated syllabus.
+
+        ``user_profile`` supplies the scheduling limits the deterministic
+        user-fit checks enforce downstream (``validation/user_fit.py``); the
+        constraints block is derived solely from the profile's typed fields —
+        callers cannot inject free text. ``repair`` is the failed
+        ``ValidationResult`` from the previous pass of the bounded repair loop
+        (axiom 04: at most two re-prompts), embedded as canonical JSON so the
+        retry sees the exact typed violations instead of re-planning blind.
+        """
+        sections = [f"Validated syllabus:\n{_canonical_json(syllabus)}"]
+        if user_profile is not None:
+            constraints = {
+                "max_session_length_min": user_profile.max_session_length_min,
+                "preferred_session_length_min": (
+                    user_profile.preferred_session_length_min
+                ),
+                "splittable_rule": (
+                    "tasks longer than max_session_length_min must set "
+                    "splittable=true"
+                ),
+                "total_capacity_min": int(
+                    user_profile.weekly_hours * 60 * user_profile.timeline_weeks
+                ),
+                "weekly_hours": user_profile.weekly_hours,
+                "timeline_weeks": user_profile.timeline_weeks,
+            }
+            sections.append(
+                "Planning constraints (hard limits enforced by validation):\n"
+                + json.dumps(constraints, sort_keys=True)
+            )
+        if repair is not None:
+            failure = {
+                "reason_code": (
+                    repair.reason_code.value if repair.reason_code else None
+                ),
+                "violations": [
+                    v.model_dump(mode="json") for v in repair.violations
+                ],
+            }
+            sections.append(
+                "The previous plan failed deterministic validation; produce a "
+                "corrected plan that fixes every violation:\n"
+                + json.dumps(failure, sort_keys=True)
+            )
         result = self._engine.generate(
             run_id=run_id,
             plan_version=plan_version,
             system=_PLANNER_SYSTEM,
-            user_prompt=f"Validated syllabus:\n{_canonical_json(syllabus)}",
+            user_prompt="\n\n".join(sections),
         )
         return cast(TaskPlan, result)
 

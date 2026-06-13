@@ -1,0 +1,10 @@
+{
+  "change_id": "thrchg_002",
+  "config_section": "drift_thresholds",
+  "threshold_field": "duration_min_sample",
+  "prior_value": 5,
+  "new_value": 4,
+  "effective_at": "2026-06-11T09:05:00-07:00",
+  "justification": "Solo dogfooding produces small samples; four observations per category is enough signal to act on.",
+  "dataset_reference": "manual prior"
+}

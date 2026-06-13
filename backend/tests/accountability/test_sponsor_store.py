@@ -1,6 +1,13 @@
-"""Tests for ``InMemorySponsorStore`` invite-lifecycle enforcement (Phase 3)."""
+"""Tests for the ``SponsorStore`` implementations (invite-lifecycle enforcement).
+
+The behavioral suite is parametrized over the in-memory and SQLite
+implementations (Phase 9a): both must satisfy the protocol identically.
+Restart-survival tests at the bottom are SQLite-only by nature.
+"""
 
 from __future__ import annotations
+
+from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
@@ -12,41 +19,43 @@ from agentic_calendar.accountability.sponsor_store import (
     SponsorNotFoundError,
     SponsorStore,
 )
+from agentic_calendar.accountability.sqlite_sponsor_store import SqliteSponsorStore
 from agentic_calendar.common.clock import FrozenClock
+from agentic_calendar.common.sqlite import SqliteDatabase
 from agentic_calendar.contracts.sponsor import Sponsor, SponsorStatus
 
 from ._builders import T0, build_sponsor
 
 
-def _store() -> InMemorySponsorStore:
+@pytest.fixture(params=["in_memory", "sqlite"])
+def store(request: pytest.FixtureRequest, tmp_path: Path) -> SponsorStore:
+    if request.param == "sqlite":
+        return SqliteSponsorStore(SqliteDatabase(tmp_path / "store.db"), clock=FrozenClock(T0))
     return InMemorySponsorStore(clock=FrozenClock(T0))
 
 
-def test_satisfies_protocol() -> None:
-    assert isinstance(_store(), SponsorStore)
+def test_satisfies_protocol(store: SponsorStore) -> None:
+    assert isinstance(store, SponsorStore)
 
 
-def test_invite_then_get() -> None:
-    store = _store()
+def test_invite_then_get(store: SponsorStore) -> None:
     pending = build_sponsor(status=SponsorStatus.PENDING, accepted_at=None, revoked_at=None)
     store.invite(pending)
     assert store.get("sponsor_001").status is SponsorStatus.PENDING
 
 
-def test_invite_rejects_duplicate() -> None:
-    store = _store()
+def test_invite_rejects_duplicate(store: SponsorStore) -> None:
     store.invite(build_sponsor(status=SponsorStatus.PENDING, accepted_at=None))
     with pytest.raises(SponsorAlreadyExistsError):
         store.invite(build_sponsor(status=SponsorStatus.PENDING, accepted_at=None))
 
 
-def test_get_missing_raises() -> None:
+def test_get_missing_raises(store: SponsorStore) -> None:
     with pytest.raises(SponsorNotFoundError):
-        _store().get("nope")
+        store.get("nope")
 
 
-def test_accept_sets_status_and_timestamp() -> None:
-    store = _store()
+def test_accept_sets_status_and_timestamp(store: SponsorStore) -> None:
     store.invite(build_sponsor(status=SponsorStatus.PENDING, accepted_at=None))
     accepted = store.accept("sponsor_001")
     assert accepted.status is SponsorStatus.ACCEPTED
@@ -55,8 +64,7 @@ def test_accept_sets_status_and_timestamp() -> None:
     assert accepted.is_reportable() is True
 
 
-def test_revoke_from_pending() -> None:
-    store = _store()
+def test_revoke_from_pending(store: SponsorStore) -> None:
     store.invite(build_sponsor(status=SponsorStatus.PENDING, accepted_at=None))
     revoked = store.revoke("sponsor_001")
     assert revoked.status is SponsorStatus.REVOKED
@@ -64,8 +72,7 @@ def test_revoke_from_pending() -> None:
     assert revoked.is_reportable() is False
 
 
-def test_revoke_from_accepted_takes_effect_immediately() -> None:
-    store = _store()
+def test_revoke_from_accepted_takes_effect_immediately(store: SponsorStore) -> None:
     store.invite(build_sponsor(status=SponsorStatus.PENDING, accepted_at=None))
     store.accept("sponsor_001")
     revoked = store.revoke("sponsor_001")
@@ -74,8 +81,7 @@ def test_revoke_from_accepted_takes_effect_immediately() -> None:
     assert store.get("sponsor_001").status is SponsorStatus.REVOKED
 
 
-def test_cannot_accept_revoked_sponsor() -> None:
-    store = _store()
+def test_cannot_accept_revoked_sponsor(store: SponsorStore) -> None:
     store.invite(build_sponsor(status=SponsorStatus.PENDING, accepted_at=None))
     store.revoke("sponsor_001")
     with pytest.raises(IllegalSponsorTransitionError) as exc:
@@ -84,16 +90,14 @@ def test_cannot_accept_revoked_sponsor() -> None:
     assert exc.value.requested is SponsorStatus.ACCEPTED
 
 
-def test_cannot_re_accept_accepted_sponsor() -> None:
-    store = _store()
+def test_cannot_re_accept_accepted_sponsor(store: SponsorStore) -> None:
     store.invite(build_sponsor(status=SponsorStatus.PENDING, accepted_at=None))
     store.accept("sponsor_001")
     with pytest.raises(IllegalSponsorTransitionError):
         store.accept("sponsor_001")
 
 
-def test_list_for_user_sorted_by_invited_at() -> None:
-    store = _store()
+def test_list_for_user_sorted_by_invited_at(store: SponsorStore) -> None:
     store.invite(
         build_sponsor(sponsor_id="sponsor_001", status=SponsorStatus.PENDING, accepted_at=None)
     )
@@ -105,7 +109,7 @@ def test_list_for_user_sorted_by_invited_at() -> None:
     assert store.list_for_user("someone_else") == []
 
 
-def _seed(store: InMemorySponsorStore, status: SponsorStatus) -> None:
+def _seed(store: SponsorStore, status: SponsorStatus) -> None:
     """Insert a sponsor already in ``status`` (bypassing the transition path)."""
     if status is SponsorStatus.PENDING:
         store.invite(build_sponsor(status=status, accepted_at=None, revoked_at=None))
@@ -132,12 +136,12 @@ _TRANSITIONS = [
     ids=[f"{f.value}-{a}" for f, a, _, _ in _TRANSITIONS],
 )
 def test_transition_matrix(
+    store: SponsorStore,
     from_status: SponsorStatus,
     action: str,
     legal: bool,
     resulting: SponsorStatus | None,
 ) -> None:
-    store = _store()
     _seed(store, from_status)
     call = store.accept if action == "accept" else store.revoke
     if legal:
@@ -149,29 +153,28 @@ def test_transition_matrix(
         assert exc.value.current is from_status
 
 
-def test_returned_sponsor_is_frozen() -> None:
-    store = _store()
+def test_returned_sponsor_is_frozen(store: SponsorStore) -> None:
     store.invite(build_sponsor(status=SponsorStatus.PENDING, accepted_at=None))
     accepted = store.accept("sponsor_001")
     with pytest.raises(ValidationError):
         accepted.status = SponsorStatus.REVOKED  # type: ignore[misc]
 
 
-def test_transition_replaces_stored_row_without_mutating_prior() -> None:
-    store = _store()
+def test_transition_replaces_stored_row_without_mutating_prior(store: SponsorStore) -> None:
     store.invite(build_sponsor(status=SponsorStatus.PENDING, accepted_at=None))
     before = store.get("sponsor_001")
     after = store.accept("sponsor_001")
     # A new immutable instance is stored; the previously-read row is unchanged.
     assert before.status is SponsorStatus.PENDING
-    assert after is not before
-    assert store.get("sponsor_001") is after
+    assert after != before
+    assert store.get("sponsor_001") == after
 
 
-def test_concurrent_accept_of_same_sponsor_serializes_to_one_winner() -> None:
+def test_concurrent_accept_of_same_sponsor_serializes_to_one_winner(
+    store: SponsorStore,
+) -> None:
     import threading
 
-    store = _store()
     store.invite(build_sponsor(status=SponsorStatus.PENDING, accepted_at=None))
 
     successes: list[Sponsor] = []
@@ -201,10 +204,9 @@ def test_concurrent_accept_of_same_sponsor_serializes_to_one_winner() -> None:
     assert store.get("sponsor_001").status is SponsorStatus.ACCEPTED
 
 
-def test_concurrent_accept_of_distinct_sponsors_all_succeed() -> None:
+def test_concurrent_accept_of_distinct_sponsors_all_succeed(store: SponsorStore) -> None:
     import threading
 
-    store = _store()
     ids = [f"sponsor_{i:03d}" for i in range(50)]
     for sid in ids:
         store.invite(build_sponsor(sponsor_id=sid, status=SponsorStatus.PENDING, accepted_at=None))
@@ -225,3 +227,31 @@ def test_concurrent_accept_of_distinct_sponsors_all_succeed() -> None:
 
     assert errors == []
     assert all(store.get(sid).status is SponsorStatus.ACCEPTED for sid in ids)
+
+
+# --------------------------------------------------------------------------- #
+# Restart survival (SQLite-only by nature): state written before a process
+# exit must be fully recovered by a fresh store instance on the same file.
+# --------------------------------------------------------------------------- #
+
+
+def test_sqlite_state_survives_restart(tmp_path: Path) -> None:
+    db_path = tmp_path / "store.db"
+    db = SqliteDatabase(db_path)
+    first = SqliteSponsorStore(db, clock=FrozenClock(T0))
+    for sid in ("sponsor_001", "sponsor_002", "sponsor_003"):
+        first.invite(
+            build_sponsor(sponsor_id=sid, status=SponsorStatus.PENDING, accepted_at=None)
+        )
+    accepted = first.accept("sponsor_001")
+    revoked = first.revoke("sponsor_002")
+    pending = first.get("sponsor_003")
+    db.close()
+
+    reopened = SqliteSponsorStore(SqliteDatabase(db_path), clock=FrozenClock(T0))
+    assert reopened.get("sponsor_001") == accepted
+    assert reopened.get("sponsor_002") == revoked
+    assert reopened.get("sponsor_003") == pending
+    assert reopened.list_for_user("user_123") == [accepted, revoked, pending]
+    assert reopened.get("sponsor_001").status is SponsorStatus.ACCEPTED
+    assert reopened.get("sponsor_002").status is SponsorStatus.REVOKED

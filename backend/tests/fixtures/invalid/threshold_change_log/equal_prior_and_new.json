@@ -1,0 +1,10 @@
+{
+  "change_id": "thrchg_inv",
+  "config_section": "drift_thresholds",
+  "threshold_field": "duration_underestimate_ratio",
+  "prior_value": 1.3,
+  "new_value": 1.3,
+  "effective_at": "2026-06-11T09:00:00-07:00",
+  "justification": "Loosened after repeated false positives during dogfooding.",
+  "dataset_reference": "telemetry through 2026-06-10"
+}

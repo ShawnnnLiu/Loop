@@ -11,6 +11,8 @@ dependencies = [
     # Pinned exact: the committed JSON Schemas in /schemas are byte-stable only
     # for this pydantic version, and `make schema-check` enforces that. Bump
     # deliberately (update lock + `make schemas` + retest); see docs/axioms/18.
+    "google-api-python-client>=2.197.0",
+    "google-auth-oauthlib>=1.4.0",
     "pydantic==2.13.3",
 ]
 
@@ -91,6 +93,17 @@ no_implicit_optional = true
 plugins = ["pydantic.mypy"]
 # Note: ``make typecheck`` only checks ``src/`` (production code).
 # Test type-checking is intentionally relaxed and not part of CI.
+
+# The Google API client and auth libraries ship no type stubs (no py.typed);
+# their import surface is confined to tools/google_calendar_auth.py plus the
+# lazy HttpError translation in calendar_writer/google_adapter.py.
+[[tool.mypy.overrides]]
+module = [
+    "googleapiclient.*",
+    "google.*",
+    "google_auth_oauthlib.*",
+]
+ignore_missing_imports = true
 
 [tool.pydantic-mypy]
 init_forbid_extra = true

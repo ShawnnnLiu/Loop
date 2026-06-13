@@ -1,0 +1,6 @@
+{
+  "error_substrings": [
+    "Input should be a valid integer",
+    "Input should be a valid number"
+  ]
+}

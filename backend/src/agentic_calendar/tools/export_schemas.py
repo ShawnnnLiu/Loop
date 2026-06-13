@@ -62,6 +62,7 @@ from agentic_calendar.contracts.strategy_constraints import StrategyConstraints
 from agentic_calendar.contracts.syllabus_units import SyllabusUnits
 from agentic_calendar.contracts.task_plan import TaskPlan
 from agentic_calendar.contracts.telemetry import TelemetryEvent
+from agentic_calendar.contracts.threshold_change_log import ThresholdChange
 from agentic_calendar.contracts.user_duration_multipliers import UserDurationMultipliers
 from agentic_calendar.contracts.user_profile import UserProfile
 from agentic_calendar.contracts.validation_result import ValidationResult
@@ -106,6 +107,7 @@ CONTRACTS: dict[str, type[BaseModel]] = {
     "power_user_eligibility": PowerUserEligibility,
     "per_user_refinement": PerUserRefinement,
     "llm_call_log": LlmCallLog,
+    "threshold_change_log": ThresholdChange,
 }
 
 

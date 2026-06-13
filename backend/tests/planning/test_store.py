@@ -1,13 +1,21 @@
-"""Tests for ``planning.store.InMemoryPlanVersionStore``."""
+"""Tests for the ``PlanVersionStore`` implementations.
+
+The behavioral suite is parametrized over the in-memory and SQLite
+implementations (Phase 9a): both must satisfy the protocol identically.
+Restart-survival tests at the bottom are SQLite-only by nature.
+"""
 
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from pathlib import Path
 
 import pytest
 
+from agentic_calendar.common.sqlite import SqliteDatabase
 from agentic_calendar.contracts.task_plan import TaskPlan
 from agentic_calendar.planning.plan_version import LifecycleState, PlanVersion
+from agentic_calendar.planning.sqlite_store import SqlitePlanVersionStore
 from agentic_calendar.planning.store import (
     InMemoryPlanVersionStore,
     MultipleActivePlansError,
@@ -15,6 +23,13 @@ from agentic_calendar.planning.store import (
     PlanVersionStore,
 )
 from tests._fixture_loader import iter_valid
+
+
+@pytest.fixture(params=["in_memory", "sqlite"])
+def store(request: pytest.FixtureRequest, tmp_path: Path) -> PlanVersionStore:
+    if request.param == "sqlite":
+        return SqlitePlanVersionStore(SqliteDatabase(tmp_path / "store.db"))
+    return InMemoryPlanVersionStore()
 
 
 def _make_pv(
@@ -38,26 +53,23 @@ def _make_pv(
     )
 
 
-def test_satisfies_protocol() -> None:
-    assert isinstance(InMemoryPlanVersionStore(), PlanVersionStore)
+def test_satisfies_protocol(store: PlanVersionStore) -> None:
+    assert isinstance(store, PlanVersionStore)
 
 
-def test_save_and_get_round_trip() -> None:
-    store = InMemoryPlanVersionStore()
+def test_save_and_get_round_trip(store: PlanVersionStore) -> None:
     pv = _make_pv(plan_version="plan_001")
     store.save(pv)
     got = store.get("user_001", "plan_001")
-    assert got is pv
+    assert got == pv
 
 
-def test_get_missing_raises() -> None:
-    store = InMemoryPlanVersionStore()
+def test_get_missing_raises(store: PlanVersionStore) -> None:
     with pytest.raises(PlanVersionNotFoundError):
         store.get("user_001", "missing")
 
 
-def test_list_returns_all_for_user_in_creation_order() -> None:
-    store = InMemoryPlanVersionStore()
+def test_list_returns_all_for_user_in_creation_order(store: PlanVersionStore) -> None:
     pv1 = _make_pv(plan_version="plan_001")
     pv2 = _make_pv(plan_version="plan_002")
     store.save(pv1)
@@ -66,33 +78,33 @@ def test_list_returns_all_for_user_in_creation_order() -> None:
     assert [pv.plan_version for pv in listing] == ["plan_001", "plan_002"]
 
 
-def test_get_active_returns_none_when_no_active() -> None:
-    store = InMemoryPlanVersionStore()
+def test_get_active_returns_none_when_no_active(store: PlanVersionStore) -> None:
     store.save(_make_pv(plan_version="plan_001"))
     assert store.get_active("user_001") is None
 
 
-def test_get_active_returns_active_plan() -> None:
-    store = InMemoryPlanVersionStore()
+def test_get_active_returns_active_plan(store: PlanVersionStore) -> None:
     pv = _make_pv(plan_version="plan_001", state=LifecycleState.ACTIVE)
     store.save(pv)
-    assert store.get_active("user_001") is pv
+    assert store.get_active("user_001") == pv
 
 
-def test_two_active_plans_for_same_user_raises_invariant() -> None:
-    store = InMemoryPlanVersionStore()
+def test_two_active_plans_for_same_user_raises_invariant(
+    store: PlanVersionStore,
+) -> None:
     store.save(_make_pv(plan_version="plan_001", state=LifecycleState.ACTIVE))
     with pytest.raises(MultipleActivePlansError):
         store.save(_make_pv(plan_version="plan_002", state=LifecycleState.ACTIVE))
 
 
-def test_failed_active_save_rolls_back_and_leaves_store_queryable() -> None:
+def test_failed_active_save_rolls_back_and_leaves_store_queryable(
+    store: PlanVersionStore,
+) -> None:
     """A save that violates the single-active invariant must not corrupt state.
 
     Without rollback, the rejected plan would linger in the bucket and the
     next ``get_active`` call would also raise — leaving the store unusable.
     """
-    store = InMemoryPlanVersionStore()
     pv1 = _make_pv(plan_version="plan_001", state=LifecycleState.ACTIVE)
     pv2 = _make_pv(plan_version="plan_002", state=LifecycleState.ACTIVE)
     store.save(pv1)
@@ -107,9 +119,10 @@ def test_failed_active_save_rolls_back_and_leaves_store_queryable() -> None:
     assert active.plan_version == "plan_001"
 
 
-def test_failed_save_restores_prior_version_when_replacing() -> None:
+def test_failed_save_restores_prior_version_when_replacing(
+    store: PlanVersionStore,
+) -> None:
     """If a same-id save would violate the invariant, the prior value must remain."""
-    store = InMemoryPlanVersionStore()
     pv_active = _make_pv(plan_version="plan_001", state=LifecycleState.ACTIVE)
     other_active = _make_pv(plan_version="plan_other", state=LifecycleState.ACTIVE)
     store.save(pv_active)
@@ -120,8 +133,7 @@ def test_failed_save_restores_prior_version_when_replacing() -> None:
     assert survivor.state is LifecycleState.ACTIVE
 
 
-def test_users_are_isolated() -> None:
-    store = InMemoryPlanVersionStore()
+def test_users_are_isolated(store: PlanVersionStore) -> None:
     pv_a = _make_pv(plan_version="plan_a", user_id="user_A")
     pv_b = _make_pv(plan_version="plan_b", user_id="user_B")
     store.save(pv_a)
@@ -132,9 +144,8 @@ def test_users_are_isolated() -> None:
         store.get("user_A", "plan_b")
 
 
-def test_save_replaces_same_id_with_updated_version() -> None:
+def test_save_replaces_same_id_with_updated_version(store: PlanVersionStore) -> None:
     """Saving a model_copy with the same id is permitted (e.g. transitions)."""
-    store = InMemoryPlanVersionStore()
     pv = _make_pv(plan_version="plan_001")
     store.save(pv)
     now = datetime(2026, 5, 5, 12, 0, 0, tzinfo=UTC)
@@ -144,16 +155,18 @@ def test_save_replaces_same_id_with_updated_version() -> None:
 
 
 # --------------------------------------------------------------------------- #
-# Concurrency: the in-memory store advertises thread-safety via an RLock; the
-# tests below pin that contract so a future refactor cannot quietly drop it.
+# Concurrency: both stores advertise thread-safety (RLock / serialized DB
+# transactions); the tests below pin that contract so a future refactor cannot
+# quietly drop it.
 # --------------------------------------------------------------------------- #
 
 
-def test_concurrent_saves_of_distinct_plan_versions_all_visible() -> None:
+def test_concurrent_saves_of_distinct_plan_versions_all_visible(
+    store: PlanVersionStore,
+) -> None:
     """N threads saving distinct plan_versions: every save is visible after join."""
     import threading
 
-    store = InMemoryPlanVersionStore()
     n = 64
     pvs = [_make_pv(plan_version=f"plan_{i:03d}") for i in range(n)]
     barrier = threading.Barrier(n)
@@ -172,7 +185,7 @@ def test_concurrent_saves_of_distinct_plan_versions_all_visible() -> None:
     assert {pv.plan_version for pv in listing} == {f"plan_{i:03d}" for i in range(n)}
 
 
-def test_concurrent_active_saves_exactly_one_wins() -> None:
+def test_concurrent_active_saves_exactly_one_wins(store: PlanVersionStore) -> None:
     """Two threads racing to mark different plans ACTIVE for the same user.
 
     The single-active invariant must hold: exactly one save succeeds; the
@@ -180,7 +193,6 @@ def test_concurrent_active_saves_exactly_one_wins() -> None:
     """
     import threading
 
-    store = InMemoryPlanVersionStore()
     pv1 = _make_pv(plan_version="plan_001", state=LifecycleState.ACTIVE)
     pv2 = _make_pv(plan_version="plan_002", state=LifecycleState.ACTIVE)
 
@@ -211,3 +223,26 @@ def test_concurrent_active_saves_exactly_one_wins() -> None:
     active = store.get_active("user_001")
     assert active is not None
     assert active.plan_version == successes[0]
+
+
+# --------------------------------------------------------------------------- #
+# Restart survival (SQLite-only by nature): state written before a process
+# exit must be fully recovered by a fresh store instance on the same file.
+# --------------------------------------------------------------------------- #
+
+
+def test_sqlite_state_survives_restart(tmp_path: Path) -> None:
+    db_path = tmp_path / "store.db"
+    db = SqliteDatabase(db_path)
+    first = SqlitePlanVersionStore(db)
+    pv_active = _make_pv(plan_version="plan_001", state=LifecycleState.ACTIVE)
+    pv_draft = _make_pv(plan_version="plan_002")
+    first.save(pv_active)
+    first.save(pv_draft)
+    db.close()
+
+    reopened = SqlitePlanVersionStore(SqliteDatabase(db_path))
+    assert reopened.list_for_user("user_001") == [pv_active, pv_draft]
+    active = reopened.get_active("user_001")
+    assert active == pv_active
+    assert active is not None and active.state is LifecycleState.ACTIVE

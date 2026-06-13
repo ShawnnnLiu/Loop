@@ -8,6 +8,7 @@ license = { text = "Proprietary" }
 authors = [{ name = "Agentic Calendar" }]
 dependencies = [
     "anthropic>=0.109.1",
+    "cryptography>=43",
     "fastapi>=0.115",
     # Pinned exact: the committed JSON Schemas in /schemas are byte-stable only
     # for this pydantic version, and `make schema-check` enforces that. Bump

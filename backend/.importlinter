@@ -31,6 +31,7 @@ source_modules =
     agentic_calendar.cache
     agentic_calendar.templates
     agentic_calendar.consent
+    agentic_calendar.identity
 forbidden_modules =
     openai
     anthropic
@@ -65,6 +66,7 @@ modules =
     agentic_calendar.telemetry
     agentic_calendar.drift
     agentic_calendar.consent
+    agentic_calendar.identity
 
 # Note: `calendar_writer` is intentionally NOT in the independence set above.
 # The Calendar Write Manager must import :class:`ApprovalEventStore` from
@@ -394,3 +396,37 @@ forbidden_modules =
     agentic_calendar.source_claims
     agentic_calendar.cache
     agentic_calendar.templates
+
+# ---------------------------------------------------------------------------
+# Contract 15: Identity leaf-deps (hosted multi-user frontend).
+#
+# `identity` (per-user Google sub->user_id mapping, encrypted OAuth token, and
+# dedicated calendar id) may depend only on `common` and `contracts`. Like
+# `consent`, it is a pure leaf imported solely by the composition root
+# (`app/`): the web layer wires it, and the Google OAuth SDK stays in
+# `tools/google_oauth_web.py` (the leaf never touches it). Encryption is the
+# caller's job via `common.secrets`, so this region carries no crypto imports
+# that a contract would need to govern.
+# ---------------------------------------------------------------------------
+[importlinter:contract:identity-is-leaf]
+name = identity/ may only depend on common/ and contracts/.
+type = forbidden
+source_modules =
+    agentic_calendar.identity
+forbidden_modules =
+    agentic_calendar.supervisor
+    agentic_calendar.validation
+    agentic_calendar.scheduler
+    agentic_calendar.planning
+    agentic_calendar.llm_nodes
+    agentic_calendar.prerequisites
+    agentic_calendar.calendar_writer
+    agentic_calendar.approval
+    agentic_calendar.accountability
+    agentic_calendar.telemetry
+    agentic_calendar.drift
+    agentic_calendar.duration_estimation
+    agentic_calendar.source_claims
+    agentic_calendar.cache
+    agentic_calendar.templates
+    agentic_calendar.consent

@@ -62,6 +62,7 @@ from agentic_calendar.contracts.telemetry import TelemetryEvent
 from agentic_calendar.contracts.validation_result import (
     MAX_REPAIR_ATTEMPTS_LLM,
     NextAction,
+    ValidationResult,
 )
 from agentic_calendar.drift.classifier import DriftInput
 from agentic_calendar.duration_estimation.pooled import resolve_effective_multipliers
@@ -343,8 +344,13 @@ class CycleService:
         env.state.save_syllabus(onboarding.user_id, syllabus)
         bound_syllabus = syllabus
 
-        def planner_pass(run_id: str) -> TaskPlan:
-            return env.nodes.planner.run(run_id=run_id, syllabus=bound_syllabus)
+        def planner_pass(run_id: str, repair: ValidationResult | None) -> TaskPlan:
+            return env.nodes.planner.run(
+                run_id=run_id,
+                syllabus=bound_syllabus,
+                user_profile=onboarding.user_profile,
+                repair=repair,
+            )
 
         return self._plan_pipeline(
             run,
@@ -404,19 +410,23 @@ class CycleService:
         syllabus: SyllabusUnits,
         kind: ReplanKind,
         mode: RecoveryAction | None,
-    ) -> Callable[[str], TaskPlan]:
+    ) -> Callable[[str, ValidationResult | None], TaskPlan]:
         """Pick where the replanned content comes from.
 
         Deterministic drafts (recalibration, reschedule) return constant plan
-        content — they still pass full validation downstream. Content-shaping
-        modes route back through the Planner node: deterministic code must
-        not invent plan content (recovery spec "Choice Semantics").
+        content — they still pass full validation downstream, and they ignore
+        the repair context (a constant cannot self-correct; the bounded loop
+        exhausts into ``ERROR_REQUIRES_USER`` as before). Content-shaping
+        modes route back through the Planner node — with the user's profile
+        constraints and any failed ``ValidationResult`` — because
+        deterministic code must not invent plan content (recovery spec
+        "Choice Semantics").
         """
         env = self._env
         if kind is ReplanKind.RECALIBRATION:
             recalibrated = self._recalibrated_plan(onboarding, active)
             if recalibrated is not None:
-                return lambda run_id: recalibrated
+                return lambda run_id, repair: recalibrated
             # Telemetry no longer moves any duration; fall back to the
             # deterministic reschedule draft so the run still converges.
             mode = RecoveryAction.RESCHEDULE
@@ -429,8 +439,13 @@ class CycleService:
             if proposal.draft is None:
                 raise CycleError("deterministic recovery proposal carried no draft")
             deterministic_plan = proposal.draft.plan
-            return lambda run_id: deterministic_plan
-        return lambda run_id: env.nodes.planner.run(run_id=run_id, syllabus=syllabus)
+            return lambda run_id, repair: deterministic_plan
+        return lambda run_id, repair: env.nodes.planner.run(
+            run_id=run_id,
+            syllabus=syllabus,
+            user_profile=onboarding.user_profile,
+            repair=repair,
+        )
 
     def _recalibrated_plan(
         self, onboarding: OnboardingRecord, active: PlanVersion
@@ -484,7 +499,7 @@ class CycleService:
         *,
         onboarding: OnboardingRecord,
         syllabus: SyllabusUnits,
-        make_plan: Callable[[str], TaskPlan],
+        make_plan: Callable[[str, ValidationResult | None], TaskPlan],
         free_busy: Sequence[Mapping[str, Any]],
         horizon_days: int,
         parent_plan_version: str | None,
@@ -495,7 +510,10 @@ class CycleService:
         ``make_plan`` is invoked once per planner pass — an LLM node for
         generated content, or a constant for deterministic recovery drafts
         (which then still pass full validation: no invalid plan reaches the
-        Scheduler, whoever authored it).
+        Scheduler, whoever authored it). The second argument is the failed
+        ``ValidationResult`` from the previous pass (``None`` on the first),
+        so a repair retry (axiom 04: at most two) carries the typed
+        violations back to the producer instead of re-invoking it blind.
         """
         env = self._env
         profile = onboarding.user_profile
@@ -504,9 +522,10 @@ class CycleService:
         while True:
             # --- planner stage (state: PLANNER_RUNNING) ---
             plan: TaskPlan | None = None
+            repair: ValidationResult | None = None
             for attempt in range(MAX_REPAIR_ATTEMPTS_LLM + 1):
                 try:
-                    candidate = make_plan(run.run_id)
+                    candidate = make_plan(run.run_id, repair)
                 except LLMNodeError as exc:
                     return self._propose_failure(self._llm_failure(run, exc))
                 run = self._transition(run, Sig.PLANNER_OUTPUT_PRODUCED)
@@ -523,6 +542,7 @@ class CycleService:
                     break
                 if result.next_action is NextAction.PLANNER_REPAIR_RETRY:
                     run = self._transition(run, Sig.VALIDATION_FAILED_REPAIRABLE)
+                    repair = result
                     continue
                 run = self._transition(
                     run, Sig.REPAIR_LIMIT_EXCEEDED, reason_code=result.reason_code

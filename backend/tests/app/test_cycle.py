@@ -39,6 +39,7 @@ from agentic_calendar.app.environment import (
     AppEnvironment,
     LlmNodeBundle,
     NodeDependencies,
+    PlannerNode,
     build_environment,
 )
 from agentic_calendar.app.state import ReplanKind, RunRecord
@@ -61,6 +62,7 @@ from agentic_calendar.contracts.source_claim import SourceClaim
 from agentic_calendar.contracts.syllabus_units import SyllabusUnits
 from agentic_calendar.contracts.task_plan import TaskPlan
 from agentic_calendar.contracts.user_profile import UserProfile
+from agentic_calendar.contracts.validation_result import ValidationResult
 from agentic_calendar.llm_nodes.planner import FixturePlanner
 from agentic_calendar.llm_nodes.reflection_summary import DeterministicReflectionSummary
 from agentic_calendar.llm_nodes.strategist import FixtureStrategist
@@ -131,9 +133,38 @@ class CountingPlanner:
         self._inner = inner
         self.calls = 0
 
-    def run(self, *, run_id: str, syllabus: SyllabusUnits) -> TaskPlan:
+    def run(
+        self,
+        *,
+        run_id: str,
+        syllabus: SyllabusUnits,
+        user_profile: UserProfile | None = None,
+        repair: ValidationResult | None = None,
+    ) -> TaskPlan:
         self.calls += 1
-        return self._inner.run(run_id=run_id, syllabus=syllabus)
+        return self._inner.run(
+            run_id=run_id, syllabus=syllabus, user_profile=user_profile, repair=repair
+        )
+
+
+class RecordingPlanner:
+    """Constant planner that records the repair context of every pass."""
+
+    def __init__(self, plan: TaskPlan) -> None:
+        self._plan = plan
+        self.repairs: list[ValidationResult | None] = []
+
+    def run(
+        self,
+        *,
+        run_id: str,
+        syllabus: SyllabusUnits,
+        user_profile: UserProfile | None = None,
+        repair: ValidationResult | None = None,
+    ) -> TaskPlan:
+        del run_id, syllabus, user_profile
+        self.repairs.append(repair)
+        return self._plan
 
 
 def make_service(
@@ -143,7 +174,7 @@ def make_service(
     db_path: Path | None = None,
     strategist_fixtures: Mapping[str, SyllabusUnits] | None = None,
     planner_fixtures: Mapping[str, TaskPlan] | None = None,
-    planner: CountingPlanner | None = None,
+    planner: PlannerNode | None = None,
     seed_claims: bool = True,
     onboard: bool = True,
     now: datetime = HAPPY_NOW,
@@ -395,6 +426,36 @@ def test_invalid_plan_exhausts_planner_repairs_with_typed_reason() -> None:
     assert run is not None
     assert run.state is S.ERROR_REQUIRES_USER
     assert run.reason_code is result.reason_code
+
+
+def test_planner_repair_retries_receive_failed_validation_result() -> None:
+    """The repair loop hands each retry the previous failed ValidationResult:
+    pass 1 gets None, passes 2-3 get the typed user-fit violations (150-min
+    non-splittable task vs max_session_length_min=120). The stub keeps
+    returning the same plan, so the bounded loop (axiom 04: 2 repair
+    re-prompts) still exhausts into ERROR_REQUIRES_USER."""
+    bad = _canonical_plan().model_dump()
+    bad["tasks"][0]["estimated_duration_min"] = 150  # > fixture max session 120
+    bad["tasks"][0]["splittable"] = False
+    recording = RecordingPlanner(TaskPlan.model_validate(bad))
+    service, env, _clock = make_service(planner=recording)
+
+    result = service.propose(USER_ID)
+
+    assert result.state is S.ERROR_REQUIRES_USER
+    assert result.reason_code is ReasonCode.USER_FIT_VIOLATED
+    assert len(recording.repairs) == 3  # 1 initial pass + 2 bounded repairs
+    assert recording.repairs[0] is None
+    for repair in recording.repairs[1:]:
+        assert repair is not None
+        assert repair.valid is False
+        assert repair.violations
+        assert repair.reason_code is ReasonCode.USER_FIT_VIOLATED
+
+    run = env.state.get_run(result.run_id)
+    assert run is not None
+    assert run.state is S.ERROR_REQUIRES_USER
+    assert run.reason_code is ReasonCode.USER_FIT_VIOLATED
 
 
 # --------------------------------------------------------------------------- #

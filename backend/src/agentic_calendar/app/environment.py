@@ -121,9 +121,23 @@ class StrategistNode(Protocol):
 
 @runtime_checkable
 class PlannerNode(Protocol):
-    """Structural surface shared by ``FixturePlanner`` and ``AnthropicPlanner``."""
+    """Structural surface shared by ``FixturePlanner`` and ``AnthropicPlanner``.
 
-    def run(self, *, run_id: str, syllabus: SyllabusUnits) -> TaskPlan: ...
+    ``user_profile`` carries the scheduling limits the deterministic user-fit
+    checks enforce; ``repair`` is the failed ``ValidationResult`` from the
+    previous pass of the bounded repair loop (axiom 04) so retries are not
+    re-invoked blind. Both are optional: deterministic plan sources ignore
+    them.
+    """
+
+    def run(
+        self,
+        *,
+        run_id: str,
+        syllabus: SyllabusUnits,
+        user_profile: UserProfile | None = None,
+        repair: ValidationResult | None = None,
+    ) -> TaskPlan: ...
 
 
 @runtime_checkable

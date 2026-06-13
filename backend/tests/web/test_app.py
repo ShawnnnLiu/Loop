@@ -23,8 +23,8 @@ from tests.app.test_cycle import (
 
 
 def _client() -> tuple[TestClient, object]:
-    service, _env, clock = make_service()
-    app = create_app(service, default_user_id=USER_ID)
+    _service, env, clock = make_service()
+    app = create_app(env=env, default_user_id=USER_ID)
     return TestClient(app), clock
 
 

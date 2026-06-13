@@ -15,6 +15,7 @@ dependencies = [
     # deliberately (update lock + `make schemas` + retest); see docs/axioms/18.
     "google-api-python-client>=2.197.0",
     "google-auth-oauthlib>=1.4.0",
+    "itsdangerous>=2.1",
     "pydantic==2.13.3",
     "uvicorn[standard]>=0.30",
 ]

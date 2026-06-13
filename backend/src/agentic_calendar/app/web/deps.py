@@ -1,19 +1,21 @@
 """FastAPI request dependencies: resolve the cycle service and the acting user.
 
-These two seams are the whole point of keeping a ``deps`` module: in
-Increment 1 the service is a single process-wide instance and the user is a
-single configured id, but Increments 3-4 replace :func:`require_user` with a
-session lookup (the trust boundary — the acting ``user_id`` is *never* taken
-from the request body) and :func:`get_cycle_service` with a per-user build
-over that user's stored Google credentials. Routes depend on these names, so
-that later swap touches only this file.
+:func:`require_user` is the trust boundary. In hosted mode (a
+:class:`~agentic_calendar.app.web.config.WebAuthConfig` was supplied) the acting
+``user_id`` is read from the signed session cookie and a missing session is a
+401 — it is never taken from the request body, query, or path. In the
+Increment-1 localhost dev mode (no auth) it returns the single configured id.
+
+Increment 4 swaps :func:`get_cycle_service` for a per-user build over that
+user's stored Google credentials; routes depend on these names so that change
+touches only this file.
 """
 
 from __future__ import annotations
 
 from typing import cast
 
-from fastapi import Request
+from fastapi import HTTPException, Request
 
 from agentic_calendar.app.cycle import CycleService
 
@@ -24,11 +26,14 @@ def get_cycle_service(request: Request) -> CycleService:
 
 
 def require_user(request: Request) -> str:
-    """The acting user id.
+    """The acting user id, resolved server-side.
 
-    Increment 1: the single configured id stored on ``app.state``. This is the
-    seam that becomes session-derived in Increment 3 — by then it raises 401
-    when no authenticated session is present, and the id is read from the
-    signed cookie, never from a form field, query param, or path.
+    Hosted mode: from ``request.session["user_id"]`` (401 if unauthenticated).
+    Dev mode: the single configured ``app.state.default_user_id``.
     """
+    if request.app.state.auth_enabled:
+        user_id = request.session.get("user_id")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="not authenticated")
+        return cast(str, user_id)
     return cast(str, request.app.state.default_user_id)

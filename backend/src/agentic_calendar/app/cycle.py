@@ -833,6 +833,10 @@ class CycleService:
                 verified_task_ids=[],
                 failed_task_ids=[],
                 mapping_status_by_task={},
+                # Operator diagnosability: domain-error messages are typed
+                # prose (never raw calendar content or secrets), so the text
+                # is safe to surface alongside the reason_code.
+                error=str(exc),
             )
         verified = (
             result.status is WriteStatus.SUCCESS
@@ -875,6 +879,10 @@ class CycleService:
             mapping_status_by_task={
                 m.task_id: m.calendar_write_status.value for m in mappings
             },
+            # The manager's translated failure detail (e.g. the Google
+            # adapter's enriched "events.list failed ...: HTTP 403" prose);
+            # None on success.
+            error=result.error,
         )
 
     def _activate_plan(self, user_id: str, run: RunRecord) -> None:

@@ -81,6 +81,11 @@ class WriteCycleResult(BaseModel):
     verified_task_ids: list[str] = Field(default_factory=list)
     failed_task_ids: list[str] = Field(default_factory=list)
     mapping_status_by_task: dict[str, str] = Field(default_factory=dict)
+    error: str | None = None
+    """Failure detail passed through from the write manager (or the
+    defense-in-depth guard) so the operator can diagnose a failed write
+    beyond the bare ``reason_code``. Typed error prose only — adapters
+    never embed raw calendar content or secrets. ``None`` on success."""
 
 
 class TelemetryItemOutcome(BaseModel):

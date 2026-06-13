@@ -649,6 +649,10 @@ def test_adapter_create_failure_preserves_reason_and_blocks_activation() -> None
 
     assert written.state is S.CALENDAR_WRITE_FAILED_STATE
     assert written.reason_code is ReasonCode.CALENDAR_WRITE_FAILED
+    # The manager's failure text reaches the operator surface, not just the
+    # bare reason_code (typed prose only, never raw content/secrets).
+    assert written.error is not None
+    assert "create_event" in written.error
     assert env.plan_store.get_active(USER_ID) is None
     assert env.plan_store.get(USER_ID, proposed.plan_version).state is (
         LifecycleState.APPROVED
@@ -715,6 +719,10 @@ def test_adapter_query_failure_returns_typed_result_instead_of_raising() -> None
     assert written.dry_run is False
     assert written.state is S.CALENDAR_WRITE_FAILED_STATE
     assert written.reason_code is ReasonCode.CALENDAR_WRITE_FAILED
+    # The Google adapter's enriched provider detail must survive the
+    # manager's WriteResult translation all the way to the operator result.
+    assert written.error is not None
+    assert "events.list failed" in written.error
     assert written.written_task_ids == []
     assert env.plan_store.get_active(USER_ID) is None
 
@@ -739,6 +747,10 @@ def test_write_guard_catches_untranslated_domain_error() -> None:
     assert written.state is S.CALENDAR_WRITE_FAILED_STATE
     assert written.reason_code is ReasonCode.CALENDAR_WRITE_FAILED
     assert written.write_status == "failed"
+    # The defense-in-depth path also carries the failure text for the
+    # operator (domain-error messages are typed prose, never secrets).
+    assert written.error is not None
+    assert "untranslated defect" in written.error
     assert written.written_task_ids == []
 
     run = env.state.get_run(proposed.run_id)

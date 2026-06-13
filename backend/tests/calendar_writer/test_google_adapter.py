@@ -686,6 +686,10 @@ def test_manager_list_failure_returns_typed_result_and_releases_lock() -> None:
     assert result.reason_code is ReasonCode.CALENDAR_WRITE_FAILED
     assert result.run_id is not None
     assert result.written_mappings == ()
+    # The adapter's enriched provider detail reaches the operator — the
+    # reason_code alone would hide which API call failed and why.
+    assert result.error is not None
+    assert "events.list failed" in result.error
     # The guard failed before any insert: nothing external, nothing local.
     assert transport.events == {}
     assert mapping_store.list_for_run(result.run_id) == []

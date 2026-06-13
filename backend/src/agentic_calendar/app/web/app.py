@@ -27,6 +27,7 @@ from agentic_calendar.common.errors import AgenticCalendarError
 from agentic_calendar.common.secrets import TokenCipher
 
 from .config import WebAuthConfig
+from .pages import router as pages_router
 from .routes_auth import router as auth_router
 from .routes_cycle import router as cycle_router
 
@@ -68,6 +69,7 @@ def create_app(
             https_only=auth_config.https_only,
         )
         app.include_router(auth_router)
+        app.include_router(pages_router)
 
     @app.get("/healthz")
     def healthz() -> dict[str, str]:

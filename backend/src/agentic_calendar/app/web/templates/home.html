@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Your plan</h1>
+<ul class="muted">
+  <li>State: <strong>{{ status.state.value if status.state else "—" }}</strong>
+      {%- if status.reason_code %} ({{ status.reason_code.value }}){% endif %}</li>
+  <li>Onboarded: {{ status.onboarded }}</li>
+  <li>Active plan: {{ status.active_plan_version or "none" }}</li>
+  <li>Plan versions: {{ status.plan_version_count }}</li>
+</ul>
+
+{% if status.onboarded %}
+<form method="post" action="/ui/propose">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <button>Propose a schedule</button>
+</form>
+{% else %}
+<p class="muted">You are not onboarded yet. Complete onboarding via the API,
+then return here to propose a schedule.</p>
+{% endif %}
+
+{% if status.draft_schedule_id %}
+<p><a href="/draft">Review the current draft &raquo;</a></p>
+{% endif %}
+{% endblock %}

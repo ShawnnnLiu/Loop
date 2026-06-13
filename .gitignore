@@ -40,3 +40,9 @@ graphify-out/
 # Google OAuth secrets (Phase 9c) — never commit tokens or client secrets
 .secrets/
 client_secret*.json
+
+# Dogfood databases hold personal data — never commit
+*.db
+*.db-wal
+*.db-shm
+dogfood_profile.json

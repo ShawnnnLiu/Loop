@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -101,7 +102,18 @@ def _fixture_bundle(deps: NodeDependencies) -> LlmNodeBundle:
 
 
 def _live_bundle(deps: NodeDependencies) -> LlmNodeBundle:
-    """Real Anthropic adapters (Phase 8); requires ``ANTHROPIC_API_KEY``."""
+    """Real Anthropic adapters (Phase 8); requires ``ANTHROPIC_API_KEY``.
+
+    Checked here, before any node is constructed: without the guard a
+    missing key surfaces as a raw SDK ``TypeError`` traceback mid-propose
+    instead of a clean operator error (same precondition gate as
+    ``llm_smoke --live``).
+    """
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        raise CycleError(
+            "--llm live requires ANTHROPIC_API_KEY in the environment; "
+            "export it or use --llm fixture for the offline demo nodes"
+        )
     transport = AnthropicMessagesTransport()
     return LlmNodeBundle(
         strategist=AnthropicStrategist(

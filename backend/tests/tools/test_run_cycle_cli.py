@@ -151,3 +151,19 @@ def test_status_on_onboarded_but_empty_db(
     status = _run_json(capsys, ["status", "--db", db, "--user", USER])
     assert status["onboarded"] is True
     assert status["state"] is None
+
+
+def test_propose_live_without_api_key_fails_cleanly(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """--llm live without ANTHROPIC_API_KEY exits 1 with a typed operator
+    error naming the variable — never a raw SDK traceback (axiom 16: no raw
+    exception crosses an operator surface)."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    db = str(tmp_path / "cycle.db")
+    rc = cli.main(["propose", "--db", db, "--user", "user_ghost", "--llm", "live"])
+    captured = capsys.readouterr()
+    assert rc == 1
+    assert "ANTHROPIC_API_KEY" in captured.err

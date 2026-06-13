@@ -21,13 +21,14 @@ from __future__ import annotations
 
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Body, Depends
+from fastapi import APIRouter, Body, Depends, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict
 
 from agentic_calendar.app.cycle import DEFAULT_TARGET_CALENDAR_ID, CycleService
 from agentic_calendar.contracts.checkin_event import RecoveryAction
 
+from .calendar_service import build_user_calendar_service
 from .deps import get_cycle_service, require_user
 
 router = APIRouter(prefix="/api", tags=["cycle"])
@@ -111,11 +112,30 @@ def approve(
 
 @router.post("/write")
 def write(
+    request: Request,
     service: Service,
     user_id: ActingUser,
     body: WriteRequest | None = None,
 ) -> JSONResponse:
     body = body or WriteRequest()
+    if request.app.state.auth_enabled:
+        # Hosted mode: write to THIS user's dedicated calendar via a per-user
+        # adapter. The target id comes from their stored credential, never the
+        # request body — a client cannot redirect the write to another calendar.
+        user_service, calendar_id = build_user_calendar_service(
+            request.app.state.env,
+            user_id=user_id,
+            token_cipher=request.app.state.token_cipher,
+        )
+        return _json(
+            user_service.write(
+                user_id,
+                run_id=body.run_id,
+                target_calendar_id=calendar_id,
+                dry_run=body.dry_run,
+            )
+        )
+    # Dev mode: shared in-memory adapter, target from the request.
     return _json(
         service.write(
             user_id,

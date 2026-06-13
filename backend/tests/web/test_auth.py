@@ -74,6 +74,13 @@ def _complete_login(
         "identity_from_token",
         lambda token_json, *, audience: GoogleIdentity(sub=sub, email=email),
     )
+    # Connect-time dedicated-calendar provisioning (faked SDK seam).
+    monkeypatch.setattr(routes_auth, "build_service_from_token", lambda token_json: object())
+    monkeypatch.setattr(
+        routes_auth,
+        "create_dedicated_calendar",
+        lambda service, *, summary, time_zone="UTC": "cal_provisioned",
+    )
     return client.get(f"/auth/callback?code=abc&state={state}", follow_redirects=False)
 
 
@@ -104,6 +111,7 @@ def test_full_login_authenticates_and_persists_encrypted_token(
     record = env.credential_store.get_by_user(user_id)
     assert record is not None
     assert record.email == EMAIL
+    assert record.dedicated_calendar_id == "cal_provisioned"  # provisioned on connect
     # Stored ciphertext is not the plaintext token, but decrypts back to it.
     assert record.encrypted_token != json.dumps(TOKEN)
     assert json.loads(cipher.decrypt(record.encrypted_token)) == TOKEN

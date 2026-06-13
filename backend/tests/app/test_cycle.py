@@ -43,11 +43,18 @@ from agentic_calendar.app.environment import (
     build_environment,
 )
 from agentic_calendar.app.state import ReplanKind, RunRecord
+from agentic_calendar.calendar_writer.adapter import (
+    ExternalCalendarAdapter,
+    ExternalEventHandle,
+    ExternalEventRecord,
+)
+from agentic_calendar.calendar_writer.google_adapter import GoogleCalendarApiError
 from agentic_calendar.calendar_writer.in_memory_adapter import (
     FailureModes,
     InMemoryCalendarAdapter,
 )
 from agentic_calendar.common.clock import FrozenClock
+from agentic_calendar.common.errors import AgenticCalendarError
 from agentic_calendar.common.ids import DeterministicIdGenerator
 from agentic_calendar.contracts.checkin_event import RecoveryAction
 from agentic_calendar.contracts.data_access_audit import (
@@ -170,7 +177,7 @@ class RecordingPlanner:
 def make_service(
     *,
     motivation_profile: Mapping[str, Any] | None = None,
-    calendar_adapter: InMemoryCalendarAdapter | None = None,
+    calendar_adapter: ExternalCalendarAdapter | None = None,
     db_path: Path | None = None,
     strategist_fixtures: Mapping[str, SyllabusUnits] | None = None,
     planner_fixtures: Mapping[str, TaskPlan] | None = None,
@@ -646,6 +653,93 @@ def test_adapter_create_failure_preserves_reason_and_blocks_activation() -> None
     assert env.plan_store.get(USER_ID, proposed.plan_version).state is (
         LifecycleState.APPROVED
     )
+
+    run = env.state.get_run(proposed.run_id)
+    assert run is not None
+    assert run.state is S.CALENDAR_WRITE_FAILED_STATE
+    assert run.reason_code is ReasonCode.CALENDAR_WRITE_FAILED
+
+
+class _QueryRaisingAdapter:
+    """:class:`ExternalCalendarAdapter` stub whose duplicate-guard query
+    raises — the live dogfood failure mode (Google ``events.list`` failing
+    inside ``approve_and_write`` step 4)."""
+
+    def __init__(self, exc: Exception) -> None:
+        self._exc = exc
+
+    def create_event(
+        self,
+        *,
+        target_calendar_id: str,
+        scheduled_start: datetime,
+        scheduled_end: datetime,
+        metadata: Mapping[str, str],
+    ) -> ExternalEventHandle:
+        raise AssertionError("create_event must not be reached")
+
+    def read_event(
+        self, *, target_calendar_id: str, calendar_event_id: str
+    ) -> ExternalEventRecord | None:
+        return None
+
+    def delete_event(
+        self, *, target_calendar_id: str, calendar_event_id: str
+    ) -> None:
+        return None
+
+    def query_events_by_metadata(
+        self, *, target_calendar_id: str, run_id: str
+    ) -> list[ExternalEventRecord]:
+        raise self._exc
+
+
+def test_adapter_query_failure_returns_typed_result_instead_of_raising() -> None:
+    """The live dogfood regression: a Google API failure during the manager's
+    duplicate guard must surface as a RETURNED WriteCycleResult — typed state
+    + reason_code, run record matching — never escape ``service.write`` as a
+    raw exception that strands the run in CALENDAR_WRITE_IN_PROGRESS."""
+    adapter = _QueryRaisingAdapter(
+        GoogleCalendarApiError(
+            "events.list failed for calendar 'dogfood': HTTP 403: "
+            "insufficient permissions",
+            status=403,
+        )
+    )
+    service, env, _clock = make_service(calendar_adapter=adapter)
+    proposed = service.propose(USER_ID)
+    service.approve(USER_ID)
+
+    written = service.write(USER_ID)
+
+    assert written.dry_run is False
+    assert written.state is S.CALENDAR_WRITE_FAILED_STATE
+    assert written.reason_code is ReasonCode.CALENDAR_WRITE_FAILED
+    assert written.written_task_ids == []
+    assert env.plan_store.get_active(USER_ID) is None
+
+    run = env.state.get_run(proposed.run_id)
+    assert run is not None
+    assert run.state is S.CALENDAR_WRITE_FAILED_STATE
+    assert run.reason_code is ReasonCode.CALENDAR_WRITE_FAILED
+
+
+def test_write_guard_catches_untranslated_domain_error() -> None:
+    """Defense in depth (axiom 16): even an AgenticCalendarError that is NOT
+    a CalendarWriterError — i.e. one the manager's boundary translation does
+    not catch — must land the run in CALENDAR_WRITE_FAILED_STATE with the
+    typed fallback reason_code instead of escaping the operator surface."""
+    adapter = _QueryRaisingAdapter(AgenticCalendarError("untranslated defect"))
+    service, env, _clock = make_service(calendar_adapter=adapter)
+    proposed = service.propose(USER_ID)
+    service.approve(USER_ID)
+
+    written = service.write(USER_ID)
+
+    assert written.state is S.CALENDAR_WRITE_FAILED_STATE
+    assert written.reason_code is ReasonCode.CALENDAR_WRITE_FAILED
+    assert written.write_status == "failed"
+    assert written.written_task_ids == []
 
     run = env.state.get_run(proposed.run_id)
     assert run is not None

@@ -23,6 +23,7 @@ from agentic_calendar.calendar_writer.adapter import (
     ExternalCalendarAdapter,
     ExternalEventRecord,
 )
+from agentic_calendar.calendar_writer.errors import CalendarWriterError
 from agentic_calendar.calendar_writer.google_adapter import (
     EVENT_SUMMARY,
     DedicatedCalendarViolationError,
@@ -75,8 +76,8 @@ class FakeGoogleTransport:
       cancelled items too — the adapter must filter them;
     * non-absent failures raise :class:`GoogleCalendarApiError` directly,
       the typed error the transport contract promises (no
-      ``googleapiclient`` in tests): set ``fail_insert`` to raise it on the
-      next insert (one-shot, then cleared);
+      ``googleapiclient`` in tests): set ``fail_insert`` / ``fail_list`` to
+      raise it on the next insert / list (one-shot, then cleared);
     * every ``(method, calendar_id)`` call is recorded in ``calls`` so tests
       can prove the dedicated-calendar guard fires BEFORE any transport I/O.
     """
@@ -85,6 +86,7 @@ class FakeGoogleTransport:
         self.events: dict[str, dict[str, Any]] = {}
         self.calls: list[tuple[str, str]] = []
         self.fail_insert: GoogleCalendarApiError | None = None
+        self.fail_list: GoogleCalendarApiError | None = None
         self._counter = 0
 
     def insert_event(
@@ -126,6 +128,9 @@ class FakeGoogleTransport:
         self, *, calendar_id: str, private_properties: Mapping[str, str]
     ) -> list[Mapping[str, Any]]:
         self.calls.append(("list_events", calendar_id))
+        if self.fail_list is not None:
+            error, self.fail_list = self.fail_list, None
+            raise error
         return [
             resource
             for resource in self.events.values()
@@ -163,6 +168,18 @@ def test_satisfies_external_calendar_adapter_protocol() -> None:
     adapter, transport = _make_adapter()
     assert isinstance(adapter, ExternalCalendarAdapter)
     assert isinstance(transport, GoogleCalendarTransport)
+
+
+def test_google_adapter_errors_are_calendar_writer_errors() -> None:
+    """The manager's boundary translation catches ``CalendarWriterError``;
+    the Google error hierarchy must live under it so every transport/adapter
+    failure inside the write path becomes a typed ``WriteResult`` with the
+    lock released, never a raw exception that strands the run (axiom 06/16)."""
+    assert isinstance(GoogleCalendarApiError("x"), CalendarWriterError)
+    assert isinstance(
+        DedicatedCalendarViolationError(requested="primary", dedicated=_DEDICATED),
+        CalendarWriterError,
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -626,3 +643,53 @@ def test_manager_insert_failure_surfaces_calendar_write_failed() -> None:
     # The first insert failed, so nothing was stored externally or locally.
     assert transport.events == {}
     assert mapping_store.list_for_run(result.run_id) == []
+
+
+def test_manager_list_failure_returns_typed_result_and_releases_lock() -> None:
+    """A transport-level list failure during the duplicate guard (the live
+    dogfood failure mode) must RETURN a typed WriteResult — never raise past
+    the manager boundary — and must leave the per-user lock released so the
+    user is not stranded (axiom 06/16)."""
+    clk = FrozenClock(_NOW)
+    transport = FakeGoogleTransport()
+    adapter = GoogleCalendarAdapter(
+        transport=transport, dedicated_calendar_id=_DEDICATED
+    )
+    mapping_store = InMemoryCalendarEventMappingStore()
+    approval_store = InMemoryApprovalEventStore()
+    lock = CalendarWriteLockManager(clock=clk)
+    mgr = CalendarWriteManager(
+        adapter=adapter,
+        mapping_store=mapping_store,
+        approval_store=approval_store,
+        lock_manager=lock,
+        id_generator=DeterministicIdGenerator(),
+        clock=clk,
+    )
+    draft = _draft()
+    approval = _approval_for(draft)
+    approval_store.save(approval)
+    transport.fail_list = GoogleCalendarApiError(
+        "events.list failed for calendar "
+        f"{_DEDICATED!r}: HTTP 403: insufficient permissions",
+        status=403,
+    )
+
+    result = mgr.approve_and_write(
+        approval_event_id=approval.approval_event_id,
+        draft=draft,
+        target_calendar_id=_DEDICATED,
+    )
+
+    # Typed failure, not a raise: the inherited CALENDAR_WRITE_FAILED code.
+    assert result.status is WriteStatus.PARTIAL_FAILURE
+    assert result.reason_code is ReasonCode.CALENDAR_WRITE_FAILED
+    assert result.run_id is not None
+    assert result.written_mappings == ()
+    # The guard failed before any insert: nothing external, nothing local.
+    assert transport.events == {}
+    assert mapping_store.list_for_run(result.run_id) == []
+    # The lock was released on the way out (finally), so the same user can
+    # immediately acquire it again — no stranded in-progress run.
+    token = lock.acquire(user_id=approval.user_id, run_id="run_retry")
+    lock.release(token)

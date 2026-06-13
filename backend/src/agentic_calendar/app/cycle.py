@@ -779,6 +779,13 @@ class CycleService:
         verification read-back — lives in ``CalendarWriteManager``; this
         method only sequences supervisor transitions around it and activates
         the plan version after a verified write.
+
+        The manager already translates every ``CalendarWriterError`` into a
+        typed ``WriteResult`` at its boundary; the ``AgenticCalendarError``
+        guard around it is defense in depth so no adapter/manager defect can
+        ever escape the operator surface raw and strand a run in
+        ``CALENDAR_WRITE_IN_PROGRESS`` — every failure leaves the run in a
+        typed terminal state with a ``reason_code`` (axiom 16).
         """
         env = self._env
         run = self._require_run(user_id, run_id, expected=S.CALENDAR_WRITE_APPROVED)
@@ -802,11 +809,31 @@ class CycleService:
             )
 
         run = self._transition(run, Sig.CALENDAR_WRITE_STARTED)
-        result = env.write_manager.approve_and_write(
-            approval_event_id=approval_event_id,
-            draft=draft,
-            target_calendar_id=target_calendar_id,
-        )
+        try:
+            result = env.write_manager.approve_and_write(
+                approval_event_id=approval_event_id,
+                draft=draft,
+                target_calendar_id=target_calendar_id,
+            )
+        except AgenticCalendarError as exc:
+            reason: ReasonCode = (
+                getattr(exc, "reason_code", None) or ReasonCode.CALENDAR_WRITE_FAILED
+            )
+            run = self._transition(
+                run, Sig.CALENDAR_WRITE_FAILED, reason_code=reason
+            )
+            return WriteCycleResult(
+                run_id=run.run_id,
+                user_id=user_id,
+                state=run.state,
+                dry_run=False,
+                write_status="failed",
+                reason_code=run.reason_code,
+                written_task_ids=[],
+                verified_task_ids=[],
+                failed_task_ids=[],
+                mapping_status_by_task={},
+            )
         verified = (
             result.status is WriteStatus.SUCCESS
             and result.verification is not None

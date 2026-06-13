@@ -34,17 +34,25 @@ from collections.abc import Mapping
 from datetime import UTC, datetime
 from typing import Any, Protocol, runtime_checkable
 
-from agentic_calendar.common.errors import AgenticCalendarError
-
 from .adapter import ExternalEventHandle, ExternalEventRecord
+from .errors import CalendarWriterError
 from .metadata import APP_TAG
 
 EVENT_SUMMARY = "Career prep study block"
 """Fixed, content-free summary for every event the system creates."""
 
 
-class GoogleCalendarAdapterError(AgenticCalendarError):
-    """Base for Google-adapter errors that callers may catch."""
+class GoogleCalendarAdapterError(CalendarWriterError):
+    """Base for Google-adapter errors that callers may catch.
+
+    Subclasses :class:`CalendarWriterError` so that every adapter failure
+    raised inside the manager's write path is caught by the manager's
+    boundary translation (``CalendarWriteManager._translate_error``) and
+    becomes a typed ``WriteResult`` with the lock released — an adapter
+    fault must never escape the manager as a raw exception and strand a run
+    mid-state (axiom 06/16). Inherits the base's
+    ``ReasonCode.CALENDAR_WRITE_FAILED``.
+    """
 
 
 class DedicatedCalendarViolationError(GoogleCalendarAdapterError):
@@ -118,6 +126,25 @@ class GoogleApiHttpTransport:
             return int(exc.resp.status)
         return None
 
+    @staticmethod
+    def _error_detail(exc: Exception) -> str:
+        """Provider-side failure detail to append to a raised message.
+
+        Carries only the HTTP status and Google's error prose (or the
+        exception type + text for non-HTTP failures) — calendar ids and
+        provider prose, never secrets. Truncated so a giant provider payload
+        cannot bloat logs or results.
+        """
+        try:
+            from googleapiclient.errors import HttpError
+        except ImportError:  # pragma: no cover - dependency is installed in dev
+            pass
+        else:
+            if isinstance(exc, HttpError):
+                detail = exc.reason or str(exc)[:200]
+                return f"HTTP {int(exc.resp.status)}: {detail}"
+        return f"{type(exc).__name__}: {str(exc)[:200]}"
+
     def insert_event(
         self, *, calendar_id: str, body: Mapping[str, Any]
     ) -> Mapping[str, Any]:
@@ -131,7 +158,9 @@ class GoogleApiHttpTransport:
         except Exception as exc:
             status = self._absent_status(exc)
             raise GoogleCalendarApiError(
-                f"events.insert failed for calendar {calendar_id!r}", status=status
+                f"events.insert failed for calendar {calendar_id!r}: "
+                f"{self._error_detail(exc)}",
+                status=status,
             ) from exc
 
     def get_event(
@@ -149,7 +178,9 @@ class GoogleApiHttpTransport:
             if status in (404, 410):
                 return None
             raise GoogleCalendarApiError(
-                f"events.get failed for event {event_id!r}", status=status
+                f"events.get failed for event {event_id!r}: "
+                f"{self._error_detail(exc)}",
+                status=status,
             ) from exc
 
     def delete_event(self, *, calendar_id: str, event_id: str) -> None:
@@ -162,7 +193,9 @@ class GoogleApiHttpTransport:
             if status in (404, 410):
                 return  # idempotent, like the in-memory adapter
             raise GoogleCalendarApiError(
-                f"events.delete failed for event {event_id!r}", status=status
+                f"events.delete failed for event {event_id!r}: "
+                f"{self._error_detail(exc)}",
+                status=status,
             ) from exc
 
     def list_events(
@@ -191,7 +224,9 @@ class GoogleApiHttpTransport:
         except Exception as exc:
             status = self._absent_status(exc)
             raise GoogleCalendarApiError(
-                f"events.list failed for calendar {calendar_id!r}", status=status
+                f"events.list failed for calendar {calendar_id!r}: "
+                f"{self._error_detail(exc)}",
+                status=status,
             ) from exc
 
 

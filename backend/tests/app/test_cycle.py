@@ -471,7 +471,9 @@ def test_blocked_horizon_exhausts_scheduler_planner_iterations() -> None:
     service, env, clock = make_service(planner=counting)
     busy = [{"start": clock.now(), "end": clock.now() + timedelta(days=14)}]
 
-    result = service.propose(USER_ID, free_busy=busy)
+    # The horizon is pinned to the busy interval: this test exercises the
+    # bounded-iteration exhaustion, not the timeline-derived default.
+    result = service.propose(USER_ID, free_busy=busy, horizon_days=14)
 
     assert result.state is S.ERROR_REQUIRES_USER
     assert counting.calls == 2  # axiom 05 bound: at most two planner passes
@@ -486,6 +488,27 @@ def test_blocked_horizon_exhausts_scheduler_planner_iterations() -> None:
     assert run is not None
     assert run.state is S.ERROR_REQUIRES_USER
     assert run.reason_code is result.unscheduled_tasks[0].reason_code
+
+
+def test_default_horizon_covers_the_profile_timeline() -> None:
+    """The default scheduling horizon is the profile's full timeline
+    (timeline_weeks * 7), not a fixed fortnight: user-fit validation sizes
+    plans to weekly_hours * timeline_weeks, and the Phase 1 scheduler places
+    the whole plan inside the horizon — a 14-day default made any plan that
+    needs week 3+ structurally unschedulable (capacity failures cascading
+    into DEPENDENCY_BLOCKED). A 15-day busy block must therefore no longer
+    fail a propose for the canonical 10-week profile; placement lands after
+    the block, beyond the old default."""
+    service, env, clock = make_service()
+    busy = [{"start": clock.now(), "end": clock.now() + timedelta(days=15)}]
+
+    result = service.propose(USER_ID, free_busy=busy)
+
+    assert result.state is S.AWAITING_USER_APPROVAL
+    assert result.draft_schedule_id is not None
+    draft = env.state.get_draft(result.draft_schedule_id)
+    assert draft is not None
+    assert all(e.start >= clock.now() + timedelta(days=15) for e in draft.entries)
 
 
 # --------------------------------------------------------------------------- #

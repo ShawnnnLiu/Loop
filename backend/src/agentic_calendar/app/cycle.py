@@ -257,7 +257,7 @@ class CycleService:
         user_id: str,
         *,
         free_busy: Sequence[Mapping[str, Any]] = (),
-        horizon_days: int = 14,
+        horizon_days: int | None = None,
         recovery_mode: RecoveryAction | None = None,
     ) -> ProposeResult:
         """Produce a draft plan + draft schedule awaiting approval.
@@ -268,8 +268,18 @@ class CycleService:
         instead: ``REPLAN_STARTED`` re-enters the planner stage through the
         recovery or recalibration path. ``recovery_mode`` supplies the user's
         choice when the motivation profile says ``ask_each_time``.
+
+        ``horizon_days`` defaults to the profile's full timeline
+        (``timeline_weeks * 7``): user-fit validation sizes the plan to
+        ``weekly_hours * timeline_weeks``, so the Phase 1 scheduler — which
+        places the WHOLE plan inside the horizon — must be given the whole
+        timeline. A shorter explicit horizon makes a full-sized plan
+        structurally unschedulable (capacity failures cascading into
+        ``DEPENDENCY_BLOCKED`` for every dependent task).
         """
         onboarding = self._require_onboarding(user_id)
+        if horizon_days is None:
+            horizon_days = onboarding.user_profile.timeline_weeks * 7
         latest = self._env.state.latest_run_for_user(user_id)
         if latest is not None and latest.state is S.REPLAN_REQUIRED:
             return self._propose_replan(

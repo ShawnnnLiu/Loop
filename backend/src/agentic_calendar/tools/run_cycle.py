@@ -208,7 +208,7 @@ def _cmd_propose(args: argparse.Namespace) -> int:
         service.propose(
             args.user,
             free_busy=extra.get("free_busy", ()),
-            horizon_days=extra.get("horizon_days", 14),
+            horizon_days=extra.get("horizon_days"),
             recovery_mode=(
                 RecoveryAction(args.recovery_mode) if args.recovery_mode else None
             ),

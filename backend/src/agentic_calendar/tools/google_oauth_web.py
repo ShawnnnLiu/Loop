@@ -32,7 +32,9 @@ WEB_SCOPES = (
     "openid",
     "https://www.googleapis.com/auth/userinfo.email",
     "https://www.googleapis.com/auth/userinfo.profile",
-    "https://www.googleapis.com/auth/calendar.events",
+    # calendar.app.created: create a secondary calendar AND manage its events.
+    # (calendar.events alone cannot create a calendar — calendars.insert 403s.)
+    "https://www.googleapis.com/auth/calendar.app.created",
 )
 
 
@@ -50,12 +52,18 @@ class GoogleIdentity:
 
 def build_authorization_url(
     *, client_config: Mapping[str, Any], redirect_uri: str, state: str
-) -> str:
-    """The Google consent URL to redirect the user to.
+) -> tuple[str, str]:
+    """The Google consent URL plus the PKCE ``code_verifier`` to redirect to.
 
     ``access_type=offline`` + ``prompt=consent`` ensures a refresh token comes
     back so the server can write to the calendar later without the user present.
     ``state`` is the caller's CSRF token, echoed back on the callback.
+
+    The library uses PKCE: it generates a one-time ``code_verifier`` here and
+    sends its hash to Google. The verifier is needed again at the token
+    exchange (a *separate* request), so the caller MUST persist it (in the
+    session) and hand it to :func:`exchange_code` — otherwise Google rejects
+    the exchange with "Missing code verifier".
     """
     from google_auth_oauthlib.flow import Flow
 
@@ -65,7 +73,7 @@ def build_authorization_url(
     url, _state = flow.authorization_url(
         access_type="offline", include_granted_scopes="true", prompt="consent", state=state
     )
-    return str(url)
+    return str(url), str(flow.code_verifier or "")
 
 
 def exchange_code(
@@ -74,8 +82,12 @@ def exchange_code(
     redirect_uri: str,
     code: str,
     state: str,
+    code_verifier: str | None = None,
 ) -> dict[str, Any]:
     """Exchange the callback ``code`` for this user's token JSON.
+
+    ``code_verifier`` is the PKCE verifier minted in :func:`build_authorization_url`
+    and carried through the session — it must be replayed here.
 
     Returns the authorized-user token dict (token, refresh_token, client id/
     secret, scopes) with ``id_token`` guaranteed present so the caller can
@@ -86,7 +98,14 @@ def exchange_code(
     flow = Flow.from_client_config(
         client_config, scopes=list(WEB_SCOPES), redirect_uri=redirect_uri, state=state
     )
-    flow.fetch_token(code=code)
+    if code_verifier:
+        flow.code_verifier = code_verifier
+    try:
+        flow.fetch_token(code=code)
+    except Exception as exc:
+        # oauthlib / transport failures (invalid_grant, scope changes, network)
+        # become a typed error so the surface returns a clean 400, not a 500.
+        raise GoogleOAuthError(f"OAuth token exchange failed: {exc}") from exc
     creds = flow.credentials
     token_json: dict[str, Any] = json.loads(creds.to_json())
     if "id_token" not in token_json and getattr(creds, "id_token", None):
@@ -143,7 +162,11 @@ def create_dedicated_calendar(
     Each user gets their own dedicated calendar so the adapter's "never write
     to primary" guard holds and one user's events never land on another's.
     """
-    created = service.calendars().insert(
-        body={"summary": summary, "timeZone": time_zone}
-    ).execute()
+    try:
+        created = service.calendars().insert(
+            body={"summary": summary, "timeZone": time_zone}
+        ).execute()
+    except Exception as exc:
+        # e.g. an insufficient-scope 403 from the Calendar API — typed, not a 500.
+        raise GoogleOAuthError(f"could not create the dedicated calendar: {exc}") from exc
     return str(created["id"])

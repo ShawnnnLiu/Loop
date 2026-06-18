@@ -50,7 +50,10 @@ def _login(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         routes_auth,
         "build_authorization_url",
-        lambda *, client_config, redirect_uri, state: f"https://g.test/auth?state={state}",
+        lambda *, client_config, redirect_uri, state: (
+            f"https://g.test/auth?state={state}",
+            "test-verifier",
+        ),
     )
     monkeypatch.setattr(routes_auth, "exchange_code", lambda **kwargs: dict(TOKEN))
     monkeypatch.setattr(

@@ -38,6 +38,7 @@ from agentic_calendar.tools.google_oauth_web import (
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 _OAUTH_STATE_KEY = "oauth_state"
+_OAUTH_VERIFIER_KEY = "oauth_code_verifier"
 
 
 def _config(request: Request) -> WebAuthConfig:
@@ -54,12 +55,15 @@ def _user_id_for_sub(sub: str) -> str:
 def login(request: Request) -> RedirectResponse:
     config = _config(request)
     state = secrets.token_urlsafe(32)
-    request.session[_OAUTH_STATE_KEY] = state
-    url = build_authorization_url(
+    url, code_verifier = build_authorization_url(
         client_config=config.client_config,
         redirect_uri=config.redirect_uri,
         state=state,
     )
+    # PKCE spans both requests: stash the verifier (and the CSRF state) so the
+    # callback can replay them.
+    request.session[_OAUTH_STATE_KEY] = state
+    request.session[_OAUTH_VERIFIER_KEY] = code_verifier
     return RedirectResponse(url, status_code=307)
 
 
@@ -67,6 +71,7 @@ def login(request: Request) -> RedirectResponse:
 def callback(request: Request, code: str, state: str) -> RedirectResponse:
     config = _config(request)
     expected = request.session.pop(_OAUTH_STATE_KEY, None)
+    code_verifier = request.session.pop(_OAUTH_VERIFIER_KEY, None)
     if not expected or state != expected:
         # Defeats login-CSRF: the state must match the one this session minted.
         raise HTTPException(status_code=400, detail="invalid or missing oauth state")
@@ -76,6 +81,7 @@ def callback(request: Request, code: str, state: str) -> RedirectResponse:
         redirect_uri=config.redirect_uri,
         code=code,
         state=state,
+        code_verifier=code_verifier,
     )
     identity = identity_from_token(token_json, audience=config.audience)
     if not config.allows(identity.email):

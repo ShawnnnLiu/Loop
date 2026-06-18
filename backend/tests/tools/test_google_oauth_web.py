@@ -42,6 +42,7 @@ class _FakeCreds:
 class _FakeFlow:
     def __init__(self) -> None:
         self.credentials = _FakeCreds()
+        self.code_verifier = "test-verifier"
 
     @classmethod
     def from_client_config(cls, config, scopes, redirect_uri, state=None):  # type: ignore[no-untyped-def]
@@ -57,10 +58,26 @@ class _FakeFlow:
 
 def test_build_authorization_url(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("google_auth_oauthlib.flow.Flow", _FakeFlow)
-    url = build_authorization_url(
+    url, code_verifier = build_authorization_url(
         client_config={"web": {}}, redirect_uri="https://app.test/auth/callback", state="st123"
     )
     assert "state=st123" in url
+    assert code_verifier == "test-verifier"  # PKCE verifier returned for the session
+
+
+def test_exchange_code_translates_errors(monkeypatch: pytest.MonkeyPatch) -> None:
+    class _FailingFlow(_FakeFlow):
+        def fetch_token(self, code):  # type: ignore[no-untyped-def]
+            raise RuntimeError("invalid_grant: missing code verifier")
+
+    monkeypatch.setattr("google_auth_oauthlib.flow.Flow", _FailingFlow)
+    with pytest.raises(GoogleOAuthError):
+        exchange_code(
+            client_config={"web": {}},
+            redirect_uri="https://app.test/auth/callback",
+            code="bad",
+            state="st",
+        )
 
 
 def test_exchange_code_includes_id_token(monkeypatch: pytest.MonkeyPatch) -> None:

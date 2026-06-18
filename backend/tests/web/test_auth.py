@@ -52,7 +52,8 @@ def _login(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> str:
         routes_auth,
         "build_authorization_url",
         lambda *, client_config, redirect_uri, state: (
-            f"https://accounts.google.test/o/oauth2/auth?state={state}"
+            f"https://accounts.google.test/o/oauth2/auth?state={state}",
+            "test-verifier",
         ),
     )
     resp = client.get("/auth/login", follow_redirects=False)

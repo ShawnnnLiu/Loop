@@ -5,8 +5,8 @@
 # IMPORTANT: exactly ONE machine. SQLite + WAL is a one-process store, so do
 # not scale past 1 (`fly scale count 1`) and do not add workers.
 
-app = "agentic-calendar"          # <-- your app name; domain is <app>.fly.dev
-primary_region = "iad"            # <-- a region near your testers
+app = "acme-agentic-cal"          # <-- your app name; domain is <app>.fly.dev
+primary_region = "lax"            # <-- a region near your testers
 
 [build]
   dockerfile = "Dockerfile"
@@ -28,4 +28,4 @@ primary_region = "iad"            # <-- a region near your testers
 [env]
   SHARED_DB_PATH = "/data/app.db"
   APP_HTTPS_ONLY = "1"
-  OAUTH_REDIRECT_URI = "https://agentic-calendar.fly.dev/auth/callback"  # <-- match your app
+  OAUTH_REDIRECT_URI = "https://acme-agentic-cal.fly.dev/auth/callback"  # <-- match your app

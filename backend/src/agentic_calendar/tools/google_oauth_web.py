@@ -22,6 +22,7 @@ closed group of ≤100 testers needs no Google app verification.
 from __future__ import annotations
 
 import json
+import os
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
@@ -100,6 +101,11 @@ def exchange_code(
     )
     if code_verifier:
         flow.code_verifier = code_verifier
+    # Google returns the union of previously-granted scopes (incremental auth,
+    # via include_granted_scopes) and usually reorders them, so the granted set
+    # won't equal the requested set. Tell oauthlib not to reject that — we only
+    # ever rely on calendar.app.created; any extra grant is harmless.
+    os.environ.setdefault("OAUTHLIB_RELAX_TOKEN_SCOPE", "1")
     try:
         flow.fetch_token(code=code)
     except Exception as exc:

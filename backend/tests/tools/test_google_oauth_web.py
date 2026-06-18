@@ -9,6 +9,7 @@ before the call takes effect.
 from __future__ import annotations
 
 import json
+import os
 
 import pytest
 
@@ -63,6 +64,20 @@ def test_build_authorization_url(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     assert "state=st123" in url
     assert code_verifier == "test-verifier"  # PKCE verifier returned for the session
+
+
+def test_exchange_code_relaxes_oauthlib_scope_check(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Google returns a reordered superset of scopes (incremental auth); the
+    # exchange must relax oauthlib's strict scope-equality check.
+    monkeypatch.delenv("OAUTHLIB_RELAX_TOKEN_SCOPE", raising=False)
+    monkeypatch.setattr("google_auth_oauthlib.flow.Flow", _FakeFlow)
+    exchange_code(
+        client_config={"web": {}},
+        redirect_uri="https://app.test/auth/callback",
+        code="auth-code",
+        state="st",
+    )
+    assert "OAUTHLIB_RELAX_TOKEN_SCOPE" in os.environ
 
 
 def test_exchange_code_translates_errors(monkeypatch: pytest.MonkeyPatch) -> None:

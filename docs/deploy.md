@@ -31,7 +31,7 @@ deterministic core and every axiom-06 invariant are unchanged.
 | Variable | Purpose |
 |---|---|
 | `SHARED_DB_PATH` | SQLite file path on a **persistent volume** (all per-user data). |
-| `GOOGLE_OAUTH_CLIENT_SECRET_FILE` | Path to the Web client JSON from step 1. |
+| `GOOGLE_OAUTH_CLIENT_SECRET_JSON` *or* `GOOGLE_OAUTH_CLIENT_SECRET_FILE` | The Web client JSON from step 1 — inline (env-var hosts like Fly) or a file path. |
 | `OAUTH_REDIRECT_URI` | Must equal the Authorized redirect URI exactly. |
 | `APP_SESSION_SECRET` | Random secret for signing the session cookie. |
 | `APP_TOKEN_ENCRYPTION_KEY` | Fernet key for encrypting OAuth tokens at rest. |
@@ -79,6 +79,28 @@ docker run -p 8000:8000 \
 
 Terminate TLS in front of the app (the platform's load balancer, or Caddy for
 automatic HTTPS) so the public URL is `https://<your-domain>`.
+
+### Fly.io (single machine + volume)
+
+`backend/fly.toml` is preconfigured; edit `app`, `primary_region`, and the
+`OAUTH_REDIRECT_URI` to match your app name. Run flyctl from `backend/`:
+
+```bash
+cd backend
+fly launch --no-deploy --copy-config --name <your-app>   # reuse fly.toml
+fly volumes create data --region <region> --size 1        # persistent SQLite
+fly secrets set \
+  APP_SESSION_SECRET="$(python -c 'import secrets;print(secrets.token_urlsafe(48))')" \
+  APP_TOKEN_ENCRYPTION_KEY="$(python -c 'from cryptography.fernet import Fernet;print(Fernet.generate_key().decode())')" \
+  TESTER_ALLOWLIST="a@example.com,b@example.com" \
+  ANTHROPIC_API_KEY="sk-ant-..." \
+  GOOGLE_OAUTH_CLIENT_SECRET_JSON="$(cat client_secret.json)"
+fly deploy
+fly scale count 1   # exactly one machine — SQLite is single-process
+```
+
+The public URL is `https://<your-app>.fly.dev`; its `/auth/callback` must be
+the Authorized redirect URI from step 1.
 
 ## 4. Operate
 

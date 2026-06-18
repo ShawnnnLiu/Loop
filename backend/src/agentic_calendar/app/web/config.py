@@ -47,13 +47,14 @@ class WebAuthConfig:
     def from_env(cls) -> WebAuthConfig:
         """Build from environment variables (the deploy path).
 
-        ``GOOGLE_OAUTH_CLIENT_SECRET_FILE`` (path to the web client JSON),
+        The web client JSON comes from ``GOOGLE_OAUTH_CLIENT_SECRET_JSON``
+        (inline JSON — convenient on platforms whose secrets are env vars, e.g.
+        Fly.io) or ``GOOGLE_OAUTH_CLIENT_SECRET_FILE`` (a path). Plus
         ``OAUTH_REDIRECT_URI``, ``APP_SESSION_SECRET``, ``TESTER_ALLOWLIST``
         (comma-separated emails). ``APP_HTTPS_ONLY=0`` disables the Secure flag
         for local runs.
         """
-        secret_file = _require_env("GOOGLE_OAUTH_CLIENT_SECRET_FILE")
-        client_config = json.loads(Path(secret_file).read_text())
+        client_config = _load_client_config()
         web = client_config.get("web")
         if not isinstance(web, Mapping) or not web.get("client_id"):
             raise WebConfigError(
@@ -85,3 +86,26 @@ def _require_env(var: str) -> str:
     if not value:
         raise WebConfigError(f"{var} is not set")
     return value
+
+
+def _load_client_config() -> dict[str, Any]:
+    """The Google web client config, from inline JSON or a file path.
+
+    ``GOOGLE_OAUTH_CLIENT_SECRET_JSON`` (inline) wins so env-var-only hosts can
+    supply it as a secret; otherwise ``GOOGLE_OAUTH_CLIENT_SECRET_FILE`` is read.
+    """
+    inline = os.environ.get("GOOGLE_OAUTH_CLIENT_SECRET_JSON")
+    if inline:
+        try:
+            parsed: dict[str, Any] = json.loads(inline)
+        except json.JSONDecodeError as exc:
+            raise WebConfigError("GOOGLE_OAUTH_CLIENT_SECRET_JSON is not valid JSON") from exc
+        return parsed
+    path = os.environ.get("GOOGLE_OAUTH_CLIENT_SECRET_FILE")
+    if not path:
+        raise WebConfigError(
+            "set GOOGLE_OAUTH_CLIENT_SECRET_JSON (inline) or "
+            "GOOGLE_OAUTH_CLIENT_SECRET_FILE (path)"
+        )
+    loaded: dict[str, Any] = json.loads(Path(path).read_text())
+    return loaded

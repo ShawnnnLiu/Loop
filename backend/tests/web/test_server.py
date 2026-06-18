@@ -55,6 +55,18 @@ def test_create_hosted_app_wires_from_env(
     assert client.get("/api/status").status_code == 401
 
 
+def test_create_hosted_app_accepts_inline_client_json(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    _set_env(monkeypatch, tmp_path)
+    # Drop the file path; supply the client config inline (the Fly-style path).
+    monkeypatch.delenv("GOOGLE_OAUTH_CLIENT_SECRET_FILE")
+    monkeypatch.setenv("GOOGLE_OAUTH_CLIENT_SECRET_JSON", json.dumps(_CLIENT_JSON))
+    client = TestClient(create_hosted_app())
+    assert client.get("/").status_code == 200
+    assert client.get("/api/status").status_code == 401
+
+
 def test_create_hosted_app_requires_db_path(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

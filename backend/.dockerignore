@@ -1,0 +1,18 @@
+# Keep secrets and local cruft out of the Docker build context / image.
+# Secrets reach the container via `fly secrets` (env), never baked in.
+.secrets/
+client_secret*.json
+*.db
+*.db-wal
+*.db-shm
+.venv/
+.git/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+smoke_rows.json

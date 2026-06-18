@@ -14,7 +14,7 @@ JSON API for now — a profile form is a follow-up.
 from __future__ import annotations
 
 import secrets
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -25,8 +25,10 @@ from fastapi.templating import Jinja2Templates
 from pydantic import ValidationError
 
 from agentic_calendar.app.cycle import HASH_CANONICALIZATION_VERSION
+from agentic_calendar.app.environment import AppEnvironment
 from agentic_calendar.app.state import OnboardingRecord
 from agentic_calendar.contracts.common_types import Day, ExperienceLevel
+from agentic_calendar.contracts.draft_schedule import DraftSchedule, DraftScheduleEntry
 from agentic_calendar.contracts.hashing import canonical_payload_hash
 
 from .calendar_service import build_user_calendar_service
@@ -252,6 +254,95 @@ def _values_from_record(record: OnboardingRecord) -> dict[str, Any]:
     }
 
 
+# ---------------------------------------------------------------------------- #
+# Today / check-in (#2): the telemetry feedback loop.
+#
+# Renders the active plan's scheduled tasks. A task becomes "due" once its draft
+# entry has ended; a due task offers Complete / Missed, which POST a single
+# telemetry event through the same CycleService.ingest the JSON API uses. A task
+# that already has a telemetry event is shown as reported and a re-submit is
+# refused server-side, so a double click can never double-count.
+# ---------------------------------------------------------------------------- #
+
+
+def _active_draft(env: AppEnvironment, user_id: str) -> DraftSchedule | None:
+    """The draft backing the user's *active* (written) plan, or ``None``.
+
+    Guards that the latest run's draft actually matches the active plan version,
+    so a replan-in-flight draft is never shown as today's schedule.
+    """
+    run = env.state.latest_run_for_user(user_id)
+    active = env.plan_store.get_active(user_id)
+    if active is None or run is None or run.draft_schedule_id is None:
+        return None
+    draft = env.state.get_draft(run.draft_schedule_id)
+    if draft is None or draft.plan_version != active.plan_version:
+        return None
+    return draft
+
+
+def _entry_for_task(
+    env: AppEnvironment, user_id: str, task_id: str
+) -> DraftScheduleEntry | None:
+    draft = _active_draft(env, user_id)
+    if draft is None:
+        return None
+    return next((entry for entry in draft.entries if entry.task_id == task_id), None)
+
+
+def _today_rows(env: AppEnvironment, user_id: str) -> list[dict[str, Any]]:
+    """One render row per scheduled task, localized to the user's timezone."""
+    draft = _active_draft(env, user_id)
+    active = env.plan_store.get_active(user_id)
+    if draft is None or active is None:
+        return []
+    onboarding = env.state.get_onboarding(user_id)
+    tz = onboarding.tzinfo() if onboarding is not None else UTC
+    now = env.clock.now()
+    tasks = {task.task_id: task for task in active.plan.tasks}
+    rows: list[dict[str, Any]] = []
+    for entry in draft.entries:
+        task = tasks.get(entry.task_id)
+        if task is None:
+            continue
+        rows.append(
+            {
+                "task_id": entry.task_id,
+                "title": task.title,
+                "category": task.category.value,
+                "focus": task.required_focus_level.value,
+                "when": entry.start.astimezone(tz).strftime("%a %b %d, %H:%M"),
+                "end_hm": entry.end.astimezone(tz).strftime("%H:%M"),
+                "due": entry.end <= now,
+                "reported": bool(env.telemetry_store.list_for_task(entry.task_id)),
+            }
+        )
+    return rows
+
+
+def _checkin_payload(
+    env: AppEnvironment, task_id: str, scheduled_min: int, *, completed: bool
+) -> dict[str, Any]:
+    """Build one telemetry event for a user-reported, online outcome.
+
+    Mirrors the ``_completed_event`` / ``_missed_event`` shapes the cycle tests
+    use: a completion carries actuals + timestamp so ``data_quality`` stays
+    ``complete``; a miss carries neither.
+    """
+    payload: dict[str, Any] = {
+        "telemetry_event_id": env.id_generator.new_id("telemetry"),
+        "task_id": task_id,
+        "scheduled_duration_min": scheduled_min,
+        "actual_duration_min": scheduled_min if completed else None,
+        "completed": completed,
+        "user_reschedule_count": 0,
+        "data_quality": "complete",
+    }
+    if completed:
+        payload["completion_timestamp"] = env.clock.now()
+    return payload
+
+
 @router.get("/", response_class=HTMLResponse)
 def index(request: Request) -> Response:
     if _user(request):
@@ -291,6 +382,38 @@ async def ui_onboard(request: Request) -> Response:
             values=_submitted_values(form), errors=_validation_errors(exc),
         )
     return RedirectResponse("/home", status_code=303)
+
+
+@router.get("/today", response_class=HTMLResponse)
+def today_page(request: Request) -> Response:
+    if not _user(request):
+        return RedirectResponse("/", status_code=303)
+    rows = _today_rows(request.app.state.env, _require_user(request))
+    return _page(request, "today.html", rows=rows)
+
+
+@router.post("/ui/checkin")
+async def ui_checkin(request: Request) -> Response:
+    form = await request.form()
+    _check_csrf(request, str(form.get("csrf_token", "")))
+    user_id = _require_user(request)
+    env = request.app.state.env
+    task_id = str(form.get("task_id", ""))
+    completed = str(form.get("outcome", "")) == "complete"
+    entry = _entry_for_task(env, user_id, task_id)
+    # Only a task in the active plan, already ended, and not yet reported can
+    # produce an event — this enforces membership, the "due" rule, and
+    # idempotency (a double-submit cannot double-count).
+    if (
+        entry is not None
+        and entry.end <= env.clock.now()
+        and not env.telemetry_store.list_for_task(task_id)
+    ):
+        scheduled_min = int((entry.end - entry.start).total_seconds() // 60)
+        get_cycle_service(request).ingest(
+            user_id, [_checkin_payload(env, task_id, scheduled_min, completed=completed)]
+        )
+    return RedirectResponse("/today", status_code=303)
 
 
 @router.get("/draft", response_class=HTMLResponse)

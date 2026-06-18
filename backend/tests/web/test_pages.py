@@ -19,7 +19,7 @@ from agentic_calendar.app.web.app import create_app
 from agentic_calendar.app.web.config import WebAuthConfig
 from agentic_calendar.common.secrets import TokenCipher
 from agentic_calendar.tools.google_oauth_web import GoogleIdentity
-from tests.app.test_cycle import _canonical_profile, make_service
+from tests.app.test_cycle import _advance_past_draft, _canonical_profile, make_service
 from tests.calendar_writer.test_google_adapter import FakeGoogleTransport
 
 EMAIL = "tester@example.com"
@@ -219,3 +219,76 @@ def test_full_ui_journey(monkeypatch: pytest.MonkeyPatch) -> None:
     assert "active_plan" in client.get("/home").text
     inserts = [cal for (method, cal) in transport.calls if method == "insert_event"]
     assert inserts and all(calendar_id == "cal_pages" for calendar_id in inserts)
+
+
+def test_today_empty_without_active_plan(monkeypatch: pytest.MonkeyPatch) -> None:
+    client = _client()
+    _login(client, monkeypatch)
+    client.post(
+        "/api/onboard",
+        json={"user_profile": _canonical_profile().model_dump(mode="json"), "timezone": "UTC"},
+    )
+    resp = client.get("/today")
+    assert resp.status_code == 200
+    assert "No active plan yet" in resp.text
+
+
+def test_today_checkin_records_telemetry(monkeypatch: pytest.MonkeyPatch) -> None:
+    _service, env, clock = make_service()
+    client = TestClient(
+        create_app(
+            env=env, auth_config=_config(), token_cipher=TokenCipher(TokenCipher.generate_key())
+        )
+    )
+    _login(client, monkeypatch)
+    client.post(
+        "/api/onboard",
+        json={"user_profile": _canonical_profile().model_dump(mode="json"), "timezone": "UTC"},
+    )
+    token = _csrf(client)
+    client.post("/ui/propose", data={"csrf_token": token})
+    client.post("/ui/approve", data={"csrf_token": token, "action": "approve"})
+
+    transport = FakeGoogleTransport()
+    monkeypatch.setattr(calendar_service, "build_service_from_token", lambda token_json: object())
+    monkeypatch.setattr(calendar_service, "GoogleApiHttpTransport", lambda service: transport)
+    client.post("/ui/write", data={"csrf_token": token})
+
+    # Before any task ends, the schedule is upcoming -> no check-in controls.
+    assert "Mark complete" not in client.get("/today").text
+
+    # Advance the frozen clock past every entry so each task becomes due.
+    draft_id = client.get("/api/status").json()["draft_schedule_id"]
+    _advance_past_draft(env, clock, draft_id)
+    assert "Mark complete" in client.get("/today").text
+
+    task_id = env.state.get_draft(draft_id).entries[0].task_id
+    before = client.get("/api/status").json()["telemetry_event_count"]
+    resp = client.post(
+        "/ui/checkin",
+        data={"csrf_token": token, "task_id": task_id, "outcome": "complete"},
+        follow_redirects=False,
+    )
+    assert resp.status_code == 303
+    assert resp.headers["location"] == "/today"
+    assert client.get("/api/status").json()["telemetry_event_count"] == before + 1
+    # The checked-off task now reads as reported instead of offering buttons.
+    assert "reported" in client.get("/today").text
+
+
+def test_checkin_ignores_task_not_in_plan(monkeypatch: pytest.MonkeyPatch) -> None:
+    client = _client()
+    _login(client, monkeypatch)
+    client.post(
+        "/api/onboard",
+        json={"user_profile": _canonical_profile().model_dump(mode="json"), "timezone": "UTC"},
+    )
+    token = _csrf(client)
+    # No active plan, so any task_id is a non-member: the POST is a no-op redirect.
+    resp = client.post(
+        "/ui/checkin",
+        data={"csrf_token": token, "task_id": "not_a_task", "outcome": "complete"},
+        follow_redirects=False,
+    )
+    assert resp.status_code == 303
+    assert client.get("/api/status").json()["telemetry_event_count"] == 0

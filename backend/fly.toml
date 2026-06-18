@@ -1,0 +1,31 @@
+# Fly.io config for the single-instance hosted app.
+# Run flyctl from backend/ (build context = this directory, where the
+# Dockerfile lives). Replace the app name and redirect URI with your own.
+#
+# IMPORTANT: exactly ONE machine. SQLite + WAL is a one-process store, so do
+# not scale past 1 (`fly scale count 1`) and do not add workers.
+
+app = "acme-agentic-cal"          # <-- your app name; domain is <app>.fly.dev
+primary_region = "lax"            # <-- a region near your testers
+
+[build]
+  dockerfile = "Dockerfile"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1        # keep the single machine always on
+
+[mounts]
+  source = "data"                 # the volume created with `fly volumes create data`
+  destination = "/data"
+
+# Non-secret config. Secrets (APP_SESSION_SECRET, APP_TOKEN_ENCRYPTION_KEY,
+# TESTER_ALLOWLIST, ANTHROPIC_API_KEY, GOOGLE_OAUTH_CLIENT_SECRET_JSON) are set
+# with `fly secrets set` and injected as env vars at runtime.
+[env]
+  SHARED_DB_PATH = "/data/app.db"
+  APP_HTTPS_ONLY = "1"
+  OAUTH_REDIRECT_URI = "https://acme-agentic-cal.fly.dev/auth/callback"  # <-- match your app

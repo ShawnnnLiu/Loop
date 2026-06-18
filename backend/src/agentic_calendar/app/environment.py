@@ -78,6 +78,11 @@ from agentic_calendar.contracts.task_plan import TaskPlan
 from agentic_calendar.contracts.user_profile import UserProfile
 from agentic_calendar.contracts.validation_result import ValidationResult
 from agentic_calendar.drift.classifier import DriftClassifier
+from agentic_calendar.identity.sqlite_store import SqliteGoogleCredentialStore
+from agentic_calendar.identity.store import (
+    GoogleCredentialStore,
+    InMemoryGoogleCredentialStore,
+)
 from agentic_calendar.llm_nodes.call_log import InMemoryLlmCallLogStore, LlmCallLogStore
 from agentic_calendar.llm_nodes.reflection_summary import ReflectionSummary
 from agentic_calendar.llm_nodes.sqlite_call_log import SqliteLlmCallLogStore
@@ -205,6 +210,7 @@ class AppEnvironment:
     sponsor_store: SponsorStore
     call_log_store: LlmCallLogStore
     claim_store: SourceClaimStore
+    credential_store: GoogleCredentialStore
     threshold_log_store: ThresholdChangeLogStore
     tuning: EffectiveTuning
     calendar_adapter: ExternalCalendarAdapter
@@ -259,6 +265,7 @@ def build_environment(
         sponsor_store: SponsorStore = InMemorySponsorStore(clock)
         call_log_store: LlmCallLogStore = InMemoryLlmCallLogStore()
         claim_store: SourceClaimStore = InMemorySourceClaimStore()
+        credential_store: GoogleCredentialStore = InMemoryGoogleCredentialStore()
         threshold_log_store: ThresholdChangeLogStore = (
             InMemoryThresholdChangeLogStore()
         )
@@ -278,6 +285,7 @@ def build_environment(
         sponsor_store = SqliteSponsorStore(db, clock)
         call_log_store = SqliteLlmCallLogStore(db)
         claim_store = SqliteSourceClaimStore(db)
+        credential_store = SqliteGoogleCredentialStore(db)
         threshold_log_store = SqliteThresholdChangeLogStore(db)
 
     tuning = apply_tuning(
@@ -322,6 +330,7 @@ def build_environment(
         sponsor_store=sponsor_store,
         call_log_store=call_log_store,
         claim_store=claim_store,
+        credential_store=credential_store,
         threshold_log_store=threshold_log_store,
         tuning=tuning,
         calendar_adapter=adapter,

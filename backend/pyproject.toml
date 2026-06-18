@@ -8,12 +8,18 @@ license = { text = "Proprietary" }
 authors = [{ name = "Agentic Calendar" }]
 dependencies = [
     "anthropic>=0.109.1",
+    "cryptography>=43",
+    "fastapi>=0.115",
     # Pinned exact: the committed JSON Schemas in /schemas are byte-stable only
     # for this pydantic version, and `make schema-check` enforces that. Bump
     # deliberately (update lock + `make schemas` + retest); see docs/axioms/18.
     "google-api-python-client>=2.197.0",
     "google-auth-oauthlib>=1.4.0",
+    "itsdangerous>=2.1",
+    "jinja2>=3.1",
     "pydantic==2.13.3",
+    "python-multipart>=0.0.9",
+    "uvicorn[standard]>=0.30",
 ]
 
 [project.optional-dependencies]
@@ -24,6 +30,7 @@ dev = [
     "ruff>=0.6",
     "mypy>=1.10",
     "import-linter>=2.0",
+    "httpx>=0.27",
 ]
 
 [project.scripts]

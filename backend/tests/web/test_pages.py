@@ -107,6 +107,84 @@ def test_csrf_token_is_required(monkeypatch: pytest.MonkeyPatch) -> None:
     assert resp.status_code == 403
 
 
+def _onboard_form(token: str) -> dict[str, object]:
+    return {
+        "csrf_token": token,
+        "goal": "Prepare for backend SWE interviews",
+        "target_role": "Backend SWE",
+        "target_companies": "Meta, Stripe",
+        "target_level": "new_grad",
+        "experience_level": "intermediate",
+        "known_strengths": "arrays, hash maps",
+        "known_weaknesses": "dynamic programming",
+        "timeline_weeks": "10",
+        "weekly_hours": "8",
+        "preferred_session_length_min": "60",
+        "max_session_length_min": "120",
+        "dww_day": ["Mon", "Wed"],
+        "dww_start": "18:00",
+        "dww_end": "21:00",
+        "no_events_before": "08:00",
+        "no_events_after": "22:30",
+        "max_daily_study_min": "180",
+        "min_break_between_deep_blocks_min": "30",
+        "allow_weekends": "on",
+        "prefer_evening_sessions": "on",
+        "timezone": "America/Los_Angeles",
+    }
+
+
+def test_onboard_page_renders_form(monkeypatch: pytest.MonkeyPatch) -> None:
+    client = _client()
+    _login(client, monkeypatch)
+    resp = client.get("/onboard")
+    assert resp.status_code == 200
+    assert "Set up your profile" in resp.text
+    assert 'name="goal"' in resp.text
+
+
+def test_onboard_form_completes_onboarding(monkeypatch: pytest.MonkeyPatch) -> None:
+    client = _client()
+    _login(client, monkeypatch)
+    assert "Set up your profile" in client.get("/home").text  # not onboarded yet
+
+    resp = client.post(
+        "/ui/onboard", data=_onboard_form(_csrf(client)), follow_redirects=False
+    )
+    assert resp.status_code == 303
+    assert resp.headers["location"] == "/home"
+    assert "Propose a schedule" in client.get("/home").text
+
+
+def test_onboard_form_prefills_saved_profile(monkeypatch: pytest.MonkeyPatch) -> None:
+    client = _client()
+    _login(client, monkeypatch)
+    client.post("/ui/onboard", data=_onboard_form(_csrf(client)), follow_redirects=False)
+
+    # "Edit profile" must show what was saved, not the blank defaults.
+    edit = client.get("/onboard").text
+    assert 'value="Prepare for backend SWE interviews"' in edit
+    assert 'value="Meta, Stripe"' in edit
+    assert 'value="America/Los_Angeles"' in edit
+    # The two selected deep-work weekdays come back checked.
+    mon = re.search(r'name="dww_day" value="Mon"[^>]*>', edit)
+    assert mon is not None and "checked" in mon.group(0)
+
+
+def test_onboard_form_rejects_invalid_profile(monkeypatch: pytest.MonkeyPatch) -> None:
+    client = _client()
+    _login(client, monkeypatch)
+    bad = _onboard_form(_csrf(client))
+    bad["no_events_before"] = "23:00"  # later than no_events_after -> contract rejects
+    bad["no_events_after"] = "08:00"
+
+    resp = client.post("/ui/onboard", data=bad, follow_redirects=False)
+    assert resp.status_code == 400
+    assert "must be earlier" in resp.text
+    # The rejected submit did not onboard the user.
+    assert "Set up your profile" in client.get("/home").text
+
+
 def test_full_ui_journey(monkeypatch: pytest.MonkeyPatch) -> None:
     client = _client()
     _login(client, monkeypatch)

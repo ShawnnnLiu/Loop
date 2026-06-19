@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Thresholds</h1>
+<p class="muted"><a href="/home">&laquo; Back to your plan</a></p>
+
+<p class="muted">The effective deterministic tuning the system serves from, and
+  every change to it. This page is <strong>read-only</strong>: tuning values
+  change only via <code>tuning.toml</code>, which journals each effective change
+  here (axiom 07). All values are heuristic priors pending calibration.</p>
+
+{% for section in sections %}
+<h2>{{ section.name }}</h2>
+<table>
+  <thead>
+    <tr><th>Field</th><th>Effective value</th><th>Source</th></tr>
+  </thead>
+  <tbody>
+    {% for field in section.fields %}
+    <tr>
+      <td>{{ field.name }}</td>
+      <td>{{ field.value }}</td>
+      <td>{{ field.status }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endfor %}
+
+<h2>Change history</h2>
+{% if not history %}
+<p class="muted">No threshold changes recorded yet &mdash; every section above
+  is serving its code default.</p>
+{% else %}
+<table>
+  <thead>
+    <tr><th>When</th><th>Field</th><th>Change</th><th>Justification</th><th>Dataset</th></tr>
+  </thead>
+  <tbody>
+    {% for change in history %}
+    <tr>
+      <td>{{ change.effective_at.isoformat() }}</td>
+      <td>{{ change.config_section }}.{{ change.threshold_field }}</td>
+      <td>{{ change.prior_value }} &rarr; {{ change.new_value }}</td>
+      <td>{{ change.justification }}</td>
+      <td>{{ change.dataset_reference }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}

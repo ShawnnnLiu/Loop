@@ -16,11 +16,13 @@ from urllib.parse import parse_qs, urlparse
 import pytest
 from fastapi.testclient import TestClient
 
+from agentic_calendar.app.tuning import TUNABLE_SECTIONS, scalar_fields
 from agentic_calendar.app.web import calendar_service, pages, routes_auth
 from agentic_calendar.app.web.app import create_app
 from agentic_calendar.app.web.config import WebAuthConfig
 from agentic_calendar.app.web.routes_auth import _user_id_for_sub
 from agentic_calendar.common.secrets import TokenCipher
+from agentic_calendar.contracts.threshold_change_log import ThresholdChange
 from agentic_calendar.tools.google_oauth_web import GoogleIdentity
 from tests.app.test_cycle import (
     _advance_past_draft,
@@ -415,3 +417,49 @@ def test_accountability_dashboard_renders_with_motivation_profile(
     assert "missed_task_warning" in resp.text
     # Not the empty state.
     assert "Accountability isn" not in resp.text
+
+
+def test_thresholds_page_renders_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
+    client = _client()
+    _login(client, monkeypatch)
+    resp = client.get("/thresholds")
+    assert resp.status_code == 200
+    # Every registered tuning section renders.
+    for section in TUNABLE_SECTIONS:
+        assert section in resp.text
+    # With no tuning file applied, every value serves the code default.
+    assert "default" in resp.text
+    assert "No threshold changes recorded yet" in resp.text
+
+
+def test_thresholds_page_shows_journaled_change(monkeypatch: pytest.MonkeyPatch) -> None:
+    _service, env, clock = make_service()
+    client = TestClient(
+        create_app(
+            env=env, auth_config=_config(), token_cipher=TokenCipher(TokenCipher.generate_key())
+        )
+    )
+    _login(client, monkeypatch)
+    # Seed one journaled change directly into the append-only log (the only
+    # writer in production is apply_tuning; the page only reads).
+    section = "drift_thresholds"
+    config_type, default = TUNABLE_SECTIONS[section]
+    field = next(iter(scalar_fields(config_type)))
+    prior = getattr(default, field)
+    env.threshold_log_store.append(
+        ThresholdChange(
+            change_id="thrchg_test",
+            config_section=section,
+            threshold_field=field,
+            prior_value=prior,
+            new_value=prior + 1,
+            effective_at=clock.now(),
+            justification="dogfood calibration round 1",
+            dataset_reference="tuning.toml",
+        )
+    )
+    resp = client.get("/thresholds")
+    assert resp.status_code == 200
+    assert "dogfood calibration round 1" in resp.text
+    assert f"{section}.{field}" in resp.text
+    assert "No threshold changes recorded yet" not in resp.text

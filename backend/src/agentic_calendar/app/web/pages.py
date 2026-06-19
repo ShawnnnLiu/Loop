@@ -27,6 +27,7 @@ from pydantic import ValidationError
 from agentic_calendar.app.cycle import HASH_CANONICALIZATION_VERSION
 from agentic_calendar.app.environment import AppEnvironment
 from agentic_calendar.app.state import OnboardingRecord
+from agentic_calendar.app.tuning import TUNABLE_SECTIONS, EffectiveTuning, scalar_fields
 from agentic_calendar.contracts.common_types import Day, ExperienceLevel
 from agentic_calendar.contracts.draft_schedule import DraftSchedule, DraftScheduleEntry
 from agentic_calendar.contracts.hashing import canonical_payload_hash
@@ -452,6 +453,58 @@ def accountability_page(request: Request) -> Response:
         "accountability.html",
         snapshot=snapshot,
         has_motivation_profile=has_motivation_profile,
+    )
+
+
+# ---------------------------------------------------------------------------- #
+# Thresholds page (#4): the read-only mirror of the effective deterministic
+# tuning + its change history.
+#
+# Display-only by design (axiom 07 "Threshold Change Log"): tuning values change
+# ONLY via ``tuning.toml`` → ``apply_tuning``, which journals every effective
+# change to the threshold log. The UI never edits — it reads ``env.tuning`` (the
+# already-applied ``EffectiveTuning`` the composition root serves from) and
+# ``env.threshold_log_store`` (the append-only journal). It mirrors what the
+# ``show_thresholds`` operator CLI prints, off the same surfaces.
+# ---------------------------------------------------------------------------- #
+
+
+def _threshold_sections(tuning: EffectiveTuning) -> list[dict[str, Any]]:
+    """Per-section effective scalar values, each tagged default/overridden.
+
+    Iterates the tuning registry (``TUNABLE_SECTIONS`` then ``scalar_fields``)
+    and reads the effective value straight off ``tuning`` — the values the system
+    actually serves — so ``status`` compares serving truth against the code
+    default, the same honest comparison the ``show_thresholds`` CLI makes.
+    """
+    sections: list[dict[str, Any]] = []
+    for name, (config_type, default) in TUNABLE_SECTIONS.items():
+        effective = getattr(tuning, name)
+        fields: list[dict[str, Any]] = []
+        for field_name in scalar_fields(config_type):
+            value = getattr(effective, field_name)
+            default_value = getattr(default, field_name)
+            fields.append(
+                {
+                    "name": field_name,
+                    "value": value,
+                    "status": "default" if value == default_value else "overridden",
+                }
+            )
+        sections.append({"name": name, "fields": fields})
+    return sections
+
+
+@router.get("/thresholds", response_class=HTMLResponse)
+def thresholds_page(request: Request) -> Response:
+    if not _user(request):
+        return RedirectResponse("/", status_code=303)
+    env = request.app.state.env
+    return _page(
+        request,
+        "thresholds.html",
+        sections=_threshold_sections(env.tuning),
+        history=env.threshold_log_store.list_all(),
     )
 
 

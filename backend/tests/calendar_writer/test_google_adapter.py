@@ -27,6 +27,7 @@ from agentic_calendar.calendar_writer.errors import CalendarWriterError
 from agentic_calendar.calendar_writer.google_adapter import (
     EVENT_SUMMARY,
     DedicatedCalendarViolationError,
+    GoogleApiHttpTransport,
     GoogleCalendarAdapter,
     GoogleCalendarApiError,
     GoogleCalendarTransport,
@@ -697,3 +698,68 @@ def test_manager_list_failure_returns_typed_result_and_releases_lock() -> None:
     # immediately acquire it again — no stranded in-progress run.
     token = lock.acquire(user_id=approval.user_id, run_id="run_retry")
     lock.release(token)
+
+
+# --------------------------------------------------------------------------- #
+# free/busy read (feeds the scheduler the user's existing commitments)
+# --------------------------------------------------------------------------- #
+
+
+class _FakeFreeBusyService:
+    """Minimal Calendar v3 service exposing only ``freebusy().query().execute()``."""
+
+    def __init__(self, response: Mapping[str, Any]) -> None:
+        self._response = response
+        self.queries: list[Mapping[str, Any]] = []
+
+    def freebusy(self) -> _FakeFreeBusyService:
+        return self
+
+    def query(self, *, body: Mapping[str, Any]) -> _FakeFreeBusyService:
+        self.queries.append(body)
+        return self
+
+    def execute(self) -> Mapping[str, Any]:
+        return self._response
+
+
+def test_query_free_busy_parses_ranges_and_sends_window() -> None:
+    service = _FakeFreeBusyService(
+        {
+            "calendars": {
+                "primary": {
+                    "busy": [
+                        {"start": "2026-05-04T01:00:00Z", "end": "2026-05-04T03:00:00+00:00"}
+                    ]
+                }
+            }
+        }
+    )
+    transport = GoogleApiHttpTransport(service)
+    time_min = datetime(2026, 5, 4, tzinfo=UTC)
+    time_max = time_min + timedelta(days=7)
+
+    intervals = transport.query_free_busy(
+        calendar_id="primary", time_min=time_min, time_max=time_max
+    )
+
+    assert intervals == [
+        (datetime(2026, 5, 4, 1, tzinfo=UTC), datetime(2026, 5, 4, 3, tzinfo=UTC))
+    ]
+    # The query carried the window + calendar id; it reads ranges, not content.
+    body = service.queries[0]
+    assert body["items"] == [{"id": "primary"}]
+    assert body["timeMin"] == time_min.isoformat()
+
+
+def test_query_free_busy_empty_when_no_busy() -> None:
+    transport = GoogleApiHttpTransport(
+        _FakeFreeBusyService({"calendars": {"primary": {"busy": []}}})
+    )
+    t0 = datetime(2026, 5, 4, tzinfo=UTC)
+    assert (
+        transport.query_free_busy(
+            calendar_id="primary", time_min=t0, time_max=t0 + timedelta(days=1)
+        )
+        == []
+    )

@@ -9,12 +9,14 @@ form and replayed, exercising the real session-bound CSRF check.
 from __future__ import annotations
 
 import re
+from datetime import timedelta
+from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 import pytest
 from fastapi.testclient import TestClient
 
-from agentic_calendar.app.web import calendar_service, routes_auth
+from agentic_calendar.app.web import calendar_service, pages, routes_auth
 from agentic_calendar.app.web.app import create_app
 from agentic_calendar.app.web.config import WebAuthConfig
 from agentic_calendar.common.secrets import TokenCipher
@@ -143,6 +145,15 @@ def test_onboard_page_renders_form(monkeypatch: pytest.MonkeyPatch) -> None:
     assert 'name="goal"' in resp.text
 
 
+def test_onboard_page_autofills_browser_timezone(monkeypatch: pytest.MonkeyPatch) -> None:
+    client = _client()
+    _login(client, monkeypatch)
+    body = client.get("/onboard").text
+    # The browser's real IANA zone prefills the field (no third-party API).
+    assert "resolvedOptions().timeZone" in body
+    assert 'name="timezone"' in body
+
+
 def test_onboard_form_completes_onboarding(monkeypatch: pytest.MonkeyPatch) -> None:
     client = _client()
     _login(client, monkeypatch)
@@ -219,6 +230,41 @@ def test_full_ui_journey(monkeypatch: pytest.MonkeyPatch) -> None:
     assert "active_plan" in client.get("/home").text
     inserts = [cal for (method, cal) in transport.calls if method == "insert_event"]
     assert inserts and all(calendar_id == "cal_pages" for calendar_id in inserts)
+
+
+def test_propose_feeds_real_calendar_free_busy(monkeypatch: pytest.MonkeyPatch) -> None:
+    _service, env, _clock = make_service()
+    client = TestClient(
+        create_app(
+            env=env, auth_config=_config(), token_cipher=TokenCipher(TokenCipher.generate_key())
+        )
+    )
+    _login(client, monkeypatch)
+    profile = _canonical_profile()
+    client.post(
+        "/api/onboard",
+        json={"user_profile": profile.model_dump(mode="json"), "timezone": "UTC"},
+    )
+    token = _csrf(client)
+
+    captured: dict[str, Any] = {}
+
+    def _fake_fetch(
+        env_: Any, *, user_id: str, token_cipher: Any, time_min: Any, time_max: Any, **_: Any
+    ) -> list[dict[str, str]]:
+        captured["window"] = (time_min, time_max)
+        # A real (non-empty) busy list, dated before the horizon so it can't
+        # affect placement — we only assert it flows through without breaking.
+        return [{"start": "2020-01-01T01:00:00+00:00", "end": "2020-01-01T03:00:00+00:00"}]
+
+    monkeypatch.setattr(pages, "fetch_user_free_busy", _fake_fetch)
+
+    resp = client.post("/ui/propose", data={"csrf_token": token}, follow_redirects=False)
+    assert resp.status_code == 303
+    assert resp.headers["location"] == "/draft"
+    # Propose asked for busy ranges spanning the whole plan horizon.
+    time_min, time_max = captured["window"]
+    assert time_max - time_min == timedelta(days=profile.timeline_weeks * 7)
 
 
 def test_today_empty_without_active_plan(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -229,6 +229,45 @@ class GoogleApiHttpTransport:
                 status=status,
             ) from exc
 
+    def query_free_busy(
+        self, *, calendar_id: str, time_min: datetime, time_max: datetime
+    ) -> list[tuple[datetime, datetime]]:
+        """Busy intervals on ``calendar_id`` within ``[time_min, time_max)``.
+
+        Uses ``freebusy.query`` so only opaque busy *ranges* cross the boundary —
+        never event titles or descriptions (privacy axiom). Read-only, so unlike
+        the write path it may target any calendar, including the user's
+        ``primary``.
+        """
+        body = {
+            "timeMin": time_min.isoformat(),
+            "timeMax": time_max.isoformat(),
+            "items": [{"id": calendar_id}],
+        }
+        try:
+            response: Mapping[str, Any] = (
+                self._service.freebusy().query(body=body).execute()
+            )
+        except Exception as exc:
+            status = self._absent_status(exc)
+            raise GoogleCalendarApiError(
+                f"freebusy.query failed for calendar {calendar_id!r}: "
+                f"{self._error_detail(exc)}",
+                status=status,
+            ) from exc
+        windows = response.get("calendars", {}).get(calendar_id, {}).get("busy", [])
+        return [
+            (_free_busy_time(w, "start"), _free_busy_time(w, "end")) for w in windows
+        ]
+
+
+def _free_busy_time(window: Mapping[str, Any], key: str) -> datetime:
+    """Parse one RFC3339 free/busy bound into a timezone-aware datetime."""
+    raw = window.get(key)
+    if not isinstance(raw, str):
+        raise GoogleCalendarApiError(f"free/busy window missing {key!r}: {window!r}")
+    return datetime.fromisoformat(raw.replace("Z", "+00:00"))
+
 
 def _event_time(item: Mapping[str, Any], key: str, event_id: str) -> datetime:
     """Parse one RFC3339 ``dateTime`` bound; all-day events are foreign here.

@@ -14,7 +14,7 @@ JSON API for now — a profile form is a follow-up.
 from __future__ import annotations
 
 import secrets
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -31,7 +31,7 @@ from agentic_calendar.contracts.common_types import Day, ExperienceLevel
 from agentic_calendar.contracts.draft_schedule import DraftSchedule, DraftScheduleEntry
 from agentic_calendar.contracts.hashing import canonical_payload_hash
 
-from .calendar_service import build_user_calendar_service
+from .calendar_service import build_user_calendar_service, fetch_user_free_busy
 from .deps import get_cycle_service
 
 router = APIRouter(tags=["pages"])
@@ -431,10 +431,41 @@ def draft_page(request: Request) -> Response:
     return _page(request, "draft.html", status=status, draft=draft, payload_hash=payload_hash)
 
 
+def _user_free_busy(request: Request, user_id: str) -> list[dict[str, str]]:
+    """The user's real-calendar busy ranges over the plan horizon, so the
+    scheduler avoids their existing commitments.
+
+    Best-effort: if Google isn't connected, the stored token predates the
+    ``freebusy`` scope (a 403 until they reconnect), or the read otherwise
+    fails, fall back to an empty list and schedule without calendar awareness
+    rather than blocking the proposal.
+    """
+    env = request.app.state.env
+    onboarding = env.state.get_onboarding(user_id)
+    if onboarding is None:
+        return []
+    now = env.clock.now()
+    horizon = now + timedelta(days=onboarding.user_profile.timeline_weeks * 7)
+    try:
+        return fetch_user_free_busy(
+            env,
+            user_id=user_id,
+            token_cipher=request.app.state.token_cipher,
+            time_min=now,
+            time_max=horizon,
+        )
+    except Exception:
+        # Best-effort: not connected, a token predating the freebusy scope (403),
+        # expired/revoked credentials, or any provider/SDK error — schedule
+        # without calendar data rather than failing the proposal.
+        return []
+
+
 @router.post("/ui/propose")
 def ui_propose(request: Request, csrf_token: CsrfField) -> RedirectResponse:
     _check_csrf(request, csrf_token)
-    get_cycle_service(request).propose(_require_user(request))
+    user_id = _require_user(request)
+    get_cycle_service(request).propose(user_id, free_busy=_user_free_busy(request, user_id))
     return RedirectResponse("/draft", status_code=303)
 
 

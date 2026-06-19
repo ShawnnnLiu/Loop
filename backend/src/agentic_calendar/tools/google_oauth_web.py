@@ -36,6 +36,11 @@ WEB_SCOPES = (
     # calendar.app.created: create a secondary calendar AND manage its events.
     # (calendar.events alone cannot create a calendar — calendars.insert 403s.)
     "https://www.googleapis.com/auth/calendar.app.created",
+    # calendar.freebusy: read the user's real busy ranges (busy/free only, never
+    # event content) so the scheduler avoids existing commitments. Sensitive
+    # scope — already-connected users must reconnect once to grant it; until
+    # then freebusy.query 403s and the caller falls back to no calendar data.
+    "https://www.googleapis.com/auth/calendar.freebusy",
 )
 
 

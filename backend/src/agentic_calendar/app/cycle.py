@@ -571,6 +571,11 @@ class CycleService:
             versioned_plan = TaskPlan.model_validate(
                 plan.model_dump() | {"plan_version": plan_version_id}
             )
+            # Anchor the horizon in the user's local timezone so the scheduler
+            # reads the time-of-day constraints (no_events_before/after and the
+            # deep-work windows) as *local* times, not UTC. The placed entries
+            # stay timezone-aware and convert to the correct instant on write.
+            horizon_start = env.clock.now().astimezone(onboarding.tzinfo())
             output = schedule(
                 SchedulerInput(
                     run_id=run.run_id,
@@ -580,8 +585,8 @@ class CycleService:
                     calendar_free_busy=[
                         FreeBusyInterval.model_validate(dict(fb)) for fb in free_busy
                     ],
-                    horizon_start=env.clock.now(),
-                    horizon_end=env.clock.now() + timedelta(days=horizon_days),
+                    horizon_start=horizon_start,
+                    horizon_end=horizon_start + timedelta(days=horizon_days),
                 )
             )
             if output.schedule_status is ScheduleStatus.SUCCESS:

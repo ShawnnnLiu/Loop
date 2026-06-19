@@ -92,8 +92,27 @@
   <h2>Timezone</h2>
   <p><label>IANA timezone<br>
     <input name="timezone" value="{{ values.timezone }}" required></label></p>
-  <p class="muted">e.g. America/Los_Angeles, Europe/London, UTC</p>
+  <p class="muted">Detected from your browser — change it only if it's wrong
+    (e.g. America/Los_Angeles, Europe/London, UTC).</p>
 
   <p><button type="submit">Save profile &amp; continue</button></p>
 </form>
+
+<script>
+  // Prefill the field with the device's real IANA timezone, so the scheduler
+  // reads your hours in local time. Only overwrite the empty/"UTC" default —
+  // an explicit non-UTC choice (incl. on re-edit) is left untouched.
+  (function () {
+    try {
+      var input = document.querySelector('input[name="timezone"]');
+      if (!input) return;
+      var current = (input.value || "").trim();
+      if (current !== "" && current !== "UTC") return;
+      var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (tz) input.value = tz;
+    } catch (e) {
+      /* no Intl support — keep the server-rendered value */
+    }
+  })();
+</script>
 {% endblock %}

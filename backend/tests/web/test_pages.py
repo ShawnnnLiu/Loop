@@ -19,9 +19,15 @@ from fastapi.testclient import TestClient
 from agentic_calendar.app.web import calendar_service, pages, routes_auth
 from agentic_calendar.app.web.app import create_app
 from agentic_calendar.app.web.config import WebAuthConfig
+from agentic_calendar.app.web.routes_auth import _user_id_for_sub
 from agentic_calendar.common.secrets import TokenCipher
 from agentic_calendar.tools.google_oauth_web import GoogleIdentity
-from tests.app.test_cycle import _advance_past_draft, _canonical_profile, make_service
+from tests.app.test_cycle import (
+    _advance_past_draft,
+    _canonical_profile,
+    _motivation_profile_payload,
+    make_service,
+)
 from tests.calendar_writer.test_google_adapter import FakeGoogleTransport
 
 EMAIL = "tester@example.com"
@@ -338,3 +344,74 @@ def test_checkin_ignores_task_not_in_plan(monkeypatch: pytest.MonkeyPatch) -> No
     )
     assert resp.status_code == 303
     assert client.get("/api/status").json()["telemetry_event_count"] == 0
+
+
+def test_accountability_empty_without_motivation_profile(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = _client()
+    _login(client, monkeypatch)
+    # Onboard via the form path's contract — no motivation profile (the opt-in
+    # gate), so the snapshot is None and the page shows the "not set up" state.
+    client.post(
+        "/api/onboard",
+        json={"user_profile": _canonical_profile().model_dump(mode="json"), "timezone": "UTC"},
+    )
+    resp = client.get("/accountability")
+    assert resp.status_code == 200
+    assert "Accountability isn" in resp.text  # "...isn't set up yet"
+    assert "motivation profile" in resp.text
+    assert "Policy audit" not in resp.text
+
+
+def test_accountability_dashboard_renders_with_motivation_profile(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _service, env, clock = make_service()
+    client = TestClient(
+        create_app(
+            env=env, auth_config=_config(), token_cipher=TokenCipher(TokenCipher.generate_key())
+        )
+    )
+    _login(client, monkeypatch)
+    # The acting user is derived from the Google sub server-side; the onboard
+    # route rebinds user_profile.user_id to it but not the motivation profile,
+    # whose user_id the contract requires to match. Stamp it to match.
+    acting_user = _user_id_for_sub(SUB)
+    motivation = {**_motivation_profile_payload(), "user_id": acting_user}
+    client.post(
+        "/api/onboard",
+        json={
+            "user_profile": _canonical_profile().model_dump(mode="json"),
+            "motivation_profile": motivation,
+            "timezone": "UTC",
+        },
+    )
+    token = _csrf(client)
+    client.post("/ui/propose", data={"csrf_token": token})
+    client.post("/ui/approve", data={"csrf_token": token, "action": "approve"})
+
+    transport = FakeGoogleTransport()
+    monkeypatch.setattr(calendar_service, "build_service_from_token", lambda token_json: object())
+    monkeypatch.setattr(calendar_service, "GoogleApiHttpTransport", lambda service: transport)
+    client.post("/ui/write", data={"csrf_token": token})
+
+    # Advance past every entry and check one task off, so real completion
+    # telemetry flows into the deterministic projection the dashboard renders.
+    draft_id = client.get("/api/status").json()["draft_schedule_id"]
+    _advance_past_draft(env, clock, draft_id)
+    task_id = env.state.get_draft(draft_id).entries[0].task_id
+    client.post(
+        "/ui/checkin", data={"csrf_token": token, "task_id": task_id, "outcome": "complete"}
+    )
+
+    resp = client.get("/accountability")
+    assert resp.status_code == 200
+    # The projection renders: a status, the metric labels, and the full policy
+    # audit (an active contract logs every private-lane policy in order).
+    assert "A read-only projection" in resp.text
+    assert "Completion (7d):" in resp.text
+    assert "Policy audit" in resp.text
+    assert "missed_task_warning" in resp.text
+    # Not the empty state.
+    assert "Accountability isn" not in resp.text

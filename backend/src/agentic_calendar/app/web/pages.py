@@ -416,6 +416,45 @@ async def ui_checkin(request: Request) -> Response:
     return RedirectResponse("/today", status_code=303)
 
 
+# ---------------------------------------------------------------------------- #
+# Accountability dashboard (#3): the read-only projection of completion
+# telemetry + check-ins against the user's accountability contract.
+#
+# Sources every field from ``CycleService.accountability_snapshot`` — the pure
+# half of the cycle's accountability pass, with no nudge delivery, recommitment
+# request, or run-state transition — so the GET is genuinely side-effect-free
+# (and needs no CSRF). It mirrors what the ``show_accountability`` operator CLI
+# renders, off the same projection.
+#
+# DECISION (2026-06-18): ship the empty state first. Accountability is opt-in —
+# the snapshot is ``None`` until the user has a motivation profile (axiom 21) —
+# and the onboarding form (#1) deliberately omits that profile, so a current
+# dogfooding user sees the "not set up" state. The page distinguishes that from
+# "no active plan yet" so the guidance is accurate.
+#
+# DEFERRED: a motivation-profile capture surface (so the dashboard lights up
+# with live data for a real account). Tracked in phase-frontend-mvp.md.
+# ---------------------------------------------------------------------------- #
+
+
+@router.get("/accountability", response_class=HTMLResponse)
+def accountability_page(request: Request) -> Response:
+    if not _user(request):
+        return RedirectResponse("/", status_code=303)
+    user_id = _require_user(request)
+    onboarding = request.app.state.env.state.get_onboarding(user_id)
+    has_motivation_profile = (
+        onboarding is not None and onboarding.motivation_profile is not None
+    )
+    snapshot = get_cycle_service(request).accountability_snapshot(user_id)
+    return _page(
+        request,
+        "accountability.html",
+        snapshot=snapshot,
+        has_motivation_profile=has_motivation_profile,
+    )
+
+
 @router.get("/draft", response_class=HTMLResponse)
 def draft_page(request: Request) -> Response:
     if not _user(request):

@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import dataclasses
 import json
+from datetime import datetime
 
 from agentic_calendar.app.cycle import CycleError, CycleService
 from agentic_calendar.app.environment import AppEnvironment
@@ -64,3 +65,32 @@ def build_user_calendar_service(
         env, calendar_adapter=adapter, write_manager=write_manager
     )
     return CycleService(user_env), cred.dedicated_calendar_id
+
+
+def fetch_user_free_busy(
+    env: AppEnvironment,
+    *,
+    user_id: str,
+    token_cipher: TokenCipher,
+    time_min: datetime,
+    time_max: datetime,
+    calendar_id: str = "primary",
+) -> list[dict[str, str]]:
+    """This user's busy intervals over ``[time_min, time_max)`` as
+    ``{"start", "end"}`` ISO dicts, ready for ``CycleService.propose(free_busy=)``.
+
+    Reads only opaque busy ranges from their real calendar (``primary`` by
+    default) via ``freebusy.query`` — no event content crosses the boundary, in
+    keeping with the no-raw-calendar-content axiom. Raises :class:`CycleError`
+    if Google is not connected; a stored token that predates the ``freebusy``
+    scope surfaces as a ``GoogleCalendarApiError`` (403) at query time.
+    """
+    cred = env.credential_store.get_by_user(user_id)
+    if cred is None:
+        raise CycleError(f"user {user_id!r} has not connected a Google account")
+    token_json = json.loads(token_cipher.decrypt(cred.encrypted_token))
+    transport = GoogleApiHttpTransport(build_service_from_token(token_json))
+    intervals = transport.query_free_busy(
+        calendar_id=calendar_id, time_min=time_min, time_max=time_max
+    )
+    return [{"start": start.isoformat(), "end": end.isoformat()} for start, end in intervals]

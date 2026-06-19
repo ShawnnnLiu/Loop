@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -23,6 +24,7 @@ from agentic_calendar.contracts.validation_result import (
 )
 from agentic_calendar.contracts.violation_types import ViolationType
 from agentic_calendar.llm_nodes.anthropic_adapter import (
+    AnthropicMessagesTransport,
     AnthropicPlanner,
     AnthropicReflectionSummary,
     AnthropicStrategist,
@@ -376,6 +378,95 @@ def test_strategist_constraint_violation_enters_repair_loop() -> None:
     rows = store.list_all()
     assert rows[0].reason_code is ReasonCode.LLM_SCHEMA_REJECTED
     assert "max_modules" in transport.requests[1]["user_prompt"]
+
+
+#: Parses as JSON but violates the SyllabusUnits contract: a high-priority
+#: module with no ``reason`` (``SyllabusModule._high_priority_needs_reason``).
+#: This is the live-dogfood failure that crashed propose with a raw 422.
+_HIGH_PRIORITY_NO_REASON: dict[str, Any] = {
+    "syllabus_version": "syl_bad",
+    "goal_summary": "Prepare for backend interviews.",
+    "modules": [
+        {
+            "module_id": "dp",
+            "title": "Dynamic Programming",
+            "priority": "high",
+            # no "reason" key
+            "target_outcomes": ["Recognize DP state definitions"],
+            "estimated_total_min": 720,
+            "difficulty": 5,
+            "source_claim_ids": [],
+        }
+    ],
+}
+
+
+class _FakeMessagesResource:
+    """Stand-in for ``client.messages``: ``create`` returns canned structured-
+    output text and records every call's kwargs."""
+
+    def __init__(self, text: str) -> None:
+        self._text = text
+        self.calls: list[dict[str, Any]] = []
+
+    def create(self, **kwargs: Any) -> Any:
+        self.calls.append(kwargs)
+        return SimpleNamespace(
+            content=[SimpleNamespace(type="text", text=self._text)],
+            stop_reason="end_turn",
+            usage=SimpleNamespace(input_tokens=100, output_tokens=50),
+        )
+
+
+class _FakeAnthropicClient:
+    def __init__(self, text: str) -> None:
+        self.messages = _FakeMessagesResource(text)
+
+
+def test_transport_hands_engine_raw_output_without_validating() -> None:
+    """Regression: the live transport must NOT eagerly validate. A contract-
+    violating body comes back as the raw dict, not a raised ValidationError, so
+    the engine's repair loop can see and repair it (the old ``messages.parse``
+    path raised inside the SDK and escaped the loop as a 500/422)."""
+    client = _FakeAnthropicClient(json.dumps(_HIGH_PRIORITY_NO_REASON))
+    result = AnthropicMessagesTransport(client=client).complete(
+        model_name="claude-opus-4-8",
+        max_tokens=1024,
+        system="s",
+        user_prompt="p",
+        output_contract=SyllabusUnits,
+    )
+    assert result.payload == _HIGH_PRIORITY_NO_REASON
+    assert result.stop_reason == "end_turn"
+    # Generation was still shaped to the contract's schema via output_config.
+    sent = client.messages.calls[0]["output_config"]["format"]
+    assert sent["type"] == "json_schema" and sent["schema"]
+
+
+def test_strategist_contract_violation_repairs_then_typed_error() -> None:
+    """End-to-end over the live transport: a syllabus that violates a contract
+    invariant repairs within the bounded loop and ends as a typed
+    REPAIR_LIMIT_EXCEEDED — never a raw ValidationError leaking to the caller."""
+    client = _FakeAnthropicClient(json.dumps(_HIGH_PRIORITY_NO_REASON))
+    store = InMemoryLlmCallLogStore()
+    strategist = AnthropicStrategist(
+        transport=AnthropicMessagesTransport(client=client),
+        store=store,
+        clock=FrozenClock(_NOW),
+        id_generator=DeterministicIdGenerator(),
+    )
+
+    with pytest.raises(LLMGenerationError) as exc_info:
+        strategist.run(run_id="run_t", user_profile=_profile())
+
+    assert exc_info.value.reason_code is ReasonCode.REPAIR_LIMIT_EXCEEDED
+    rows = store.list_all()
+    assert [r.attempt for r in rows] == [0, 1, 2]
+    assert all(r.reason_code is ReasonCode.LLM_SCHEMA_REJECTED for r in rows)
+    # The repair re-prompt carried the specific deterministic violation.
+    repair_prompt = client.messages.calls[1]["messages"][0]["content"]
+    assert "rejected by deterministic validation" in repair_prompt
+    assert "reason" in repair_prompt
 
 
 def test_reflection_psych_label_is_rejected_and_repaired() -> None:

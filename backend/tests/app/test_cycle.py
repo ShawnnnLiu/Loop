@@ -27,6 +27,7 @@ from collections.abc import Mapping
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import pytest
 
@@ -495,6 +496,35 @@ def test_blocked_horizon_exhausts_scheduler_planner_iterations() -> None:
     assert run is not None
     assert run.state is S.ERROR_REQUIRES_USER
     assert run.reason_code is result.unscheduled_tasks[0].reason_code
+
+
+def test_propose_places_blocks_in_user_local_timezone() -> None:
+    """Time-of-day constraints are read in the user's timezone, not UTC. A
+    Pacific user's blocks land within their LOCAL allowed hours — the previous
+    UTC anchoring placed them ~7-8h off (08:00 local read as 08:00 UTC, i.e.
+    ~01:00 Pacific)."""
+    service, env, _clock = make_service()
+    # Re-onboard the same profile in a western timezone (make_service uses UTC).
+    service.onboard(
+        {
+            "user_profile": _canonical_profile().model_dump(mode="json"),
+            "timezone": "America/Los_Angeles",
+        }
+    )
+
+    result = service.propose(USER_ID)
+
+    assert result.state is S.AWAITING_USER_APPROVAL
+    draft = env.state.get_draft(result.draft_schedule_id)
+    assert draft is not None and draft.entries
+
+    tz = ZoneInfo("America/Los_Angeles")
+    hard = _canonical_profile().hard_constraints
+    for entry in draft.entries:
+        local_start = entry.start.astimezone(tz)
+        local_end = entry.end.astimezone(tz)
+        assert f"{local_start.hour:02d}:{local_start.minute:02d}" >= hard.no_events_before
+        assert f"{local_end.hour:02d}:{local_end.minute:02d}" <= hard.no_events_after
 
 
 def test_default_horizon_covers_the_profile_timeline() -> None:

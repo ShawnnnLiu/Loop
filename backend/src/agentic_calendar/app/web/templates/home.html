@@ -14,9 +14,11 @@
   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
   <button>Propose a schedule</button>
 </form>
+<p><a href="/today">Today&rsquo;s tasks &raquo;</a></p>
+<p class="muted"><a href="/onboard">Edit your profile</a></p>
 {% else %}
-<p class="muted">You are not onboarded yet. Complete onboarding via the API,
-then return here to propose a schedule.</p>
+<p class="muted">You are not onboarded yet.
+  <a href="/onboard">Set up your profile</a> to get started.</p>
 {% endif %}
 
 {% if status.draft_schedule_id %}

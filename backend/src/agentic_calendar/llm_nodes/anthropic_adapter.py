@@ -34,7 +34,7 @@ import json
 from collections.abc import Callable, Sequence
 from typing import Any, Protocol, cast, runtime_checkable
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
 
 from agentic_calendar.common.clock import Clock
 from agentic_calendar.common.errors import AgenticCalendarError
@@ -100,9 +100,15 @@ class AnthropicTransport(Protocol):
 class AnthropicMessagesTransport:
     """Real SDK transport. API key comes from the environment, never code.
 
-    Uses ``client.messages.parse`` so generation is shaped by the contract's
-    schema (the SDK strips JSON-Schema constraints the API doesn't support
-    and validates them client-side). The engine re-validates regardless."""
+    Shapes generation to the contract's JSON schema via ``output_config.format``
+    (the SDK's own ``transform_schema`` strips the JSON-Schema constraints the
+    API can't enforce), exactly as ``messages.parse`` would — but returns the
+    **raw** model JSON rather than a validated object. Validation is the engine's
+    job: ``messages.parse`` runs the contract's ``model_validator``s and raises a
+    ``pydantic.ValidationError`` *inside* the SDK call, which would escape the
+    bounded repair loop and surface as an unhandled error instead of a repaired
+    re-prompt (or a typed ``reason_code``). The engine re-validates the raw dict
+    and owns repair (axiom 04/22)."""
 
     def __init__(self, client: Any | None = None) -> None:
         if client is None:
@@ -122,28 +128,43 @@ class AnthropicMessagesTransport:
     ) -> TransportResult:
         import anthropic
 
+        # The SDK's own schema shaper — the same transform ``messages.parse`` /
+        # ``messages.stream`` apply to an ``output_format`` model, so generation
+        # is shaped identically; we just stop short of the SDK's eager validate.
+        from anthropic.lib._parse._transform import transform_schema
+
+        schema = transform_schema(TypeAdapter(output_contract).json_schema())
         try:
-            response = self._client.messages.parse(
+            response = self._client.messages.create(
                 model=model_name,
                 max_tokens=max_tokens,
                 system=system,
                 messages=[{"role": "user", "content": user_prompt}],
-                output_format=output_contract,
+                output_config={"format": {"type": "json_schema", "schema": schema}},
             )
         except anthropic.APIError as exc:
             # Type name only: SDK exception bodies may quote request content.
             raise TransportError(f"provider call failed: {type(exc).__name__}") from exc
 
-        parsed = getattr(response, "parsed_output", None)
-        payload = parsed.model_dump(mode="json") if isinstance(parsed, BaseModel) else None
         # Walk the content blocks untyped: the SDK's block union is broad and
-        # we only need the first text body, which we hash rather than store.
+        # we only need the first text body, which is the structured-output JSON.
         blocks: Sequence[Any] = response.content
         raw_text: str | None = None
         for block in blocks:
             if getattr(block, "type", None) == "text":
                 raw_text = str(block.text)
                 break
+        # Decode the candidate WITHOUT validating it against the contract: a
+        # contract violation (or a truncated/garbled body) becomes repair context
+        # or a typed reason_code downstream, never a transport-level raise.
+        payload: dict[str, Any] | None = None
+        if raw_text is not None:
+            try:
+                decoded = json.loads(raw_text)
+            except json.JSONDecodeError:
+                decoded = None
+            if isinstance(decoded, dict):
+                payload = decoded
         usage = response.usage
         return TransportResult(
             payload=payload,
@@ -501,8 +522,9 @@ _STRATEGIST_SYSTEM = (
     "engine. Propose a structured syllabus for the inputs provided. Cover every "
     "listed weakness, stay within the strategy constraints (module count, "
     "priorities, total minutes), and cite source claims by id in "
-    "source_claim_ids for any company-specific module. Return only the "
-    "structured object."
+    "source_claim_ids for any company-specific module. Every module you mark "
+    "high priority must include a non-empty 'reason' explaining why it is high "
+    "priority. Return only the structured object."
 )
 
 _PLANNER_SYSTEM = (

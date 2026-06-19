@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Accountability</h1>
+<p class="muted"><a href="/home">&laquo; Back to your plan</a></p>
+
+{% if snapshot is none %}
+{% if not has_motivation_profile %}
+<p class="muted">Accountability isn&rsquo;t set up yet. It turns your completion
+  history into a deterministic &ldquo;are you on track?&rdquo; read, but it needs a
+  <strong>motivation profile</strong> first &mdash; capturing that in the UI is a
+  follow-up, so there&rsquo;s nothing to show here yet.</p>
+{% else %}
+<p class="muted">No active plan yet. <a href="/home">Propose and approve a
+    schedule</a>, check off a few tasks on <a href="/today">Today</a>, and your
+  accountability read shows up here.</p>
+{% endif %}
+{% else %}
+<p class="muted">A read-only projection of your completion telemetry and weekly
+  check-in against your accountability contract. The numbers and the chosen
+  intervention are computed deterministically &mdash; never written here.</p>
+
+<ul class="muted">
+  <li>Status:
+      <strong>{{ snapshot.state.current_status.value }}</strong></li>
+  <li>Completion (7d):
+      <strong>{{ "%.0f"|format(snapshot.state.completion_rate_7d * 100) }}%</strong>
+      &middot; (14d):
+      <strong>{{ "%.0f"|format(snapshot.state.completion_rate_14d * 100) }}%</strong></li>
+  <li>Missed tasks (7d): <strong>{{ snapshot.state.missed_tasks_7d }}</strong>
+      &middot; Reschedules (7d):
+      <strong>{{ snapshot.state.reschedule_count_7d }}</strong></li>
+  <li>Behind schedule:
+      <strong>{{ snapshot.state.behind_schedule_percent }}%</strong></li>
+  <li>Weekly check-in:
+      <strong>{{ snapshot.checkin_status.value }}</strong></li>
+  <li>Sponsor report allowed:
+      <strong>{{ snapshot.state.sponsor_report_allowed }}</strong></li>
+</ul>
+
+<h2>Recommended intervention</h2>
+<ul class="muted">
+  <li>Private lane:
+      <strong>{{ snapshot.decision.action.value if snapshot.decision.action else "none" }}</strong>
+      {%- if snapshot.decision.reason_code %} ({{ snapshot.decision.reason_code.value }}){% endif %}</li>
+  <li>Sponsor lane:
+      <strong>{{ snapshot.decision.sponsor_action.value if snapshot.decision.sponsor_action else "none" }}</strong></li>
+</ul>
+
+{% if snapshot.decision.evaluations %}
+<h2>Policy audit</h2>
+<p class="muted">Every policy the engine evaluated, in order &mdash; the first
+  matching one chose the action above.</p>
+<table>
+  <thead>
+    <tr><th>Policy</th><th>Matched</th><th>Observed</th><th>Threshold</th></tr>
+  </thead>
+  <tbody>
+    {% for ev in snapshot.decision.evaluations %}
+    <tr>
+      <td>{{ ev.policy_name }}</td>
+      <td>{{ "yes" if ev.matched else "no" }}</td>
+      <td>{{ "%g"|format(ev.observed_value) }}</td>
+      <td>{{ "%g"|format(ev.threshold_value) }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endif %}
+{% endblock %}

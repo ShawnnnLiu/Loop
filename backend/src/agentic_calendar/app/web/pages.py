@@ -27,6 +27,7 @@ from pydantic import ValidationError
 from agentic_calendar.app.cycle import HASH_CANONICALIZATION_VERSION
 from agentic_calendar.app.environment import AppEnvironment
 from agentic_calendar.app.state import OnboardingRecord
+from agentic_calendar.app.tuning import TUNABLE_SECTIONS, EffectiveTuning, scalar_fields
 from agentic_calendar.contracts.common_types import Day, ExperienceLevel
 from agentic_calendar.contracts.draft_schedule import DraftSchedule, DraftScheduleEntry
 from agentic_calendar.contracts.hashing import canonical_payload_hash
@@ -414,6 +415,97 @@ async def ui_checkin(request: Request) -> Response:
             user_id, [_checkin_payload(env, task_id, scheduled_min, completed=completed)]
         )
     return RedirectResponse("/today", status_code=303)
+
+
+# ---------------------------------------------------------------------------- #
+# Accountability dashboard (#3): the read-only projection of completion
+# telemetry + check-ins against the user's accountability contract.
+#
+# Sources every field from ``CycleService.accountability_snapshot`` — the pure
+# half of the cycle's accountability pass, with no nudge delivery, recommitment
+# request, or run-state transition — so the GET is genuinely side-effect-free
+# (and needs no CSRF). It mirrors what the ``show_accountability`` operator CLI
+# renders, off the same projection.
+#
+# DECISION (2026-06-18): ship the empty state first. Accountability is opt-in —
+# the snapshot is ``None`` until the user has a motivation profile (axiom 21) —
+# and the onboarding form (#1) deliberately omits that profile, so a current
+# dogfooding user sees the "not set up" state. The page distinguishes that from
+# "no active plan yet" so the guidance is accurate.
+#
+# DEFERRED: a motivation-profile capture surface (so the dashboard lights up
+# with live data for a real account). Tracked in phase-frontend-mvp.md.
+# ---------------------------------------------------------------------------- #
+
+
+@router.get("/accountability", response_class=HTMLResponse)
+def accountability_page(request: Request) -> Response:
+    if not _user(request):
+        return RedirectResponse("/", status_code=303)
+    user_id = _require_user(request)
+    onboarding = request.app.state.env.state.get_onboarding(user_id)
+    has_motivation_profile = (
+        onboarding is not None and onboarding.motivation_profile is not None
+    )
+    snapshot = get_cycle_service(request).accountability_snapshot(user_id)
+    return _page(
+        request,
+        "accountability.html",
+        snapshot=snapshot,
+        has_motivation_profile=has_motivation_profile,
+    )
+
+
+# ---------------------------------------------------------------------------- #
+# Thresholds page (#4): the read-only mirror of the effective deterministic
+# tuning + its change history.
+#
+# Display-only by design (axiom 07 "Threshold Change Log"): tuning values change
+# ONLY via ``tuning.toml`` → ``apply_tuning``, which journals every effective
+# change to the threshold log. The UI never edits — it reads ``env.tuning`` (the
+# already-applied ``EffectiveTuning`` the composition root serves from) and
+# ``env.threshold_log_store`` (the append-only journal). It mirrors what the
+# ``show_thresholds`` operator CLI prints, off the same surfaces.
+# ---------------------------------------------------------------------------- #
+
+
+def _threshold_sections(tuning: EffectiveTuning) -> list[dict[str, Any]]:
+    """Per-section effective scalar values, each tagged default/overridden.
+
+    Iterates the tuning registry (``TUNABLE_SECTIONS`` then ``scalar_fields``)
+    and reads the effective value straight off ``tuning`` — the values the system
+    actually serves — so ``status`` compares serving truth against the code
+    default, the same honest comparison the ``show_thresholds`` CLI makes.
+    """
+    sections: list[dict[str, Any]] = []
+    for name, (config_type, default) in TUNABLE_SECTIONS.items():
+        effective = getattr(tuning, name)
+        fields: list[dict[str, Any]] = []
+        for field_name in scalar_fields(config_type):
+            value = getattr(effective, field_name)
+            default_value = getattr(default, field_name)
+            fields.append(
+                {
+                    "name": field_name,
+                    "value": value,
+                    "status": "default" if value == default_value else "overridden",
+                }
+            )
+        sections.append({"name": name, "fields": fields})
+    return sections
+
+
+@router.get("/thresholds", response_class=HTMLResponse)
+def thresholds_page(request: Request) -> Response:
+    if not _user(request):
+        return RedirectResponse("/", status_code=303)
+    env = request.app.state.env
+    return _page(
+        request,
+        "thresholds.html",
+        sections=_threshold_sections(env.tuning),
+        history=env.threshold_log_store.list_all(),
+    )
 
 
 @router.get("/draft", response_class=HTMLResponse)

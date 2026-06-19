@@ -29,7 +29,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
 
-from agentic_calendar.accountability.checkin import evaluate_checkin
+from agentic_calendar.accountability.checkin import CheckinStatus, evaluate_checkin
 from agentic_calendar.accountability.contract import derive_accountability_contract
 from agentic_calendar.accountability.policy_engine import (
     AccountabilityOutcome,
@@ -39,7 +39,11 @@ from agentic_calendar.accountability.projection import ProjectionInput
 from agentic_calendar.accountability.recommitment import request_recommitment
 from agentic_calendar.calendar_writer.manager import WriteStatus
 from agentic_calendar.common.errors import AgenticCalendarError
-from agentic_calendar.contracts.accountability_intervention import AccountabilityAction
+from agentic_calendar.contracts.accountability_intervention import (
+    AccountabilityAction,
+    InterventionDecision,
+)
+from agentic_calendar.contracts.accountability_state import AccountabilityState
 from agentic_calendar.contracts.approval_event import (
     ApprovalActionType,
     ApprovalEvent,
@@ -147,6 +151,20 @@ class _AccountabilityPass:
     outcome: AccountabilityOutcome | None
     nudge_id: str | None
     recommitment_request_id: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class AccountabilitySnapshot:
+    """Read-only accountability projection for the dashboard.
+
+    The pure result of one accountability pass — the weekly check-in status,
+    the deterministic state, and the policy decision (with its full audit) —
+    carrying none of the side effects ``_evaluate_accountability`` performs.
+    """
+
+    checkin_status: CheckinStatus
+    state: AccountabilityState
+    decision: InterventionDecision
 
 
 @dataclass(frozen=True, slots=True)
@@ -1066,6 +1084,57 @@ class CycleService:
             recommitment_id = request.recommitment_request_id
         return _AccountabilityPass(
             outcome, nudge.nudge_id if nudge else None, recommitment_id
+        )
+
+    def accountability_snapshot(self, user_id: str) -> AccountabilitySnapshot | None:
+        """Read-only accountability projection for the dashboard.
+
+        Mirrors the *pure* half of :meth:`_evaluate_accountability` — derive
+        the contract, evaluate the weekly check-in, project the windows, and
+        decide — but STOPS before every side effect that method performs: no
+        nudge delivery, no recommitment request, no run-state transition.
+        Performs no transitions and no writes, exactly like :meth:`status`.
+
+        Returns ``None`` when accountability cannot be projected: the user is
+        not onboarded, has no active plan or run yet, or — the opt-in gate of
+        axiom 21, the same early-return as ``_evaluate_accountability`` — has
+        no motivation profile.
+        """
+        env = self._env
+        onboarding = env.state.get_onboarding(user_id)
+        if onboarding is None or onboarding.motivation_profile is None:
+            return None
+        active = env.plan_store.get_active(user_id)
+        run = env.state.latest_run_for_user(user_id)
+        if active is None or run is None:
+            return None
+        now = env.clock.now()
+        tz = onboarding.tzinfo()
+        contract = derive_accountability_contract(
+            onboarding.motivation_profile, id_generator=env.id_generator, clock=env.clock
+        )
+        checkins = env.checkin_store.list_for_plan(user_id, active.plan_version)
+        checkin = evaluate_checkin(contract, checkins, now=now, tz=tz)
+        events = self._events_for_plan(active.plan)
+        scheduled_due, completed_due, events_7d, events_14d = self._projection_windows(
+            run, active, events, now
+        )
+        outcome = evaluate_accountability(
+            ProjectionInput(
+                user_id=user_id,
+                plan_id=active.plan_version,
+                events_7d=events_7d,
+                events_14d=events_14d,
+                scheduled_minutes_due=scheduled_due,
+                completed_minutes_due=completed_due,
+            ),
+            contract,
+            checkin.status,
+            clock=env.clock,
+            id_generator=env.id_generator,
+        )
+        return AccountabilitySnapshot(
+            checkin_status=checkin.status, state=outcome.state, decision=outcome.decision
         )
 
     def _projection_windows(

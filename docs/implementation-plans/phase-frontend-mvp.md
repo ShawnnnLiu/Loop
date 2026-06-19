@@ -42,6 +42,26 @@ Stage 0 acceptance: every flow it exposes goes through the same services
 the operator CLIs use; no axiom 06 invariant is bypassable from the UI; the
 app restarts cleanly against the Phase 9 SQLite state.
 
+## Hosted Frontend Follow-ups (deferrals)
+
+The hosted (multi-user, in-browser Google connect) variant of the Stage 0
+pages superseded the single-user localhost app. As those pages landed, two
+items were deliberately deferred and are tracked here:
+
+- **Motivation-profile capture surface (deferred 2026-06-18).** The onboarding
+  form (#1) captures the `user_profile` but deliberately omits the
+  `motivation_profile`. Accountability is opt-in on that profile (axiom 21:
+  `CycleService.accountability_snapshot` / `_evaluate_accountability` return
+  early when it is absent), so the read-only Accountability dashboard (#3)
+  ships with an **empty state first** ("Accountability isn't set up — add a
+  motivation profile") rather than a capture flow. Decision: empty-state-first
+  over (a) extending the onboarding form or (b) a separate setup mini-form —
+  smallest change now, dashboard renders nothing live until this lands.
+  Follow-up: a motivation-profile entry path (form section or dedicated page)
+  that re-onboards with the profile merged in, so the dashboard shows live
+  data for a real account. Fields: see `../specs/motivation-profile.schema.md`
+  / `contracts/motivation_profile.py`.
+
 ## Goal
 
 Land the user-facing surface that the Phase 1 and Phase 2 axiom roadmaps originally promised but which the corresponding implementation plans deferred so the deterministic core could ship first. After this phase, every flow currently exercised by an operator CLI must also be reachable by an end user, and the system must support real Google Calendar writes — not just the in-memory adapter.

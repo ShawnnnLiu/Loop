@@ -314,3 +314,62 @@ def test_from_scheduler_output_preserves_scheduled_order() -> None:
         created_at=datetime(2026, 5, 4, 17, 55, tzinfo=UTC),
     )
     assert [e.task_id for e in draft.entries] == ["b", "a"]
+
+
+# --------------------------------------------------------------------------- #
+# with_adjustments
+# --------------------------------------------------------------------------- #
+
+
+def _two_entry_draft() -> DraftSchedule:
+    early = _entry(
+        task_id="a",
+        start=datetime(2026, 5, 4, 8, 0, tzinfo=UTC),
+        end=datetime(2026, 5, 4, 9, 0, tzinfo=UTC),  # 60m
+    )
+    late = _entry(
+        task_id="b",
+        start=datetime(2026, 5, 4, 18, 0, tzinfo=UTC),
+        end=datetime(2026, 5, 4, 20, 0, tzinfo=UTC),  # 120m
+    )
+    return _draft(entries=(early, late))
+
+
+def test_with_adjustments_moves_preserving_duration_order_and_plan() -> None:
+    draft = _two_entry_draft()
+    # Move "b" two days later and to the morning (a cross-day move).
+    moved = draft.with_adjustments(
+        {"b": datetime(2026, 5, 6, 10, 0, tzinfo=UTC)},
+        draft_schedule_id="draft_002",
+        created_at=datetime(2026, 5, 4, 17, 55, tzinfo=UTC),
+    )
+    assert moved.draft_schedule_id == "draft_002"
+    assert moved.plan_version == draft.plan_version  # repositioning never re-plans
+    # Order preserved: "a" then "b", even though "b" now starts later in the day.
+    assert [e.task_id for e in moved.entries] == ["a", "b"]
+    assert moved.entries[0] == draft.entries[0]  # untouched task unchanged
+    b = moved.entries[1]
+    assert b.start == datetime(2026, 5, 6, 10, 0, tzinfo=UTC)
+    assert b.end == datetime(2026, 5, 6, 12, 0, tzinfo=UTC)  # 120m preserved, new day
+    # The original draft is untouched (immutable).
+    assert draft.entries[1].start == datetime(2026, 5, 4, 18, 0, tzinfo=UTC)
+
+
+def test_with_adjustments_unknown_task_id_rejected() -> None:
+    draft = _two_entry_draft()
+    with pytest.raises(ValueError, match="unknown task_id"):
+        draft.with_adjustments(
+            {"nope": datetime(2026, 5, 4, 10, 0, tzinfo=UTC)},
+            draft_schedule_id="draft_002",
+            created_at=datetime(2026, 5, 4, 17, 55, tzinfo=UTC),
+        )
+
+
+def test_with_adjustments_naive_start_rejected() -> None:
+    draft = _two_entry_draft()
+    with pytest.raises(ValidationError, match="timezone-aware"):
+        draft.with_adjustments(
+            {"a": datetime(2026, 5, 4, 10, 0)},  # naive
+            draft_schedule_id="draft_002",
+            created_at=datetime(2026, 5, 4, 17, 55, tzinfo=UTC),
+        )

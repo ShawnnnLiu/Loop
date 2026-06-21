@@ -54,6 +54,38 @@ class ProposeResult(BaseModel):
     """LLM prose attachment (validation wording); never control-plane."""
 
 
+class AdjustViolation(BaseModel):
+    """One typed reason a hand-adjusted placement was refused."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    task_id: str
+    reason_code: ReasonCode
+    detail: str
+
+
+class AdjustResult(BaseModel):
+    """Outcome of one drag-to-adjust on a draft awaiting approval.
+
+    On success a new immutable draft replaces the pending one and its fresh
+    canonical hash is returned. On a rejected move nothing is persisted and the
+    typed ``violations`` say which placements failed and why.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    run_id: str
+    user_id: str
+    state: SupervisorState
+    applied: bool
+    reason_code: ReasonCode | None = None
+    draft_schedule_id: str | None = None
+    draft_payload_hash: str | None = None
+    adjusted_task_ids: list[str] = Field(default_factory=list)
+    scheduled_task_count: int = 0
+    violations: list[AdjustViolation] = Field(default_factory=list)
+
+
 class ApproveResult(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 

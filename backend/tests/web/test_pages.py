@@ -17,7 +17,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from agentic_calendar.app.tuning import TUNABLE_SECTIONS, scalar_fields
-from agentic_calendar.app.web import calendar_service, pages, routes_auth
+from agentic_calendar.app.web import calendar_service, routes_auth
 from agentic_calendar.app.web.app import create_app
 from agentic_calendar.app.web.config import WebAuthConfig
 from agentic_calendar.app.web.routes_auth import _user_id_for_sub
@@ -265,7 +265,7 @@ def test_propose_feeds_real_calendar_free_busy(monkeypatch: pytest.MonkeyPatch) 
         # affect placement — we only assert it flows through without breaking.
         return [{"start": "2020-01-01T01:00:00+00:00", "end": "2020-01-01T03:00:00+00:00"}]
 
-    monkeypatch.setattr(pages, "fetch_user_free_busy", _fake_fetch)
+    monkeypatch.setattr(calendar_service, "fetch_user_free_busy", _fake_fetch)
 
     resp = client.post("/ui/propose", data={"csrf_token": token}, follow_redirects=False)
     assert resp.status_code == 303

@@ -27,8 +27,9 @@ from pydantic import BaseModel, ConfigDict
 
 from agentic_calendar.app.cycle import DEFAULT_TARGET_CALENDAR_ID, CycleService
 from agentic_calendar.contracts.checkin_event import RecoveryAction
+from agentic_calendar.scheduler.adjustment import DraftAdjustment
 
-from .calendar_service import build_user_calendar_service
+from .calendar_service import best_effort_free_busy, build_user_calendar_service
 from .deps import get_cycle_service, require_user
 
 router = APIRouter(prefix="/api", tags=["cycle"])
@@ -60,6 +61,13 @@ class WriteRequest(BaseModel):
     run_id: str | None = None
     target_calendar_id: str = DEFAULT_TARGET_CALENDAR_ID
     dry_run: bool = False
+
+
+class AdjustRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    adjustments: list[DraftAdjustment]
+    run_id: str | None = None
 
 
 def _json(result: BaseModel) -> JSONResponse:
@@ -108,6 +116,36 @@ def approve(
 ) -> JSONResponse:
     body = body or ApproveRequest()
     return _json(service.approve(user_id, run_id=body.run_id, reject=body.reject))
+
+
+def _adjust_free_busy(request: Request, user_id: str) -> list[dict[str, str]]:
+    """The user's real busy windows, fetched server-side so adjust re-validation
+    never trusts the client's own conflict checking. Dev mode has no per-user
+    token, so it falls back to no calendar awareness there (best-effort)."""
+    if not request.app.state.auth_enabled:
+        return []
+    return best_effort_free_busy(
+        request.app.state.env,
+        user_id=user_id,
+        token_cipher=request.app.state.token_cipher,
+    )
+
+
+@router.post("/adjust")
+def adjust(
+    request: Request,
+    service: Service,
+    user_id: ActingUser,
+    body: AdjustRequest,
+) -> JSONResponse:
+    return _json(
+        service.adjust(
+            user_id,
+            body.adjustments,
+            run_id=body.run_id,
+            free_busy=_adjust_free_busy(request, user_id),
+        )
+    )
 
 
 @router.post("/write")

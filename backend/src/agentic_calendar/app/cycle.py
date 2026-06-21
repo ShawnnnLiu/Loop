@@ -81,6 +81,7 @@ from agentic_calendar.planning.plan_version import (
 from agentic_calendar.planning.recovery import RecoveryRoute, propose_recovery_plan
 from agentic_calendar.planning.replan import propose_recalibrated_plan
 from agentic_calendar.scheduler import schedule
+from agentic_calendar.scheduler.adjustment import DraftAdjustment, validate_placements
 from agentic_calendar.scheduler.inputs import FreeBusyInterval, SchedulerInput
 from agentic_calendar.scheduler.policy import policy_from_user_profile
 from agentic_calendar.supervisor.routing import route
@@ -92,6 +93,8 @@ from agentic_calendar.validation import validate_syllabus_units, validate_task_p
 
 from .environment import AppEnvironment
 from .results import (
+    AdjustResult,
+    AdjustViolation,
     ApproveResult,
     IngestResult,
     OnboardResult,
@@ -782,6 +785,105 @@ class CycleService:
             approval_event_id=approval.approval_event_id,
             approved_payload_hash=approved_hash,
             expires_at_iso=approval.expires_at.isoformat(),
+        )
+
+    # ------------------------------------------------------------------ #
+    # adjust (drag-to-adjust, pre-approval)
+    # ------------------------------------------------------------------ #
+
+    def adjust(
+        self,
+        user_id: str,
+        adjustments: Sequence[DraftAdjustment],
+        *,
+        run_id: str | None = None,
+        free_busy: Sequence[Mapping[str, Any]] = (),
+    ) -> AdjustResult:
+        """Reposition proposed blocks on the awaiting draft, server-validated.
+
+        The user's drag edits (``adjustments``: ``task_id`` → new start) are
+        applied to the pending draft with each block's duration preserved, then
+        the WHOLE resulting placement is re-validated against the user's policy
+        and ``free_busy`` — never the client's own conflict checks. A clean move
+        replaces the pending draft with a new immutable one and returns its fresh
+        canonical hash; a rejected move persists nothing and returns the typed
+        ``violations``.
+
+        Valid only while the run awaits approval: the state guard refuses a move
+        once the draft is approved, so re-approval (not silent mutation) is the
+        contract, and axiom 06's write-time hash recheck still validates exactly
+        what the user approved.
+        """
+        env = self._env
+        if not adjustments:
+            raise CycleError("no adjustments supplied")
+        task_ids = [adjustment.task_id for adjustment in adjustments]
+        if len(task_ids) != len(set(task_ids)):
+            raise CycleError("adjustments contain a duplicate task_id")
+
+        onboarding = self._require_onboarding(user_id)
+        run = self._require_run(user_id, run_id, expected=S.AWAITING_USER_APPROVAL)
+        if run.draft_schedule_id is None or run.plan_version is None:
+            raise CycleError("run is awaiting approval but has no draft/plan attached")
+        draft = env.state.get_draft(run.draft_schedule_id)
+        if draft is None:
+            raise CycleError(f"draft {run.draft_schedule_id!r} not found")
+        plan_version = env.plan_store.get(user_id, run.plan_version)
+
+        tz = onboarding.tzinfo()
+        new_starts = {
+            adjustment.task_id: adjustment.start.astimezone(tz)
+            for adjustment in adjustments
+        }
+        try:
+            candidate = draft.with_adjustments(
+                new_starts,
+                draft_schedule_id=env.id_generator.new_id("draft"),
+                created_at=env.clock.now(),
+            )
+        except ValueError as exc:
+            # Unknown task_id: the client tried to move a task not in the draft.
+            raise CycleError(str(exc)) from exc
+
+        conflicts = validate_placements(
+            candidate.entries,
+            plan=plan_version.plan,
+            policy=policy_from_user_profile(onboarding.user_profile),
+            free_busy=[FreeBusyInterval.model_validate(dict(fb)) for fb in free_busy],
+            tz=tz,
+        )
+        if conflicts:
+            return AdjustResult(
+                run_id=run.run_id,
+                user_id=user_id,
+                state=run.state,
+                applied=False,
+                reason_code=conflicts[0].reason_code,
+                violations=[
+                    AdjustViolation(
+                        task_id=conflict.task_id,
+                        reason_code=conflict.reason_code,
+                        detail=conflict.detail,
+                    )
+                    for conflict in conflicts
+                ],
+            )
+
+        env.state.save_draft(user_id, candidate)
+        # Pure artifact swap: the run stays in AWAITING_USER_APPROVAL (no
+        # lifecycle transition) — only the pending draft it points at changes.
+        run = self._save_run(run, draft_schedule_id=candidate.draft_schedule_id)
+        return AdjustResult(
+            run_id=run.run_id,
+            user_id=user_id,
+            state=run.state,
+            applied=True,
+            draft_schedule_id=candidate.draft_schedule_id,
+            draft_payload_hash=canonical_payload_hash(
+                candidate, HASH_CANONICALIZATION_VERSION
+            ),
+            adjusted_task_ids=sorted(new_starts),
+            scheduled_task_count=len(candidate.entries),
         )
 
     # ------------------------------------------------------------------ #

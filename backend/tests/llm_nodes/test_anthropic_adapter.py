@@ -380,6 +380,38 @@ def test_strategist_constraint_violation_enters_repair_loop() -> None:
     assert "max_modules" in transport.requests[1]["user_prompt"]
 
 
+def _profile_with_resume(text: str) -> UserProfile:
+    fixture = next(f for f in iter_valid("user_profile") if f.name == "backend_swe_intermediate")
+    return UserProfile.model_validate({**fixture.payload, "resume_text": text})
+
+
+def _run_strategist_once(user_profile: UserProfile) -> FakeTransport:
+    transport = FakeTransport([_ok(_SYLLABUS)])
+    AnthropicStrategist(
+        transport=transport,
+        store=InMemoryLlmCallLogStore(),
+        clock=FrozenClock(_NOW),
+        id_generator=DeterministicIdGenerator(),
+    ).run(run_id="run_t", user_profile=user_profile)
+    return transport
+
+
+def test_strategist_prompt_includes_resume_text_when_present() -> None:
+    transport = _run_strategist_once(_profile_with_resume("ACME_RESUME_MARKER 4 yrs Go"))
+    prompt = transport.requests[0]["user_prompt"]
+    assert "Candidate résumé" in prompt
+    assert "ACME_RESUME_MARKER 4 yrs Go" in prompt
+
+
+def test_strategist_prompt_omits_resume_text_cleanly_when_none() -> None:
+    # The default fixture profile has no résumé; the field must leave no artifact
+    # in the prompt — not even the `resume_text` key or an empty section header.
+    transport = _run_strategist_once(_profile())
+    prompt = transport.requests[0]["user_prompt"]
+    assert "resume_text" not in prompt
+    assert "résumé" not in prompt.lower()
+
+
 #: Parses as JSON but violates the SyllabusUnits contract: a high-priority
 #: module with no ``reason`` (``SyllabusModule._high_priority_needs_reason``).
 #: This is the live-dogfood failure that crashed propose with a raw 422.

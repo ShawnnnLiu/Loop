@@ -117,6 +117,7 @@ _SCALAR_FIELDS: tuple[str, ...] = (
     "max_daily_study_min",
     "min_break_between_deep_blocks_min",
     "timezone",
+    "resume_text",
 )
 
 # Pre-filled, valid-by-default values so a freshly connected user can submit
@@ -141,6 +142,7 @@ _DEFAULT_ONBOARD_VALUES: dict[str, Any] = {
     "max_daily_study_min": "180",
     "min_break_between_deep_blocks_min": "30",
     "timezone": "UTC",
+    "resume_text": "",
     "selected_days": [],
     "checkboxes": {name: name == "allow_weekends" for name in _CHECKBOXES},
 }
@@ -192,6 +194,7 @@ def _build_profile(form: FormData, user_id: str, now: datetime) -> dict[str, Any
             "prefer_weekend_long_blocks": form.get("prefer_weekend_long_blocks") is not None,
             "avoid_back_to_back_deep_work": form.get("avoid_back_to_back_deep_work") is not None,
         },
+        "resume_text": str(form.get("resume_text", "")).strip() or None,
         "created_at": now,
         "updated_at": now,
     }
@@ -245,6 +248,7 @@ def _values_from_record(record: OnboardingRecord) -> dict[str, Any]:
         "max_daily_study_min": str(hard.max_daily_study_min),
         "min_break_between_deep_blocks_min": str(hard.min_break_between_deep_blocks_min),
         "timezone": record.timezone,
+        "resume_text": profile.resume_text or "",
         "selected_days": [window.day.value for window in windows],
         "checkboxes": {
             "allow_weekends": hard.allow_weekends,

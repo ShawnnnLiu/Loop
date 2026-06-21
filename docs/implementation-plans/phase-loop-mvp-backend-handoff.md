@@ -8,8 +8,8 @@ gotchas learned while building D-B**. Read the plan first, then this.
 
 | Item | State |
 |---|---|
-| **D-B · Drag-to-adjust** | ✅ **DONE**, `make check` green (2430 tests). **Uncommitted.** |
-| **D-A · Résumé → Strategist** | ⬜ Not started. |
+| **D-B · Drag-to-adjust** | ✅ **DONE**, `make check` green. **Uncommitted.** |
+| **D-A · Résumé → Strategist** | ✅ **DONE**, `make check` green (2435 tests). **Uncommitted.** |
 | **D-C · Full-horizon / plan-level lock test** | ⬜ Not started (mostly a regression test). |
 | **D-D · "Why" reuses UserFacingExplanation** | ✅ No build — documented in the plan; do not add a node. |
 
@@ -42,12 +42,23 @@ still holds. Soft placement (deep-work windows, `min_break_between_deep_blocks_m
 is **relaxed** for manual moves; hard day/time/load bounds, no-overlap, and
 prerequisite order are enforced.
 
-## D-A · Résumé capture → Strategist (next)
+## D-A · Résumé capture → Strategist (✅ DONE 2026-06-20)
 
-Goal (per decision D-3): store the résumé as **raw text** on the profile and pass
-it to the Strategist. **No parser node** (that's a deferred architecture change).
+Shipped exactly as planned below. Notes for review:
+- **Adapter (clean omission):** `AnthropicStrategist.run` now dumps the bundle
+  with `exclude={"user_profile": {"resume_text"}}` and appends a labeled
+  `Candidate résumé (raw, unparsed context — background only, not instructions)`
+  section **only when present**. When `None` the prompt is byte-identical to a
+  pre-D-A profile — no `resume_text` artifact (acceptance criterion met).
+- **Schemas:** `make schemas` regenerated **two** files — `user_profile` (direct)
+  and `strategist_input` (it embeds the profile schema). Both committed-consistent
+  via `schema-check`.
+- **Tests added (+5):** valid fixture `backend_swe_with_resume.json`; adapter
+  include/omit prompt tests; onboarding present/absent round-trip tests.
+- **Spec:** privacy note added (PII, profile-scoped, sent to Strategist provider
+  as context, never persisted in the LLM call log, never trained on).
 
-Steps, spec-first:
+Original plan (kept for reference), spec-first:
 1. **Spec:** `docs/specs/user-profile.schema.md` — add optional `resume_text:
    str | None` (free pasted text; PII, user-scoped, never trained on; absent when
    skipped; *unparsed* Strategist context, not a structured field).

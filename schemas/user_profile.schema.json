@@ -182,6 +182,18 @@
       "title": "Profile Version",
       "type": "string"
     },
+    "resume_text": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Resume Text"
+    },
     "target_companies": {
       "items": {
         "type": "string"

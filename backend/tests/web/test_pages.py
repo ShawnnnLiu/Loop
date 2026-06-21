@@ -190,6 +190,29 @@ def test_onboard_form_prefills_saved_profile(monkeypatch: pytest.MonkeyPatch) ->
     assert mon is not None and "checked" in mon.group(0)
 
 
+def test_onboard_form_round_trips_resume_text(monkeypatch: pytest.MonkeyPatch) -> None:
+    client = _client()
+    _login(client, monkeypatch)
+    form = _onboard_form(_csrf(client))
+    form["resume_text"] = "RESUME_MARKER 4 yrs Python and Go"
+    resp = client.post("/ui/onboard", data=form, follow_redirects=False)
+    assert resp.status_code == 303
+
+    # The pasted résumé survives _build_profile -> record -> _values_from_record.
+    edit = client.get("/onboard").text
+    assert 'name="resume_text"' in edit
+    assert "RESUME_MARKER 4 yrs Python and Go" in edit
+
+
+def test_onboard_form_omitted_resume_round_trips_empty(monkeypatch: pytest.MonkeyPatch) -> None:
+    client = _client()
+    _login(client, monkeypatch)
+    # The base form omits resume_text -> stored as None -> echoed as an empty box.
+    client.post("/ui/onboard", data=_onboard_form(_csrf(client)), follow_redirects=False)
+    edit = client.get("/onboard").text
+    assert re.search(r'name="resume_text"[^>]*></textarea>', edit) is not None
+
+
 def test_onboard_form_rejects_invalid_profile(monkeypatch: pytest.MonkeyPatch) -> None:
     client = _client()
     _login(client, monkeypatch)

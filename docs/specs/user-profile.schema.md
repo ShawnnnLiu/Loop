@@ -46,6 +46,7 @@ Convert a vague career objective into machine-readable constraints. The profile 
     "avoid_back_to_back_deep_work": true
   },
   "motivation_profile_id": "mot_001",
+  "resume_text": "Senior backend engineer, 4 yrs Python/Go. Led billing platform...",
   "created_at": "2026-04-28T12:00:00-07:00",
   "updated_at": "2026-04-28T12:00:00-07:00"
 }
@@ -82,6 +83,9 @@ Convert a vague career objective into machine-readable constraints. The profile 
 | `hard_constraints` | Defines non-negotiable scheduling boundaries |
 | `preferences` | Soft constraints used when multiple schedules are valid |
 | `motivation_profile_id` | Foreign key into `motivation_profiles`; drives accountability intensity, check-in cadence, and sponsor permissions |
+| `resume_text` | Optional free text the user pastes during onboarding. *Unparsed* context passed to the `StrategistNode` to sharpen the proposed syllabus — never a structured field, never an oracle for routing or validation. Absent for users who skip the step. |
+
+`resume_text` is **PII**: it is stored only on the user's own profile record, is not shared cross-user, and is deleted with the profile. It is sent to the Strategist LLM provider as prompt context when present, but is never persisted in the LLM call log (which records hashes and counts only — see `../axioms/22-llm-evaluation-and-observability.md`) and is never used for training. There is no résumé-parser node in this MVP; the future extract→review→confirm parser is deferred (it would add a new LLM node class — see `../axioms/01-system-boundaries.md` and `../implementation-plans/phase-loop-mvp-backend.md`).
 
 Motivation, accountability, sponsor visibility, and pressure tolerance live in a separate `motivation_profile` object so they can change on a different cadence than planning constraints without invalidating the syllabus. See `motivation-profile.schema.md` and `../axioms/21-accountability-layer.md`.
 

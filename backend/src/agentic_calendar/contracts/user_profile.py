@@ -92,6 +92,14 @@ class UserProfile(BaseModel):
     hard_constraints: HardConstraints
     preferences: Preferences = Field(default_factory=Preferences)
     motivation_profile_id: str | None = None
+    resume_text: str | None = None
+    """Optional raw résumé text the user pastes during onboarding.
+
+    Unparsed context for the Strategist only (see the spec); never a structured
+    field, never an oracle for routing or validation. ``None`` when the user
+    skips the step. PII: stored on the user's own profile, not persisted in the
+    LLM call log, never used for training.
+    """
     created_at: datetime
     updated_at: datetime
 

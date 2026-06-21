@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Tandem 同舟 — Design Reference (all screens)</title>
+<meta name="viewport" content="width=1480" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Hanken+Grotesk:wght@400;500;600;700&family=Noto+Serif+SC:wght@500;600&family=Noto+Sans+SC:wght@400;500;700&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="app.css" />
+<style>
+  body { margin: 0; background: #e7e3da; font-family: 'Hanken Grotesk', system-ui, sans-serif; }
+  .wrap { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 40px 20px 80px; }
+  .grp-h { width: 1440px; margin: 26px 0 2px; }
+  .grp-h h2 { font-family: 'Newsreader', Georgia, serif; font-size: 22px; margin: 0; color: #16212e; }
+  .grp-h p { margin: 4px 0 0; font-size: 13px; color: #6c7886; }
+  .cap { width: 1440px; font-family: 'Spline Sans Mono', monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #9c4527; margin: 18px 0 -4px; }
+  .frame { width: 1440px; height: 900px; box-shadow: 0 18px 50px -16px rgba(22,33,46,0.34); border-radius: 4px; overflow: hidden; }
+  .lead { width: 1440px; padding: 8px 2px 0; }
+  .lead h1 { font-family: 'Newsreader', Georgia, serif; font-weight: 500; font-size: 30px; color: #16212e; margin: 0; }
+  .lead p { font-size: 14px; color: #38485a; max-width: 760px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="lead">
+    <h1>Tandem 同舟 — design reference</h1>
+    <p>The seven product screens at native 1440×900, rendered from the same React source the Designs canvas uses. This file is the <b>visual source of truth</b>; the Markdown specs next to it are the <b>build spec</b>. Read both. (Open <code>../README.md</code> first.)</p>
+  </div>
+
+  <div class="grp-h"><h2>01 · Onboarding — deterministic wizard, two AI parse steps</h2><p>7-step first-run setup. AI is used only on the transcript and activities steps; everything else is a plain form.</p></div>
+  <div class="cap">Step 3 · Deadline — deterministic</div>
+  <div class="frame" id="ob-deadline"></div>
+  <div class="cap">Step 4 · Transcript / GPA parse — AI step</div>
+  <div class="frame" id="ob-transcript"></div>
+  <div class="cap">Step 5 · Current courses &amp; grades — deterministic</div>
+  <div class="frame" id="ob-courses"></div>
+  <div class="cap">Step 6 · Activities parse — AI step</div>
+  <div class="frame" id="ob-activities"></div>
+
+  <div class="grp-h"><h2>02 · Calendar — week grid + day rail + milestone track</h2><p>Google Calendar owns scheduling. Accept → writes to gcal. Done → logs telemetry. State grammar drives every block.</p></div>
+  <div class="cap">Week grid + day rail</div>
+  <div class="frame" id="cal"></div>
+
+  <div class="grp-h"><h2>03 · Agent — docked rail (never a floating pill)</h2><p>Approvals on top, thread in the middle, composer + trust strip at the bottom. Plus the capability map.</p></div>
+  <div class="cap">Sidebar dock (week + dock)</div>
+  <div class="frame" id="ag"></div>
+  <div class="cap">Capability map — AI proposes vs deterministic acts</div>
+  <div class="frame" id="ag-map"></div>
+</div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<!-- calendar must load before agent: agent reuses window.WK / DayColumn / ProductTopbar / MilestoneBar -->
+<script type="text/babel" src="onboarding.jsx"></script>
+<script type="text/babel" src="calendar.jsx"></script>
+<script type="text/babel" src="agent.jsx"></script>
+<script type="text/babel">
+  function mount() {
+    if (!window.OnbDeadline || !window.CalendarScreen || !window.AgentScreen || !window.CapabilityMap) {
+      return setTimeout(mount, 60);
+    }
+    const r = (id, el) => ReactDOM.createRoot(document.getElementById(id)).render(el);
+    r('ob-deadline',   <window.OnbDeadline />);
+    r('ob-transcript', <window.OnbTranscript />);
+    r('ob-courses',    <window.OnbSkills />);
+    r('ob-activities', <window.OnbResume />);
+    r('cal',           <window.CalendarScreen />);
+    r('ag',            <window.AgentScreen />);
+    r('ag-map',        <window.CapabilityMap />);
+  }
+  mount();
+</script>
+</body>
+</html>

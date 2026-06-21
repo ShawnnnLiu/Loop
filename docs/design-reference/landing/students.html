@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>For Students · Tandem 同舟</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Hanken+Grotesk:wght@400;500;600;700&family=Noto+Serif+SC:wght@500;600&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="index.html" style="white-space:nowrap;">
+      <span class="glyph"><i class="g-char">同</i></span>
+      <span data-zh="同舟 Tandem">Tandem <span class="zh">同舟</span></span>
+    </a>
+    <div class="nav-links">
+      <a href="parents.html" data-zh="家长">Parents</a>
+      <a href="students.html" class="active" data-zh="学生">Students</a>
+      <a href="trust.html" data-zh="运作原理">How it works</a>
+    </div>
+    <div class="nav-right">
+      <div class="lang-pill">
+        <button data-lang="en" class="on">EN</button>
+        <button data-lang="zh">中文</button>
+      </div>
+      <a href="#cta" class="btn btn-ink" data-zh="免费搭计划">Build free</a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<header class="section" style="padding-bottom: clamp(40px,5vw,64px);">
+  <div class="wrap">
+    <div style="display:grid; grid-template-columns: 1fr 0.95fr; gap: 52px; align-items:center;">
+      <div class="kicker-row">
+        <span class="eyebrow" data-zh="致学生">For students</span>
+        <h1 class="display" data-zh="你的副驾驶，不是你爸妈的监控。">Your copilot. <br>Not your parents' spy.</h1>
+        <p class="lead" style="max-width:520px;" data-zh="再大、再吓人的目标，都会拆成这周的几个小任务，直接排进你的日历，按你真实的生活节奏来。所有事都得你点头，爸妈只看得到你愿意让他们看的那部分。">A big, scary goal becomes this week's tasks — on your real calendar, around your real life. You approve everything. Your parents see only what you let them.</p>
+        <div style="display:flex; gap:14px; flex-wrap:wrap; margin-top:4px;">
+          <a href="#cta" class="btn btn-primary btn-lg" data-zh="免费搭一份第一周计划 →">Build your first week — free →</a>
+          <a href="trust.html" class="btn btn-ghost btn-lg" data-zh="看看它是怎么运作的 →">See how it works →</a>
+        </div>
+        <div class="trust-strip" style="margin-top:14px;">
+          <span class="item"><span class="dot"></span><span data-zh="接入你的 Google 日历">Works with your Google Calendar</span></span>
+          <span class="item"><span class="dot"></span><span data-zh="你写的东西永远是你的">Your writing stays yours</span></span>
+        </div>
+      </div>
+
+      <!-- weekly calendar mock with approve -->
+      <div class="mock">
+        <div class="mock-bar"><span class="tl"></span><span class="tl"></span><span class="tl"></span><span class="title" data-zh="本周 · 你的日历">This week · your calendar</span></div>
+        <div class="mock-body">
+          <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:12px;">
+            <span style="font-family:var(--serif); font-size:18px; font-weight:600;" data-zh="本周">This week</span>
+            <span style="font-size:12px; color:var(--muted);" data-zh="4.5 小时 · 6 个任务">4.5 hrs · 6 tasks</span>
+          </div>
+          <div class="mini-cal">
+            <div class="col"><span class="dh">M</span><span class="mini-task done" data-zh="文书">essay</span><span class="mini-task acc" data-zh="选校">list</span></div>
+            <div class="col"><span class="dh">T</span><span class="mini-task acc" data-zh="文书 v2">SOP v2</span></div>
+            <div class="col"><span class="dh">W</span><span class="mini-task prop" data-zh="草稿">draft</span><span class="mini-task prop" data-zh="复盘">reflect</span></div>
+            <div class="col"><span class="dh">T</span><span class="mini-task acc" data-zh="模拟面试">mock</span></div>
+            <div class="col"><span class="dh">F</span><span class="mini-task acc" data-zh="终稿">final</span></div>
+          </div>
+          <div style="margin-top:13px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+            <span style="font-size:11.5px; color:var(--muted); display:inline-flex; align-items:center; gap:6px;"><span style="width:10px;height:10px;border-radius:3px;border:1px dashed var(--clay);background:var(--clay-tint);display:inline-block;"></span><span data-zh="建议">proposed</span></span>
+            <span style="font-size:11.5px; color:var(--muted); display:inline-flex; align-items:center; gap:6px;"><span style="width:10px;height:10px;border-radius:3px;background:var(--ink);display:inline-block;"></span><span data-zh="完成">done</span></span>
+          </div>
+          <button class="btn btn-primary btn-block" style="margin-top:13px;" data-zh="✓ 批准本周计划">✓ Approve this week</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- RELIEF -->
+<section class="section-sm">
+  <div class="wrap">
+    <div class="grid grid-2" style="align-items:center; gap:40px;">
+      <div class="kicker-row">
+        <span class="eyebrow" data-zh="缓解焦虑">Relief from overwhelm</span>
+        <h2 class="h-lg" data-zh="从「根本不知道从哪儿下手」，到「今晚就先做这一件」">From "I don't even know where to start" to "here's what I'm doing tonight."</h2>
+        <p class="lead" data-zh="不用再盯着一堆截止日期发慌。系统会把整个申请季拆成一个个做得完的小步骤，就放在你一眼能看到的地方。">No more staring at a wall of deadlines. The system breaks the whole season into small, doable steps and puts them where you'll actually see them.</p>
+      </div>
+      <div class="card card-soft" style="padding:24px;">
+        <div style="font-size:13px; color:var(--muted); font-weight:600; letter-spacing:0.04em; margin-bottom:12px;" data-zh="今晚">TONIGHT</div>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <div style="display:flex; gap:12px; align-items:center; padding:13px 15px; background:var(--card); border:1px solid var(--line-2); border-radius:11px;">
+            <span class="checkpoint"><span class="ring" style="border-style:solid;background:var(--ink);color:#fff;border-color:var(--ink);">1</span></span>
+            <div><div style="font-weight:600; font-size:15px;" data-zh="文书 · 开头段落">Essay · opening paragraph</div><div style="font-size:12.5px; color:var(--muted);" data-zh="45 分钟 · 7:30pm">45 min · 7:30pm</div></div>
+          </div>
+          <div style="display:flex; gap:12px; align-items:center; padding:13px 15px; background:var(--clay-tint); border:1px dashed var(--clay); border-radius:11px;">
+            <span class="checkpoint"><span class="ring">2</span></span>
+            <div><div style="font-weight:600; font-size:15px;" data-zh="选校 · 再加 2 所">School list · add 2 reaches</div><div style="font-size:12.5px; color:var(--clay-deep);" data-zh="建议 · 20 分钟">proposed · 20 min</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- GOOGLE CALENDAR INTEGRATION -->
+<section class="section-sm">
+  <div class="wrap">
+    <div class="card" style="background:var(--ink); color:var(--paper); border:none; padding:clamp(30px,4vw,48px);">
+      <div style="display:grid; grid-template-columns:1fr 0.9fr; gap:40px; align-items:center;">
+        <div>
+          <div class="checkpoint-stamp" style="background:rgba(251,248,242,0.1); border-color:rgba(251,248,242,0.2); color:var(--paper); margin-bottom:16px;"><span class="ring" style="border-color:#e8a585; color:#e8a585; background:rgba(232,165,133,0.12);">↻</span><span data-zh="直接接入 Google 日历">Works with Google Calendar</span></div>
+          <h2 class="h-lg" style="color:var(--paper); max-width:520px;" data-zh="就用你本来在用的那本日历。">It lives in the calendar you already use.</h2>
+          <p class="lead" style="color:rgba(251,248,242,0.74); max-width:540px; margin:14px 0 0;" data-zh="同舟直接接入你的 Google 日历，把任务排在课程、训练和生活的空档里。它只读你的空闲时间，绝不和已有日程撞车，也绝不会把你日历里的东西搞乱。当然——你不点「确认」，什么都不会写进去。">Tandem plugs straight into your Google Calendar — tasks land in the gaps around your classes, practice, and life. It reads only your free time, never double-books, and never scrambles what's already there. And nothing gets written until you tap approve.</p>
+          <div style="display:flex; flex-direction:column; gap:13px; margin-top:20px;">
+            <div style="display:flex; gap:10px; align-items:flex-start; font-size:14.5px; line-height:1.4; color:rgba(251,248,242,0.9);"><span style="color:#7fc99a; font-weight:800;">✓</span><span data-zh="只读你的空闲时间">Reads your free/busy</span></div>
+            <div style="display:flex; gap:10px; align-items:flex-start; font-size:14.5px; line-height:1.4; color:rgba(251,248,242,0.9);"><span style="color:#7fc99a; font-weight:800;">✓</span><span data-zh="绝不撞车，绝不把日历搞乱">Never double-books or messes up your calendar</span></div>
+            <div style="display:flex; gap:10px; align-items:flex-start; font-size:14.5px; line-height:1.4; color:rgba(251,248,242,0.9);"><span style="color:#7fc99a; font-weight:800;">✓</span><span data-zh="你不点头，什么都不会写进去">Nothing is written without your tap</span></div>
+          </div>
+        </div>
+
+        <!-- sync mock -->
+        <div class="mock" style="color:var(--ink);">
+          <div class="mock-bar"><span style="width:11px;height:11px;border-radius:3px;background:#4285F4;display:inline-block;"></span><span class="title" data-zh="Google 日历 · 已同步">Google Calendar · synced</span><span style="margin-left:auto; font-size:11px; color:var(--sage); font-weight:700;" data-zh="● 已连接">● connected</span></div>
+          <div class="mock-body" style="display:flex; flex-direction:column; gap:8px;">
+            <div style="display:flex; gap:10px; align-items:center; padding:9px 11px; background:var(--paper-2); border:1px solid var(--line); border-radius:9px;">
+              <span style="font-family:var(--mono); font-size:11px; color:var(--muted); width:42px;">9:00</span>
+              <span style="font-size:13px; font-weight:600; flex:1;" data-zh="化学课">Chem class</span>
+              <span style="font-size:10.5px; color:var(--muted); font-weight:600;" data-zh="你的日程">your event</span>
+            </div>
+            <div style="display:flex; gap:10px; align-items:center; padding:9px 11px; background:var(--clay-tint); border:1px dashed var(--clay); border-radius:9px;">
+              <span style="font-family:var(--mono); font-size:11px; color:var(--clay-deep); width:42px;">11:00</span>
+              <span style="font-size:13px; font-weight:600; flex:1; color:var(--clay-deep);" data-zh="同舟 · 文书开头">Tandem · essay intro</span>
+              <span style="font-size:10.5px; color:var(--clay-deep); font-weight:700;" data-zh="建议">proposed</span>
+            </div>
+            <div style="display:flex; gap:10px; align-items:center; padding:9px 11px; background:var(--paper-2); border:1px solid var(--line); border-radius:9px;">
+              <span style="font-family:var(--mono); font-size:11px; color:var(--muted); width:42px;">15:30</span>
+              <span style="font-size:13px; font-weight:600; flex:1;" data-zh="足球训练">Soccer practice</span>
+              <span style="font-size:10.5px; color:var(--muted); font-weight:600;" data-zh="你的日程">your event</span>
+            </div>
+            <div style="display:flex; gap:10px; align-items:center; padding:9px 11px; background:var(--clay-tint); border:1px dashed var(--clay); border-radius:9px;">
+              <span style="font-family:var(--mono); font-size:11px; color:var(--clay-deep); width:42px;">19:30</span>
+              <span style="font-size:13px; font-weight:600; flex:1; color:var(--clay-deep);" data-zh="同舟 · SOP v2">Tandem · SOP v2</span>
+              <span style="font-size:10.5px; color:var(--clay-deep); font-weight:700;" data-zh="建议">proposed</span>
+            </div>
+            <div style="margin-top:4px; padding:8px 11px; background:var(--sage-soft); border-radius:9px; font-size:12.5px; color:var(--sage); font-weight:600; display:flex; gap:8px; align-items:center;"><span>✓</span><span data-zh="无冲突 · 不会动你已有的日程">No conflicts · won't touch your existing events</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- IN CONTROL (secondary mention) -->
+<section class="section-sm" style="padding-top:0;">
+  <div class="wrap-narrow center">
+    <div class="checkpoint-stamp" style="margin:0 auto 14px;"><span class="ring">✓</span><span data-zh="你的确认 = 唯一的开关">your tap = the only switch</span></div>
+    <h3 class="h-md" data-zh="你不点头，什么都不会发生。">Nothing happens without your tap.</h3>
+    <p class="muted" style="max-width:540px; margin:10px auto 0;" data-zh="不会自动排进日历，不会分享出去，也不会替你发送——除非你点了「确认」。计划是你的，你随时能改。">Nothing gets scheduled, nothing gets shared, nothing gets sent — until you say yes. It's your plan, and you can change it.</p>
+  </div>
+</section>
+
+<!-- PRESSURE + LEARNS YOU -->
+<section class="section-sm">
+  <div class="wrap">
+    <div class="grid grid-2">
+      <div class="card">
+        <span class="eyebrow" data-zh="你选的节奏">Pressure, tuned to you</span>
+        <h3 class="h-md" style="margin:12px 0 10px;" data-zh="是你自己选的节奏，而不是被安排的压力。">The pressure you picked — not the pressure picked for you.</h3>
+        <p class="muted" data-zh="打卡、提醒、连续天数——都按你能接受的程度来设。是推你一把，不是逼你；你需要喘口气的时候，它会往后退一步。">Check-ins, nudges, streaks — set to your tolerance. It's encouraging, never hostile, and it backs off when you need it to.</p>
+        <div style="display:flex; gap:8px; margin-top:16px; flex-wrap:wrap;">
+          <span class="concept" style="background:var(--paper-2); border-color:var(--line-2); color:var(--ink-soft);"><span data-zh="轻推">gentle</span></span>
+          <span class="concept"><b data-zh="刚好">balanced</b></span>
+          <span class="concept" style="background:var(--paper-2); border-color:var(--line-2); color:var(--ink-soft);"><span data-zh="高强度">intense</span></span>
+        </div>
+      </div>
+      <div class="card">
+        <span class="eyebrow" data-zh="它会学你">It learns you</span>
+        <h3 class="h-md" style="margin:12px 0 10px;" data-zh="它会摸清你真实的节奏。">It learns how you actually work.</h3>
+        <p class="muted" data-zh="文书总是拖？它会帮你把计划调一调。刷题很快？它也看得出来，给你留更多空间。是计划迁就你，不是你迁就计划。">Always behind on essays? It adjusts your plan. Fly through problem sets? It notices and gives you room. The plan bends to you, not the other way around.</p>
+        <div style="margin-top:16px; padding:12px 14px; background:var(--paper-2); border-radius:11px; font-size:13.5px; display:flex; gap:10px; align-items:center;">
+          <span style="font-size:18px;">↘</span><span data-zh="发现：文书平均比预计多花 20%。已自动放宽。">Noticed: essays take you ~20% longer. Plan loosened automatically.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- VS CONSULTANT -->
+<section class="section-sm">
+  <div class="wrap">
+    <div class="center kicker-row" style="margin-bottom:30px;">
+      <span class="eyebrow center" data-zh="对比">The comparison</span>
+      <h2 class="h-lg" data-zh="对比请一位顾问">vs. hiring a consultant</h2>
+    </div>
+    <div class="compare">
+      <div class="compare-row header">
+        <div class="compare-cell label" data-zh=" "></div>
+        <div class="compare-cell head them" data-zh="请一位顾问">A hired consultant</div>
+        <div class="compare-cell head us"><span class="us-badge"><span class="checkpoint"><span class="ring" style="width:18px;height:18px;font-size:9px;">✓</span></span><span data-zh="你的副驾驶">Your copilot</span></span></div>
+      </div>
+      <div class="compare-row">
+        <div class="compare-cell label" data-zh="时间表">Schedule</div>
+        <div class="compare-cell them" data-zh="他们的时间">Their calendar</div>
+        <div class="compare-cell us" data-zh="是你的">Yours</div>
+      </div>
+      <div class="compare-row">
+        <div class="compare-cell label" data-zh="节奏">Pace</div>
+        <div class="compare-cell them" data-zh="他们的节奏">Their pace</div>
+        <div class="compare-cell us" data-zh="你的节奏">Your pace</div>
+      </div>
+      <div class="compare-row">
+        <div class="compare-cell label" data-zh="持续性">Continuity</div>
+        <div class="compare-cell them" data-zh="申请季一结束就没了">Gone after the season</div>
+        <div class="compare-cell us" data-zh="一直陪着你">Stays with you</div>
+      </div>
+      <div class="compare-row">
+        <div class="compare-cell label" data-zh="价格">Price</div>
+        <div class="compare-cell them" data-zh="很贵">$$$$</div>
+        <div class="compare-cell us" data-zh="负担得起">Affordable</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRIVACY PROMISE -->
+<section class="section-sm">
+  <div class="wrap-narrow">
+    <div class="card" style="border:1px solid var(--clay-soft); background:var(--clay-tint); text-align:center; padding:clamp(32px,5vw,48px);">
+      <div style="font-size:30px; margin-bottom:8px;">🔒</div>
+      <span class="eyebrow center" data-zh="隐私承诺">Privacy promise</span>
+      <h2 class="h-md" style="margin:12px 0 10px;" data-zh="你写的东西，永远是你的。">Your writing is yours.</h2>
+      <p class="lead" style="max-width:560px; margin:0 auto; color:var(--ink-soft);" data-zh="你的文书、草稿、私人笔记，永远不会被分享出去——不给爸妈，也不给任何人。让谁看、看多少，你说了算。">Your essays, drafts, and private notes are never shared — with your parents, with anyone. You decide what they see.</p>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="section" id="cta">
+  <div class="wrap">
+    <div class="cta-band">
+      <span class="eyebrow center" style="color:#e8a585;" data-zh="免费开始">Free to start</span>
+      <h2 class="h-xl" style="margin:16px auto 0; max-width:600px;" data-zh="免费搭一份你的第一周计划。">Build your first week — free.</h2>
+      <p class="lead" style="margin:14px auto 26px; max-width:500px;" data-zh="几分钟，把一个吓人的目标变成今晚就能做的一步。">In a few minutes, turn one scary goal into a step you can take tonight.</p>
+      <div style="display:flex; gap:14px; justify-content:center; flex-wrap:wrap;">
+        <a href="#" class="btn btn-primary btn-lg" data-zh="免费搭计划">Build your first week</a>
+        <a href="trust.html" class="btn btn-ghost btn-lg" data-zh="看看它是怎么运作的 →">See how it works →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="wrap footer-inner">
+    <div style="display:flex; flex-direction:column; gap:7px;">
+      <span class="brand" style="font-size:17px;"><span class="glyph" style="width:26px;height:26px;font-size:15px;"><i class="g-char">同</i></span><span data-zh="同舟 Tandem">Tandem <span class="zh">同舟</span></span></span>
+      <span class="tagline" data-zh="值得信任的节奏，看得见的进度。">Structure you can trust. Progress you can see.</span>
+    </div>
+    <nav class="footer-nav">
+      <a href="parents.html" data-zh="家长">Parents</a>
+      <a href="students.html" data-zh="学生">Students</a>
+      <a href="trust.html" data-zh="运作原理">How it works</a>
+      <a href="trust.html" data-zh="联系／候补名单">Contact</a>
+    </nav>
+  </div>
+</footer>
+
+<script src="site.js"></script>
+</body>
+</html>

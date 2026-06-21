@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>For Parents · Tandem 同舟</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Hanken+Grotesk:wght@400;500;600;700&family=Noto+Serif+SC:wght@500;600&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="index.html" style="white-space:nowrap;">
+      <span class="glyph"><i class="g-char">同</i></span>
+      <span data-zh="同舟 Tandem">Tandem <span class="zh">同舟</span></span>
+    </a>
+    <div class="nav-links">
+      <a href="parents.html" class="active" data-zh="家长">Parents</a>
+      <a href="students.html" data-zh="学生">Students</a>
+      <a href="trust.html" data-zh="运作原理">How it works</a>
+    </div>
+    <div class="nav-right">
+      <div class="lang-pill">
+        <button data-lang="en" class="on">EN</button>
+        <button data-lang="zh">中文</button>
+      </div>
+      <a href="#cta" class="btn btn-ink" data-zh="加入试点">Join the pilot</a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<header class="section" style="padding-bottom: clamp(40px,5vw,64px);">
+  <div class="wrap">
+    <div style="display:grid; grid-template-columns: 1fr 0.92fr; gap: 52px; align-items:center;">
+      <div class="kicker-row">
+        <span class="eyebrow" data-zh="致家长">For parents</span>
+        <h1 class="display" data-zh="别再天天催了，孩子的进度一眼就能看到。">Stop nagging. <br>Start seeing.</h1>
+        <p class="lead" style="max-width:520px;" data-zh="你花的钱，买的是安心——可现在心里还是没底吧？每周都能清楚看到孩子走到哪一步，不用盯、不用偷看，也不用再当那个天天唠叨的「坏人」。">You're paying for peace of mind — so why are you still flying blind? See exactly where your child stands each week, without spying, and without being the bad guy.</p>
+        <div style="display:flex; gap:14px; flex-wrap:wrap; margin-top:4px;">
+          <a href="#cta" class="btn btn-primary btn-lg" data-zh="先看一次每周报告 →">See a weekly report →</a>
+          <a href="#pricing" class="btn btn-ghost btn-lg" data-zh="看价格">See pricing</a>
+        </div>
+        <div class="trust-strip" style="margin-top:14px;">
+          <span class="item"><span class="dot"></span><span data-zh="只看概要，不看文书">Summary only — never their essays</span></span>
+          <span class="item"><span class="dot"></span><span data-zh="$8,999 机构的一个零头">A fraction of $8,999</span></span>
+        </div>
+      </div>
+
+      <!-- summary dashboard mock -->
+      <div class="mock">
+        <div class="mock-bar"><span class="tl"></span><span class="tl"></span><span class="tl"></span><span class="title" data-zh="家长看板 · 每周概要">Parent dashboard · weekly summary</span></div>
+        <div class="mock-body">
+          <div class="statline">
+            <span style="font-weight:600;" data-zh="本周整体">Overall this week</span>
+            <span class="pill-status pill-ok" data-zh="进度正常">On track</span>
+          </div>
+          <div style="padding:12px 0; border-top:1px solid var(--line);">
+            <div style="font-size:12px; color:var(--muted); margin-bottom:9px; font-weight:600; letter-spacing:0.04em;" data-zh="关键节点">MILESTONES</div>
+            <div class="statline" style="border:none; padding:6px 0;"><span style="font-size:13px;" data-zh="选校名单">School list</span><span style="width:120px;"><span class="bar"><i style="width:100%"></i></span></span></div>
+            <div class="statline" style="border:none; padding:6px 0;"><span style="font-size:13px;" data-zh="文书草稿">Essay drafts</span><span style="width:120px;"><span class="bar"><i style="width:55%"></i></span></span></div>
+            <div class="statline" style="border:none; padding:6px 0;"><span style="font-size:13px;" data-zh="截止日期">Deadlines</span><span class="pill-status pill-warn" data-zh="1 个临近">1 soon</span></div>
+          </div>
+          <div style="padding:12px; background:var(--clay-tint); border:1px solid var(--clay-soft); border-radius:10px;">
+            <div style="font-size:12px; font-weight:700; color:var(--clay-deep); margin-bottom:4px;" data-zh="这周你能帮上的一件事">ONE WAY TO HELP THIS WEEK</div>
+            <div style="font-size:14px;" data-zh="周日一起过一遍选校名单——只聊方向，不碰文书。">Sun: review the school list together — direction only, no essays.</div>
+          </div>
+          <div style="margin-top:12px; display:flex; gap:8px; align-items:center;">
+            <span class="redact-tag" data-zh="🔒 文书与笔记已隐藏">🔒 Essays & notes hidden</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- RELATIONSHIP ANGLE -->
+<section class="section-sm">
+  <div class="wrap">
+    <div class="card" style="background:var(--ink); color:var(--paper); border:none; padding: clamp(32px,5vw,56px); text-align:center;">
+      <span class="eyebrow center" style="color:#e8a585;" data-zh="情感内核">The relationship</span>
+      <h2 class="h-lg" style="color:var(--paper); max-width:760px; margin:16px auto 0;" data-zh="催进度的事交给系统，你只管当好爸妈。">Let the system do the nagging. You go back to being a parent.</h2>
+      <p class="lead" style="color:rgba(251,248,242,0.74); max-width:660px; margin:14px auto 0;" data-zh="提醒、截止日期、「写完了没」——这些话都让系统去念叨，而不用你每天在饭桌上开口。压力让系统来扛，亲子关系还给你们。">Every reminder, every deadline check, every "did you finish?" is handled by the copilot — not by you at the dinner table. The pressure comes from the system, so the relationship stays yours.</p>
+    </div>
+  </div>
+</section>
+
+<!-- WHAT YOU SEE / DON'T -->
+<section class="section-sm">
+  <div class="wrap">
+    <div class="center kicker-row" style="margin-bottom:30px;">
+      <span class="eyebrow center" data-zh="透明，但有边界">Transparent, with boundaries</span>
+      <h2 class="h-lg" data-zh="哪些你看得到，哪些看不到。">What you see — and what you don't.</h2>
+    </div>
+    <div class="seedont">
+      <div class="panel see">
+        <h4><span class="ico"><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd"></path></svg></span><span data-zh="你能看到">You see</span></h4>
+        <ul>
+          <li><span data-zh="整体进度（按时／落后）">On-track / behind status</span></li>
+          <li><span data-zh="关键节点（选校、文书、截止日期）">Milestone progress — school list, essay drafts, deadlines</span></li>
+          <li><span data-zh="这周可以怎么搭把手">One concrete way to help this week</span></li>
+        </ul>
+      </div>
+      <div class="panel dont">
+        <h4><span class="ico"><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z"></path></svg></span><span data-zh="你看不到">You don't see</span></h4>
+        <ul>
+          <li><span data-zh="孩子的文书">Their essays</span></li>
+          <li><span data-zh="孩子的私人笔记">Their private notes</span></li>
+          <li><span data-zh="孩子的每一步操作">Their every click</span></li>
+        </ul>
+        <p class="muted" style="font-size:16px; line-height:1.5; margin:18px 0 0;" data-zh="为什么：我们会给孩子留出空间——因为越盯越反，信任才是让他一直走下去的动力。">Why: we respect your child's space — surveillance backfires, and trust is what keeps them moving.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- COMPARISON -->
+<section class="section-sm">
+  <div class="wrap">
+    <div class="center kicker-row" style="margin-bottom:30px;">
+      <span class="eyebrow center" data-zh="对比">The comparison</span>
+      <h2 class="h-lg" data-zh="为什么它胜过 $8,999 的机构。">Why this beats an $8,999 agency.</h2>
+    </div>
+    <div class="compare">
+      <div class="compare-row header">
+        <div class="compare-cell label" data-zh=" "></div>
+        <div class="compare-cell head them" data-zh="传统尔湾机构">Traditional Irvine agency</div>
+        <div class="compare-cell head us"><span class="us-badge"><span class="checkpoint"><span class="ring" style="width:18px;height:18px;font-size:9px;">✓</span></span><span data-zh="同舟 Tandem">Tandem 同舟</span></span></div>
+      </div>
+      <div class="compare-row">
+        <div class="compare-cell label" data-zh="价格">Price</div>
+        <div class="compare-cell them" data-zh="一个申请季要价约 $8,999">~$8,999 per cycle</div>
+        <div class="compare-cell us" data-zh="只是一个零头">A fraction of the cost</div>
+      </div>
+      <div class="compare-row">
+        <div class="compare-cell label" data-zh="透明度">Transparency</div>
+        <div class="compare-cell them" data-zh="过程不透明">Opaque</div>
+        <div class="compare-cell us" data-zh="每周进度透明">Transparent weekly progress</div>
+      </div>
+      <div class="compare-row">
+        <div class="compare-cell label" data-zh="节奏">Pace</div>
+        <div class="compare-cell them" data-zh="所有人一个节奏">One pace for everyone</div>
+        <div class="compare-cell us" data-zh="因材施教，迁就你的孩子">Adapts to your child</div>
+      </div>
+      <div class="compare-row">
+        <div class="compare-cell label" data-zh="持续性">Continuity</div>
+        <div class="compare-cell them" data-zh="申请季结束就没了">Gone when the season ends</div>
+        <div class="compare-cell us" data-zh="长期陪跑">Continuous</div>
+      </div>
+      <div class="compare-row">
+        <div class="compare-cell label" data-zh="真人">Humans</div>
+        <div class="compare-cell them" data-zh="贵，且有限">Expensive, limited</div>
+        <div class="compare-cell us" data-zh="文书与面试仍由真人把关">Kept for essays & interviews</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section class="section" id="pricing">
+  <div class="wrap">
+    <div class="center kicker-row" style="margin-bottom:14px;">
+      <span class="eyebrow center" data-zh="价格">Pricing</span>
+      <h2 class="h-lg" data-zh="只是 $8,999 机构的一个零头。">A fraction of an $8,999 agency.</h2>
+      <p class="lead" style="max-width:620px; margin:0 auto;" data-zh="只有真正需要真人的时候，你才花这份钱。">Because software runs the repeatable work — you only pay for human time when it actually matters.</p>
+    </div>
+
+    <div class="center" style="margin:22px 0 34px;">
+      <div class="price-anchor">
+        <span class="muted" style="font-size:15px;" data-zh="尔湾机构均价">Irvine agency avg</span>
+        <span class="strike">$8,999</span>
+        <span class="muted" style="font-size:15px;" data-zh="／一个申请季">/ one cycle</span>
+      </div>
+    </div>
+
+    <div class="rising-caption">
+      <span class="seg"><span>Cadence</span> <span class="cjk">拾阶</span></span>
+      <span class="arrow">→</span>
+      <span class="seg"><span>Stride</span> <span class="cjk">致远</span></span>
+      <span class="arrow">→</span>
+      <span class="seg"><span>Lodestar</span> <span class="cjk">北辰</span></span>
+    </div>
+
+    <div class="pricing rising">
+      <div class="tier">
+        <span class="tier-step" data-zh="第一阶">Step one</span>
+        <div class="tier-poetic">Cadence <span class="cjk">拾阶</span></div>
+        <div class="tier-label" data-zh="规划核心">the planning core</div>
+        <div class="tier-price" style="margin-top:6px;">$39<small data-zh="／月">/mo</small></div>
+        <p class="tier-desc" data-zh="AI 规划、日历、每周进度、家长看板。一阶一阶，稳稳往上走。随时取消。">AI planning, calendar, weekly progress, sponsor dashboard. Step by step, every week. Cancel anytime.</p>
+        <ul>
+          <li><span data-zh="AI 周计划与日历">AI weekly planning & calendar</span></li>
+          <li><span data-zh="每周进度报告">Weekly progress reports</span></li>
+          <li><span data-zh="家长看板">Parent dashboard</span></li>
+        </ul>
+        <a href="#cta" class="btn btn-ghost btn-block" style="margin-top:auto;" data-zh="从拾阶开始">Start with Cadence</a>
+      </div>
+
+      <div class="tier featured" data-badge="Best for the season">
+        <span class="tier-step" data-zh="第二阶">Step two</span>
+        <div class="tier-poetic">Stride <span class="cjk">致远</span></div>
+        <div class="tier-label" data-zh="完整申请季">the full application season</div>
+        <div class="tier-price" style="margin-top:6px;">$33<small data-zh="／月">/mo</small></div>
+        <div class="tier-note" data-zh="按整季 $398 一次付清">$398 once, for the full season</div>
+        <p class="tier-desc" data-zh="整个申请季都帮你安排好：选校策略、关键节点、截止日期、进度跟踪——一路陪你走到提交那一刻。">The complete season workflow: strategy, milestones, deadlines, accountability — carries you all the way to submit.</p>
+        <ul>
+          <li><span data-zh="包含拾阶全部">Everything in Cadence</span></li>
+          <li><span data-zh="完整申请季策略与责任闭环">Full season strategy & accountability</span></li>
+          <li><span data-zh="可加购真人导师一对一">Add optional 1-on-1 advisor meetings</span></li>
+        </ul>
+        <a href="#cta" class="btn btn-primary btn-block" style="margin-top:auto;" data-zh="选择致远">Choose Stride</a>
+      </div>
+
+      <div class="tier">
+        <span class="tier-step" data-zh="第三阶">Step three</span>
+        <div class="tier-poetic">Lodestar <span class="cjk">北辰</span></div>
+        <div class="tier-label" data-zh="真人导师同行">with a real advisor</div>
+        <div class="tier-price" style="margin-top:6px;">$2,688</div>
+        <p class="tier-desc" data-zh="以上全部都包含，每个重要节点都有真人导师一对一把关（文书、面试、关键时刻）。">Everything above, plus expert advisor meetings at every major milestone — essays, interviews, and the moments that matter.</p>
+        <ul>
+          <li><span data-zh="包含致远全部">Everything in Stride</span></li>
+          <li><span data-zh="每个关键节点都有真人导师把关">Expert meetings at every major milestone</span></li>
+          <li><span data-zh="可另行加购更多会议">Extra meetings purchasable</span></li>
+        </ul>
+        <a href="#cta" class="btn btn-ghost btn-block" style="margin-top:auto;" data-zh="加入北辰">Add Lodestar</a>
+      </div>
+    </div>
+    <p class="center muted" style="font-size:13.5px; margin-top:28px;" data-zh="视觉上始终对标 $8,999——就算最高的北辰，也才一个中介申请季的三分之一左右，还管整整一年。">Anchored against $8,999 — even Lodestar is ~⅓ of one agency cycle, and it covers a full year.</p>
+  </div>
+</section>
+
+<!-- HONESTY -->
+<section class="section-sm">
+  <div class="wrap-narrow center">
+    <span class="eyebrow center" data-zh="坦诚">Honesty</span>
+    <h2 class="h-md" style="margin:14px 0 12px;" data-zh="我们不会把话说满。">We won't oversell you.</h2>
+    <p class="lead" data-zh="规划和盯进度交给 AI，文书和面试交给真人。我们不会假装机器能取代人的判断——也会老实告诉你，哪些已经做好了，哪些还在做。">AI handles planning and accountability. Real people handle essays and interviews. We will never pretend a machine replaces judgment — and we'll always tell you what's built and what's coming.</p>
+  </div>
+</section>
+
+<!-- FOUNDER -->
+<section class="section-sm">
+  <div class="wrap-narrow">
+    <div class="card founder">
+      <div class="ph" data-zh="创始人照片（待定）">Founder photo<br>[[to add]]</div>
+      <div>
+        <span class="eyebrow" data-zh="创始人">The founder</span>
+        <h3 class="h-md" style="margin:12px 0 10px;" data-zh="做这件事的人，自己刚走过这条路，也最懂你们。">Built by someone who just did this — and who knows families like yours.</h3>
+        <p class="muted" data-zh="创始人：刚经历过申请季的过来人 + 软件工程师 · UCI／哥大人脉 · 来自最懂这份焦虑的移民家庭。">[[Founder: a recent applicant + software builder · UCI/Columbia network · roots in immigrant families who've felt this exact pressure.]]</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="section-sm">
+  <div class="wrap-narrow">
+    <div class="center kicker-row" style="margin-bottom:18px;">
+      <span class="eyebrow center" data-zh="常见问题">Parent FAQ</span>
+      <h2 class="h-lg" data-zh="家长常见问题">Questions parents ask</h2>
+    </div>
+    <div class="faq-item">
+      <p class="q" data-zh="这是不是就是个聊天机器人？">Is this just a chatbot?</p>
+      <p class="a" data-zh="不是。它是一套会帮你规划、排期、盯进度的系统，聊天只是其中很小的一块。">No — it's a system that plans, schedules, and tracks real progress. The chat is the smallest part.</p>
+    </div>
+    <div class="faq-item">
+      <p class="q" data-zh="它会监控我的孩子吗？">Is it spying on my kid?</p>
+      <p class="a" data-zh="不会。你看到的只是进度概要；孩子的文书和私人笔记，不会给任何人看。">No. You see summary progress only. Essays and private notes are never shared.</p>
+    </div>
+    <div class="faq-item">
+      <p class="q" data-zh="它会取代升学顾问吗？">Will it replace our school counselor or consultant?</p>
+      <p class="a" data-zh="不会。重复性的盯进度交给它，真正需要判断的环节，还是真人来做。">No. It runs the repetitive accountability work; humans stay for judgment.</p>
+    </div>
+    <div class="faq-item">
+      <p class="q" data-zh="怎么收费？">How does billing work?</p>
+      <p class="a" data-zh="拾阶（$39/月）随时能退订——想停就停，已经扣掉的那个月不退，但那个月你照常能用。致远（约合 $33/月、按整季 $398 一次付清）和北辰（$2,688）是一次性付清、不退款的——所以我们把入门价压得很低，建议你先用拾阶试试水。">Cadence ($39/mo) is cancel-anytime — stop whenever you like; a month already charged isn't refunded, and you keep access through that month. Stride (~$33/mo, billed as $398 once for the season) and Lodestar ($2,688) are one-time upfront charges and are non-refundable — so we keep the entry price low and let you try Cadence first.</p>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="section" id="cta">
+  <div class="wrap">
+    <div class="cta-band">
+      <span class="eyebrow center" style="color:#e8a585;" data-zh="加入试点">Join the pilot</span>
+      <h2 class="h-xl" style="margin:16px auto 0; max-width:640px;" data-zh="先看一次每周进度报告。">See your first weekly report.</h2>
+      <p class="lead" style="margin:14px auto 26px; max-width:520px;" data-zh="加入试点，看看每周进度报告长什么样。">Join the pilot and see exactly what a weekly progress report looks like.</p>
+      <div style="display:flex; gap:14px; justify-content:center; flex-wrap:wrap;">
+        <a href="#" class="btn btn-primary btn-lg" data-zh="加入试点">Join the pilot</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="wrap footer-inner">
+    <div style="display:flex; flex-direction:column; gap:7px;">
+      <span class="brand" style="font-size:17px;"><span class="glyph" style="width:26px;height:26px;font-size:15px;"><i class="g-char">同</i></span><span data-zh="同舟 Tandem">Tandem <span class="zh">同舟</span></span></span>
+      <span class="tagline" data-zh="值得信任的节奏，看得见的进度。">Structure you can trust. Progress you can see.</span>
+    </div>
+    <nav class="footer-nav">
+      <a href="parents.html" data-zh="家长">Parents</a>
+      <a href="students.html" data-zh="学生">Students</a>
+      <a href="trust.html" data-zh="运作原理">How it works</a>
+      <a href="trust.html" data-zh="联系／候补名单">Contact</a>
+    </nav>
+  </div>
+</footer>
+
+<script src="site.js"></script>
+</body>
+</html>

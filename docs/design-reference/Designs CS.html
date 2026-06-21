@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Loop — Designs (CS interview-prep scheduler)</title>
+<meta name="viewport" content="width=1480" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Hanken+Grotesk:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="design-loop/app.css" />
+<style>body{margin:0;background:#f0eee9;}</style>
+</head>
+<body>
+
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="design-loop/onboarding.jsx"></script>
+<script type="text/babel" src="design-loop/calendar.jsx"></script>
+<script type="text/babel" src="design-loop/schedule.jsx"></script>
+<script type="text/babel" src="design-loop/agent.jsx"></script>
+<script type="text/babel" src="design-loop/generation.jsx"></script>
+<script type="text/babel" src="design-loop/accountability.jsx"></script>
+
+<script type="text/babel">
+  function App() {
+    const { DesignCanvas, DCSection, DCArtboard, DCPostIt } = window;
+    const W = 1440, H = 900;
+    return (
+      <DesignCanvas>
+        <DCSection id="cs-intro" title="Loop · Product Designs" subtitle="hi-fi · 1440×900 · CS interview-prep & job-search scheduler · click ⤢ to focus">
+          <DCPostIt>
+            <b>CS job-app base.</b><br/><br/>
+            The interview-prep product, formalized from the v2 wireframes — résumé parse, DSA &amp; system-design prep, recruiting pipeline.<br/><br/>
+            <b>Onboarding</b> — deterministic wizard; AI only when reading your résumé.<br/><br/>
+            <b>Review schedule</b> — gcal-style time grid. Drag proposed blocks; imported gcal events are locked.<br/><br/>
+            <b>Calendar</b> — week grid + day rail. Google Calendar owns scheduling.<br/><br/>
+            <b>Agent</b> — docked rail, never a floating pill. Approvals → thread → composer.<br/><br/>
+            <b>Generation · approval · failure</b> (T1) — pipeline narration, the write gate + verification, typed reason_codes.<br/><br/>
+            <b>Check-in · accountability</b> (T2) — telemetry, drift/nudges, replan, 12-week horizon, version diff.<br/><br/>
+            State grammar:<br/>
+            • <b>dashed clay</b> = proposed<br/>
+            • <b>white card</b> = accepted (on gcal)<br/>
+            • <b>ink fill / struck</b> = done<br/><br/>
+            <b>Loop</b> is a placeholder name — rename freely.
+          </DCPostIt>
+        </DCSection>
+
+        <DCSection id="cs-onboarding" title="01 · Onboarding" subtitle="deterministic wizard · one AI step (résumé parse) · four screens from the flow">
+          <DCArtboard id="ob-goal" label="Goal &amp; intensity · deterministic" width={W} height={H}>
+            <window.OnbGoal />
+          </DCArtboard>
+          <DCArtboard id="ob-deadline" label="Deadline · deterministic" width={W} height={H}>
+            <window.OnbDeadline />
+          </DCArtboard>
+          <DCArtboard id="ob-budget" label="Time budget &amp; constraints · deterministic" width={W} height={H}>
+            <window.OnbBudget />
+          </DCArtboard>
+          <DCArtboard id="ob-skills" label="Skills &amp; cadence · deterministic" width={W} height={H}>
+            <window.OnbSkills />
+          </DCArtboard>
+          <DCArtboard id="ob-resume" label="Résumé parse · AI step (centerpiece)" width={W} height={H}>
+            <window.OnbResume />
+          </DCArtboard>
+          <DCArtboard id="ob-connect" label="Connect Google Calendar · step 7 + edge states" width={W} height={H}>
+            <window.OnbConnect />
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="cs-schedule" title="02 · Review proposed schedule" subtitle="after the agent proposes · gcal-style time grid · drag the dashed blocks to reschedule · imported gcal events are locked & translucent · open in focus (⤢) to drag">
+          <DCArtboard id="sch-main" label="Drag-to-confirm week · proposed (draggable) + imported gcal (locked)" width={W} height={H}>
+            <window.ScheduleReview />
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="cs-calendar" title="03 · Calendar" subtitle="week grid + day rail + recruiting pipeline · accept → writes to gcal · done → logs telemetry">
+          <DCArtboard id="cal-main" label="Week grid + day rail" width={W} height={H}>
+            <window.CalendarScreen />
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="cs-agent" title="04 · Agent" subtitle="docked rail · approvals on top, thread in the middle, composer + trust strip at the bottom">
+          <DCArtboard id="ag-main" label="Sidebar dock (week + dock)" width={W} height={H}>
+            <window.AgentScreen />
+          </DCArtboard>
+          <DCArtboard id="ag-map" label="Capability map (AI vs deterministic)" width={W} height={H}>
+            <window.CapabilityMap />
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="cs-generation" title="05 · Generation, approval &amp; failure" subtitle="Tier 1 · the propose→write path made safe · in-progress narration, the approval gate + post-write verification, and the typed reason_code failure pattern">
+          <DCArtboard id="gen-progress" label="Generation in-progress · animated pipeline (live)" width={W} height={H}>
+            <window.GenerationProgress />
+          </DCArtboard>
+          <DCArtboard id="gen-approval" label="Approval gate + verification + rollback · click “Review &amp; write”" width={W} height={H}>
+            <window.ApprovalGate />
+          </DCArtboard>
+          <DCArtboard id="gen-failure" label="Failure / recovery · typed reason_codes (reusable pattern)" width={W} height={H}>
+            <window.FailureGallery />
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="cs-accountability" title="06 · Check-in &amp; accountability" subtitle="Tier 2 · the steady-state loop · check-in telemetry, drift/nudges/recommitment, replan choice, multi-week horizon, version diff">
+          <DCArtboard id="acc-checkin" label="Check-in loop · Complete / Missed → consequence (interactive)" width={W} height={H}>
+            <window.CheckInDemo />
+          </DCArtboard>
+          <DCArtboard id="acc-drift" label="Drift · nudges · weekly check-in · recommitment (switch status)" width={W} height={H}>
+            <window.DriftSurfaces />
+          </DCArtboard>
+          <DCArtboard id="acc-replan" label="Replan · recovery mode (compress / extend / drop)" width={W} height={H}>
+            <window.ReplanChoice />
+          </DCArtboard>
+          <DCArtboard id="acc-horizon" label="Multi-week navigation · 12-week horizon" width={W} height={H}>
+            <window.MultiWeekNav />
+          </DCArtboard>
+          <DCArtboard id="acc-diff" label="Plan version diff · v3 → v4 (Tier 3)" width={W} height={H}>
+            <window.PlanDiff />
+          </DCArtboard>
+        </DCSection>
+      </DesignCanvas>
+    );
+  }
+
+  function tryMount() {
+    if (!window.DesignCanvas || !window.OnbGoal || !window.CalendarScreen || !window.AgentScreen || !window.CapabilityMap || !window.ScheduleReview || !window.GenerationProgress || !window.CheckInDemo || !window.OnbConnect) {
+      return setTimeout(tryMount, 60);
+    }
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  }
+  tryMount();
+</script>
+</body>
+</html>

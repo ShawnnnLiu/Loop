@@ -182,16 +182,26 @@ schedule. Plan-level (D-7); entire horizon (D-8).
    lifecycle transition; either way it must not skip the approval gate. Flag
    axiom 02 if a new signal is added.
 
-### D-C · Confirm full-horizon, plan-level write (implements D-7, D-8)
+### D-C · Confirm full-horizon, plan-level write (implements D-7, D-8) — ✅ DONE
 
-No new logic expected — this is a guard-and-document task.
+No new logic — a guard-and-document task. Confirmed:
 
-1. Confirm `propose` defaults to the full timeline horizon and the scheduler
-   places the whole plan (it does today: `horizon_days = timeline_weeks * 7`).
-2. Confirm `approve`/`write` operate on the whole draft as one unit (they do).
-3. Add a test that locks this in: a multi-week plan proposes a draft spanning
-   the full horizon, and a single approve→write writes every entry — guarding
-   against a future regression toward per-week slicing.
+1. `propose` defaults to the full timeline horizon and the scheduler places the
+   whole plan: `propose` sets `horizon_days = timeline_weeks * 7` when no
+   explicit horizon is given (`app/cycle.py`), and the docstring records that the
+   Phase 1 scheduler places the WHOLE plan inside the horizon.
+2. `approve`/`write` operate on the whole draft as one unit — there is no
+   per-week or per-block slicing in the approve/write path.
+3. Locked in by `tests/app/test_cycle.py::
+   test_multi_week_plan_writes_full_horizon_in_single_approval`: a profile with
+   one Monday deep-work window + a 120-min daily cap forces the dependent task
+   into the following week (draft spans ≥2 ISO weeks), and a single
+   approve → write writes/verifies **every** entry — guarding against a future
+   regression toward per-week slicing.
+
+**Per-week / selective-week approval is intentionally not offered** (D-8);
+drag-to-adjust (D-B) gives per-block control *before* the single plan-level
+approval (D-7).
 
 ### D-D · "Why this block" reuses UserFacingExplanation (implements D-9)
 

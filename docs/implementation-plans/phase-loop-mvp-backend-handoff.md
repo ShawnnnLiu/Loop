@@ -9,8 +9,8 @@ gotchas learned while building D-B**. Read the plan first, then this.
 | Item | State |
 |---|---|
 | **D-B · Drag-to-adjust** | ✅ **DONE**, `make check` green. **Uncommitted.** |
-| **D-A · Résumé → Strategist** | ✅ **DONE**, `make check` green (2435 tests). **Uncommitted.** |
-| **D-C · Full-horizon / plan-level lock test** | ⬜ Not started (mostly a regression test). |
+| **D-A · Résumé → Strategist** | ✅ **DONE** + committed. |
+| **D-C · Full-horizon / plan-level lock test** | ✅ **DONE** (regression test). **Uncommitted.** |
 | **D-D · "Why" reuses UserFacingExplanation** | ✅ No build — documented in the plan; do not add a node. |
 
 Everything is **uncommitted** in the working tree. Nothing has been committed or

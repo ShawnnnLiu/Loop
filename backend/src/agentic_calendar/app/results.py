@@ -9,12 +9,19 @@ deterministic fields are always sufficient to act on without reading them.
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from pydantic import BaseModel, ConfigDict, Field
 
+from agentic_calendar.contracts.accountability_intervention import InterventionDecision
+from agentic_calendar.contracts.accountability_state import AccountabilityState
 from agentic_calendar.contracts.checkin_event import RecoveryAction
+from agentic_calendar.contracts.draft_schedule import DraftSchedule
 from agentic_calendar.contracts.drift_event import DriftEvent
 from agentic_calendar.contracts.reason_codes import ReasonCode
 from agentic_calendar.contracts.scheduler_output import RepairOption, UnscheduledTask
+from agentic_calendar.contracts.threshold_change_log import ThresholdChange
+from agentic_calendar.contracts.user_profile import UserProfile
 from agentic_calendar.llm_nodes.reflection_summary import ReflectionSummary
 from agentic_calendar.llm_nodes.user_facing_explanation import UserExplanation
 from agentic_calendar.supervisor.state import SupervisorState
@@ -179,3 +186,99 @@ class StatusResult(BaseModel):
     telemetry_event_count: int = 0
     nudge_count: int = 0
     checkin_count: int = 0
+
+
+# --------------------------------------------------------------------------- #
+# Read-projection results (F-A): JSON the SPA renders from. Like StatusResult,
+# these are app-layer view models — NOT schema-exported contracts — and reuse
+# the registered contracts (DraftSchedule, UserProfile, …) for anything
+# structured. Times stay as tz-aware datetimes (``model_dump(mode="json")``
+# serializes them to ISO-8601); the client localizes them.
+# --------------------------------------------------------------------------- #
+
+
+class DraftView(BaseModel):
+    """The pending draft the review/approval screens render, with the canonical
+    hash the user approves and the imported busy windows the grid draws as
+    fixed. ``free_busy`` is supplied by the web layer (it needs the per-user
+    calendar credential); empty when the calendar can't be read."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    draft: DraftSchedule | None = None
+    payload_hash: str | None = None
+    hash_canonicalization_version: str
+    free_busy: list[dict[str, str]] = Field(default_factory=list)
+
+
+class TodayTask(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    task_id: str
+    title: str
+    category: str
+    required_focus_level: str
+    start: datetime
+    end: datetime
+    due: bool
+    """True once the block has ended — only a due task can be checked in."""
+    reported: bool
+    """True once a telemetry event exists for the task (idempotency)."""
+
+
+class TodayResult(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    timezone: str | None = None
+    tasks: list[TodayTask] = Field(default_factory=list)
+
+
+class ThresholdFieldView(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    name: str
+    value: float | int | bool
+    status: str
+    """``default`` or ``overridden`` — serving truth vs. the code default."""
+
+
+class ThresholdSectionView(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    name: str
+    fields: list[ThresholdFieldView]
+
+
+class ThresholdsResult(BaseModel):
+    """The effective deterministic tuning the system serves + the append-only
+    change journal. Read-only (axiom 07): tuning changes only via tuning.toml."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    sections: list[ThresholdSectionView]
+    history: list[ThresholdChange]
+
+
+class MeResult(BaseModel):
+    """Identity + saved profile for the wizard's prefill / edit-later."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    user_id: str
+    onboarded: bool
+    timezone: str | None = None
+    email: str | None = None
+    profile: UserProfile | None = None
+
+
+class AccountabilityResult(BaseModel):
+    """The read-only accountability projection. Empty-state until a motivation
+    profile exists (axiom 21): ``has_motivation_profile`` is False and the
+    snapshot fields are ``None`` for a user who skipped that capture."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    has_motivation_profile: bool
+    checkin_status: str | None = None
+    state: AccountabilityState | None = None
+    decision: InterventionDecision | None = None

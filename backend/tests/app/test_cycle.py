@@ -1170,3 +1170,145 @@ def test_tuning_file_overrides_drift_thresholds_and_journals(tmp_path: Path) -> 
     assert entries[0].threshold_field == "duration_min_sample"
     assert entries[0].prior_value == 5
     assert entries[0].new_value == 1
+
+
+# --------------------------------------------------------------------------- #
+# K. Read projections + guarded check-in (F-A)
+# --------------------------------------------------------------------------- #
+
+
+def test_me_returns_profile_email_and_timezone() -> None:
+    service, _env, _clock = make_service()
+    me = service.me(USER_ID)
+    assert me.onboarded is True
+    assert me.timezone == "UTC"
+    assert me.profile is not None
+    assert me.profile.target_role == "Backend SWE"
+    # The in-memory dev build has no Google credential, so no email.
+    assert me.email is None
+
+
+def test_me_before_onboarding_is_empty() -> None:
+    service, _env, _clock = make_service(onboard=False)
+    me = service.me(USER_ID)
+    assert me.onboarded is False
+    assert me.profile is None
+    assert me.timezone is None
+
+
+def test_draft_view_exposes_pending_draft_and_canonical_hash() -> None:
+    service, env, _clock = make_service()
+    proposed = service.propose(USER_ID)
+    view = service.draft_view(USER_ID)
+    assert view.draft is not None
+    assert view.hash_canonicalization_version == HASH_CANONICALIZATION_VERSION
+    stored = env.state.get_draft(proposed.draft_schedule_id)
+    assert stored is not None
+    # The view's hash is the real canonical hash — exactly what propose surfaced
+    # for approval (axiom 06: the user approves against this datum).
+    assert view.payload_hash == canonical_payload_hash(stored, HASH_CANONICALIZATION_VERSION)
+    assert view.payload_hash == proposed.draft_payload_hash
+    assert {entry.task_id for entry in view.draft.entries} == set(PLAN_TASK_IDS)
+    # Dev build: free/busy is fetched server-side and unavailable here, so empty
+    # — never a client-supplied list.
+    assert view.free_busy == []
+
+
+def test_draft_view_without_a_run_is_empty() -> None:
+    service, _env, _clock = make_service()
+    view = service.draft_view(USER_ID)
+    assert view.draft is None
+    assert view.payload_hash is None
+    assert view.hash_canonicalization_version == HASH_CANONICALIZATION_VERSION
+
+
+def test_today_lists_tasks_with_due_and_reported_flags() -> None:
+    service, env, clock = make_service()
+    proposed = _activate_plan(service)
+    today = service.today(USER_ID)
+    assert today.timezone == "UTC"
+    assert {row.task_id for row in today.tasks} == set(PLAN_TASK_IDS)
+    # Every block is in the future at HAPPY_NOW → not yet due, none reported.
+    assert all(row.due is False for row in today.tasks)
+    assert all(row.reported is False for row in today.tasks)
+    # Advance the clock past every block → all due now.
+    _advance_past_draft(env, clock, proposed.draft_schedule_id)
+    assert all(row.due is True for row in service.today(USER_ID).tasks)
+
+
+def test_today_without_active_plan_is_empty_but_keeps_timezone() -> None:
+    service, _env, _clock = make_service()
+    today = service.today(USER_ID)
+    assert today.tasks == []
+    assert today.timezone == "UTC"
+
+
+def test_thresholds_view_reports_effective_defaults() -> None:
+    service, _env, _clock = make_service()
+    view = service.thresholds_view()
+    assert view.sections  # the tunable registry is non-empty
+    # No tuning overrides applied → every served value equals the code default.
+    assert all(
+        field.status == "default" for section in view.sections for field in section.fields
+    )
+    assert view.history == []
+
+
+def test_accountability_view_empty_state_without_motivation_profile() -> None:
+    service, _env, _clock = make_service()  # motivation_profile defaults to None
+    view = service.accountability_view(USER_ID)
+    assert view.has_motivation_profile is False
+    assert view.state is None
+    assert view.decision is None
+    assert view.checkin_status is None
+
+
+def test_accountability_view_flags_motivation_profile_present() -> None:
+    service, _env, _clock = make_service(motivation_profile=_motivation_profile_payload())
+    view = service.accountability_view(USER_ID)
+    assert view.has_motivation_profile is True
+
+
+def test_checkin_completed_records_telemetry() -> None:
+    service, env, clock = make_service()
+    proposed = _activate_plan(service)
+    _advance_past_draft(env, clock, proposed.draft_schedule_id)
+    result = service.checkin(USER_ID, "dp_001", completed=True)
+    assert result.ingested_count == 1
+    stored = env.telemetry_store.list_for_task("dp_001")
+    assert len(stored) == 1
+    assert stored[0].completed is True
+
+
+def test_checkin_missed_records_incomplete_telemetry() -> None:
+    service, env, clock = make_service()
+    proposed = _activate_plan(service)
+    _advance_past_draft(env, clock, proposed.draft_schedule_id)
+    service.checkin(USER_ID, "dp_001", completed=False)
+    stored = env.telemetry_store.list_for_task("dp_001")
+    assert len(stored) == 1
+    assert stored[0].completed is False
+
+
+def test_checkin_rejects_task_not_yet_due() -> None:
+    service, _env, _clock = make_service()
+    _activate_plan(service)  # blocks are still in the future at HAPPY_NOW
+    with pytest.raises(CycleError, match="not yet due"):
+        service.checkin(USER_ID, "dp_001", completed=True)
+
+
+def test_checkin_rejects_unknown_task() -> None:
+    service, env, clock = make_service()
+    proposed = _activate_plan(service)
+    _advance_past_draft(env, clock, proposed.draft_schedule_id)
+    with pytest.raises(CycleError, match="not in the active schedule"):
+        service.checkin(USER_ID, "ghost_999", completed=True)
+
+
+def test_checkin_rejects_double_submit() -> None:
+    service, env, clock = make_service()
+    proposed = _activate_plan(service)
+    _advance_past_draft(env, clock, proposed.draft_schedule_id)
+    service.checkin(USER_ID, "dp_001", completed=True)
+    with pytest.raises(CycleError, match="already been reported"):
+        service.checkin(USER_ID, "dp_001", completed=True)

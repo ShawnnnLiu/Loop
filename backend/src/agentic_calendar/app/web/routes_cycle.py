@@ -19,7 +19,7 @@ session-derived (Increment 3).
 
 from __future__ import annotations
 
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Body, Depends, Request
 from fastapi.responses import JSONResponse
@@ -68,6 +68,13 @@ class AdjustRequest(BaseModel):
 
     adjustments: list[DraftAdjustment]
     run_id: str | None = None
+
+
+class CheckinRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    task_id: str
+    outcome: Literal["complete", "missed"]
 
 
 def _json(result: BaseModel) -> JSONResponse:
@@ -197,3 +204,43 @@ def ingest(
 @router.get("/status")
 def status(service: Service, user_id: ActingUser) -> JSONResponse:
     return _json(service.status(user_id))
+
+
+# --------------------------------------------------------------------------- #
+# Read projections (F-A): JSON the SPA renders from. Each is a thin wrapper over
+# a side-effect-free ``CycleService`` projection; the acting user is always
+# session-derived. ``/checkin`` is the one mutation — its guard lives in the
+# service, so the SPA cannot double-count or report a non-due / foreign task.
+# --------------------------------------------------------------------------- #
+
+
+@router.get("/draft")
+def draft(request: Request, service: Service, user_id: ActingUser) -> JSONResponse:
+    # Free/busy is fetched server-side so the grid's "fixed" events are the real
+    # calendar, never a client-supplied list (same helper /api/adjust uses).
+    return _json(service.draft_view(user_id, free_busy=_adjust_free_busy(request, user_id)))
+
+
+@router.get("/today")
+def today(service: Service, user_id: ActingUser) -> JSONResponse:
+    return _json(service.today(user_id))
+
+
+@router.get("/accountability")
+def accountability(service: Service, user_id: ActingUser) -> JSONResponse:
+    return _json(service.accountability_view(user_id))
+
+
+@router.get("/thresholds")
+def thresholds(service: Service, user_id: ActingUser) -> JSONResponse:
+    return _json(service.thresholds_view())
+
+
+@router.get("/me")
+def me(service: Service, user_id: ActingUser) -> JSONResponse:
+    return _json(service.me(user_id))
+
+
+@router.post("/checkin")
+def checkin(service: Service, user_id: ActingUser, body: CheckinRequest) -> JSONResponse:
+    return _json(service.checkin(user_id, body.task_id, completed=body.outcome == "complete"))

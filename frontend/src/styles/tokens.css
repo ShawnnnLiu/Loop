@@ -542,6 +542,160 @@ select.input {
   }
 }
 
+.agent-mark {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--clay);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  flex: none;
+}
+
+/* ——— Schedule review grid ——— */
+.sched {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 66px); /* below the topbar */
+  min-height: 0;
+}
+.sched-banner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px clamp(16px, 4vw, 26px);
+  border-bottom: 1px solid var(--line);
+  background: var(--clay-tint);
+}
+.sched-scroll {
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+}
+.sched-head {
+  display: flex;
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  background: var(--paper);
+  z-index: 2;
+}
+.sched-head .gutter {
+  width: 52px;
+  flex: none;
+}
+.sched-head .dcol {
+  flex: 1;
+  text-align: center;
+  padding: 8px 0;
+}
+.sched-body {
+  display: flex;
+}
+.sched-gutter {
+  width: 52px;
+  flex: none;
+}
+.sched-gutter .hr {
+  height: 46px;
+  position: relative;
+}
+.sched-gutter .hr span {
+  position: absolute;
+  top: -7px;
+  right: 8px;
+  font-size: 10.5px;
+  color: var(--muted-2);
+  font-family: var(--mono);
+}
+.sched-cols {
+  flex: 1;
+  position: relative;
+}
+.sched-hline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--line);
+  pointer-events: none;
+}
+.sched-vline {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--line);
+  pointer-events: none;
+}
+.blk {
+  position: absolute;
+  border-radius: 7px;
+  padding: 4px 7px;
+  overflow: hidden;
+  font-size: 11.5px;
+  box-sizing: border-box;
+}
+.blk-busy {
+  background: repeating-linear-gradient(
+    135deg,
+    rgba(108, 120, 134, 0.16) 0 7px,
+    rgba(108, 120, 134, 0.07) 7px 14px
+  );
+  border: 1px solid rgba(108, 120, 134, 0.34);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+.blk-proposed {
+  background: var(--clay-tint);
+  border: 1.5px dashed var(--clay);
+  border-left: 3px solid var(--clay-deep);
+  color: var(--clay-deep);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.blk-proposed.dragging {
+  cursor: grabbing;
+  border-style: solid;
+  box-shadow: 0 10px 26px -6px rgba(157, 69, 39, 0.5);
+  z-index: 50;
+}
+.blk-proposed.bad {
+  border-color: #c0492f;
+  border-left-color: #c0492f;
+}
+.blk .bt {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.blk .bm {
+  font-family: var(--mono);
+  font-size: 10px;
+  opacity: 0.8;
+}
+.sched-legend {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px clamp(16px, 4vw, 26px);
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--muted);
+}
+.sw {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  border-radius: 3px;
+  margin-right: 6px;
+  vertical-align: -2px;
+}
+
 /* ——— Reason-code failure card ——— */
 .err-card {
   border: 1px solid #e3b7ab;

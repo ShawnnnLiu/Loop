@@ -1430,15 +1430,20 @@ class CycleService:
         run = env.state.latest_run_for_user(user_id)
         draft: DraftSchedule | None = None
         payload_hash: str | None = None
+        task_titles: dict[str, str] = {}
         if run is not None and run.draft_schedule_id is not None:
             draft = env.state.get_draft(run.draft_schedule_id)
             if draft is not None:
                 payload_hash = canonical_payload_hash(draft, HASH_CANONICALIZATION_VERSION)
+                plan = env.plan_store.get(user_id, draft.plan_version)
+                if plan is not None:
+                    task_titles = {task.task_id: task.title for task in plan.plan.tasks}
         return DraftView(
             draft=draft,
             payload_hash=payload_hash,
             hash_canonicalization_version=HASH_CANONICALIZATION_VERSION,
             free_busy=[dict(interval) for interval in (free_busy or [])],
+            task_titles=task_titles,
         )
 
     def today(self, user_id: str) -> TodayResult:

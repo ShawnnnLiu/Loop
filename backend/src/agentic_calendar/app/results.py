@@ -209,6 +209,9 @@ class DraftView(BaseModel):
     payload_hash: str | None = None
     hash_canonicalization_version: str
     free_busy: list[dict[str, str]] = Field(default_factory=list)
+    task_titles: dict[str, str] = Field(default_factory=dict)
+    """task_id -> title for the draft's plan version, so the grid can label
+    blocks (a draft entry carries only the task_id)."""
 
 
 class TodayTask(BaseModel):

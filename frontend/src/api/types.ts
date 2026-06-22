@@ -107,6 +107,57 @@ export interface StatusResult {
   approval_event_id: string | null
 }
 
+export interface DraftScheduleEntry {
+  task_id: string
+  start: string // ISO, tz-aware
+  end: string
+  calendar_event_status: string
+}
+
+export interface DraftSchedule {
+  draft_schedule_id: string
+  plan_version: string
+  entries: DraftScheduleEntry[]
+}
+
+export interface FreeBusyInterval {
+  start: string
+  end: string
+}
+
+export interface DraftView {
+  draft: DraftSchedule | null
+  payload_hash: string | null
+  hash_canonicalization_version: string
+  free_busy: FreeBusyInterval[]
+  task_titles: Record<string, string>
+}
+
+/** A single move sent to /api/adjust; the server derives `end` from the
+ *  original duration (a move can relocate a block but never resize it). */
+export interface DraftAdjustment {
+  task_id: string
+  start: string // ISO, tz-aware
+}
+
+export interface AdjustViolation {
+  task_id: string
+  reason_code: ReasonCode
+  detail: string
+}
+
+export interface AdjustResult {
+  run_id: string
+  state: string
+  applied: boolean
+  reason_code: ReasonCode | null
+  draft_schedule_id: string | null
+  draft_payload_hash: string | null
+  adjusted_task_ids: string[]
+  scheduled_task_count: number
+  violations: AdjustViolation[]
+}
+
 export interface TodayTask {
   task_id: string
   title: string

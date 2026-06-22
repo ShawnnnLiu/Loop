@@ -1209,6 +1209,10 @@ def test_draft_view_exposes_pending_draft_and_canonical_hash() -> None:
     assert view.payload_hash == canonical_payload_hash(stored, HASH_CANONICALIZATION_VERSION)
     assert view.payload_hash == proposed.draft_payload_hash
     assert {entry.task_id for entry in view.draft.entries} == set(PLAN_TASK_IDS)
+    # Titles are joined from the draft's plan version so the grid can label
+    # blocks (a draft entry carries only the task_id).
+    assert set(view.task_titles) == set(PLAN_TASK_IDS)
+    assert all(view.task_titles.values())
     # Dev build: free/busy is fetched server-side and unavailable here, so empty
     # — never a client-supplied list.
     assert view.free_busy == []

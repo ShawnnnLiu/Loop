@@ -6,9 +6,10 @@ import type { MeResult } from './api/types'
 import { Topbar } from './components/Topbar'
 import { GenerationScreen } from './screens/Generation'
 import { OnboardingScreen } from './screens/Onboarding'
+import { ScheduleReviewScreen } from './screens/ScheduleReview'
 import {
   AccountabilityScreen,
-  ScheduleReviewScreen,
+  ApprovalScreen,
   ThresholdsScreen,
   TodayScreen,
 } from './screens/placeholders'
@@ -59,6 +60,7 @@ export function App() {
           <Route path="/onboarding" element={<OnboardingScreen me={me} />} />
           <Route path="/plan" element={<GenerationScreen />} />
           <Route path="/review" element={<ScheduleReviewScreen />} />
+          <Route path="/approve" element={<ApprovalScreen />} />
           <Route path="/today" element={<TodayScreen />} />
           <Route path="/accountability" element={<AccountabilityScreen />} />
           <Route path="/thresholds" element={<ThresholdsScreen />} />

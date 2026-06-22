@@ -1,5 +1,8 @@
 import type {
   AccountabilityResult,
+  AdjustResult,
+  DraftAdjustment,
+  DraftView,
   MeResult,
   OnboardPayload,
   OnboardResult,
@@ -65,6 +68,9 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 export const api = {
   me: () => request<MeResult>('GET', '/me'),
   status: () => request<StatusResult>('GET', '/status'),
+  draft: () => request<DraftView>('GET', '/draft'),
+  adjust: (adjustments: DraftAdjustment[]) =>
+    request<AdjustResult>('POST', '/adjust', { adjustments }),
   today: () => request<TodayResult>('GET', '/today'),
   thresholds: () => request<ThresholdsResult>('GET', '/thresholds'),
   accountability: () => request<AccountabilityResult>('GET', '/accountability'),

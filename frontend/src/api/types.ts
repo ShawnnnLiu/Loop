@@ -75,6 +75,25 @@ export interface MeResult {
   profile: UserProfile | null
 }
 
+/** The SPA never supplies free/busy — the server fetches it (hosted) since it
+ *  needs the per-user token cipher. So only the optional knobs are sent. */
+export interface ProposeRequest {
+  horizon_days?: number
+  recovery_mode?: string
+}
+
+/** Subset of ProposeResult the generation screen reads. A *workflow* failure
+ *  arrives here as a 200 with `reason_code` set (not an ApiError). */
+export interface ProposeResult {
+  run_id: string
+  state: string
+  reason_code: ReasonCode | null
+  draft_schedule_id: string | null
+  draft_payload_hash: string | null
+  scheduled_task_count: number
+  explanation: Record<string, unknown> | null
+}
+
 /** Subset of StatusResult the UI reads; the endpoint returns more fields. */
 export interface StatusResult {
   user_id: string

@@ -11,6 +11,8 @@ identical fixture-backed, claim-seeded, frozen-clock build.
 
 from __future__ import annotations
 
+from datetime import timedelta
+
 from fastapi.testclient import TestClient
 
 from agentic_calendar.app.web.app import create_app
@@ -239,3 +241,16 @@ def test_checkin_invalid_outcome_maps_to_422() -> None:
     client, _clock = _client()
     resp = client.post("/api/checkin", json={"task_id": "dp_001", "outcome": "kinda"})
     assert resp.status_code == 422
+
+
+def test_propose_honors_body_free_busy_in_dev() -> None:
+    """Dev mode trusts the body's free_busy (the operator/test surface keeps
+    control). An all-horizon busy block leaves no room, so scheduling fails with
+    a typed reason_code — proving the supplied list flows through the route.
+    (Hosted mode instead fetches free/busy server-side; see routes_cycle.)"""
+    client, clock = _client()
+    now = clock.now()
+    busy = [{"start": now.isoformat(), "end": (now + timedelta(days=14)).isoformat()}]
+    resp = client.post("/api/propose", json={"free_busy": busy, "horizon_days": 14})
+    assert resp.status_code == 200
+    assert resp.json()["reason_code"]

@@ -3,6 +3,8 @@ import type {
   MeResult,
   OnboardPayload,
   OnboardResult,
+  ProposeRequest,
+  ProposeResult,
   StatusResult,
   ThresholdsResult,
   TodayResult,
@@ -67,6 +69,7 @@ export const api = {
   thresholds: () => request<ThresholdsResult>('GET', '/thresholds'),
   accountability: () => request<AccountabilityResult>('GET', '/accountability'),
   onboard: (payload: OnboardPayload) => request<OnboardResult>('POST', '/onboard', payload),
+  propose: (body: ProposeRequest = {}) => request<ProposeResult>('POST', '/propose', body),
 }
 
 /** Best-effort human message out of an ApiError body (the ValidationError

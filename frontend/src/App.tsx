@@ -4,10 +4,10 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { ApiError, api } from './api/client'
 import type { MeResult } from './api/types'
 import { Topbar } from './components/Topbar'
+import { GenerationScreen } from './screens/Generation'
 import { OnboardingScreen } from './screens/Onboarding'
 import {
   AccountabilityScreen,
-  GenerationScreen,
   ScheduleReviewScreen,
   ThresholdsScreen,
   TodayScreen,

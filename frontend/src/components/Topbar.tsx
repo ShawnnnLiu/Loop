@@ -1,0 +1,36 @@
+import { NavLink } from 'react-router-dom'
+
+import { logout } from '../auth/session'
+
+const NAV = [
+  { to: '/today', label: 'Today' },
+  { to: '/review', label: 'Week' },
+  { to: '/plan', label: 'Plan' },
+] as const
+
+export function Topbar({ email }: { email: string | null }) {
+  return (
+    <header className="tb">
+      <div className="brand">
+        <span className="glyph">L</span>
+        <span className="word">Loop</span>
+      </div>
+      <nav className="tb-nav">
+        {NAV.map((item) => (
+          <NavLink key={item.to} to={item.to} className={({ isActive }) => (isActive ? 'on' : '')}>
+            {item.label}
+          </NavLink>
+        ))}
+      </nav>
+      <span className="spacer" />
+      {email && (
+        <span className="muted" style={{ fontSize: 13 }}>
+          {email}
+        </span>
+      )}
+      <button className="btn btn-soft sm" onClick={() => void logout()}>
+        Log out
+      </button>
+    </header>
+  )
+}

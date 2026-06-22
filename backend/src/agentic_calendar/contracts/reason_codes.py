@@ -63,23 +63,22 @@ class ReasonCode(StrEnum):
     DEPENDENCY_BLOCKED = "DEPENDENCY_BLOCKED"
 
     OUTSIDE_ALLOWED_HOURS = "OUTSIDE_ALLOWED_HOURS"
-    """Reserved (axiom 05 / 16). **No Phase 1 producer.**
-
-    The Phase 1 scheduler defensively clips candidate windows to
-    ``[no_events_before, no_events_after]`` inside ``windows.py`` before
-    any placement happens, so this code is structurally unreachable today.
-    It remains in the enum so future phases that loosen the clip can emit
-    it without breaking downstream consumers."""
+    """The Phase 1 scheduler defensively clips candidate windows to
+    ``[no_events_before, no_events_after]`` inside ``windows.py`` before any
+    placement happens, so the *scheduler* never emits this. The drag-to-adjust
+    placement validator (``scheduler/adjustment.py``) does: a manual move that
+    lands outside the allowed hours or on a disabled weekend is refused with
+    this code."""
 
     DAILY_LOAD_EXCEEDED = "DAILY_LOAD_EXCEEDED"
-    """Reserved (axiom 05 / 16). **No Phase 1 producer.**
-
-    The greedy placement loop currently skips windows where
+    """The greedy placement loop skips windows where
     ``used_today + duration > max_daily_study_min`` and lets the task fall
-    through to ``NO_VALID_CONTIGUOUS_BLOCK`` (or the capacity-promotion
-    path). Distinguishing daily-load failures from contiguous-block
-    failures is deferred to Phase 2, when richer Scheduler diagnostics
-    land alongside the approval UI."""
+    through to ``NO_VALID_CONTIGUOUS_BLOCK`` (or the capacity-promotion path),
+    so the *scheduler* never emits this directly. The drag-to-adjust placement
+    validator (``scheduler/adjustment.py``) does: a manual move that pushes a
+    calendar day over ``max_daily_study_min`` is refused with this code.
+    Distinguishing daily-load failures inside the scheduler itself remains
+    deferred to the Phase 3 solver upgrade."""
 
     DEEP_WORK_REQUIRED_UNAVAILABLE = "DEEP_WORK_REQUIRED_UNAVAILABLE"
     TASK_TOO_LONG_UNSPLITTABLE = "TASK_TOO_LONG_UNSPLITTABLE"

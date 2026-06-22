@@ -1,0 +1,291 @@
+/* v2 — full-screen web-app wireframes, low-fi sketch */
+:root {
+  --ink: #1a1a1a;
+  --ink-2: #2a2a2a;
+  --pencil: #555;
+  --pencil-soft: #888;
+  --paper: #ffffff;
+  --paper-warm: #fafaf6;
+  --paper-2: #f3f1e8;
+  --paper-3: #e9e6dc;
+  --line: #2a2a2a;
+  --line-soft: #b8b3a4;
+  --line-soft-2: #d6d2c4;
+  --accent: #ff5a3c;
+  --accent-2: #ffd84d;
+  --hand: 'Kalam', 'Caveat', sans-serif;
+  --hand-title: 'Caveat', cursive;
+  --mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+* { box-sizing: border-box; }
+
+/* ——— App shell (1440x900 frame) ——— */
+.app {
+  width: 1440px;
+  height: 900px;
+  background: var(--paper-warm);
+  font-family: var(--hand);
+  color: var(--ink);
+  display: grid;
+  position: relative;
+  overflow: hidden;
+}
+.app, .app * { font-family: var(--hand); }
+.app .mono, .app .mono * { font-family: var(--mono); }
+
+/* shared sketchy primitives */
+.sk-box {
+  border: 1.8px solid var(--ink);
+  border-radius: 8px;
+  background: #fff;
+  padding: 12px 14px;
+  position: relative;
+}
+.sk-box.dashed { border-style: dashed; }
+.sk-box.thick { border-width: 2.5px; box-shadow: 3px 3px 0 var(--ink); }
+.sk-box.fill-yellow { background: rgba(255, 216, 77, 0.5); }
+.sk-box.fill-coral { background: rgba(255, 90, 60, 0.18); }
+.sk-box.fill-ink { background: var(--ink); color: var(--paper); }
+.sk-box.fill-paper2 { background: var(--paper-2); }
+
+.sk-h1 { font-family: var(--hand-title); font-size: 44px; line-height: 1.05; margin: 0; }
+.sk-h2 { font-family: var(--hand-title); font-size: 32px; line-height: 1.05; margin: 0; }
+.sk-h3 { font-family: var(--hand-title); font-size: 24px; line-height: 1.1; margin: 0; }
+.sk-h4 { font-family: var(--hand-title); font-size: 19px; line-height: 1.1; margin: 0; }
+
+.sk-sub {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--pencil);
+  text-transform: uppercase;
+}
+.sk-sub.lc { text-transform: none; letter-spacing: 0; font-size: 12px; }
+
+.sk-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1.8px solid var(--ink);
+  border-radius: 8px;
+  padding: 7px 14px;
+  background: #fff;
+  font-family: var(--hand);
+  font-size: 16px;
+  box-shadow: 2px 2px 0 var(--ink);
+  cursor: default;
+  white-space: nowrap;
+}
+.sk-btn.primary { background: var(--ink); color: var(--paper); }
+.sk-btn.coral { background: var(--accent); color: #fff; border-color: var(--ink); }
+.sk-btn.yellow { background: var(--accent-2); color: var(--ink); }
+.sk-btn.ghost { box-shadow: none; background: transparent; }
+.sk-btn.tiny { font-size: 13px; padding: 4px 9px; box-shadow: 1.5px 1.5px 0 var(--ink); border-radius: 6px; }
+.sk-btn.lg { font-size: 18px; padding: 10px 20px; box-shadow: 3px 3px 0 var(--ink); }
+
+.sk-chip {
+  display: inline-block;
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  padding: 3px 11px;
+  font-size: 14px;
+  background: #fff;
+  white-space: nowrap;
+}
+.sk-chip.on { background: var(--ink); color: var(--paper); }
+.sk-chip.coral { background: var(--accent); color: #fff; }
+.sk-chip.yellow { background: var(--accent-2); }
+.sk-chip.dashed { border-style: dashed; }
+
+.sk-row { display: flex; gap: 8px; align-items: center; }
+.sk-col { display: flex; flex-direction: column; gap: 8px; }
+
+.sk-line {
+  height: 8px;
+  background: linear-gradient(90deg, #2a2a2a 0 70%, transparent 70%);
+  background-size: 10px 100%;
+  border-radius: 4px;
+  opacity: 0.5;
+}
+.sk-line.short { width: 60%; }
+.sk-line.tiny { width: 30%; }
+
+/* ——— Top bar (consistent across full-screen mocks) ——— */
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 24px;
+  border-bottom: 1.5px dashed var(--line-soft);
+  background: var(--paper);
+}
+.topbar .logo {
+  font-family: var(--hand-title);
+  font-size: 26px;
+  line-height: 1;
+  display: flex; align-items: center; gap: 6px;
+}
+.topbar .logo .mark {
+  width: 28px; height: 28px;
+  border: 2px solid var(--ink);
+  border-radius: 7px;
+  background: var(--accent);
+  display: inline-flex; align-items: center; justify-content: center;
+  color: #fff;
+  font-family: var(--hand-title);
+  font-size: 18px;
+}
+.topbar .nav {
+  display: flex; gap: 4px;
+  margin-left: 18px;
+}
+.topbar .nav a {
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 15px;
+  color: var(--pencil);
+}
+.topbar .nav a.on { background: var(--ink); color: var(--paper); }
+.topbar .spacer { flex: 1; }
+.topbar .who {
+  display: flex; align-items: center; gap: 8px;
+}
+.topbar .avatar {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  border: 2px solid var(--ink);
+  background: var(--accent-2);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: var(--hand-title);
+  font-size: 16px;
+}
+
+/* ——— Calendar primitives (full-size) ——— */
+.cal-grid {
+  display: grid;
+  grid-template-columns: 56px repeat(7, 1fr);
+  border: 1.5px solid var(--ink);
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fff;
+  height: 100%;
+}
+.cal-grid .cell {
+  border-right: 1px dashed var(--line-soft);
+  border-bottom: 1px dashed var(--line-soft);
+  position: relative;
+  min-height: 44px;
+}
+.cal-grid .cell:nth-child(8n) { border-right: none; }
+.cal-grid .head {
+  background: var(--paper-2);
+  font-family: var(--mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  text-align: center;
+  padding: 8px 0 6px;
+  color: var(--pencil);
+  border-bottom: 1.5px solid var(--ink);
+  min-height: 0;
+}
+.cal-grid .head b {
+  display: block;
+  font-family: var(--hand-title);
+  font-size: 22px;
+  color: var(--ink);
+  letter-spacing: 0;
+}
+.cal-grid .head.today b { color: var(--accent); }
+.cal-grid .hour {
+  background: var(--paper-2);
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--pencil);
+  text-align: right;
+  padding: 4px 6px 0 0;
+  border-right: 1.5px solid var(--ink);
+}
+
+.evt {
+  position: absolute;
+  left: 4px; right: 4px;
+  border: 1.5px solid var(--ink);
+  border-radius: 6px;
+  padding: 5px 7px;
+  font-size: 12px;
+  font-family: var(--hand);
+  line-height: 1.15;
+  background: #fff;
+  overflow: hidden;
+}
+.evt.proposed { border-style: dashed; background: rgba(255, 216, 77, 0.55); }
+.evt.locked   { background: rgba(0,0,0,0.06); color: var(--pencil); }
+.evt.task     { background: rgba(255, 90, 60, 0.18); }
+.evt.done     { background: rgba(0,0,0,0.85); color: var(--paper); border-color: var(--ink); }
+.evt.done b   { text-decoration: line-through; }
+.evt b { font-weight: 700; display: block; font-size: 13px; }
+.evt .meta { font-family: var(--mono); font-size: 10px; opacity: 0.7; margin-top: 1px; }
+
+/* ——— Chat bubbles (full size) ——— */
+.bubble {
+  border: 1.8px solid var(--ink);
+  border-radius: 14px;
+  padding: 10px 13px;
+  background: #fff;
+  font-size: 15px;
+  max-width: 92%;
+  line-height: 1.4;
+}
+.bubble.me { align-self: flex-end; background: var(--ink); color: var(--paper); }
+.bubble.agent { align-self: flex-start; background: rgba(255,216,77,0.55); }
+.bubble.tool {
+  background: rgba(255,90,60,0.12);
+  border-style: dashed;
+  font-family: var(--mono);
+  font-size: 12px;
+  align-self: flex-start;
+}
+.chat { display: flex; flex-direction: column; gap: 9px; }
+.chat-input {
+  display: flex; gap: 8px; align-items: center;
+  border: 1.8px solid var(--ink);
+  border-radius: 999px;
+  padding: 7px 10px 7px 18px;
+  background: #fff;
+}
+.chat-input .ph { flex: 1; font-family: var(--hand); color: var(--pencil); font-size: 15px; }
+
+/* ——— Section header label that floats above each artboard ——— */
+.frame-label {
+  display: flex; align-items: baseline; gap: 10px;
+  margin-bottom: 6px;
+}
+.frame-label .num {
+  font-family: var(--hand-title);
+  font-size: 22px;
+  color: var(--accent);
+}
+.frame-label .ttl {
+  font-family: var(--hand-title);
+  font-size: 22px;
+}
+.frame-label .desc {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--pencil);
+  margin-left: auto;
+}
+
+/* annotations layer */
+.annot {
+  position: absolute;
+  font-family: 'Gloria Hallelujah', cursive;
+  font-size: 14px;
+  color: var(--accent);
+  pointer-events: none;
+  z-index: 5;
+}
+.annot::before {
+  content: "";
+  position: absolute;
+  border-top: 1.5px dashed var(--accent);
+  width: 30px;
+}

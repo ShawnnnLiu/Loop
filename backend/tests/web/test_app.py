@@ -89,6 +89,52 @@ def test_command_precondition_failure_maps_to_409() -> None:
     assert "error" in body
 
 
+def test_adjust_endpoint_applies_and_approve_locks_adjusted_hash() -> None:
+    client, _clock = _client()
+    proposed = client.post("/api/propose", json={}).json()
+
+    resp = client.post(
+        "/api/adjust",
+        json={"adjustments": [{"task_id": "dp_001", "start": "2026-05-04T16:00:00+00:00"}]},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["applied"] is True
+    assert body["adjusted_task_ids"] == ["dp_001"]
+    assert body["draft_payload_hash"] != proposed["draft_payload_hash"]
+
+    # Approving after the adjust commits to the adjusted draft's hash.
+    approved = client.post("/api/approve", json={}).json()
+    assert approved["approved_payload_hash"] == body["draft_payload_hash"]
+
+
+def test_adjust_endpoint_rejection_is_200_with_typed_reason() -> None:
+    client, _clock = _client()
+    client.post("/api/propose", json={})
+
+    # 07:00 is before the profile's 08:00 bound — a workflow rejection (HTTP 200
+    # with a typed reason_code), not a precondition error.
+    resp = client.post(
+        "/api/adjust",
+        json={"adjustments": [{"task_id": "dp_001", "start": "2026-05-04T07:00:00+00:00"}]},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["applied"] is False
+    assert body["reason_code"] == "OUTSIDE_ALLOWED_HOURS"
+    assert body["violations"]
+
+
+def test_adjust_before_propose_maps_to_409() -> None:
+    client, _clock = _client()
+    resp = client.post(
+        "/api/adjust",
+        json={"adjustments": [{"task_id": "dp_001", "start": "2026-05-04T16:00:00+00:00"}]},
+    )
+    assert resp.status_code == 409
+    assert resp.json()["type"] == "CycleError"
+
+
 def test_onboard_overrides_client_supplied_user_id() -> None:
     client, _clock = _client()
     payload = _canonical_profile().model_dump(mode="json")

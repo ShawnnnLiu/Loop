@@ -17,6 +17,7 @@ prevents accidental hash drift if ``SchedulerOutput`` grows new fields.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -110,5 +111,50 @@ class DraftSchedule(BaseModel):
             draft_schedule_id=draft_schedule_id,
             plan_version=output.plan_version,
             entries=entries,
+            created_at=created_at,
+        )
+
+    def with_adjustments(
+        self,
+        new_starts: Mapping[str, datetime],
+        *,
+        draft_schedule_id: str,
+        created_at: datetime,
+    ) -> DraftSchedule:
+        """Return a revised draft with the named tasks moved to new start times.
+
+        ``new_starts`` maps ``task_id`` to its new (timezone-aware) start. For
+        each moved task the new ``end`` is ``new_start + (old_end - old_start)``
+        — duration is **preserved**, so a move can change *when* a block runs but
+        never its length. A task absent from ``new_starts`` keeps its placement,
+        and **entry order is preserved** for every task. The ``plan_version`` is
+        unchanged (repositioning does not alter plan content); the caller supplies
+        a fresh ``draft_schedule_id`` because drafts are immutable.
+
+        Raises ``ValueError`` if ``new_starts`` references a ``task_id`` not in
+        this draft — a caller cannot move a task that is not already present.
+        Structural invariants are re-checked by the constructor.
+        """
+        known = {entry.task_id for entry in self.entries}
+        unknown = sorted(tid for tid in new_starts if tid not in known)
+        if unknown:
+            raise ValueError(
+                f"adjustment references unknown task_id(s): {unknown}"
+            )
+        revised = tuple(
+            DraftScheduleEntry(
+                task_id=entry.task_id,
+                start=new_starts[entry.task_id],
+                end=new_starts[entry.task_id] + (entry.end - entry.start),
+                calendar_event_status=entry.calendar_event_status,
+            )
+            if entry.task_id in new_starts
+            else entry
+            for entry in self.entries
+        )
+        return DraftSchedule(
+            draft_schedule_id=draft_schedule_id,
+            plan_version=self.plan_version,
+            entries=revised,
             created_at=created_at,
         )

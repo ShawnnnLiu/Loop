@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Tandem 同舟 · Admissions, handled like a project</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Hanken+Grotesk:wght@400;500;600;700&family=Noto+Serif+SC:wght@500;600&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="index.html" style="white-space:nowrap;">
+      <span class="glyph"><i class="g-char">同</i></span>
+      <span data-zh="同舟 Tandem">Tandem <span class="zh">同舟</span></span>
+    </a>
+    <div class="nav-links">
+      <a href="parents.html" data-zh="家长">Parents</a>
+      <a href="students.html" data-zh="学生">Students</a>
+      <a href="trust.html" data-zh="运作原理">How it works</a>
+    </div>
+    <div class="nav-right">
+      <div class="lang-pill">
+        <button data-lang="en" class="on">EN</button>
+        <button data-lang="zh">中文</button>
+      </div>
+      <a href="trust.html" class="btn btn-ink" data-zh="加入试点">Join the pilot</a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<header class="section" style="padding-bottom: clamp(48px,6vw,80px);">
+  <div class="wrap">
+    <div style="display:grid; grid-template-columns: 1.05fr 0.95fr; gap: 56px; align-items: center;">
+      <div class="kicker-row">
+        <span class="eyebrow" data-zh="申请不该是一场全家的焦虑，而可以是一件有节奏、能稳稳推进的事">Admissions, handled like a project — not a panic</span>
+        <h1 class="display" data-zh="再大的目标，也能拆成每周的小任务。进度看得见，心里也踏实。">Big goals become this week's tasks. <br>Progress everyone can trust.</h1>
+        <p class="lead" style="max-width:540px;" data-zh="一套 AI 升学陪跑系统，帮你把整个申请季理顺成每周该做的事——选校策略、截止日期、进度跟踪，一样都不落。最关键的文书和面试，依然由真人把关。">An AI copilot that turns the application season into supervised weekly execution — strategy, deadlines, accountability, and progress you can actually see. Real people stay for what matters most: essays and interviews.</p>
+
+        <div style="display:flex; gap:14px; flex-wrap:wrap; margin-top:4px;">
+          <a href="parents.html" class="btn btn-primary btn-lg" data-zh="我是家长 →">I'm a parent →</a>
+          <a href="students.html" class="btn btn-ghost btn-lg" data-zh="我是学生 →">I'm a student →</a>
+        </div>
+
+        <div class="bilingual-welcome" style="margin-top:6px;" data-zh="由一个走过这条路的家庭打造 —— 我们也是这样走过来的。">Built by a family who's been through it — <span class="zh-cue">我们也是这样走过来的。</span></div>
+
+        <div class="trust-strip" style="margin-top:18px;">
+          <span class="item"><span class="dot"></span><span data-zh="你说了算，系统绝不自作主张">Nothing happens without your approval</span></span>
+          <span class="item"><span class="dot"></span><span data-zh="私人文书不外传">Private drafts never shared</span></span>
+          <span class="item"><span class="dot"></span><span data-zh="价格只是中介的一个零头">A fraction of an $8,999 agency</span></span>
+        </div>
+      </div>
+
+      <!-- HERO VISUAL: stacked mocks joined by the approval checkpoint -->
+      <div style="position:relative; display:flex; flex-direction:column; gap:0; align-items:center;">
+        <!-- parent summary card -->
+        <div class="mock" style="width:100%; max-width:420px; z-index:1;">
+          <div class="mock-bar"><span class="tl"></span><span class="tl"></span><span class="tl"></span><span class="title" data-zh="家长看板 · 概要">Parent view · summary</span></div>
+          <div class="mock-body">
+            <div class="statline">
+              <span style="font-weight:600; font-size:14px;" data-zh="本周状态">This week</span>
+              <span class="pill-status pill-ok" data-zh="进度正常">On track</span>
+            </div>
+            <div class="statline">
+              <span style="font-size:13px; color:var(--muted);" data-zh="选校名单">School list</span>
+              <span style="width:130px;"><span class="bar"><i style="width:90%"></i></span></span>
+            </div>
+            <div class="statline">
+              <span style="font-size:13px; color:var(--muted);" data-zh="文书草稿">Essay drafts</span>
+              <span style="width:130px;"><span class="bar"><i style="width:55%"></i></span></span>
+            </div>
+            <div style="margin-top:12px; padding:10px 12px; background:var(--paper-2); border-radius:10px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+              <span class="redact-tag" data-zh="🔒 文书已隐藏">🔒 Essay text hidden</span>
+              <span style="font-size:12px; color:var(--muted);" data-zh="看进度，不看草稿">progress, not drafts</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- checkpoint stamp connector -->
+        <div class="checkpoint-stamp" style="z-index:3; margin:-13px 0; box-shadow: var(--shadow);">
+          <span class="ring">✓</span><span data-zh="由你批准 — 一切的关口">you approve — the gate for everything</span>
+        </div>
+
+        <!-- student calendar card -->
+        <div class="mock" style="width:100%; max-width:420px; z-index:2;">
+          <div class="mock-bar"><span class="tl"></span><span class="tl"></span><span class="tl"></span><span class="title" data-zh="学生 · 本周">Student · this week</span></div>
+          <div class="mock-body">
+            <div class="mini-cal">
+              <div class="col"><span class="dh">M</span><span class="mini-task done" data-zh="文书">essays</span></div>
+              <div class="col"><span class="dh">T</span><span class="mini-task acc" data-zh="文书">SOP v2</span></div>
+              <div class="col"><span class="dh">W</span><span class="mini-task prop" data-zh="草稿">draft</span></div>
+              <div class="col"><span class="dh">T</span><span class="mini-task acc" data-zh="面试">mock</span></div>
+              <div class="col"><span class="dh">F</span><span class="mini-task prop" data-zh="复盘">review</span></div>
+            </div>
+            <button class="btn btn-primary btn-block" style="margin-top:14px; font-size:14px; padding:11px;" data-zh="✓ 批准本周计划">✓ Approve this week</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- TWO DOORS (explicit) -->
+<section class="section-sm">
+  <div class="wrap">
+    <div class="center kicker-row" style="margin-bottom:34px;">
+      <span class="eyebrow center" data-zh="两扇门，一个真相">Two doors, one truth</span>
+      <h2 class="h-lg" data-zh="谁在用它？">Who's it for?</h2>
+    </div>
+    <div class="doors">
+      <a class="door parent" href="parents.html">
+        <span class="door-tag" data-zh="家长">For parents</span>
+        <h3 data-zh="不用再催，进度看得见。">Stop nagging. Start seeing.</h3>
+        <p class="muted" style="font-size:15px;" data-zh="每周清楚看到孩子的进度——不监控，也不用你当那个「坏人」。">See exactly where your child stands each week — without spying, and without being the bad guy.</p>
+        <span class="arrow" data-zh="进入家长页 →">Enter the parent page →</span>
+      </a>
+      <a class="door student" href="students.html">
+        <span class="door-tag" data-zh="学生">For students</span>
+        <h3 data-zh="你的副驾驶，不是你爸妈的监控。">Your copilot. Not your parents' spy.</h3>
+        <p class="muted" style="font-size:15px;" data-zh="再大的目标也会被拆成这周的小任务，一切由你确认。">A big, scary goal becomes this week's tasks — and you approve everything.</p>
+        <span class="arrow" data-zh="进入学生页 →">Enter the student page →</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- EVERYTHING IN ONE PLACE -->
+<section class="section-sm" style="padding-top:0;">
+  <div class="wrap">
+    <div class="one-place">
+      <!-- copy -->
+      <div class="kicker-row">
+        <span class="eyebrow" data-zh="尽收一处">Everything in one place</span>
+        <h2 class="h-lg" data-zh="升学的千头万绪，从此归于一处。">All of admissions, gathered into one place.</h2>
+        <p class="lead" style="max-width:480px;" data-zh="成绩、标化、选校名单、截止日期、文书、活动、推荐信——申请的每一块，都收在同一份始终最新的档案里。你、家人，和 AI 陪跑，看到的永远是同一幅完整的全局。">Grades, test scores, school list, deadlines, essays, activities, recommendations — every piece of the application lives in one organized, always-current profile. You, your family, and the copilot all work from the same complete picture.</p>
+        <div class="source-strip">
+          <span class="source-chip" data-zh="成绩单">Transcript</span>
+          <span class="source-chip" data-zh="标化成绩">Test scores</span>
+          <span class="source-chip" data-zh="选校名单">School list</span>
+          <span class="source-chip" data-zh="截止日期">Deadlines</span>
+          <span class="source-chip" data-zh="文书">Essays</span>
+          <span class="source-chip" data-zh="课外活动">Activities</span>
+          <span class="source-chip" data-zh="推荐信">Recommendations</span>
+        </div>
+      </div>
+
+      <!-- unified profile hub mock -->
+      <div class="mock profile-hub" style="max-width:460px; width:100%; margin:0 auto;">
+        <div class="mock-bar">
+          <span class="tl"></span><span class="tl"></span><span class="tl"></span>
+          <span class="title" data-zh="学生档案 · 同舟">Student profile · one place</span>
+        </div>
+        <div class="mock-body">
+          <div class="hub-row"><span class="hub-ico">学</span><span class="hub-label" data-zh="成绩与课程">Academics & courses</span><span class="hub-meta" data-zh="已同步">synced</span></div>
+          <div class="hub-row"><span class="hub-ico">考</span><span class="hub-label" data-zh="标化成绩">Test scores</span><span class="hub-meta" data-zh="已录入">on file</span></div>
+          <div class="hub-row"><span class="hub-ico">校</span><span class="hub-label" data-zh="选校名单">School list</span><span class="hub-meta" data-zh="12 所">12 schools</span></div>
+          <div class="hub-row"><span class="hub-ico">期</span><span class="hub-label" data-zh="截止日期">Deadlines</span><span class="hub-meta warm" data-zh="下一个 11 天">next in 11d</span></div>
+          <div class="hub-row"><span class="hub-ico">文</span><span class="hub-label" data-zh="文书与草稿">Essays & drafts</span><span class="hub-meta muted" data-zh="🔒 仅本人">🔒 private</span></div>
+          <div class="hub-row"><span class="hub-ico">动</span><span class="hub-label" data-zh="活动与奖项">Activities & awards</span><span class="hub-meta" data-zh="已同步">synced</span></div>
+          <div class="hub-row"><span class="hub-ico">荐</span><span class="hub-label" data-zh="推荐信">Recommendations</span><span class="hub-meta" data-zh="3 / 4">3 of 4</span></div>
+        </div>
+        <div class="mock-foot"><span class="dot"></span><span data-zh="一处更新，处处最新 —— 陪跑始终从全局出发">One update, current everywhere — the copilot always works from the whole picture</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CONCEPT / 陪跑 strip -->
+<section class="section-sm" style="padding-top:0;">
+  <div class="wrap-narrow center">
+    <div class="concept" style="margin-bottom:18px;"><b>陪跑</b><span data-zh="—— 陪着你一起跑">— running alongside you</span></div>
+    <h2 class="h-md" style="font-weight:500; color:var(--ink-soft);" data-zh="我们卖的不是更便宜的建议。我们卖的是结构、节奏，和每个人都信得过的进度。">We're not selling cheaper advice. We're selling structure, pace, and progress everyone can trust.</h2>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="wrap footer-inner">
+    <div style="display:flex; flex-direction:column; gap:7px;">
+      <span class="brand" style="font-size:17px;"><span class="glyph" style="width:26px;height:26px;font-size:15px;"><i class="g-char">同</i></span><span data-zh="同舟 Tandem">Tandem <span class="zh">同舟</span></span></span>
+      <span class="tagline" data-zh="值得信任的节奏，看得见的进度。">Structure you can trust. Progress you can see.</span>
+    </div>
+    <nav class="footer-nav">
+      <a href="parents.html" data-zh="家长">Parents</a>
+      <a href="students.html" data-zh="学生">Students</a>
+      <a href="trust.html" data-zh="运作原理">How it works</a>
+      <a href="trust.html" data-zh="联系／候补名单">Contact</a>
+    </nav>
+  </div>
+</footer>
+
+<script src="site.js"></script>
+</body>
+</html>

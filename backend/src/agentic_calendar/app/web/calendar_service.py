@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import dataclasses
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from agentic_calendar.app.cycle import CycleError, CycleService
 from agentic_calendar.app.environment import AppEnvironment
@@ -94,3 +94,33 @@ def fetch_user_free_busy(
         calendar_id=calendar_id, time_min=time_min, time_max=time_max
     )
     return [{"start": start.isoformat(), "end": end.isoformat()} for start, end in intervals]
+
+
+def best_effort_free_busy(
+    env: AppEnvironment, *, user_id: str, token_cipher: TokenCipher
+) -> list[dict[str, str]]:
+    """This user's busy ranges over the plan horizon, or ``[]`` if unavailable.
+
+    Best-effort wrapper around :func:`fetch_user_free_busy` used by the propose
+    and adjust paths so the scheduler avoids the user's existing commitments. It
+    swallows every failure mode — Google not connected, a token predating the
+    ``freebusy`` scope (403), expired/revoked credentials, any provider/SDK
+    error — and falls back to an empty list, so a missing or failing calendar
+    read degrades to scheduling without calendar awareness rather than blocking
+    the caller.
+    """
+    onboarding = env.state.get_onboarding(user_id)
+    if onboarding is None:
+        return []
+    now = env.clock.now()
+    horizon = now + timedelta(days=onboarding.user_profile.timeline_weeks * 7)
+    try:
+        return fetch_user_free_busy(
+            env,
+            user_id=user_id,
+            token_cipher=token_cipher,
+            time_min=now,
+            time_max=horizon,
+        )
+    except Exception:
+        return []

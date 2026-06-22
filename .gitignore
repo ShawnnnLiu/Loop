@@ -46,3 +46,8 @@ client_secret*.json
 *.db-wal
 *.db-shm
 dogfood_profile.json
+
+# Local-only artifacts (not part of the project)
+/Admissions Agentic Scheduler.zip
+/backend/smoke_rows.json
+/.claude/agents/

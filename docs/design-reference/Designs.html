@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Tandem 同舟 — Designs</title>
+<meta name="viewport" content="width=1480" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Hanken+Grotesk:wght@400;500;600;700&family=Noto+Serif+SC:wght@500;600&family=Noto+Sans+SC:wght@400;500;700&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="design/app.css" />
+<style>body{margin:0;background:#f0eee9;}</style>
+</head>
+<body>
+
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="design/onboarding.jsx"></script>
+<script type="text/babel" src="design/calendar.jsx"></script>
+<script type="text/babel" src="design/agent.jsx"></script>
+
+<script type="text/babel">
+  function App() {
+    const { DesignCanvas, DCSection, DCArtboard, DCPostIt } = window;
+    const W = 1440, H = 900;
+    return (
+      <DesignCanvas>
+        <DCSection id="intro" title="Tandem 同舟 · Product Designs" subtitle="hi-fi · 1440×900 · ink + terracotta · consolidated from wireframes · click ⤢ to focus">
+          <DCPostIt>
+            <b>From wireframe to design.</b><br/><br/>
+            These are the three product flows rendered in the <b>Tandem</b> brand —
+            deep ink + terracotta, Newsreader serif, Hanken sans.<br/><br/>
+            <b>Onboarding</b> — deterministic wizard; AI only when reading your transcript &amp; activities.<br/><br/>
+            <b>Calendar</b> — week grid + day rail. Google Calendar owns scheduling.<br/><br/>
+            <b>Agent</b> — docked rail, never a floating pill. Approvals → thread → composer.<br/><br/>
+            State grammar:<br/>
+            • <b>dashed clay</b> = proposed<br/>
+            • <b>white card</b> = accepted (on gcal)<br/>
+            • <b>ink fill / struck</b> = done
+          </DCPostIt>
+        </DCSection>
+
+        <DCSection id="onboarding" title="01 · Onboarding" subtitle="deterministic wizard · two AI parse steps (transcript, activities) · four screens from the flow">
+          <DCArtboard id="ob-deadline" label="Deadline · deterministic" width={W} height={H}>
+            <window.OnbDeadline />
+          </DCArtboard>
+          <DCArtboard id="ob-transcript" label="Transcript / GPA parse · AI step" width={W} height={H}>
+            <window.OnbTranscript />
+          </DCArtboard>
+          <DCArtboard id="ob-courses" label="Current courses &amp; grades · deterministic" width={W} height={H}>
+            <window.OnbSkills />
+          </DCArtboard>
+          <DCArtboard id="ob-resume" label="Activities parse · AI step" width={W} height={H}>
+            <window.OnbResume />
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="calendar" title="02 · Calendar" subtitle="week grid + day rail + milestone track · accept → writes to gcal · done → logs telemetry">
+          <DCArtboard id="cal-main" label="Week grid + day rail" width={W} height={H}>
+            <window.CalendarScreen />
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="agent" title="03 · Agent" subtitle="docked rail · approvals on top, thread in the middle, composer + trust strip at the bottom">
+          <DCArtboard id="ag-main" label="Sidebar dock (week + dock)" width={W} height={H}>
+            <window.AgentScreen />
+          </DCArtboard>
+          <DCArtboard id="ag-map" label="Capability map (AI vs deterministic)" width={W} height={H}>
+            <window.CapabilityMap />
+          </DCArtboard>
+        </DCSection>
+      </DesignCanvas>
+    );
+  }
+
+  function tryMount() {
+    if (!window.DesignCanvas || !window.OnbDeadline || !window.OnbTranscript || !window.CalendarScreen || !window.AgentScreen || !window.CapabilityMap) {
+      return setTimeout(tryMount, 60);
+    }
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  }
+  tryMount();
+</script>
+</body>
+</html>

@@ -104,6 +104,62 @@ The classmethod copies `plan_version` from the scheduler output, copies each
 `ScheduledTask` into a `DraftScheduleEntry` preserving scheduled order, and
 attaches the supplied `draft_schedule_id` and `created_at`.
 
+## Adjustment (drag-to-adjust)
+
+Before approval, the user may reposition proposed blocks in the schedule-review
+UI (`docs/design-reference/design-loop/schedule.jsx`). The backend persists
+these moves as a **new draft** — drafts are immutable, so a revision always
+gets a fresh `draft_schedule_id` for the same `plan_version`.
+
+A single move is expressed by an **adjustment request item**:
+
+```json
+{ "task_id": "graphs_004", "start": "2026-05-08T20:00:00-07:00" }
+```
+
+| Field | Purpose |
+| --- | --- |
+| `task_id` | The proposed entry being moved (must already exist in the draft) |
+| `start` | The new timezone-aware start instant; the new day is just a different date here, so a **cross-day move** needs no special field |
+
+`DraftSchedule.with_adjustments(new_starts, *, draft_schedule_id, created_at)`
+applies a `{task_id: new_start}` mapping and returns the revised draft:
+
+- **Duration is preserved.** The new `end` is `new_start + (old_end - old_start)`;
+  a move can change *when* a block runs but never its length. The request carries
+  no `end`, so a client cannot resize a block.
+- **Entry order is preserved.** Unmoved entries keep their placement and position;
+  only the named tasks change `start`/`end`.
+- **Unknown `task_id`s are rejected** (`ValueError`) — a caller cannot introduce a
+  task that is not already in the draft, or drop one.
+- Structural invariants above (tz-aware, `end > start`, unique ids, non-empty)
+  are re-checked by the constructor.
+
+### Server-side re-validation (never trust the client)
+
+The UI's own conflict checking is advisory. Before a revised draft is stored, the
+service re-validates the **entire** resulting placement against the user's
+scheduling policy and a freshly-fetched free/busy snapshot, and refuses the move
+with a typed `reason_code` if any of these hold (see
+`backend/src/agentic_calendar/scheduler/adjustment.py`):
+
+| Condition | `reason_code` |
+| --- | --- |
+| Overlaps a fixed external event, or another proposed block | `NO_VALID_CONTIGUOUS_BLOCK` |
+| Runs outside `[no_events_before, no_events_after]`, or lands on a disabled weekend | `OUTSIDE_ALLOWED_HOURS` |
+| Pushes a calendar day over `max_daily_study_min` | `DAILY_LOAD_EXCEEDED` |
+| Starts before a prerequisite task ends | `DEPENDENCY_BLOCKED` |
+
+Soft placement that the scheduler *optimizes for* but that is not a hard safety
+rule — deep-work-window adherence and `min_break_between_deep_blocks_min` — is
+**relaxed for manual moves**: the user is explicitly overriding placement, and
+the review grid spans a wider day than the deep-work windows. Adjustment is
+allowed **only while the run awaits approval**; the state guard refuses a move
+once the draft has been approved (re-approval, not silent mutation, is the
+contract). On success the revised draft replaces the pending one and the
+approval hash is recomputed from it, so axiom 06's write-time recheck still
+validates against exactly what the user approved.
+
 ## Invalid Examples
 
 ```json

@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Admissions Agentic Scheduler — Wireframes</title>
+<meta name="viewport" content="width=1480" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Kalam:wght@300;400;700&family=Gloria+Hallelujah&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="v2/styles.css" />
+<style>body{margin:0;background:#f0eee9;}</style>
+</head>
+<body>
+
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="v2/onboarding.jsx"></script>
+<script type="text/babel" src="v2/calendar.jsx"></script>
+<script type="text/babel" src="v2/agent.jsx"></script>
+
+<script type="text/babel">
+  function App() {
+    const { DesignCanvas, DCSection, DCArtboard, DCPostIt } = window;
+    const W = 1440, H = 900;
+    return (
+      <DesignCanvas>
+        <DCSection id="intro" title="Admissions Agentic Scheduler · Wireframes" subtitle="full-screen 1440×900 · sketchy lo-fi · click ⤢ on any artboard to focus">
+          <DCPostIt>
+            <b>Read me.</b><br/><br/>
+            <b>Onboarding</b> — three combinable panels, a deterministic wizard with one LLM-only step (resume/file parsing).<br/><br/>
+            <b>Calendar</b> — single screen: week-grid of day-columns + day rail for the selected day + milestone rail. No built-in calendar UI — gcal owns scheduling.<br/><br/>
+            <b>Agent</b> — sidebar dock (always docked, never a floating bot pill). Approvals + thread + composer in one rail.<br/><br/>
+            Visual grammar:<br/>
+            • <b>dashed yellow</b> = proposed<br/>
+            • <b>solid coral</b> = accepted (on gcal)<br/>
+            • <b>black/struck</b> = done
+          </DCPostIt>
+        </DCSection>
+
+        <DCSection id="onboarding" title="01 · Onboarding" subtitle="deterministic wizard · LLM only when reading files / parsing resume · panels A+B+C combine into one flow">
+          <DCArtboard id="ob-A" label="A · deterministic wizard (deadline)" width={W} height={H}>
+            <window.OnboardingA />
+          </DCArtboard>
+          <DCArtboard id="ob-B" label="B · LLM step (resume parse)" width={W} height={H}>
+            <window.OnboardingB />
+          </DCArtboard>
+          <DCArtboard id="ob-C" label="C · skills + accountability + quiet hours" width={W} height={H}>
+            <window.OnboardingC />
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="calendar" title="02 · Calendar — week grid + day rail" subtitle="gcal owns scheduling · we surface tasks & milestones · accept → writes to gcal · done → logs telemetry">
+          <DCArtboard id="cal-main" label="Week grid + day rail + milestone rail" width={W} height={H}>
+            <window.CalendarMain />
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="agent" title="03 · Agent — sidebar dock" subtitle="docked, not floating · approvals on top, thread in the middle, trust strip at the bottom · same chrome as the calendar">
+          <DCArtboard id="ag-main" label="Sidebar dock (week view + dock)" width={W} height={H}>
+            <window.AgentMain />
+          </DCArtboard>
+          <DCArtboard id="ag-map" label="Capability map (LLM vs deterministic)" width={W} height={H}>
+            <window.CapabilityMap />
+          </DCArtboard>
+        </DCSection>
+      </DesignCanvas>
+    );
+  }
+
+  function tryMount() {
+    if (!window.DesignCanvas || !window.OnboardingA || !window.CalendarMain || !window.AgentMain) {
+      return setTimeout(tryMount, 60);
+    }
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  }
+  tryMount();
+</script>
+</body>
+</html>

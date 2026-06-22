@@ -14,7 +14,7 @@ JSON API for now — a profile form is a follow-up.
 from __future__ import annotations
 
 import secrets
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -32,7 +32,7 @@ from agentic_calendar.contracts.common_types import Day, ExperienceLevel
 from agentic_calendar.contracts.draft_schedule import DraftSchedule, DraftScheduleEntry
 from agentic_calendar.contracts.hashing import canonical_payload_hash
 
-from .calendar_service import build_user_calendar_service, fetch_user_free_busy
+from .calendar_service import best_effort_free_busy, build_user_calendar_service
 from .deps import get_cycle_service
 
 router = APIRouter(tags=["pages"])
@@ -117,6 +117,7 @@ _SCALAR_FIELDS: tuple[str, ...] = (
     "max_daily_study_min",
     "min_break_between_deep_blocks_min",
     "timezone",
+    "resume_text",
 )
 
 # Pre-filled, valid-by-default values so a freshly connected user can submit
@@ -141,6 +142,7 @@ _DEFAULT_ONBOARD_VALUES: dict[str, Any] = {
     "max_daily_study_min": "180",
     "min_break_between_deep_blocks_min": "30",
     "timezone": "UTC",
+    "resume_text": "",
     "selected_days": [],
     "checkboxes": {name: name == "allow_weekends" for name in _CHECKBOXES},
 }
@@ -192,6 +194,7 @@ def _build_profile(form: FormData, user_id: str, now: datetime) -> dict[str, Any
             "prefer_weekend_long_blocks": form.get("prefer_weekend_long_blocks") is not None,
             "avoid_back_to_back_deep_work": form.get("avoid_back_to_back_deep_work") is not None,
         },
+        "resume_text": str(form.get("resume_text", "")).strip() or None,
         "created_at": now,
         "updated_at": now,
     }
@@ -245,6 +248,7 @@ def _values_from_record(record: OnboardingRecord) -> dict[str, Any]:
         "max_daily_study_min": str(hard.max_daily_study_min),
         "min_break_between_deep_blocks_min": str(hard.min_break_between_deep_blocks_min),
         "timezone": record.timezone,
+        "resume_text": profile.resume_text or "",
         "selected_days": [window.day.value for window in windows],
         "checkboxes": {
             "allow_weekends": hard.allow_weekends,
@@ -525,32 +529,13 @@ def draft_page(request: Request) -> Response:
 
 def _user_free_busy(request: Request, user_id: str) -> list[dict[str, str]]:
     """The user's real-calendar busy ranges over the plan horizon, so the
-    scheduler avoids their existing commitments.
-
-    Best-effort: if Google isn't connected, the stored token predates the
-    ``freebusy`` scope (a 403 until they reconnect), or the read otherwise
-    fails, fall back to an empty list and schedule without calendar awareness
-    rather than blocking the proposal.
-    """
-    env = request.app.state.env
-    onboarding = env.state.get_onboarding(user_id)
-    if onboarding is None:
-        return []
-    now = env.clock.now()
-    horizon = now + timedelta(days=onboarding.user_profile.timeline_weeks * 7)
-    try:
-        return fetch_user_free_busy(
-            env,
-            user_id=user_id,
-            token_cipher=request.app.state.token_cipher,
-            time_min=now,
-            time_max=horizon,
-        )
-    except Exception:
-        # Best-effort: not connected, a token predating the freebusy scope (403),
-        # expired/revoked credentials, or any provider/SDK error — schedule
-        # without calendar data rather than failing the proposal.
-        return []
+    scheduler avoids their existing commitments (best-effort; ``[]`` if the
+    calendar can't be read — see :func:`best_effort_free_busy`)."""
+    return best_effort_free_busy(
+        request.app.state.env,
+        user_id=user_id,
+        token_cipher=request.app.state.token_cipher,
+    )
 
 
 @router.post("/ui/propose")

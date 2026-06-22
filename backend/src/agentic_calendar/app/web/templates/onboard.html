@@ -34,6 +34,13 @@
   <p><label>Known weaknesses (comma-separated)<br>
     <input name="known_weaknesses" value="{{ values.known_weaknesses }}"></label></p>
 
+  <h2>Résumé (optional)</h2>
+  <p><label>Paste your résumé<br>
+    <textarea name="resume_text" rows="8" cols="60"
+      placeholder="Paste your résumé here to sharpen the plan — optional.">{{ values.resume_text }}</textarea></label></p>
+  <p class="muted">Used only as extra context for planning. Stays on your
+    account, is never shared, and is never used for training.</p>
+
   <h2>Time budget</h2>
   <p><label>Timeline (weeks)<br>
     <input name="timeline_weeks" type="number" min="1"

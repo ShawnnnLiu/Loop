@@ -1,0 +1,1533 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Scheduler — Wireframes</title>
+<meta name="viewport" content="width=1480" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Kalam:wght@300;400;700&family=Gloria+Hallelujah&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --ink-soft: #2a2a2a;
+    --pencil: #555;
+    --paper: #fafaf6;
+    --paper-2: #f3f1e8;
+    --line: #2a2a2a;
+    --line-soft: #999;
+    --accent: #ff5a3c;     /* coral pencil */
+    --accent-2: #ffd84d;   /* highlighter yellow */
+    --blue: #3b6ef0;
+    --hand: 'Kalam', 'Caveat', sans-serif;
+    --hand-title: 'Caveat', cursive;
+    --hand-loose: 'Gloria Hallelujah', cursive;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    background:
+      radial-gradient(circle at 20% 10%, #f7f4e9 0%, transparent 50%),
+      radial-gradient(circle at 80% 80%, #f0ede0 0%, transparent 60%),
+      var(--paper);
+    color: var(--ink);
+    font-family: var(--hand);
+    font-size: 17px;
+    line-height: 1.45;
+  }
+  body::before {
+    /* paper grain */
+    content: "";
+    position: fixed; inset: 0;
+    background-image:
+      radial-gradient(rgba(0,0,0,0.025) 1px, transparent 1px),
+      radial-gradient(rgba(0,0,0,0.018) 1px, transparent 1px);
+    background-size: 3px 3px, 7px 7px;
+    pointer-events: none;
+    z-index: 1;
+  }
+  .page {
+    position: relative;
+    z-index: 2;
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 56px 56px 120px;
+  }
+  /* ——— Header ——— */
+  .doc-head {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    border-bottom: 2px dashed var(--ink);
+    padding-bottom: 18px;
+    margin-bottom: 36px;
+  }
+  .doc-head h1 {
+    font-family: var(--hand-title);
+    font-size: 56px;
+    line-height: 1;
+    margin: 0;
+    letter-spacing: 0.5px;
+  }
+  .doc-head h1 em {
+    font-style: normal;
+    background: linear-gradient(transparent 60%, var(--accent-2) 60%);
+    padding: 0 4px;
+  }
+  .doc-head .meta {
+    text-align: right;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--pencil);
+    line-height: 1.7;
+  }
+  .doc-head .meta b { color: var(--ink); }
+
+  /* ——— Section header ——— */
+  .section {
+    margin-top: 64px;
+  }
+  .section-head {
+    display: flex; align-items: baseline; gap: 18px;
+    margin-bottom: 8px;
+  }
+  .section-num {
+    font-family: var(--hand-title);
+    font-size: 38px;
+    color: var(--accent);
+    transform: rotate(-3deg);
+    display: inline-block;
+  }
+  .section-title {
+    font-family: var(--hand-title);
+    font-size: 38px;
+    line-height: 1.05;
+    margin: 0;
+  }
+  .section-head { flex-wrap: wrap; }
+  .section-sub {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--pencil);
+    margin-top: 0;
+    margin-bottom: 28px;
+    max-width: 720px;
+    line-height: 1.7;
+  }
+
+  /* ——— Variation grid ——— */
+  .variants {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 28px;
+    align-items: start;
+  }
+  .variants.two { grid-template-columns: repeat(2, 1fr); }
+  .variant {
+    background: var(--paper-2);
+    border: 2px solid var(--ink);
+    border-radius: 14px;
+    padding: 18px 18px 22px;
+    box-shadow: 4px 4px 0 var(--ink);
+    position: relative;
+  }
+  .variant.tape::before {
+    content: "";
+    position: absolute;
+    top: -14px; left: 50%;
+    width: 90px; height: 22px;
+    background: rgba(255, 216, 77, 0.7);
+    transform: translateX(-50%) rotate(-2deg);
+    border-left: 1px dashed rgba(0,0,0,0.15);
+    border-right: 1px dashed rgba(0,0,0,0.15);
+  }
+  .variant-tag {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    background: var(--ink);
+    color: var(--paper);
+    padding: 3px 8px;
+    border-radius: 3px;
+    margin-bottom: 6px;
+  }
+  .variant-title {
+    font-family: var(--hand-title);
+    font-size: 26px;
+    margin: 0 0 4px;
+    line-height: 1;
+  }
+  .variant-note {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--pencil);
+    margin: 0 0 14px;
+    line-height: 1.55;
+  }
+
+  /* ——— Mock device frame ——— */
+  .mock {
+    background: #fff;
+    border: 2px solid var(--ink);
+    border-radius: 10px;
+    padding: 12px;
+    position: relative;
+    overflow: hidden;
+  }
+  .mock.phone {
+    width: 260px;
+    margin: 0 auto;
+    border-radius: 28px;
+    padding: 28px 14px 22px;
+  }
+  .mock.phone::before {
+    content: "";
+    position: absolute;
+    top: 8px; left: 50%;
+    transform: translateX(-50%);
+    width: 70px; height: 6px;
+    background: var(--ink);
+    border-radius: 4px;
+  }
+  .mock.web {
+    min-height: 380px;
+  }
+  .mock-toolbar {
+    display: flex; gap: 6px; align-items: center;
+    border-bottom: 1.5px dashed var(--line-soft);
+    padding-bottom: 8px; margin-bottom: 10px;
+  }
+  .mock-toolbar .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    border: 1.5px solid var(--ink);
+  }
+  .mock-toolbar .url {
+    flex: 1;
+    border: 1.5px solid var(--ink);
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--pencil);
+    margin-left: 8px;
+  }
+
+  /* ——— Sketchy primitives ——— */
+  .sk-box {
+    border: 1.8px solid var(--ink);
+    border-radius: 6px;
+    padding: 8px 10px;
+    background: #fff;
+    position: relative;
+  }
+  .sk-box.dashed { border-style: dashed; }
+  .sk-box.thick { border-width: 2.5px; box-shadow: 2px 2px 0 var(--ink); }
+  .sk-box.fill-yellow { background: rgba(255, 216, 77, 0.5); }
+  .sk-box.fill-coral { background: rgba(255, 90, 60, 0.18); }
+  .sk-box.fill-ink { background: var(--ink); color: var(--paper); }
+
+  .sk-line {
+    height: 6px;
+    background: linear-gradient(90deg, #444 0 70%, transparent 70%);
+    background-size: 8px 100%;
+    border-radius: 3px;
+    margin: 4px 0;
+    opacity: 0.6;
+  }
+  .sk-line.short { width: 60%; }
+  .sk-line.tiny { width: 30%; }
+
+  .sk-row { display: flex; gap: 6px; align-items: center; }
+  .sk-col { display: flex; flex-direction: column; gap: 6px; }
+
+  .sk-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    border: 1.8px solid var(--ink);
+    border-radius: 6px;
+    padding: 4px 10px;
+    background: #fff;
+    font-family: var(--hand);
+    font-size: 14px;
+    box-shadow: 2px 2px 0 var(--ink);
+    cursor: default;
+  }
+  .sk-btn.primary { background: var(--ink); color: var(--paper); }
+  .sk-btn.coral { background: var(--accent); color: #fff; border-color: var(--ink); }
+  .sk-btn.ghost { box-shadow: none; }
+  .sk-btn.tiny { font-size: 11px; padding: 2px 7px; box-shadow: 1.5px 1.5px 0 var(--ink); }
+
+  .sk-chip {
+    display: inline-block;
+    border: 1.5px solid var(--ink);
+    border-radius: 999px;
+    padding: 1px 9px;
+    font-size: 12px;
+    background: #fff;
+  }
+  .sk-chip.on { background: var(--ink); color: var(--paper); }
+  .sk-chip.coral { background: var(--accent); color: #fff; }
+  .sk-chip.yellow { background: var(--accent-2); }
+
+  .sk-h { font-family: var(--hand-title); font-size: 20px; margin: 2px 0; line-height: 1; }
+  .sk-sub { font-family: var(--mono); font-size: 10px; color: var(--pencil); }
+
+  .sk-arrow {
+    font-family: var(--hand-loose);
+    font-size: 22px;
+    color: var(--accent);
+    line-height: 1;
+  }
+  .annot {
+    font-family: var(--hand-loose);
+    font-size: 13px;
+    color: var(--accent);
+    line-height: 1.2;
+    position: absolute;
+    pointer-events: none;
+  }
+  .annot::before {
+    content: "";
+    position: absolute;
+    border-top: 1.5px dashed var(--accent);
+    width: 22px;
+  }
+
+  /* ——— Onboarding specifics ——— */
+  .step-dots {
+    display: flex; gap: 5px; align-items: center;
+    margin-bottom: 10px;
+  }
+  .step-dots .d {
+    width: 22px; height: 6px;
+    background: var(--ink);
+    border-radius: 3px;
+    opacity: 0.25;
+  }
+  .step-dots .d.on { opacity: 1; background: var(--accent); }
+
+  /* ——— Calendar grid ——— */
+  .cal-week {
+    display: grid;
+    grid-template-columns: 28px repeat(5, 1fr);
+    gap: 0;
+    border: 1.5px solid var(--ink);
+    border-radius: 6px;
+    overflow: hidden;
+    background: #fff;
+  }
+  .cal-week .cell {
+    border-right: 1px dashed var(--line-soft);
+    border-bottom: 1px dashed var(--line-soft);
+    min-height: 26px;
+    position: relative;
+    padding: 2px;
+  }
+  .cal-week .cell:last-child { border-right: none; }
+  .cal-week .head {
+    background: var(--paper-2);
+    font-family: var(--mono);
+    font-size: 9px;
+    text-align: center;
+    padding: 4px 0;
+    color: var(--pencil);
+    border-bottom: 1.5px solid var(--ink);
+    min-height: 0;
+  }
+  .cal-week .hour {
+    background: var(--paper-2);
+    font-family: var(--mono);
+    font-size: 8.5px;
+    color: var(--pencil);
+    text-align: right;
+    padding-right: 4px;
+    border-right: 1.5px solid var(--ink);
+  }
+  .evt {
+    position: absolute;
+    left: 2px; right: 2px;
+    border: 1.5px solid var(--ink);
+    border-radius: 4px;
+    padding: 2px 4px;
+    font-size: 10px;
+    font-family: var(--hand);
+    line-height: 1.1;
+    background: #fff;
+  }
+  .evt.proposed {
+    border-style: dashed;
+    background: rgba(255, 216, 77, 0.55);
+  }
+  .evt.locked { background: rgba(0,0,0,0.06); color: var(--pencil); }
+  .evt.task { background: rgba(255, 90, 60, 0.2); }
+  .evt.done { background: rgba(0,0,0,0.85); color: var(--paper); border-color: var(--ink); text-decoration: line-through; }
+  .evt b { font-weight: 700; display: block; }
+
+  /* ——— Chat bubbles ——— */
+  .bubble {
+    border: 1.8px solid var(--ink);
+    border-radius: 12px;
+    padding: 7px 10px;
+    background: #fff;
+    font-size: 13px;
+    max-width: 88%;
+  }
+  .bubble.me {
+    align-self: flex-end;
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+  }
+  .bubble.agent {
+    align-self: flex-start;
+    background: rgba(255,216,77,0.5);
+  }
+  .bubble.tool {
+    background: rgba(255,90,60,0.12);
+    border-style: dashed;
+    font-family: var(--mono);
+    font-size: 11px;
+  }
+  .chat {
+    display: flex; flex-direction: column; gap: 7px;
+    padding: 8px;
+  }
+  .chat-input {
+    display: flex; gap: 6px; align-items: center;
+    border: 1.8px solid var(--ink);
+    border-radius: 999px;
+    padding: 4px 6px 4px 12px;
+    background: #fff;
+    margin-top: 6px;
+  }
+  .chat-input .ph {
+    flex: 1;
+    font-family: var(--hand);
+    color: var(--pencil);
+    font-size: 13px;
+  }
+
+  /* ——— Capability cards (agent map) ——— */
+  .cap-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-top: 22px;
+  }
+  .cap {
+    border: 2px solid var(--ink);
+    border-radius: 10px;
+    padding: 12px 14px;
+    background: #fff;
+    box-shadow: 3px 3px 0 var(--ink);
+    position: relative;
+  }
+  .cap h4 {
+    font-family: var(--hand-title);
+    font-size: 22px;
+    margin: 4px 0 6px;
+    line-height: 1;
+  }
+  .cap p {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--pencil);
+    line-height: 1.55;
+    margin: 0;
+  }
+  .cap .icon {
+    width: 28px; height: 28px;
+    border: 2px solid var(--ink);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--hand-title);
+    font-size: 18px;
+    background: var(--accent-2);
+  }
+  .cap .det {
+    position: absolute; top: 10px; right: 10px;
+    font-family: var(--mono); font-size: 9px;
+    color: var(--pencil);
+  }
+  .cap.llm .icon { background: var(--accent); color: #fff; }
+  .cap.det-only .icon { background: #fff; }
+
+  .legend {
+    display: flex; gap: 16px; margin-top: 14px;
+    font-family: var(--mono); font-size: 11px; color: var(--pencil);
+  }
+  .legend .sw { display: inline-block; width: 14px; height: 14px; border: 1.5px solid var(--ink); margin-right: 5px; vertical-align: -2px; border-radius: 3px;}
+
+  /* ——— Approval gate row ——— */
+  .approval {
+    margin-top: 30px;
+    border: 2px dashed var(--ink);
+    border-radius: 12px;
+    padding: 18px 22px;
+    background: rgba(255,216,77,0.25);
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 22px;
+    align-items: center;
+  }
+  .approval h3 {
+    font-family: var(--hand-title);
+    font-size: 30px;
+    margin: 0 0 4px;
+  }
+  .approval p {
+    font-family: var(--mono); font-size: 12px; color: var(--ink-soft); margin: 0; line-height: 1.6;
+  }
+  .approval .gate {
+    display: flex; gap: 10px; justify-content: flex-end; align-items: center;
+  }
+
+  /* ——— Footer / system thesis ——— */
+  .thesis {
+    margin-top: 80px;
+    padding: 28px;
+    border: 2px solid var(--ink);
+    border-radius: 14px;
+    background: var(--ink);
+    color: var(--paper);
+    text-align: center;
+  }
+  .thesis h2 {
+    font-family: var(--hand-title);
+    font-size: 42px;
+    margin: 0 0 6px;
+  }
+  .thesis p {
+    font-family: var(--mono); font-size: 12.5px; opacity: 0.8; margin: 0;
+  }
+
+  /* ——— Hide variants based on tweak ——— */
+  .variant[data-show="false"] { display: none; }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- ============ HEAD ============ -->
+  <header class="doc-head">
+    <div>
+      <div class="sk-sub" style="margin-bottom:6px;">WIREFRAME PASS · v0.1 · LO-FI</div>
+      <h1>The <em>Scheduler</em> &mdash; first sketches</h1>
+      <div class="sk-sub" style="margin-top:8px;">
+        Onboarding · Calendar w/ Accept · Done · Agent capabilities
+      </div>
+    </div>
+    <div class="meta">
+      <div><b>FOR</b> · students &amp; new-grads</div>
+      <div><b>VIBE</b> · calm, serious, daily-driver</div>
+      <div><b>NOT</b> · therapy, autonomous, slop</div>
+      <div><b>RIVAL</b> · shovel · gcal · sunsama</div>
+    </div>
+  </header>
+
+  <!-- ============ DESIGN NOTES ============ -->
+  <div class="sk-box dashed" style="padding:16px 20px; background:rgba(255,255,255,0.6); margin-bottom:48px;">
+    <div class="sk-h" style="margin-bottom:6px;">design notes &mdash; what we're optimizing for</div>
+    <div class="sk-sub" style="line-height:1.7;">
+      <b style="font-family:var(--hand);font-size:14px;color:var(--ink);">Promise:</b>
+      "tells students what to do today, when to do it, and never writes to their calendar without permission."
+      <br>
+      <b style="font-family:var(--hand);font-size:14px;color:var(--ink);">Daily-driver test:</b>
+      home view = today's blocks + 1 agent prompt + Done buttons. nothing else competing.
+      <br>
+      <b style="font-family:var(--hand);font-size:14px;color:var(--ink);">Trust visuals:</b>
+      proposed = dashed/yellow. accepted = solid. done = struck-through. clear visual grammar.
+      <br>
+      <b style="font-family:var(--hand);font-size:14px;color:var(--ink);">Agent stays in a box:</b>
+      LLM proposes, deterministic dispose. UI should reinforce this — labelled "draft", "preview", "approve".
+    </div>
+  </div>
+
+  <!-- =================================================== -->
+  <!-- ============== ONBOARDING ========================= -->
+  <!-- =================================================== -->
+  <section class="section" id="sec-onboarding">
+    <div class="section-head">
+      <span class="section-num">01</span>
+      <h2 class="section-title">Onboarding &mdash; goal &rarr; plan</h2>
+    </div>
+    <p class="section-sub">
+      8&ndash;10 fields collected: <b>goal</b> · <b>deadline</b> · <b>weekly hours / quiet hours</b> · <b>skill self-rating</b> · <b>motivation profile</b> · <b>accountability mode</b> (self / sponsor) · <b>calendar connect</b>. End screen always = draft syllabus preview, not "you're in!". Three pacing options below.
+    </p>
+
+    <div class="variants" data-section="onboarding">
+
+      <!-- A. Stepped wizard -->
+      <div class="variant" data-variant="onboarding-A">
+        <span class="variant-tag">A · stepped</span>
+        <h3 class="variant-title">One thing at a time</h3>
+        <p class="variant-note">classic wizard. 6 steps, progress bar, big single question per screen. lowest-anxiety. feels like a form but quiet.</p>
+
+        <div class="mock web">
+          <div class="mock-toolbar">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="url">scheduler.app/start &mdash; step 3 of 6</span>
+          </div>
+          <div class="step-dots">
+            <span class="d on"></span><span class="d on"></span><span class="d on"></span>
+            <span class="d"></span><span class="d"></span><span class="d"></span>
+          </div>
+          <div class="sk-sub">step 03</div>
+          <div class="sk-h" style="font-size:24px;margin:2px 0 2px;">when's the deadline?</div>
+          <div class="sk-sub" style="margin-bottom:10px;">we'll back-plan from this date. you can change it later.</div>
+
+          <div class="sk-row" style="gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+            <span class="sk-chip">in 4 weeks</span>
+            <span class="sk-chip on">in 3 months</span>
+            <span class="sk-chip">in 6 months</span>
+            <span class="sk-chip">pick a date &rarr;</span>
+          </div>
+
+          <div class="sk-box" style="padding:8px 10px;">
+            <div class="sk-row" style="justify-content:space-between;">
+              <span class="sk-sub">selected</span>
+              <span class="sk-sub">Feb 14, 2026</span>
+            </div>
+            <div class="sk-h" style="font-size:18px;">~ 12 weeks of runway</div>
+          </div>
+
+          <div class="sk-row" style="margin-top:18px;justify-content:space-between;">
+            <span class="sk-btn ghost">&larr; back</span>
+            <span class="sk-btn primary">next &rarr;</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- B. Conversational -->
+      <div class="variant" data-variant="onboarding-B">
+        <span class="variant-tag">B · conversational</span>
+        <h3 class="variant-title">Talks first, schedules second</h3>
+        <p class="variant-note">agent asks in natural language, fills a structured panel on the right. feels like Linear's Bismuth or Sunsama onboarding. higher signal, slower.</p>
+
+        <div class="mock web">
+          <div class="mock-toolbar">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="url">scheduler.app/start</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:10px;">
+            <!-- chat -->
+            <div class="chat" style="padding:0;">
+              <div class="bubble agent">hey! i'm your scheduler. what are you preparing for?</div>
+              <div class="bubble me">SWE new-grad interviews, target Feb</div>
+              <div class="bubble agent">got it. how are you feeling about DSA right now?</div>
+              <div class="bubble me">shaky on graphs &amp; DP</div>
+              <div class="bubble tool">+ skill_profile.dsa.dp = "weak"</div>
+              <div class="bubble agent">how many hours/week realistically?</div>
+              <div class="chat-input">
+                <span class="ph">type your reply&hellip;</span>
+                <span class="sk-btn tiny primary">&uarr;</span>
+              </div>
+            </div>
+            <!-- side panel -->
+            <div class="sk-col">
+              <div class="sk-sub" style="margin-bottom:2px;">your profile, so far</div>
+              <div class="sk-box" style="padding:8px 10px;">
+                <div class="sk-sub">goal</div>
+                <div class="sk-h" style="font-size:14px;">SWE new-grad</div>
+              </div>
+              <div class="sk-box" style="padding:8px 10px;">
+                <div class="sk-sub">deadline</div>
+                <div class="sk-h" style="font-size:14px;">Feb 2026 · ~12wk</div>
+              </div>
+              <div class="sk-box fill-coral" style="padding:8px 10px;">
+                <div class="sk-sub">weak spots</div>
+                <div class="sk-row" style="gap:4px;flex-wrap:wrap;">
+                  <span class="sk-chip">graphs</span><span class="sk-chip">DP</span>
+                </div>
+              </div>
+              <div class="sk-box dashed" style="padding:8px 10px;">
+                <div class="sk-sub">hours/week</div>
+                <div class="sk-h" style="font-size:14px;color:var(--pencil);">&hellip; asking</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- C. Single dense canvas -->
+      <div class="variant" data-variant="onboarding-C">
+        <span class="variant-tag">C · canvas</span>
+        <h3 class="variant-title">One page, everything visible</h3>
+        <p class="variant-note">all fields on one screen, big sliders &amp; chips. fastest for power users. feels like Notion + a settings sheet. risk: more intimidating.</p>
+
+        <div class="mock web">
+          <div class="mock-toolbar">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="url">scheduler.app/start &mdash; setup</span>
+          </div>
+
+          <div class="sk-h" style="font-size:22px;">build my plan</div>
+          <div class="sk-sub" style="margin-bottom:10px;">all in one place. the agent will draft a syllabus when you hit "preview".</div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div class="sk-box" style="padding:8px 10px;">
+              <div class="sk-sub">i'm preparing for&hellip;</div>
+              <div class="sk-row" style="gap:4px;flex-wrap:wrap;margin-top:4px;">
+                <span class="sk-chip on">SWE interviews</span>
+                <span class="sk-chip">college apps</span>
+                <span class="sk-chip">cert</span>
+                <span class="sk-chip">other</span>
+              </div>
+            </div>
+            <div class="sk-box" style="padding:8px 10px;">
+              <div class="sk-sub">deadline</div>
+              <div class="sk-row" style="gap:4px;flex-wrap:wrap;margin-top:4px;">
+                <span class="sk-chip">4w</span><span class="sk-chip on">12w</span><span class="sk-chip">6mo</span><span class="sk-chip">date&hellip;</span>
+              </div>
+            </div>
+            <div class="sk-box" style="padding:8px 10px;">
+              <div class="sk-sub">hours/week</div>
+              <div class="sk-row" style="margin-top:4px;align-items:center;">
+                <span class="sk-sub">2</span>
+                <div style="flex:1;height:4px;background:var(--ink);position:relative;margin:0 6px;border-radius:2px;">
+                  <span style="position:absolute;left:55%;top:-4px;width:12px;height:12px;background:var(--accent);border:1.5px solid var(--ink);border-radius:50%;"></span>
+                </div>
+                <span class="sk-sub">25</span>
+              </div>
+              <div class="sk-h" style="font-size:14px;text-align:center;">~14 hrs</div>
+            </div>
+            <div class="sk-box" style="padding:8px 10px;">
+              <div class="sk-sub">accountability</div>
+              <div class="sk-row" style="gap:4px;flex-wrap:wrap;margin-top:4px;">
+                <span class="sk-chip">self</span>
+                <span class="sk-chip on">weekly check-in</span>
+                <span class="sk-chip">sponsor</span>
+              </div>
+            </div>
+            <div class="sk-box" style="padding:8px 10px;grid-column:span 2;">
+              <div class="sk-sub">skill self-rating &mdash; tap to mark weak/strong</div>
+              <div class="sk-row" style="gap:4px;flex-wrap:wrap;margin-top:4px;">
+                <span class="sk-chip coral">arrays · weak</span>
+                <span class="sk-chip">strings</span>
+                <span class="sk-chip coral">graphs · weak</span>
+                <span class="sk-chip on">trees · ok</span>
+                <span class="sk-chip coral">DP · weak</span>
+                <span class="sk-chip on">sql · ok</span>
+                <span class="sk-chip">sysdesign</span>
+                <span class="sk-chip">behavioral</span>
+              </div>
+            </div>
+            <div class="sk-box dashed" style="padding:8px 10px;grid-column:span 2;display:flex;justify-content:space-between;align-items:center;">
+              <div>
+                <div class="sk-sub">connect calendar (read-only first)</div>
+                <div class="sk-h" style="font-size:14px;">we'll never write without your "approve"</div>
+              </div>
+              <span class="sk-btn">connect google &rarr;</span>
+            </div>
+          </div>
+
+          <div class="sk-row" style="margin-top:14px;justify-content:flex-end;gap:8px;">
+            <span class="sk-btn ghost">save draft</span>
+            <span class="sk-btn coral">preview my syllabus &rarr;</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Approval gate (shared) -->
+    <div class="approval">
+      <div>
+        <span class="variant-tag" style="background:var(--accent);">step 7 · the approval gate</span>
+        <h3>"draft syllabus + draft calendar &mdash; approve to schedule"</h3>
+        <p>
+          the deterministic promise made visible. user sees every block before it touches their real calendar. nothing writes until they approve. they can edit blocks, decline weeks, or regen with feedback. <b style="color:var(--ink);">this screen is non-negotiable across all variations.</b>
+        </p>
+      </div>
+      <div class="gate">
+        <span class="sk-btn ghost">edit &darr;</span>
+        <span class="sk-btn">regenerate</span>
+        <span class="sk-btn coral">approve &amp; schedule &rarr;</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- =================================================== -->
+  <!-- ============== CALENDAR =========================== -->
+  <!-- =================================================== -->
+  <section class="section" id="sec-calendar">
+    <div class="section-head">
+      <span class="section-num">02</span>
+      <h2 class="section-title">Calendar &mdash; Accept &amp; Done</h2>
+    </div>
+    <p class="section-sub">
+      Two-state task model: <b>proposed</b> (yellow, dashed &mdash; "Accept") &rarr; <b>accepted</b> (solid) &rarr; <b>done</b> (struck-through, "Done"). Accepting writes to gcal. Done logs telemetry that calibrates next week. Three views below; the legend is the same in all.
+    </p>
+
+    <div class="legend">
+      <span><span class="sw" style="background:rgba(255,216,77,0.55);border-style:dashed;"></span>proposed (tap accept)</span>
+      <span><span class="sw" style="background:rgba(255,90,60,0.2);"></span>accepted &mdash; on your calendar</span>
+      <span><span class="sw" style="background:rgba(0,0,0,0.85);"></span>done</span>
+      <span><span class="sw" style="background:rgba(0,0,0,0.06);"></span>locked (your other events)</span>
+    </div>
+
+    <div class="variants" data-section="calendar" style="margin-top:18px;">
+
+      <!-- A. Week grid (Shovel/GCal-like) -->
+      <div class="variant" data-variant="calendar-A">
+        <span class="variant-tag">A · week grid</span>
+        <h3 class="variant-title">Familiar week, smarter blocks</h3>
+        <p class="variant-note">weekday columns, hour rows, gcal-native feel. tasks dropped as time blocks. accept/done lives on the block itself + a today-rail at top.</p>
+
+        <div class="mock web">
+          <div class="mock-toolbar">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="url">scheduler.app/week</span>
+          </div>
+
+          <!-- Today rail -->
+          <div class="sk-box fill-yellow" style="padding:8px 10px;margin-bottom:8px;">
+            <div class="sk-row" style="justify-content:space-between;align-items:center;">
+              <div>
+                <div class="sk-sub">TODAY · MON 14</div>
+                <div class="sk-h" style="font-size:18px;">9:00 &mdash; graphs: BFS warmup (45m)</div>
+              </div>
+              <div class="sk-row" style="gap:6px;">
+                <span class="sk-btn tiny">snooze</span>
+                <span class="sk-btn tiny coral">done</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Week grid -->
+          <div class="cal-week">
+            <div class="cell hour"></div>
+            <div class="cell head">MON</div>
+            <div class="cell head">TUE</div>
+            <div class="cell head">WED</div>
+            <div class="cell head">THU</div>
+            <div class="cell head">FRI</div>
+
+            <div class="cell hour">9</div>
+            <div class="cell"><div class="evt done"><b>BFS warmup</b>45m</div></div>
+            <div class="cell"><div class="evt task"><b>DP review</b>1h</div></div>
+            <div class="cell"><div class="evt locked"><b>class</b></div></div>
+            <div class="cell"><div class="evt proposed"><b>graphs · 2</b>1h&nbsp; <span class="sk-sub">accept?</span></div></div>
+            <div class="cell"><div class="evt task"><b>mock #1</b>1h</div></div>
+
+            <div class="cell hour">11</div>
+            <div class="cell"><div class="evt locked"><b>lab</b></div></div>
+            <div class="cell"></div>
+            <div class="cell"><div class="evt locked"><b>class</b></div></div>
+            <div class="cell"></div>
+            <div class="cell"><div class="evt proposed"><b>reflect</b>20m</div></div>
+
+            <div class="cell hour">2p</div>
+            <div class="cell"></div>
+            <div class="cell"><div class="evt proposed"><b>DP · ladder</b>1.5h</div></div>
+            <div class="cell"></div>
+            <div class="cell"><div class="evt task"><b>sys design</b>1h</div></div>
+            <div class="cell"></div>
+
+            <div class="cell hour">4p</div>
+            <div class="cell"><div class="evt task"><b>essay draft</b>45m</div></div>
+            <div class="cell"></div>
+            <div class="cell"><div class="evt proposed"><b>DP · ladder</b>1h</div></div>
+            <div class="cell"></div>
+            <div class="cell"><div class="evt locked"><b>gym</b></div></div>
+          </div>
+
+          <div class="sk-row" style="justify-content:space-between;margin-top:10px;align-items:center;">
+            <div class="sk-sub">5 proposed · 2 accepted · 1 done</div>
+            <div class="sk-row" style="gap:6px;">
+              <span class="sk-btn tiny">accept all proposed</span>
+              <span class="sk-btn tiny ghost">regen week &nbsp;&rarr;</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- B. Today timeline -->
+      <div class="variant" data-variant="calendar-B">
+        <span class="variant-tag">B · today rail</span>
+        <h3 class="variant-title">Today, big &mdash; week, small</h3>
+        <p class="variant-note">today's blocks fill the hero. this week shrinks to a strip. the daily-driver bet: most students live one day at a time. closer to Things 3 / Sunsama daily.</p>
+
+        <div class="mock web">
+          <div class="mock-toolbar">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="url">scheduler.app/today</span>
+          </div>
+
+          <!-- mini week strip -->
+          <div class="sk-row" style="gap:4px;margin-bottom:10px;">
+            <div class="sk-box" style="padding:4px 6px;text-align:center;flex:1;">
+              <div class="sk-sub">M 14</div>
+              <div class="sk-h" style="font-size:13px;color:var(--accent);">today</div>
+            </div>
+            <div class="sk-box" style="padding:4px 6px;text-align:center;flex:1;"><div class="sk-sub">T 15</div><div class="sk-h" style="font-size:13px;">3</div></div>
+            <div class="sk-box" style="padding:4px 6px;text-align:center;flex:1;"><div class="sk-sub">W 16</div><div class="sk-h" style="font-size:13px;">2</div></div>
+            <div class="sk-box" style="padding:4px 6px;text-align:center;flex:1;"><div class="sk-sub">T 17</div><div class="sk-h" style="font-size:13px;">4</div></div>
+            <div class="sk-box" style="padding:4px 6px;text-align:center;flex:1;"><div class="sk-sub">F 18</div><div class="sk-h" style="font-size:13px;">3</div></div>
+            <div class="sk-box dashed" style="padding:4px 6px;text-align:center;flex:1;"><div class="sk-sub">S 19</div><div class="sk-h" style="font-size:13px;">&mdash;</div></div>
+            <div class="sk-box dashed" style="padding:4px 6px;text-align:center;flex:1;"><div class="sk-sub">S 20</div><div class="sk-h" style="font-size:13px;">&mdash;</div></div>
+          </div>
+
+          <!-- today blocks -->
+          <div class="sk-col" style="gap:6px;">
+            <div class="sk-box" style="padding:8px 10px;display:flex;justify-content:space-between;align-items:center;">
+              <div>
+                <div class="sk-sub">9:00 &mdash; 9:45 · 45m</div>
+                <div class="sk-h" style="font-size:16px;">BFS warmup</div>
+                <div class="sk-sub">graphs · prereq for "DP ladder"</div>
+              </div>
+              <div class="sk-row" style="gap:6px;">
+                <span class="sk-btn tiny ghost">skip</span>
+                <span class="sk-btn tiny primary">done</span>
+              </div>
+            </div>
+            <div class="sk-box fill-yellow" style="padding:8px 10px;border-style:dashed;display:flex;justify-content:space-between;align-items:center;">
+              <div>
+                <div class="sk-sub">10:30 &mdash; 11:30 · proposed</div>
+                <div class="sk-h" style="font-size:16px;">graphs · problem set 2</div>
+                <div class="sk-sub">conflicts: none · cost: 1h focus</div>
+              </div>
+              <div class="sk-row" style="gap:6px;">
+                <span class="sk-btn tiny ghost">edit</span>
+                <span class="sk-btn tiny coral">accept</span>
+              </div>
+            </div>
+            <div class="sk-box" style="padding:8px 10px;background:rgba(0,0,0,0.04);display:flex;justify-content:space-between;align-items:center;opacity:0.7;">
+              <div>
+                <div class="sk-sub">12:00 &mdash; 13:00 · locked</div>
+                <div class="sk-h" style="font-size:16px;color:var(--pencil);">CS 3110 lecture</div>
+              </div>
+            </div>
+            <div class="sk-box" style="padding:8px 10px;display:flex;justify-content:space-between;align-items:center;">
+              <div>
+                <div class="sk-sub">15:00 &mdash; 16:00 · accepted</div>
+                <div class="sk-h" style="font-size:16px;">mock interview #1</div>
+              </div>
+              <div class="sk-row" style="gap:6px;">
+                <span class="sk-btn tiny ghost">reschedule</span>
+                <span class="sk-btn tiny primary">done</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="sk-row" style="justify-content:space-between;margin-top:10px;">
+            <div class="sk-sub">2 done · 2 to go · on track</div>
+            <span class="sk-btn tiny">jump to week &rarr;</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- C. Two-pane / focused -->
+      <div class="variant" data-variant="calendar-C">
+        <span class="variant-tag">C · two-pane</span>
+        <h3 class="variant-title">Calendar left, focus right</h3>
+        <p class="variant-note">click a block, the right pane shows context: which milestone, prereqs, agent's reasoning, accept/done. the "why is this on my plan?" surface. kills schedule anxiety.</p>
+
+        <div class="mock web" style="min-height:430px;">
+          <div class="mock-toolbar">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="url">scheduler.app/cal</span>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:10px;">
+            <!-- mini week -->
+            <div class="cal-week" style="grid-template-columns:24px repeat(5,1fr);">
+              <div class="cell hour"></div>
+              <div class="cell head">M</div><div class="cell head">T</div>
+              <div class="cell head">W</div><div class="cell head">T</div>
+              <div class="cell head">F</div>
+
+              <div class="cell hour">9</div>
+              <div class="cell"><div class="evt done"><b>BFS</b></div></div>
+              <div class="cell"><div class="evt task"><b>DP rev</b></div></div>
+              <div class="cell"><div class="evt locked">class</div></div>
+              <div class="cell" style="background:rgba(255,90,60,0.1);"><div class="evt proposed" style="border-color:var(--accent);box-shadow:0 0 0 2px var(--accent);"><b>graphs2</b></div></div>
+              <div class="cell"><div class="evt task"><b>mock</b></div></div>
+
+              <div class="cell hour">11</div>
+              <div class="cell"><div class="evt locked">lab</div></div>
+              <div class="cell"></div>
+              <div class="cell"><div class="evt locked">class</div></div>
+              <div class="cell"></div>
+              <div class="cell"><div class="evt proposed">reflect</div></div>
+
+              <div class="cell hour">2p</div>
+              <div class="cell"></div>
+              <div class="cell"><div class="evt proposed"><b>DP lad</b></div></div>
+              <div class="cell"></div>
+              <div class="cell"><div class="evt task"><b>sysdes</b></div></div>
+              <div class="cell"></div>
+
+              <div class="cell hour">4p</div>
+              <div class="cell"><div class="evt task">essay</div></div>
+              <div class="cell"></div>
+              <div class="cell"><div class="evt proposed">DP lad</div></div>
+              <div class="cell"></div>
+              <div class="cell"><div class="evt locked">gym</div></div>
+            </div>
+
+            <!-- focus pane -->
+            <div class="sk-box" style="padding:10px 12px;background:#fff;">
+              <div class="sk-sub">SELECTED BLOCK</div>
+              <div class="sk-h" style="font-size:18px;">graphs · problem set 2</div>
+              <div class="sk-sub">thu 9:00 &mdash; 10:00 · 1h · proposed</div>
+
+              <div style="border-top:1.5px dashed var(--line-soft);margin:10px 0 8px;"></div>
+
+              <div class="sk-sub">why this, why now</div>
+              <div style="font-size:12px;line-height:1.55;margin:4px 0 10px;">
+                you marked <b>graphs</b> weak. BFS warmup (mon) is a prereq, you finished it. this builds toward <b>milestone 2: graphs fluency</b> &mdash; due fri.
+              </div>
+
+              <div class="sk-sub">prereqs</div>
+              <div class="sk-row" style="flex-wrap:wrap;gap:4px;margin:4px 0 10px;">
+                <span class="sk-chip on">BFS warmup ✓</span>
+                <span class="sk-chip on">DFS warmup ✓</span>
+              </div>
+
+              <div class="sk-sub">conflicts &amp; cost</div>
+              <div style="font-size:12px;margin:4px 0 12px;">none. 1 hour of focus. mid-energy slot.</div>
+
+              <div class="sk-row" style="gap:6px;justify-content:flex-end;">
+                <span class="sk-btn tiny ghost">push 1d</span>
+                <span class="sk-btn tiny">edit</span>
+                <span class="sk-btn tiny coral">accept &rarr; calendar</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Accept/Done state diagram -->
+    <div style="margin-top:32px;">
+      <div class="sk-h" style="font-size:22px;">the accept &rarr; done loop</div>
+      <div class="sk-sub" style="margin-bottom:10px;">single source of truth for the button states across every screen.</div>
+      <div class="sk-row" style="gap:14px;align-items:stretch;flex-wrap:wrap;">
+        <div class="sk-box dashed fill-yellow" style="flex:1;min-width:160px;">
+          <div class="sk-sub">state 1</div>
+          <div class="sk-h">PROPOSED</div>
+          <div class="sk-sub">agent drafted it. dashed, yellow. nothing on calendar yet.</div>
+          <div class="sk-row" style="margin-top:8px;gap:6px;"><span class="sk-btn tiny ghost">edit</span><span class="sk-btn tiny coral">accept</span></div>
+        </div>
+        <span class="sk-arrow" style="align-self:center;">&rarr;</span>
+        <div class="sk-box thick" style="flex:1;min-width:160px;background:rgba(255,90,60,0.15);">
+          <div class="sk-sub">state 2</div>
+          <div class="sk-h">ACCEPTED</div>
+          <div class="sk-sub">written to your calendar. solid border. shows in gcal too.</div>
+          <div class="sk-row" style="margin-top:8px;gap:6px;"><span class="sk-btn tiny ghost">resched</span><span class="sk-btn tiny primary">done</span></div>
+        </div>
+        <span class="sk-arrow" style="align-self:center;">&rarr;</span>
+        <div class="sk-box fill-ink" style="flex:1;min-width:160px;color:var(--paper);">
+          <div class="sk-sub" style="color:var(--paper);opacity:0.6;">state 3</div>
+          <div class="sk-h" style="color:var(--paper);">DONE</div>
+          <div class="sk-sub" style="color:var(--paper);opacity:0.7;">struck through. logs duration &rarr; calibrates next week.</div>
+        </div>
+        <span class="sk-arrow" style="align-self:center;">&darr;</span>
+        <div class="sk-box dashed" style="flex:0.7;min-width:130px;">
+          <div class="sk-sub">side-state</div>
+          <div class="sk-h" style="font-size:18px;">SKIPPED / MISSED</div>
+          <div class="sk-sub">drift detected &rarr; weekly check-in surfaces a recovery plan.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =================================================== -->
+  <!-- ============== AGENT ============================== -->
+  <!-- =================================================== -->
+  <section class="section" id="sec-agent">
+    <div class="section-head">
+      <span class="section-num">03</span>
+      <h2 class="section-title">Agent &mdash; bounded, helpful, in-a-box</h2>
+    </div>
+    <p class="section-sub">
+      Agent is <b>not</b> the system &mdash; it's an interface to the deterministic engine. Every chat action either (a) generates structured candidates the user must approve, or (b) reads/explains state. <b>Capabilities below are split: LLM-generated</b> vs <b>deterministic-only</b> &mdash; the UI should reflect this difference.
+    </p>
+
+    <!-- Placement variations -->
+    <div class="variants" data-section="agent">
+
+      <!-- A. Sidebar dock -->
+      <div class="variant" data-variant="agent-A">
+        <span class="variant-tag">A · sidebar dock</span>
+        <h3 class="variant-title">Always there, never in the way</h3>
+        <p class="variant-note">right rail, collapsible. context-aware: knows what week/block you're looking at. best for power users.</p>
+
+        <div class="mock web" style="min-height:380px;">
+          <div class="mock-toolbar">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="url">scheduler.app/week + agent</span>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:10px;">
+            <!-- calendar peek -->
+            <div class="sk-col">
+              <div class="sk-box" style="padding:8px;">
+                <div class="sk-sub">WEEK OF FEB 14</div>
+                <div class="sk-row" style="gap:4px;flex-wrap:wrap;margin-top:6px;">
+                  <div class="evt task" style="position:static;">DP review</div>
+                  <div class="evt proposed" style="position:static;">graphs2</div>
+                  <div class="evt done" style="position:static;">BFS</div>
+                  <div class="evt task" style="position:static;">mock</div>
+                  <div class="evt proposed" style="position:static;">essay</div>
+                  <div class="evt locked" style="position:static;">class</div>
+                </div>
+              </div>
+              <div class="sk-box dashed" style="padding:8px;">
+                <div class="sk-sub">drift</div>
+                <div class="sk-h" style="font-size:14px;">2h behind this week</div>
+              </div>
+            </div>
+
+            <!-- agent rail -->
+            <div class="sk-box" style="padding:8px;background:rgba(255,216,77,0.15);">
+              <div class="sk-row" style="justify-content:space-between;align-items:center;">
+                <div class="sk-h" style="font-size:18px;">agent</div>
+                <span class="sk-sub">bounded · v0.1</span>
+              </div>
+
+              <div class="chat" style="padding:4px 0;">
+                <div class="bubble agent">you're 2h behind. want me to draft a recovery plan?</div>
+                <div class="bubble me">yeah, push graphs to wed</div>
+                <div class="bubble tool">+ proposed: 3 reschedules &mdash; <b>preview</b></div>
+                <div class="bubble agent">drafted. dashed-yellow blocks on your week. approve to write.</div>
+              </div>
+
+              <div class="chat-input">
+                <span class="ph">ask, plan, reschedule&hellip;</span>
+                <span class="sk-btn tiny primary">&uarr;</span>
+              </div>
+
+              <div class="sk-row" style="gap:4px;flex-wrap:wrap;margin-top:6px;">
+                <span class="sk-chip">/recover</span>
+                <span class="sk-chip">/why</span>
+                <span class="sk-chip">/regen week</span>
+                <span class="sk-chip">/report</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- B. Bottom command bar -->
+      <div class="variant" data-variant="agent-B">
+        <span class="variant-tag">B · command bar</span>
+        <h3 class="variant-title">⌘K-style, summon &amp; dismiss</h3>
+        <p class="variant-note">raycast / linear cmd-k feel. press a key, ask anything, agent shows actions. doesn't squat on layout. great for keyboard students.</p>
+
+        <div class="mock web" style="min-height:380px;position:relative;">
+          <div class="mock-toolbar">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="url">scheduler.app/today &nbsp; ⌘K</span>
+          </div>
+
+          <!-- dim background -->
+          <div style="opacity:0.35;">
+            <div class="sk-line"></div>
+            <div class="sk-line short"></div>
+            <div class="sk-row" style="gap:6px;margin:6px 0;">
+              <div class="evt task" style="position:static;">DP review</div>
+              <div class="evt done" style="position:static;">BFS</div>
+              <div class="evt proposed" style="position:static;">graphs2</div>
+            </div>
+            <div class="sk-line"></div>
+            <div class="sk-line tiny"></div>
+          </div>
+
+          <!-- floating cmdk -->
+          <div class="sk-box thick" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:78%;background:#fff;padding:10px 12px;">
+            <div class="sk-row" style="gap:6px;align-items:center;border-bottom:1.5px dashed var(--line-soft);padding-bottom:6px;margin-bottom:6px;">
+              <span class="sk-sub" style="font-size:12px;">⌘K</span>
+              <span style="font-family:var(--hand);font-size:14px;flex:1;">push DP ladder to next week, keep graphs</span>
+              <span class="sk-sub">esc</span>
+            </div>
+            <div class="sk-col" style="gap:4px;">
+              <div class="sk-row" style="justify-content:space-between;background:rgba(255,216,77,0.5);padding:5px 8px;border-radius:5px;">
+                <span style="font-size:13px;">↳ <b>reschedule</b> · DP ladder &rarr; week of feb 21</span>
+                <span class="sk-sub">deterministic</span>
+              </div>
+              <div class="sk-row" style="justify-content:space-between;padding:5px 8px;">
+                <span style="font-size:13px;">↳ <b>regenerate</b> graphs sub-plan to fit new slots</span>
+                <span class="sk-sub">LLM &rarr; preview</span>
+              </div>
+              <div class="sk-row" style="justify-content:space-between;padding:5px 8px;">
+                <span style="font-size:13px;">↳ <b>explain</b> trade-off (delays milestone 3 by 4d)</span>
+                <span class="sk-sub">LLM</span>
+              </div>
+              <div class="sk-row" style="justify-content:space-between;padding:5px 8px;">
+                <span style="font-size:13px;">↳ <b>cancel</b></span>
+                <span class="sk-sub">return ↩</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- C. Hybrid: pill + threads -->
+      <div class="variant" data-variant="agent-C">
+        <span class="variant-tag">C · pill + threads</span>
+        <h3 class="variant-title">A pill that opens a thread</h3>
+        <p class="variant-note">friendly bottom-right pill, expands to a chat panel. each task can have its own thread ("ask about this block"). great for novice / younger students.</p>
+
+        <div class="mock web" style="min-height:380px;position:relative;overflow:visible;">
+          <div class="mock-toolbar">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="url">scheduler.app/today</span>
+          </div>
+
+          <div class="sk-col" style="gap:6px;">
+            <div class="sk-box" style="padding:6px 8px;display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-size:13px;"><b>9:00 BFS warmup</b> · 45m</span>
+              <span class="sk-btn tiny ghost">💬 ask</span>
+            </div>
+            <div class="sk-box fill-yellow" style="padding:6px 8px;border-style:dashed;display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-size:13px;"><b>10:30 graphs · ps2</b> · proposed</span>
+              <span class="sk-row" style="gap:4px;"><span class="sk-btn tiny ghost">💬</span><span class="sk-btn tiny coral">accept</span></span>
+            </div>
+            <div class="sk-box" style="padding:6px 8px;display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-size:13px;"><b>15:00 mock #1</b> · 1h</span>
+              <span class="sk-btn tiny ghost">💬 ask</span>
+            </div>
+          </div>
+
+          <!-- floating panel -->
+          <div class="sk-box thick" style="position:absolute;right:14px;bottom:14px;width:240px;background:#fff;padding:8px;">
+            <div class="sk-row" style="justify-content:space-between;align-items:center;margin-bottom:4px;">
+              <div class="sk-h" style="font-size:16px;">about this block</div>
+              <span class="sk-sub">×</span>
+            </div>
+            <div class="chat" style="padding:0;">
+              <div class="bubble me" style="font-size:12px;">why graphs again? i did BFS already.</div>
+              <div class="bubble agent" style="font-size:12px;">because graphs is a <b>milestone</b>, not a topic. BFS was the warmup. ps2 = mixed BFS/DFS at interview difficulty.</div>
+            </div>
+            <div class="chat-input" style="margin-top:4px;">
+              <span class="ph" style="font-size:12px;">ask&hellip;</span>
+            </div>
+          </div>
+          <!-- pill -->
+          <div class="sk-btn coral" style="position:absolute;right:14px;top:14px;font-family:var(--hand-title);font-size:18px;padding:6px 14px;">✦ agent</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Capability map -->
+    <div style="margin-top:32px;">
+      <div class="sk-h" style="font-size:22px;">capability map &mdash; LLM vs deterministic</div>
+      <div class="sk-sub" style="margin-bottom:6px;">
+        the visual grammar matters: <b>coral icons = LLM</b> (proposes, must be approved). <b>white icons = deterministic</b> (acts directly, no LLM in the loop).
+      </div>
+
+      <div class="cap-grid">
+        <div class="cap llm">
+          <div class="sk-row" style="justify-content:space-between;align-items:flex-start;">
+            <div class="icon">¶</div><span class="det">LLM &rarr; preview</span>
+          </div>
+          <h4>generate syllabus</h4>
+          <p>turns goal + skill profile into a milestone tree. always lands in approval gate before scheduling.</p>
+        </div>
+        <div class="cap llm">
+          <div class="sk-row" style="justify-content:space-between;align-items:flex-start;">
+            <div class="icon">↻</div><span class="det">LLM &rarr; preview</span>
+          </div>
+          <h4>regenerate week</h4>
+          <p>asks for changes, drafts new proposed blocks. user reviews dashed-yellow before accept.</p>
+        </div>
+        <div class="cap llm">
+          <div class="sk-row" style="justify-content:space-between;align-items:flex-start;">
+            <div class="icon">⚑</div><span class="det">LLM &rarr; preview</span>
+          </div>
+          <h4>recovery plan</h4>
+          <p>when user is behind. drafts a path back. policy engine decides <i>if</i>; LLM writes <i>how</i>.</p>
+        </div>
+        <div class="cap llm">
+          <div class="sk-row" style="justify-content:space-between;align-items:flex-start;">
+            <div class="icon">?</div><span class="det">LLM (read-only)</span>
+          </div>
+          <h4>explain "why this"</h4>
+          <p>natural-language explanation of any block's prereqs, milestone, energy fit.</p>
+        </div>
+        <div class="cap llm">
+          <div class="sk-row" style="justify-content:space-between;align-items:flex-start;">
+            <div class="icon">∑</div><span class="det">LLM (read-only)</span>
+          </div>
+          <h4>weekly reflection</h4>
+          <p>summary of what got done, what slipped, what to focus on. user-initiated only.</p>
+        </div>
+        <div class="cap llm">
+          <div class="sk-row" style="justify-content:space-between;align-items:flex-start;">
+            <div class="icon">✉</div><span class="det">LLM + permissions</span>
+          </div>
+          <h4>sponsor report draft</h4>
+          <p>only fields the user opted in to share. always preview before send.</p>
+        </div>
+
+        <div class="cap det-only">
+          <div class="sk-row" style="justify-content:space-between;align-items:flex-start;">
+            <div class="icon">▷</div><span class="det">deterministic</span>
+          </div>
+          <h4>accept &amp; schedule</h4>
+          <p>writes accepted blocks to gcal. idempotent. retry-safe. no LLM in this path.</p>
+        </div>
+        <div class="cap det-only">
+          <div class="sk-row" style="justify-content:space-between;align-items:flex-start;">
+            <div class="icon">✓</div><span class="det">deterministic</span>
+          </div>
+          <h4>mark done</h4>
+          <p>logs completion + actual duration. feeds calibration model. updates milestone progress.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Weekly check-in screen -->
+    <div style="margin-top:36px;display:grid;grid-template-columns:1.2fr 1fr;gap:22px;align-items:start;">
+      <div class="variant" style="margin:0;">
+        <span class="variant-tag">bonus · weekly check-in</span>
+        <h3 class="variant-title">5 min on Sunday</h3>
+        <p class="variant-note">the only required ritual. drives drift detection &amp; calibration.</p>
+
+        <div class="mock web">
+          <div class="mock-toolbar">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="url">scheduler.app/checkin</span>
+          </div>
+
+          <div class="sk-h" style="font-size:22px;">how was this week?</div>
+          <div class="sk-sub" style="margin-bottom:10px;">SUN FEB 19 · week 1 of 12</div>
+
+          <div class="sk-box" style="padding:10px 12px;margin-bottom:8px;">
+            <div class="sk-sub">completion</div>
+            <div class="sk-h" style="font-size:18px;">8 of 11 blocks done · 73%</div>
+            <div class="sk-row" style="gap:3px;margin-top:6px;flex-wrap:wrap;">
+              <span class="sk-chip on">✓</span><span class="sk-chip on">✓</span><span class="sk-chip on">✓</span><span class="sk-chip on">✓</span><span class="sk-chip on">✓</span><span class="sk-chip on">✓</span><span class="sk-chip on">✓</span><span class="sk-chip on">✓</span>
+              <span class="sk-chip coral">⨯</span><span class="sk-chip coral">⨯</span><span class="sk-chip coral">⨯</span>
+            </div>
+          </div>
+
+          <div class="sk-box dashed fill-yellow" style="padding:10px 12px;margin-bottom:8px;">
+            <div class="sk-sub">what slipped</div>
+            <div class="sk-h" style="font-size:16px;">DP ladder &mdash; 3 sessions</div>
+            <div class="sk-sub" style="margin-top:4px;">agent suggests: split into 30-min blocks at 9am instead of 1.5h afternoons</div>
+            <div class="sk-row" style="gap:6px;margin-top:8px;">
+              <span class="sk-btn tiny ghost">i'll do it manually</span>
+              <span class="sk-btn tiny coral">draft recovery &rarr;</span>
+            </div>
+          </div>
+
+          <div class="sk-box" style="padding:10px 12px;">
+            <div class="sk-sub">how was the workload?</div>
+            <div class="sk-row" style="gap:4px;flex-wrap:wrap;margin-top:6px;">
+              <span class="sk-chip">too light</span>
+              <span class="sk-chip on">about right</span>
+              <span class="sk-chip">heavy</span>
+              <span class="sk-chip">crushed me</span>
+            </div>
+          </div>
+
+          <div class="sk-row" style="margin-top:14px;justify-content:flex-end;">
+            <span class="sk-btn coral">finish check-in &rarr;</span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="sk-h" style="font-size:22px;">trust visuals · the brand promise</div>
+        <div class="sk-sub" style="margin-bottom:10px;">consistent across every screen. these are non-negotiable.</div>
+
+        <div class="sk-col" style="gap:10px;">
+          <div class="sk-box" style="padding:10px 12px;">
+            <div class="sk-sub">1. the dashed-yellow rule</div>
+            <div style="font-size:13px;">if it's dashed-yellow, it isn't on your calendar yet. ever. no exceptions.</div>
+          </div>
+          <div class="sk-box" style="padding:10px 12px;">
+            <div class="sk-sub">2. one approval gate per session</div>
+            <div style="font-size:13px;">the agent never writes silently. one explicit "approve" per batch. always reversible for 60s.</div>
+          </div>
+          <div class="sk-box" style="padding:10px 12px;">
+            <div class="sk-sub">3. "why this?" on every block</div>
+            <div style="font-size:13px;">tap any block, see prereqs + milestone. demystifies the agent.</div>
+          </div>
+          <div class="sk-box" style="padding:10px 12px;">
+            <div class="sk-sub">4. sponsor visibility = opt-in fields</div>
+            <div style="font-size:13px;">share % done + milestones, not raw blocks. user previews every report.</div>
+          </div>
+          <div class="sk-box" style="padding:10px 12px;">
+            <div class="sk-sub">5. drift &gt; punishment</div>
+            <div style="font-size:13px;">behind = "let's recover", never "you failed". no streaks-as-shame, no gamified guilt.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ NEXT STEPS ============ -->
+  <section class="section">
+    <div class="section-head">
+      <span class="section-num">·</span>
+      <h2 class="section-title">next steps for me / you</h2>
+    </div>
+    <div class="sk-row" style="gap:14px;align-items:stretch;flex-wrap:wrap;">
+      <div class="sk-box" style="flex:1;min-width:200px;padding:12px;">
+        <div class="sk-sub">YOU</div>
+        <div class="sk-h" style="font-size:18px;">pick a direction per section</div>
+        <div class="sk-sub" style="margin-top:6px;">use the <b>Tweaks</b> panel (top right) to compare A / B / C side-by-side or solo. tell me which feels right.</div>
+      </div>
+      <div class="sk-box" style="flex:1;min-width:200px;padding:12px;">
+        <div class="sk-sub">ME · next pass</div>
+        <div class="sk-h" style="font-size:18px;">mid-fi mockups</div>
+        <div class="sk-sub" style="margin-top:6px;">type system, real grid, color tokens, hover states, micro-interactions for accept &rarr; calendar write.</div>
+      </div>
+      <div class="sk-box" style="flex:1;min-width:200px;padding:12px;">
+        <div class="sk-sub">OPEN QUESTIONS</div>
+        <div class="sk-sub" style="margin-top:6px;line-height:1.7;">
+          · do students want a mobile-first or web-first daily-driver?<br>
+          · sponsor mode: opt-in at signup or later?<br>
+          · is the agent voice "calm coach" or "sharp study buddy"?
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="thesis">
+    <h2>LLMs propose. Deterministic infrastructure disposes.</h2>
+    <p>every wireframe choice on this page is downstream of that thesis.</p>
+  </div>
+
+</div>
+
+<!-- React + Tweaks panel -->
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+
+<div id="tweaks-root"></div>
+
+<script type="text/babel">
+  const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+    "show_onboarding": "all",
+    "show_calendar": "all",
+    "show_agent": "all",
+    "paper": true,
+    "accent": "coral"
+  }/*EDITMODE-END*/;
+
+  function applyVisibility(section, value) {
+    const all = document.querySelectorAll(`[data-section="${section}"] > [data-variant]`);
+    all.forEach(el => {
+      const v = el.getAttribute('data-variant');
+      const letter = v.split('-')[1];
+      const show = value === 'all' || letter === value;
+      el.setAttribute('data-show', show ? 'true' : 'false');
+    });
+  }
+
+  function applyAccent(accent) {
+    const map = {
+      coral:  '#ff5a3c',
+      blue:   '#3b6ef0',
+      green:  '#3b9d6e',
+      violet: '#7e5cff'
+    };
+    document.documentElement.style.setProperty('--accent', map[accent] || map.coral);
+  }
+
+  function applyPaper(on) {
+    document.body.style.background = on
+      ? ''
+      : '#fafafa';
+    document.body.style.setProperty('--paper', on ? '#fafaf6' : '#fff');
+  }
+
+  function App() {
+    const [t, setTweak] = window.useTweaks(TWEAK_DEFAULTS);
+
+    React.useEffect(() => { applyVisibility('onboarding', t.show_onboarding); }, [t.show_onboarding]);
+    React.useEffect(() => { applyVisibility('calendar',   t.show_calendar);   }, [t.show_calendar]);
+    React.useEffect(() => { applyVisibility('agent',      t.show_agent);      }, [t.show_agent]);
+    React.useEffect(() => { applyAccent(t.accent); }, [t.accent]);
+    React.useEffect(() => { applyPaper(t.paper);   }, [t.paper]);
+
+    const { TweaksPanel, TweakSection, TweakRadio, TweakToggle, TweakSelect } = window;
+
+    return (
+      <TweaksPanel title="Tweaks">
+        <TweakSection title="Onboarding (sec. 01)">
+          <TweakRadio
+            label="Show variant"
+            value={t.show_onboarding}
+            options={[
+              { value: 'all', label: 'All' },
+              { value: 'A',   label: 'A · stepped' },
+              { value: 'B',   label: 'B · chat' },
+              { value: 'C',   label: 'C · canvas' },
+            ]}
+            onChange={(v) => setTweak('show_onboarding', v)}
+          />
+        </TweakSection>
+
+        <TweakSection title="Calendar (sec. 02)">
+          <TweakRadio
+            label="Show variant"
+            value={t.show_calendar}
+            options={[
+              { value: 'all', label: 'All' },
+              { value: 'A',   label: 'A · week' },
+              { value: 'B',   label: 'B · today' },
+              { value: 'C',   label: 'C · 2-pane' },
+            ]}
+            onChange={(v) => setTweak('show_calendar', v)}
+          />
+        </TweakSection>
+
+        <TweakSection title="Agent (sec. 03)">
+          <TweakRadio
+            label="Show variant"
+            value={t.show_agent}
+            options={[
+              { value: 'all', label: 'All' },
+              { value: 'A',   label: 'A · sidebar' },
+              { value: 'B',   label: 'B · ⌘K' },
+              { value: 'C',   label: 'C · pill' },
+            ]}
+            onChange={(v) => setTweak('show_agent', v)}
+          />
+        </TweakSection>
+
+        <TweakSection title="Paper / accent">
+          <TweakToggle
+            label="Paper texture"
+            value={t.paper}
+            onChange={(v) => setTweak('paper', v)}
+          />
+          <TweakSelect
+            label="Accent"
+            value={t.accent}
+            options={[
+              { value: 'coral',  label: 'Coral (default)' },
+              { value: 'blue',   label: 'Pencil blue' },
+              { value: 'green',  label: 'Mint pencil' },
+              { value: 'violet', label: 'Violet pencil' },
+            ]}
+            onChange={(v) => setTweak('accent', v)}
+          />
+        </TweakSection>
+      </TweaksPanel>
+    );
+  }
+
+  function tryMount() {
+    if (!window.useTweaks || !window.TweaksPanel) {
+      return setTimeout(tryMount, 60);
+    }
+    const root = ReactDOM.createRoot(document.getElementById('tweaks-root'));
+    root.render(<App />);
+  }
+  tryMount();
+</script>
+
+</body>
+</html>

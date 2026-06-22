@@ -659,6 +659,57 @@ def test_dry_run_previews_without_side_effects_then_write_activates() -> None:
 
 
 # --------------------------------------------------------------------------- #
+# I-b. full-horizon / plan-level write (D-7, D-8): the whole horizon is approved
+# and written as ONE unit; no per-week slicing creeps in.
+# --------------------------------------------------------------------------- #
+
+
+def _multi_week_profile() -> UserProfile:
+    """Canonical profile, but the only deep-work window is Monday evening and the
+    daily cap fits just one of the two deep tasks per day. ``dp_002`` depends on
+    ``dp_001``; with a single deep day per week and a 120-min cap, the greedy
+    scheduler must push ``dp_002`` to the *following* Monday — so the draft spans
+    more than one calendar week."""
+    data = _canonical_profile().model_dump(mode="json")
+    data["deep_work_windows"] = [{"day": "Mon", "start": "18:00", "end": "21:00"}]
+    data["hard_constraints"]["max_daily_study_min"] = 120
+    return UserProfile.model_validate(data)
+
+
+def test_multi_week_plan_writes_full_horizon_in_single_approval() -> None:
+    """A multi-week draft is proposed, then a SINGLE approve → write writes every
+    entry across the full horizon (plan-level, D-7; entire horizon, D-8). Guards
+    against a future regression toward per-week approval / per-week writes."""
+    service, env, _clock = make_service()
+    # Re-onboard with a profile that forces a genuine multi-week draft (onboard
+    # upserts; profile edits during dogfooding are expected).
+    service.onboard(
+        {"user_profile": _multi_week_profile().model_dump(mode="json"), "timezone": "UTC"}
+    )
+
+    proposed = service.propose(USER_ID)
+    assert proposed.state is S.AWAITING_USER_APPROVAL
+    assert proposed.scheduled_task_count == len(PLAN_TASK_IDS)
+
+    draft = env.state.get_draft(proposed.draft_schedule_id)
+    assert draft is not None
+    # Guard the test itself: the draft must genuinely span >1 ISO week, otherwise
+    # it would not exercise the no-per-week-slicing guarantee at all.
+    iso_weeks = {entry.start.isocalendar()[:2] for entry in draft.entries}
+    assert len(iso_weeks) >= 2
+    assert {entry.task_id for entry in draft.entries} == set(PLAN_TASK_IDS)
+
+    # One approval, one write — covering every entry across the whole horizon.
+    service.approve(USER_ID)
+    written = service.write(USER_ID)
+
+    assert written.state is S.ACTIVE_PLAN
+    assert written.write_status == "success"
+    assert set(written.mapping_status_by_task) == set(PLAN_TASK_IDS)
+    assert all(status == "verified" for status in written.mapping_status_by_task.values())
+
+
+# --------------------------------------------------------------------------- #
 # J. write failure
 # --------------------------------------------------------------------------- #
 

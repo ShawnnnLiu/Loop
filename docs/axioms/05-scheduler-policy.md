@@ -127,6 +127,34 @@ Scheduler failures may suggest deterministic repair options such as splitting a 
 - The Scheduler does not bypass validation.
 - A task with unmet prerequisites must not be scheduled before its blockers in the MVP.
 
+## Manual Adjustment Re-validation (drag-to-adjust)
+
+Before approval the user may reposition proposed blocks directly (the
+schedule-review UI). The Scheduler does not re-run; instead the moved placement
+is **re-validated server-side** — the client's own conflict checking is never
+trusted — and refused with a typed `reason_code` if it breaks a hard rule. A
+manual move must still satisfy:
+
+| Broken on a manual move | `reason_code` |
+| --- | --- |
+| Overlaps a fixed external event, or another proposed block | `NO_VALID_CONTIGUOUS_BLOCK` |
+| Runs outside `[no_events_before, no_events_after]`, or lands on a disabled weekend | `OUTSIDE_ALLOWED_HOURS` |
+| Pushes a calendar day over `max_daily_study_min` | `DAILY_LOAD_EXCEEDED` |
+| Starts before a prerequisite ends | `DEPENDENCY_BLOCKED` |
+
+A move also never changes a block's **duration** (the new end is derived from the
+original length, so a drag cannot resize). What is deliberately **relaxed** for a
+manual move is the *soft placement the greedy scheduler optimizes for* but which
+is not a hard safety rule: **deep-work-window adherence** and
+**`min_break_between_deep_blocks_min`**. The user is explicitly overriding where a
+block sits, and the review grid spans a wider day than the deep-work windows;
+re-imposing those soft preferences would reject legitimate moves. The hard
+day/time/load bounds, no-overlap, and prerequisite order above are not relaxed.
+Re-validation lives in `backend/src/agentic_calendar/scheduler/adjustment.py`; the
+revised draft is a new immutable `DraftSchedule` whose approval hash is recomputed
+from it, so axiom 06's write-time recheck still validates exactly what was
+approved.
+
 ## Implementation Honesty: Greedy MVP, Solver Later
 
 ### MVP Approach: Deterministic Greedy Heuristic

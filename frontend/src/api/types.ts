@@ -5,9 +5,67 @@
 
 export type ReasonCode = string
 
-/** Loosely typed for now — the onboarding wizard (F-C) types the full
- *  UserProfile and maps it onto form fields. */
-export type UserProfile = Record<string, unknown>
+export type ExperienceLevel = 'beginner' | 'intermediate' | 'advanced'
+export type Weekday = 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat' | 'Sun'
+
+export interface DeepWorkWindow {
+  day: Weekday
+  start: string // HH:MM
+  end: string // HH:MM
+}
+
+export interface HardConstraints {
+  no_events_before: string // HH:MM
+  no_events_after: string // HH:MM
+  allow_weekends: boolean
+  max_daily_study_min: number
+  min_break_between_deep_blocks_min: number
+}
+
+export interface Preferences {
+  prefer_evening_sessions: boolean
+  prefer_weekend_long_blocks: boolean
+  avoid_back_to_back_deep_work: boolean
+}
+
+/** Mirror of contracts/user_profile.py::UserProfile. Times are HH:MM strings;
+ *  created_at/updated_at are tz-aware ISO datetimes. */
+export interface UserProfile {
+  user_id: string
+  profile_version: string
+  goal: string
+  target_role: string
+  target_companies: string[]
+  target_level: string | null
+  timeline_weeks: number
+  weekly_hours: number
+  experience_level: ExperienceLevel
+  known_strengths: string[]
+  known_weaknesses: string[]
+  preferred_session_length_min: number
+  max_session_length_min: number
+  deep_work_windows: DeepWorkWindow[]
+  hard_constraints: HardConstraints
+  preferences: Preferences
+  motivation_profile_id?: string | null
+  resume_text: string | null
+  created_at: string
+  updated_at: string
+}
+
+/** The /api/onboard request body. The server overrides user_profile.user_id
+ *  with the session user, so what the client sends there is a placeholder. */
+export interface OnboardPayload {
+  user_profile: UserProfile
+  timezone: string
+}
+
+export interface OnboardResult {
+  user_id: string
+  created: boolean
+  timezone: string
+  has_motivation_profile: boolean
+}
 
 export interface MeResult {
   user_id: string

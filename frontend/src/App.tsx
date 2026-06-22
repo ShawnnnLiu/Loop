@@ -4,10 +4,10 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { ApiError, api } from './api/client'
 import type { MeResult } from './api/types'
 import { Topbar } from './components/Topbar'
+import { OnboardingScreen } from './screens/Onboarding'
 import {
   AccountabilityScreen,
   GenerationScreen,
-  OnboardingScreen,
   ScheduleReviewScreen,
   ThresholdsScreen,
   TodayScreen,
@@ -56,7 +56,7 @@ export function App() {
         <Routes>
           {/* A connected user with no profile lands in onboarding; otherwise Today. */}
           <Route path="/" element={<Navigate to={me.onboarded ? '/today' : '/onboarding'} replace />} />
-          <Route path="/onboarding" element={<OnboardingScreen />} />
+          <Route path="/onboarding" element={<OnboardingScreen me={me} />} />
           <Route path="/plan" element={<GenerationScreen />} />
           <Route path="/review" element={<ScheduleReviewScreen />} />
           <Route path="/today" element={<TodayScreen />} />

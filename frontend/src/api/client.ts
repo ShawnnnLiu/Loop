@@ -1,6 +1,8 @@
 import type {
   AccountabilityResult,
   MeResult,
+  OnboardPayload,
+  OnboardResult,
   StatusResult,
   ThresholdsResult,
   TodayResult,
@@ -64,4 +66,20 @@ export const api = {
   today: () => request<TodayResult>('GET', '/today'),
   thresholds: () => request<ThresholdsResult>('GET', '/thresholds'),
   accountability: () => request<AccountabilityResult>('GET', '/accountability'),
+  onboard: (payload: OnboardPayload) => request<OnboardResult>('POST', '/onboard', payload),
+}
+
+/** Best-effort human message out of an ApiError body (the ValidationError
+ *  handler returns {error, type}; FastAPI body-validation returns {detail}). */
+export function errorMessage(error: unknown): string {
+  if (error instanceof ApiError) {
+    const body = error.body
+    if (body && typeof body === 'object') {
+      const record = body as Record<string, unknown>
+      if (typeof record.error === 'string') return record.error
+      if (typeof record.detail === 'string') return record.detail
+    }
+    return `Request failed (${error.status})`
+  }
+  return error instanceof Error ? error.message : 'Something went wrong'
 }

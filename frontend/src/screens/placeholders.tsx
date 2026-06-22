@@ -1,7 +1,7 @@
 // Placeholder screens proving the routed shell. Each is built out in a later
 // commit of the frontend phase (see docs/implementation-plans/
-// phase-loop-mvp-frontend.md): F-C onboarding, F-D generation, F-E drag-adjust,
-// F-G the steady-state read views.
+// phase-loop-mvp-frontend.md): F-D generation, F-E drag-adjust, F-G the
+// steady-state read views. (Onboarding shipped in F-C — see ./Onboarding.)
 
 function Placeholder({ title, commit }: { title: string; commit: string }) {
   return (
@@ -17,7 +17,6 @@ function Placeholder({ title, commit }: { title: string; commit: string }) {
   )
 }
 
-export const OnboardingScreen = () => <Placeholder title="Set up your plan" commit="F-C" />
 export const GenerationScreen = () => <Placeholder title="Building your plan" commit="F-D" />
 export const ScheduleReviewScreen = () => <Placeholder title="Review your week" commit="F-E" />
 export const TodayScreen = () => <Placeholder title="Today" commit="F-G" />

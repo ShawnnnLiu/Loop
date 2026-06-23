@@ -6,6 +6,12 @@ nodes the operator CLI's ``--llm fixture`` uses), auto-onboards the sample
 Increment-1 JSON API on localhost. This is a *demo* composition — no auth, no
 persistence, in-memory calendar; the hosted multi-user composition (real
 adapter, SQLite, sessions) arrives in later increments.
+
+This is also the **keyless dev server**: with a built ``frontend/dist`` present,
+it serves the React SPA over the fixture backend, so the whole loop (onboarding
+wizard → generate → drag-adjust → approve → write) is browsable end-to-end
+without an Anthropic key or Google connection. For SPA hot-reload, run Vite
+(``npm run dev``) and let it proxy ``/api`` here.
 """
 
 from __future__ import annotations
@@ -15,7 +21,7 @@ from agentic_calendar.app.environment import AppEnvironment, build_environment
 from agentic_calendar.tools.llm_smoke import sample_fixture_inputs
 from agentic_calendar.tools.run_cycle import _fixture_bundle
 
-from .app import create_app
+from .app import create_app, default_spa_dist
 
 
 def build_demo_environment() -> tuple[AppEnvironment, str]:
@@ -38,7 +44,7 @@ def main() -> None:
     import uvicorn
 
     env, user_id = build_demo_environment()
-    app = create_app(env=env, default_user_id=user_id)
+    app = create_app(env=env, default_user_id=user_id, spa_dist=default_spa_dist())
     uvicorn.run(app, host="127.0.0.1", port=8000)
 
 

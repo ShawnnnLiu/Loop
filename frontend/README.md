@@ -11,20 +11,34 @@ the commit breakdown (F-A…F-H).
 
 ## Develop
 
-The dev server proxies `/api`, `/auth`, and `/healthz` to the backend, so run
-the FastAPI app on `:8000` first (dev mode = no auth, a single configured user):
+Two ways to run the SPA against a real backend.
+
+**A · Vite dev server with hot-reload (active development).** The Vite dev
+server proxies `/api`, `/auth`, and `/healthz` to the keyless backend, so run
+that on `:8000` first (fixture LLM nodes, no Anthropic key, no Google — the
+sample profile is auto-onboarded so `propose` works out of the box):
 
 ```bash
-# terminal 1 — backend (from backend/), dev mode on :8000
-cd ../backend && uv run uvicorn <composition-root app>:app --port 8000
+# terminal 1 — keyless dev backend (from backend/), serves the fixture env on :8000
+cd ../backend && uv run python -m agentic_calendar.app.web
 
-# terminal 2 — frontend
+# terminal 2 — frontend with hot-reload
 npm install
-npm run dev          # http://localhost:5173
+npm run dev          # http://localhost:5173  (proxies /api,/auth,/healthz → :8000)
 ```
 
-In production the backend serves the built assets directly (frontend phase F-H);
-there is no separate dev proxy then.
+**B · Production-like single server (verify the cutover).** Build the SPA, then
+the same keyless backend serves `frontend/dist/` directly at `/`:
+
+```bash
+npm run build                                        # writes frontend/dist/
+cd ../backend && uv run python -m agentic_calendar.app.web   # http://127.0.0.1:8000
+```
+
+In production (`server:create_hosted_app`) the backend serves the built assets
+the same way (SPA fallback for app routes; `/api`, `/auth`, `/healthz` win over
+the catch-all); `SPA_DIST_DIR` overrides the build location. There is no Vite in
+production. This is the F-H cutover — the Jinja page surface has been retired.
 
 ## Checks (the per-commit frontend gate)
 
@@ -48,7 +62,9 @@ phase F-H).
   422/transport faults.
 - `src/auth/` — login redirect + logout (the session is the backend's).
 - `src/components/` — shared UI (the Loop topbar).
-- `src/screens/` — one module per surface (placeholders until their commit).
+- `src/screens/` — one module per surface (onboarding, generation, schedule
+  review, approval, today, accountability, thresholds).
+- `src/lib/` — pure, unit-tested logic (tz/week math, approval helpers).
 - `src/styles/tokens.css` — the design palette/typography, made responsive.
 
 ## Security note

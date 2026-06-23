@@ -1,9 +1,11 @@
 """Tests for the hosted entrypoint's environment wiring.
 
 These build the real hosted app over a temp SQLite file and a fake client
-secret, then exercise only the no-LLM surface (health, login page, the
-unauthenticated 401). A dummy ``ANTHROPIC_API_KEY`` lets the live node bundle
-construct without any network call.
+secret, then exercise only the no-LLM surface (health and the unauthenticated
+401). A dummy ``ANTHROPIC_API_KEY`` lets the live node bundle construct without
+any network call. ``SPA_DIST_DIR`` is pointed at a nonexistent path so the SPA
+fallback is never mounted — the static-serving behavior is covered
+deterministically in ``test_spa.py`` instead.
 """
 
 from __future__ import annotations
@@ -39,6 +41,9 @@ def _set_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv("TESTER_ALLOWLIST", "a@example.com, b@example.com")
     monkeypatch.setenv("ANTHROPIC_API_KEY", "dummy-key-no-network")
     monkeypatch.setenv("APP_HTTPS_ONLY", "0")
+    # Don't depend on a built frontend/dist: keep the SPA fallback unmounted so
+    # the unauthenticated entry is a deterministic 404, not the (gitignored) SPA.
+    monkeypatch.setenv("SPA_DIST_DIR", str(tmp_path / "no-spa-build"))
 
 
 def test_create_hosted_app_wires_from_env(
@@ -48,9 +53,9 @@ def test_create_hosted_app_wires_from_env(
     client = TestClient(create_hosted_app())
 
     assert client.get("/healthz").json() == {"status": "ok"}
-    login = client.get("/")
-    assert login.status_code == 200
-    assert "Connect Google Calendar" in login.text
+    # No server-rendered login page anymore (the Jinja surface was retired); with
+    # no SPA build mounted, the unauthenticated entry is a plain 404.
+    assert client.get("/", follow_redirects=False).status_code == 404
     # Hosted mode: the API is session-gated.
     assert client.get("/api/status").status_code == 401
 
@@ -63,7 +68,6 @@ def test_create_hosted_app_accepts_inline_client_json(
     monkeypatch.delenv("GOOGLE_OAUTH_CLIENT_SECRET_FILE")
     monkeypatch.setenv("GOOGLE_OAUTH_CLIENT_SECRET_JSON", json.dumps(_CLIENT_JSON))
     client = TestClient(create_hosted_app())
-    assert client.get("/").status_code == 200
     assert client.get("/api/status").status_code == 401
 
 

@@ -27,6 +27,7 @@ from agentic_calendar.app.web import calendar_service, routes_auth
 from agentic_calendar.app.web.app import create_app
 from agentic_calendar.app.web.config import WebAuthConfig
 from agentic_calendar.app.web.routes_auth import _user_id_for_sub
+from agentic_calendar.calendar_writer.google_adapter import GoogleCalendarApiError
 from agentic_calendar.common.secrets import TokenCipher
 from agentic_calendar.contracts.threshold_change_log import ThresholdChange
 from agentic_calendar.tools.google_oauth_web import GoogleIdentity
@@ -160,6 +161,29 @@ def test_e2e_onboard_propose_adjust_approve_write(monkeypatch: pytest.MonkeyPatc
     # Each insert landed on THIS user's dedicated calendar, never another.
     inserts = [cal for (method, cal) in transport.calls if method == "insert_event"]
     assert inserts and all(calendar_id == "cal_pages" for calendar_id in inserts)
+
+
+def test_write_failure_returns_typed_reason_through_api(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A failed calendar write is a 200 with a typed reason_code at the HTTP
+    boundary (not an exception), the plan is NOT activated, and nothing verifies
+    — the SPA renders this as a failure, never a (non-existent) auto-rollback."""
+    client, _env, _clock = _client()
+    _login(client, monkeypatch)
+    _onboard(client)
+    client.post("/api/propose", json={})
+    client.post("/api/approve", json={})
+
+    transport = _install_write_transport(monkeypatch)
+    # Make the very first calendar insert fail at the adapter seam.
+    transport.fail_insert = GoogleCalendarApiError("events.insert failed: backend error", status=500)
+
+    written = client.post("/api/write", json={})
+    assert written.status_code == 200
+    body = written.json()
+    assert body["reason_code"] is not None
+    assert body["state"] != "active_plan"  # the plan was not activated
+    assert body["verified_task_ids"] == []
+    assert body["write_status"] != "success"
 
 
 def test_propose_feeds_server_side_free_busy(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import type { DraftView, WriteCycleResult } from '../api/types'
-import { shortHash, toWriteBlocks, writeOutcome } from './approval'
+import { shortHash, toWriteBlocks, writeFailureMessage, writeOutcome } from './approval'
 
 function draftView(over: Partial<DraftView> = {}): DraftView {
   return {
@@ -79,6 +79,51 @@ describe('shortHash', () => {
   it('handles a bare hex digest and a missing hash', () => {
     expect(shortHash('abcdef1234')).toBe('sha256:abcd…234')
     expect(shortHash(null)).toBe('sha256:—')
+  })
+
+  it('shows a too-short input whole instead of overlapping head/tail', () => {
+    expect(shortHash('abcde')).toBe('sha256:abcde') // not "abcd…cde"
+  })
+})
+
+describe('writeFailureMessage', () => {
+  it('a verification failure says events are flagged and the plan was not activated — never "rolled back"', () => {
+    const msg = writeFailureMessage(
+      writeResult({
+        reason_code: 'CALENDAR_VERIFICATION_FAILED',
+        planned_event_count: 6,
+        written_task_ids: ['a', 'b', 'c', 'd', 'e', 'f'],
+        verified_task_ids: ['a', 'b', 'c', 'd'],
+        failed_task_ids: ['e', 'f'],
+      }),
+    )
+    expect(msg).toContain('4 confirmed')
+    expect(msg).toContain('2 could not be verified')
+    expect(msg).toContain('plan wasn’t activated')
+    expect(msg.toLowerCase()).not.toContain('rolled back')
+    expect(msg.toLowerCase()).not.toContain('roll back')
+  })
+
+  it('a partial create failure reports what was created and that cleanup may be manual', () => {
+    const msg = writeFailureMessage(
+      writeResult({
+        reason_code: 'CALENDAR_WRITE_FAILED',
+        written_task_ids: ['a'],
+        verified_task_ids: [],
+        failed_task_ids: [],
+      }),
+    )
+    expect(msg).toContain('1 event was created')
+    expect(msg).toContain('wasn’t activated')
+  })
+
+  it('a pre-write abort (nothing written) surfaces the typed error / a safe generic', () => {
+    expect(
+      writeFailureMessage(writeResult({ reason_code: 'APPROVAL_HASH_MISMATCH', error: 'hash changed' })),
+    ).toBe('hash changed')
+    expect(writeFailureMessage(writeResult({ reason_code: 'CALENDAR_WRITE_LOCK_BUSY', error: null }))).toContain(
+      'nothing was written',
+    )
   })
 })
 

@@ -3,20 +3,21 @@ import { useNavigate } from 'react-router-dom'
 
 import { ApiError, api, errorMessage } from '../api/client'
 import type { DraftView, WriteCycleResult } from '../api/types'
-import { shortHash, toWriteBlocks, writeOutcome } from '../lib/approval'
+import { shortHash, toWriteBlocks, writeFailureMessage, writeOutcome } from '../lib/approval'
 
 // The approval gate — the ONLY place the product writes to a calendar. The
 // backend gate (approval event, payload-hash recheck, write, per-event
-// verification, auto-rollback) is already complete; this is purely its UI.
+// verification) is already complete; this is purely its UI.
 //
 // Approve -> POST /api/approve (mints approval_event_id + approved_payload_hash)
 // then POST /api/write. The write re-checks the approved hash against the live
 // draft under the recorded canonicalization version; if the plan changed, it is
-// refused server-side. We render the verification outcome from the server's
-// truth: N/N verified on success, and on a failure code the note that the engine
-// auto-rolled-back the unverified events. There is NO manual "roll back" button
-// and NO timed undo (those are the undo endpoint the backend deliberately did
-// not build) — the only control here is approve-or-cancel.
+// refused server-side. We render the outcome from the server's truth: N/N
+// verified activates the plan; on a typed reason_code the write FAILED — the MVP
+// does NOT auto-roll-back, so we report honestly that the unverified events are
+// flagged on the calendar and the plan was not activated (see writeFailureMessage).
+// There is NO manual "roll back" button and NO timed undo (the undo endpoint was
+// deferred) — the only control here is approve-or-cancel.
 
 type Phase =
   | { kind: 'gate' } // idle: blocks shown, gate not opened
@@ -164,17 +165,7 @@ export function ApprovalScreen({ email }: { email: string | null }) {
               </span>
             </div>
             <div style={{ fontSize: 13.5, color: 'var(--ink-2)', marginTop: 10, lineHeight: 1.5 }}>
-              {phase.result.failed_task_ids.length > 0 ? (
-                <>
-                  {phase.result.verified_task_ids.length} confirmed;{' '}
-                  <b>
-                    {phase.result.failed_task_ids.length} could not be verified
-                  </b>{' '}
-                  after writing. Loop rolled those back to keep your calendar and plan in sync.
-                </>
-              ) : (
-                <>{phase.result.error ?? 'The write could not complete. Nothing was left on your calendar.'}</>
-              )}
+              {writeFailureMessage(phase.result)}
             </div>
             <button className="btn btn-soft sm" type="button" style={{ marginTop: 12 }} onClick={() => navigate('/review')}>
               Back to the draft

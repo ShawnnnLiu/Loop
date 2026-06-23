@@ -242,8 +242,10 @@ export interface ApproveResult {
 }
 
 /** Mirror of WriteCycleResult. A failed write (e.g. verification) arrives here
- *  as a 200 with `reason_code` set — the engine has already auto-rolled-back the
- *  unverified events, so the client only reports; it never rolls back itself. */
+ *  as a 200 with `reason_code` set. The MVP does not auto-roll-back: unverified
+ *  events are flagged VERIFICATION_FAILED and left on the calendar, and the plan
+ *  is not activated. The client only reports the typed outcome — it never writes
+ *  or rolls back itself. */
 export interface WriteCycleResult {
   run_id: string
   user_id: string

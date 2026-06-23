@@ -45,13 +45,16 @@ export function TodayScreen() {
     try {
       await api.checkin(task.task_id, outcome)
     } catch (err) {
+      setPending(null)
+      // A 401 has already redirected to login — don't fire a doomed reload.
       if (err instanceof ApiError && err.status === 401) return
       // 409 = the server refused (not due / already reported / not in plan).
       setRowError({ taskId: task.task_id, text: errorMessage(err) })
-    } finally {
-      setPending(null)
-      load() // re-render from the server's truth, never an optimistic guess
+      load() // refresh so the row reflects the server's current truth
+      return
     }
+    setPending(null)
+    load() // re-render from the server's truth, never an optimistic guess
   }
 
   if (loading) return <div className="screen-center muted">Loading today…</div>

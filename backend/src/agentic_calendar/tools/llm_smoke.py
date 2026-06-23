@@ -15,7 +15,9 @@ Locked safeguards (user-approved 2026-06-10):
 4. Cumulative cost guard: before every call, a deterministic estimate
    (chars/4 input heuristic + the full output cap at the model's pricing)
    is added to the actual spend recorded so far; the run aborts before
-   exceeding ``--max-cost-usd`` (default $0.25).
+   exceeding ``--max-cost-usd``. The default is derived from the configured
+   per-node output caps (one full pass over the four nodes) times an overhead
+   factor, so it tracks any ``max_tokens`` change automatically; operator-raisable.
 5. At most 2 SDK retries per call and 2 repair attempts (adapter defaults);
    exhaustion surfaces the typed reason code, never fabricated output.
 6. Every call appends an LlmCallLog row (no raw content). Raw responses go
@@ -70,7 +72,29 @@ from agentic_calendar.llm_nodes.anthropic_adapter import (
 #: purpose — there is no flag to raise it.
 MAX_LIVE_CALLS = 5
 
-DEFAULT_MAX_COST_USD = 0.25
+#: Worst-case output cost of one full pass over the four nodes, at each node's
+#: configured ``max_tokens`` and output price. Derived from the configs (not a
+#: magic constant) so the budget tracks any ``max_tokens`` change automatically.
+_FULL_PASS_OUTPUT_COST_USD = (
+    sum(
+        config.max_tokens * config.output_price_per_mtok
+        for config in (
+            STRATEGIST_CONFIG,
+            PLANNER_CONFIG,
+            REFLECTION_CONFIG,
+            EXPLANATION_CONFIG,
+        )
+    )
+    / 1_000_000
+)
+
+#: Headroom over a clean single pass: covers the input-token heuristic and the
+#: bounded repair re-prompts. The 5-call hard cap is the absolute backstop.
+_COST_BUDGET_OVERHEAD = 2.0
+
+#: Default spend ceiling, derived so it comfortably clears the most expensive
+#: single call (strategist at the opus output cap) and a clean four-node pass.
+DEFAULT_MAX_COST_USD = round(_FULL_PASS_OUTPUT_COST_USD * _COST_BUDGET_OVERHEAD, 2)
 
 
 class SmokeGuardTripped(Exception):

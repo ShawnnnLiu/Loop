@@ -31,6 +31,7 @@ from agentic_calendar.tools.google_oauth_web import (
     build_authorization_url,
     build_service_from_token,
     create_dedicated_calendar,
+    dedicated_calendar_exists,
     exchange_code,
     identity_from_token,
 )
@@ -100,12 +101,17 @@ def callback(request: Request, code: str, state: str) -> RedirectResponse:
         user_id = _user_id_for_sub(identity.sub)
         existing = None
 
-    # Provision the dedicated secondary calendar once, on first connect; reuse
-    # it on every later sign-in. Each user writes only to their own calendar,
-    # so the adapter's "never touch primary / another calendar" guard holds.
+    # Provision the dedicated secondary calendar on first connect, and reuse it
+    # on later sign-ins — but RE-provision if the stored calendar is gone
+    # (deleted in Google, lost across environments). Without this reachability
+    # check a stale id is trusted forever and every write 404s with no user-side
+    # recovery. Each user writes only to their own calendar, so the adapter's
+    # "never touch primary / another calendar" guard holds.
     dedicated_calendar_id = existing.dedicated_calendar_id if existing else None
-    if dedicated_calendar_id is None:
-        service = build_service_from_token(token_json)
+    service = build_service_from_token(token_json)
+    if dedicated_calendar_id is None or not dedicated_calendar_exists(
+        service, dedicated_calendar_id
+    ):
         dedicated_calendar_id = create_dedicated_calendar(
             service, summary=f"Agentic Calendar ({user_id})"
         )

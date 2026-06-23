@@ -1,0 +1,682 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Loop turns your interview-prep goal and real calendar into a study plan — drafted around your commitments and written to Google Calendar only after you approve."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Hanken+Grotesk:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <title>Loop — interview prep, scheduled around your real life</title>
+    <style>
+      /* Design tokens shared with the product SPA (frontend/src/styles/tokens.css).
+         Inlined so the landing is a single self-contained static file (no asset
+         routing to coordinate with the SPA's catch-all). */
+      :root {
+        --ink: #16212e;
+        --ink-2: #22303f;
+        --ink-soft: #38485a;
+        --muted: #6c7886;
+        --muted-2: #97a0ab;
+        --paper: #fbf8f2;
+        --paper-2: #f4ece0;
+        --paper-3: #ece2d3;
+        --card: #ffffff;
+        --clay: #bd5a39;
+        --clay-deep: #9c4527;
+        --clay-soft: #f1ddd1;
+        --clay-tint: #faeee6;
+        --sage: #5f7a64;
+        --sage-deep: #496650;
+        --sage-soft: #e3ebe2;
+        --gold: #c08a3e;
+        --gold-soft: #f6e6cf;
+        --line: #e9e0d2;
+        --line-2: #ddd2bf;
+        --serif: 'Newsreader', Georgia, serif;
+        --sans: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
+        --mono: 'Spline Sans Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+        --r: 16px;
+        --r-sm: 11px;
+        --shadow-sm: 0 1px 2px rgba(22, 33, 46, 0.05), 0 4px 14px rgba(22, 33, 46, 0.05);
+        --shadow: 0 2px 6px rgba(22, 33, 46, 0.05), 0 18px 44px -18px rgba(22, 33, 46, 0.22);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: var(--sans);
+        font-size: 16px;
+        line-height: 1.55;
+        -webkit-font-smoothing: antialiased;
+      }
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+        font-family: var(--serif);
+        font-weight: 500;
+        letter-spacing: -0.015em;
+        line-height: 1.08;
+      }
+      a {
+        color: inherit;
+      }
+      .wrap {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 0 clamp(20px, 5vw, 48px);
+      }
+      .eyebrow {
+        font-family: var(--sans);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--clay-deep);
+      }
+      .mono {
+        font-family: var(--mono);
+      }
+      .muted {
+        color: var(--muted);
+      }
+
+      /* ——— Top nav ——— */
+      .nav {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 18px clamp(20px, 5vw, 48px);
+        max-width: 1080px;
+        margin: 0 auto;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+      }
+      .glyph {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        background: var(--ink);
+        color: var(--paper);
+        display: grid;
+        place-items: center;
+        font-family: var(--serif);
+        font-size: 19px;
+        font-weight: 600;
+        position: relative;
+      }
+      .glyph::after {
+        content: '✓';
+        position: absolute;
+        right: -4px;
+        bottom: -4px;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--clay);
+        color: #fff;
+        font-size: 9px;
+        font-weight: 800;
+        display: grid;
+        place-items: center;
+        border: 2px solid var(--paper);
+      }
+      .word {
+        font-family: var(--serif);
+        font-size: 20px;
+        font-weight: 600;
+      }
+      .spacer {
+        flex: 1;
+      }
+
+      /* ——— Buttons ——— */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        font-family: var(--sans);
+        font-weight: 600;
+        font-size: 15px;
+        padding: 12px 20px;
+        border-radius: 11px;
+        border: 1px solid transparent;
+        cursor: pointer;
+        text-decoration: none;
+        white-space: nowrap;
+      }
+      .btn-primary {
+        background: var(--clay);
+        color: #fff;
+        box-shadow: 0 1px 2px rgba(157, 69, 39, 0.25), 0 10px 22px -12px rgba(189, 90, 57, 0.7);
+      }
+      .btn-ghost {
+        background: var(--card);
+        color: var(--ink);
+        border-color: var(--line-2);
+        box-shadow: var(--shadow-sm);
+      }
+      .btn-quiet {
+        background: transparent;
+        color: var(--ink-soft);
+        padding: 8px 12px;
+      }
+      .gmark {
+        font-family: var(--mono);
+        font-weight: 700;
+      }
+
+      /* ——— Hero ——— */
+      .hero {
+        display: grid;
+        grid-template-columns: 1.05fr 0.95fr;
+        gap: clamp(28px, 5vw, 56px);
+        align-items: center;
+        padding: clamp(36px, 6vw, 72px) 0 clamp(28px, 5vw, 56px);
+      }
+      .hero h1 {
+        font-size: clamp(34px, 5.2vw, 54px);
+        margin-top: 14px;
+      }
+      .hero p.lede {
+        font-size: clamp(16px, 2vw, 18.5px);
+        color: var(--ink-soft);
+        margin: 16px 0 0;
+        max-width: 36ch;
+      }
+      .cta-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        margin-top: 26px;
+      }
+      .tester-note {
+        font-size: 12.5px;
+        color: var(--muted);
+        margin-top: 12px;
+        max-width: 44ch;
+      }
+
+      /* ——— Hero product mock (a week of proposed blocks + approve) ——— */
+      .mock {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: var(--r);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+      .mock-bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 11px 14px;
+        background: var(--clay-tint);
+        border-bottom: 1px solid var(--clay-soft);
+        font-size: 13px;
+        color: var(--clay-deep);
+        font-weight: 600;
+      }
+      .mock-dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: var(--clay);
+      }
+      .mock-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 6px;
+        padding: 14px;
+      }
+      .mock-col {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .mock-day {
+        font-size: 10.5px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--muted-2);
+        text-align: center;
+      }
+      .blk {
+        border-radius: 8px;
+        padding: 7px 8px;
+        font-size: 11px;
+        line-height: 1.3;
+      }
+      .blk-p {
+        background: var(--clay-tint);
+        border: 1.5px dashed var(--clay);
+        border-left: 3px solid var(--clay-deep);
+        color: var(--clay-deep);
+      }
+      .blk-busy {
+        background: repeating-linear-gradient(
+          135deg,
+          rgba(108, 120, 134, 0.16) 0 7px,
+          rgba(108, 120, 134, 0.07) 7px 14px
+        );
+        border: 1px solid rgba(108, 120, 134, 0.3);
+        color: var(--muted);
+      }
+      .blk .t {
+        font-weight: 600;
+      }
+      .blk .m {
+        font-family: var(--mono);
+        font-size: 9.5px;
+        opacity: 0.85;
+      }
+      .mock-foot {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 14px;
+        border-top: 1px solid var(--line);
+        background: var(--paper-2);
+      }
+      .mock-foot .approve {
+        background: var(--clay);
+        color: #fff;
+        border-radius: 9px;
+        padding: 7px 13px;
+        font-size: 12.5px;
+        font-weight: 600;
+      }
+      .lock {
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      /* ——— Sections ——— */
+      section.band {
+        padding: clamp(40px, 6vw, 76px) 0;
+      }
+      .band-alt {
+        background: var(--paper-2);
+        border-top: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+      }
+      .band h2 {
+        font-size: clamp(26px, 3.4vw, 36px);
+      }
+      .section-lede {
+        color: var(--ink-soft);
+        font-size: 16.5px;
+        margin: 12px 0 0;
+        max-width: 60ch;
+      }
+
+      /* ——— How it works ——— */
+      .steps {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+        margin-top: 34px;
+        counter-reset: step;
+      }
+      .step {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: var(--r);
+        padding: 20px;
+        box-shadow: var(--shadow-sm);
+        position: relative;
+      }
+      .step.hinge {
+        border-color: var(--clay-soft);
+        background: var(--clay-tint);
+      }
+      .step .num {
+        font-family: var(--mono);
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--muted);
+      }
+      .step h3 {
+        font-size: 18px;
+        margin-top: 8px;
+      }
+      .step.hinge h3 {
+        color: var(--clay-deep);
+      }
+      .step p {
+        font-size: 13.5px;
+        color: var(--ink-soft);
+        margin: 7px 0 0;
+      }
+      .step .pill {
+        display: inline-block;
+        margin-top: 10px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--clay-deep);
+        background: #fff;
+        border: 1px solid var(--clay-soft);
+        border-radius: 999px;
+        padding: 3px 9px;
+      }
+
+      /* ——— Trust strip ——— */
+      .trust {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+        gap: 16px;
+        margin-top: 34px;
+      }
+      .trust-item {
+        padding: 18px 20px;
+        border-left: 3px solid var(--sage);
+        background: var(--card);
+        border-radius: 0 var(--r-sm) var(--r-sm) 0;
+        box-shadow: var(--shadow-sm);
+      }
+      .trust-item h3 {
+        font-size: 16px;
+      }
+      .trust-item p {
+        font-size: 13.5px;
+        color: var(--ink-soft);
+        margin: 6px 0 0;
+      }
+
+      /* ——— Thesis ——— */
+      .thesis {
+        text-align: center;
+        padding: clamp(44px, 7vw, 88px) 0;
+      }
+      .thesis blockquote {
+        margin: 0;
+        font-family: var(--serif);
+        font-size: clamp(24px, 3.6vw, 38px);
+        line-height: 1.18;
+        letter-spacing: -0.015em;
+        max-width: 18ch;
+        margin-inline: auto;
+      }
+      .thesis .sub {
+        color: var(--muted);
+        margin-top: 16px;
+        font-size: 15px;
+      }
+
+      /* ——— Not-this strip ——— */
+      .notthis {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px 20px;
+        margin-top: 22px;
+      }
+      .notthis span {
+        font-size: 14px;
+        color: var(--ink-soft);
+      }
+      .notthis b {
+        color: var(--ink);
+      }
+
+      /* ——— Final CTA ——— */
+      .final {
+        text-align: center;
+        padding: clamp(44px, 7vw, 84px) 0;
+      }
+      .final h2 {
+        font-size: clamp(28px, 4vw, 40px);
+      }
+      .final .cta-row {
+        justify-content: center;
+      }
+
+      /* ——— Footer ——— */
+      footer {
+        border-top: 1px solid var(--line);
+        padding: 28px clamp(20px, 5vw, 48px);
+      }
+      .foot-inner {
+        max-width: 1080px;
+        margin: 0 auto;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 14px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      @media (max-width: 820px) {
+        .hero {
+          grid-template-columns: 1fr;
+        }
+        .hero .mock {
+          order: 2;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="nav">
+      <div class="brand">
+        <span class="glyph">L</span>
+        <span class="word">Loop</span>
+      </div>
+      <span class="spacer"></span>
+      <a class="btn btn-quiet" href="#how">How it works</a>
+      <a class="btn btn-ghost" href="/auth/login">Sign in</a>
+    </header>
+
+    <main>
+      <!-- Hero -->
+      <div class="wrap">
+        <section class="hero">
+          <div>
+            <span class="eyebrow">Interview prep · job search</span>
+            <h1>Your prep plan, on your calendar — never written without your say-so.</h1>
+            <p class="lede">
+              Loop turns your goal and your real availability into a week-by-week study plan, drafts
+              it around your existing commitments, and writes it to Google Calendar
+              <em>only after you approve</em>.
+            </p>
+            <div class="cta-row">
+              <a class="btn btn-primary" href="/auth/login">
+                <span class="gmark">G</span> Connect Google Calendar
+              </a>
+              <a class="btn btn-ghost" href="#how">See how it works</a>
+            </div>
+            <p class="tester-note">
+              Loop is in limited testing — sign-in is open to a small allowlist of Google accounts
+              (≤100 testers). If yours isn’t on it yet, you’ll be told at sign-in rather than let in
+              halfway.
+            </p>
+          </div>
+
+          <!-- Product mock: a week of proposed blocks around fixed events -->
+          <div class="mock" aria-hidden="true">
+            <div class="mock-bar"><span class="mock-dot"></span> Proposed week · review &amp; adjust</div>
+            <div class="mock-grid">
+              <div class="mock-col">
+                <div class="mock-day">Mon</div>
+                <div class="blk blk-p"><div class="t">Graphs drill</div><div class="m">9:00a</div></div>
+                <div class="blk blk-busy"><div class="t">Standup</div><div class="m">11:00a</div></div>
+              </div>
+              <div class="mock-col">
+                <div class="mock-day">Tue</div>
+                <div class="blk blk-busy"><div class="t">Busy</div><div class="m">1:00p</div></div>
+                <div class="blk blk-p"><div class="t">DP review</div><div class="m">6:30p</div></div>
+              </div>
+              <div class="mock-col">
+                <div class="mock-day">Wed</div>
+                <div class="blk blk-p"><div class="t">Mock interview</div><div class="m">4:00p</div></div>
+              </div>
+              <div class="mock-col">
+                <div class="mock-day">Thu</div>
+                <div class="blk blk-p"><div class="t">System design</div><div class="m">10:00a</div></div>
+                <div class="blk blk-busy"><div class="t">Busy</div><div class="m">3:00p</div></div>
+              </div>
+              <div class="mock-col">
+                <div class="mock-day">Fri</div>
+                <div class="blk blk-p"><div class="t">Behavioral</div><div class="m">4:00p</div></div>
+              </div>
+            </div>
+            <div class="mock-foot">
+              <span class="approve">✓ Approve &amp; write</span>
+              <span class="lock">🔒 hash-checked at write time</span>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- How it works -->
+      <section class="band band-alt" id="how">
+        <div class="wrap">
+          <span class="eyebrow">The loop</span>
+          <h2>Propose, review, approve — then it’s on your calendar.</h2>
+          <p class="section-lede">
+            A deterministic pipeline does the routing and scheduling; the AI only proposes
+            candidates. The approval gate is the hinge — nothing reaches your calendar before it.
+          </p>
+          <div class="steps">
+            <div class="step">
+              <div class="num">01</div>
+              <h3>Onboard</h3>
+              <p>A quick form: your goal, weekly hours, deep-work windows, and an optional résumé paste.</p>
+            </div>
+            <div class="step">
+              <div class="num">02</div>
+              <h3>Generate</h3>
+              <p>The AI proposes a structured plan; deterministic code validates and schedules it around your busy times.</p>
+            </div>
+            <div class="step">
+              <div class="num">03</div>
+              <h3>Review &amp; adjust</h3>
+              <p>Drag any proposed block to a new time or day. Every move is re-checked on the server.</p>
+            </div>
+            <div class="step hinge">
+              <div class="num">04</div>
+              <h3>Approve</h3>
+              <p>You confirm the exact set of events. The payload is hash-locked to what you saw.</p>
+              <span class="pill">the gate</span>
+            </div>
+            <div class="step">
+              <div class="num">05</div>
+              <h3>Write &amp; verify</h3>
+              <p>Loop writes to one calendar, re-reads every event to confirm it, and rolls back anything it can’t.</p>
+            </div>
+            <div class="step">
+              <div class="num">06</div>
+              <h3>Check in &amp; calibrate</h3>
+              <p>Mark sessions complete or missed. Honest progress — telemetry tunes the plan over time.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Trust / safety -->
+      <section class="band">
+        <div class="wrap">
+          <span class="eyebrow">What the engine guarantees</span>
+          <h2>Safe by construction — not by good intentions.</h2>
+          <div class="trust">
+            <div class="trust-item">
+              <h3>No silent calendar writes</h3>
+              <p>Every write needs your explicit approval. Loop never edits your calendar on its own.</p>
+            </div>
+            <div class="trust-item">
+              <h3>Hash-checked at write time</h3>
+              <p>The approved plan is fingerprinted; if anything changed since you approved, the write is refused.</p>
+            </div>
+            <div class="trust-item">
+              <h3>Verified after writing</h3>
+              <p>Each event is re-read to confirm it landed; anything unverified is automatically rolled back.</p>
+            </div>
+            <div class="trust-item">
+              <h3>Your data stays yours</h3>
+              <p>Your résumé and plan live on your account and are never used for training.</p>
+            </div>
+            <div class="trust-item">
+              <h3>Scoped, revocable access</h3>
+              <p>Loop reads your busy times and writes to a single dedicated calendar — revoke any time.</p>
+            </div>
+            <div class="trust-item">
+              <h3>Typed failures, never dead ends</h3>
+              <p>When it can’t proceed, it says exactly why — and how to recover.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Thesis -->
+      <section class="band band-alt thesis">
+        <div class="wrap">
+          <blockquote>LLMs propose. Deterministic infrastructure disposes.</blockquote>
+          <p class="sub">
+            The AI generates candidates and explanations. Routing, validation, scheduling, the
+            approval gate, calendar writes, and verification are deterministic code.
+          </p>
+        </div>
+      </section>
+
+      <!-- What it's NOT -->
+      <section class="band">
+        <div class="wrap">
+          <span class="eyebrow">Honest framing</span>
+          <h2>What Loop is not.</h2>
+          <div class="notthis">
+            <span>Not an <b>autonomous calendar assistant</b> — it never acts without your approval.</span>
+            <span>Not a <b>chatbot</b> — it produces auditable plans, not prose that runs your week.</span>
+            <span>Not a <b>content firehose</b> — one plan, on your terms, kept honest.</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Final CTA -->
+      <section class="band band-alt final">
+        <div class="wrap">
+          <h2>Put your prep on the calendar — safely.</h2>
+          <div class="cta-row">
+            <a class="btn btn-primary" href="/auth/login">
+              <span class="gmark">G</span> Connect Google Calendar
+            </a>
+          </div>
+          <p class="tester-note" style="margin-inline: auto; text-align: center">
+            Limited testing — a small allowlist of Google accounts for now.
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="foot-inner">
+        <div class="brand">
+          <span class="glyph">L</span>
+          <span class="word">Loop</span>
+        </div>
+        <span class="muted">Interview prep, scheduled around your real life.</span>
+        <span class="spacer"></span>
+        <a class="muted" href="/auth/login">Get started →</a>
+      </div>
+    </footer>
+  </body>
+</html>

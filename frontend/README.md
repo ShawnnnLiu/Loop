@@ -31,8 +31,15 @@ there is no separate dev proxy then.
 ```bash
 npm run typecheck    # tsc --noEmit
 npm run lint         # eslint
+npm run test         # vitest run — unit tests for the pure logic
 npm run build        # tsc --noEmit && vite build
 ```
+
+Unit tests cover the pure, high-risk logic: the tz/week math in
+`src/lib/datetime.ts` and the API client's request handling in `src/api/client.ts`
+(200 / 401-redirect / 4xx-ApiError / workflow-failure-as-result). Component
+rendering and the live drag/propose flow are verified in a browser (frontend
+phase F-H).
 
 ## Layout
 
@@ -47,7 +54,9 @@ npm run build        # tsc --noEmit && vite build
 ## Security note
 
 `npm audit` flags the esbuild dev-server advisory (GHSA-67mh-4wv8-2f99) via
-Vite 5. It is **dev-server only** — it lets a website reach a *running* `npm run
-dev` server — and does not affect the production build (static assets the
-backend serves; F-H). The only fix is a major Vite bump, deliberately deferred
-for a scaffold. Don't expose `npm run dev` to untrusted networks.
+Vite 5 (and, transitively, vitest's vite-node/@vitest/mocker — npm's
+"critical/high" counts are its aggregation of that single chain). It is
+**dev-server only** — it lets a website reach a *running* `npm run dev` server —
+and does not affect the production build (static assets the backend serves; F-H)
+or test tooling output. The only fix is a major Vite bump, deliberately deferred.
+Don't expose `npm run dev` to untrusted networks.

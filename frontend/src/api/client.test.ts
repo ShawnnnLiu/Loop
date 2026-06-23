@@ -1,0 +1,94 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { ApiError, api, errorMessage, setUnauthenticatedHandler } from './client'
+
+function jsonResponse(status: number, body: unknown): Response {
+  return new Response(body === undefined ? null : JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  })
+}
+
+let onUnauthenticated: ReturnType<typeof vi.fn>
+
+beforeEach(() => {
+  // Replace the default handler (which would touch window.location) with a spy.
+  onUnauthenticated = vi.fn()
+  setUnauthenticatedHandler(onUnauthenticated)
+})
+
+afterEach(() => {
+  vi.restoreAllMocks()
+  vi.unstubAllGlobals()
+})
+
+describe('api client request handling', () => {
+  it('returns the parsed body on a 200 and hits the /api-prefixed path', async () => {
+    const fetchMock = vi.fn(async () => jsonResponse(200, { user_id: 'u_1', onboarded: true }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const me = await api.me()
+
+    expect(me.user_id).toBe('u_1')
+    expect(fetchMock).toHaveBeenCalledWith('/api/me', expect.objectContaining({ method: 'GET', credentials: 'include' }))
+  })
+
+  it('sends a JSON body with credentials on a POST', async () => {
+    const fetchMock = vi.fn(async () => jsonResponse(200, { run_id: 'r', state: 'awaiting_user_approval', reason_code: null }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await api.propose({ horizon_days: 14 })
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/propose', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ horizon_days: 14 }),
+    })
+  })
+
+  it('treats a workflow failure (200 + reason_code) as a normal result, not an error', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => jsonResponse(200, { state: 'error_requires_user', reason_code: 'INSUFFICIENT_WEEKLY_CAPACITY' })))
+
+    const result = await api.propose()
+
+    expect(result.reason_code).toBe('INSUFFICIENT_WEEKLY_CAPACITY')
+  })
+
+  it('redirects (via the handler) and throws ApiError(401) on an unauthenticated response', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => jsonResponse(401, { detail: 'not authenticated' })))
+
+    await expect(api.me()).rejects.toMatchObject({ status: 401 })
+    expect(onUnauthenticated).toHaveBeenCalledOnce()
+  })
+
+  it('throws ApiError carrying status + body on a 409 precondition failure', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => jsonResponse(409, { error: 'bad state', type: 'CycleError' })))
+
+    await expect(api.status()).rejects.toBeInstanceOf(ApiError)
+    await expect(api.status()).rejects.toMatchObject({
+      status: 409,
+      body: { error: 'bad state', type: 'CycleError' },
+    })
+    expect(onUnauthenticated).not.toHaveBeenCalled()
+  })
+})
+
+describe('errorMessage', () => {
+  it('prefers the {error} field a CycleError/ValidationError returns', () => {
+    expect(errorMessage(new ApiError(409, { error: 'no active plan', type: 'CycleError' }))).toBe('no active plan')
+  })
+
+  it('falls back to {detail} (FastAPI body validation)', () => {
+    expect(errorMessage(new ApiError(422, { detail: 'field required' }))).toBe('field required')
+  })
+
+  it('reports the status when the body has no message', () => {
+    expect(errorMessage(new ApiError(500, null))).toBe('Request failed (500)')
+  })
+
+  it('handles plain Errors and unknown values', () => {
+    expect(errorMessage(new Error('boom'))).toBe('boom')
+    expect(errorMessage('weird')).toBe('Something went wrong')
+  })
+})

@@ -1,0 +1,16 @@
+# Build context = repo root (see Dockerfile). Keep it small and never ship host
+# build outputs, caches, the venv, or secrets — stage 1 rebuilds frontend/dist.
+**/node_modules
+**/.venv
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+.git
+.github
+graphify-out
+frontend/dist
+**/.DS_Store
+**/client_secret*.json
+**/*.db

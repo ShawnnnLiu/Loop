@@ -67,6 +67,8 @@ def _complete_login(
     *,
     sub: str = SUB,
     email: str = EMAIL,
+    calendar_exists: bool = True,
+    provisioned_id: str = "cal_provisioned",
 ) -> object:
     state = _login(client, monkeypatch)
     monkeypatch.setattr(routes_auth, "exchange_code", lambda **kwargs: dict(TOKEN))
@@ -75,12 +77,17 @@ def _complete_login(
         "identity_from_token",
         lambda token_json, *, audience: GoogleIdentity(sub=sub, email=email),
     )
-    # Connect-time dedicated-calendar provisioning (faked SDK seam).
+    # Connect-time dedicated-calendar provisioning (faked SDK seam). The stored
+    # calendar is reachable by default; pass calendar_exists=False to exercise
+    # the re-provision path.
     monkeypatch.setattr(routes_auth, "build_service_from_token", lambda token_json: object())
+    monkeypatch.setattr(
+        routes_auth, "dedicated_calendar_exists", lambda service, calendar_id: calendar_exists
+    )
     monkeypatch.setattr(
         routes_auth,
         "create_dedicated_calendar",
-        lambda service, *, summary, time_zone="UTC": "cal_provisioned",
+        lambda service, *, summary, time_zone="UTC": provisioned_id,
     )
     return client.get(f"/auth/callback?code=abc&state={state}", follow_redirects=False)
 
@@ -102,7 +109,8 @@ def test_full_login_authenticates_and_persists_encrypted_token(
     client, env, cipher = _app()
     resp = _complete_login(client, monkeypatch)
     assert resp.status_code == 307
-    assert resp.headers["location"] == "/"
+    # A signed-in user lands in the app entry, not the marketing root.
+    assert resp.headers["location"] == "/app"
 
     user_id = _user_id_for_sub(SUB)
     status = client.get("/api/status")
@@ -174,3 +182,32 @@ def test_returning_user_keeps_id_and_dedicated_calendar(
     assert again is not None
     assert again.dedicated_calendar_id == "cal_existing"
     assert env.credential_store.get_user_id_for_sub(SUB) == user_id
+
+
+def test_returning_user_reprovisions_when_dedicated_calendar_deleted(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A stored dedicated calendar that no longer exists (deleted in Google →
+    404 on every write) is re-provisioned on the next sign-in, so the user
+    recovers by reconnecting instead of being stranded forever."""
+    client, env, _cipher = _app()
+    _complete_login(client, monkeypatch)
+    user_id = _user_id_for_sub(SUB)
+
+    record = env.credential_store.get_by_user(user_id)
+    assert record is not None
+    env.credential_store.save(
+        record.model_validate(
+            record.model_dump() | {"dedicated_calendar_id": "cal_deleted"}
+        )
+    )
+
+    client.post("/auth/logout")
+    # Reconnect with the stored calendar reported missing (404) → re-provision.
+    _complete_login(
+        client, monkeypatch, calendar_exists=False, provisioned_id="cal_reprovisioned"
+    )
+
+    healed = env.credential_store.get_by_user(user_id)
+    assert healed is not None
+    assert healed.dedicated_calendar_id == "cal_reprovisioned"

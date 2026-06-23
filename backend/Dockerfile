@@ -1,18 +1,44 @@
+# syntax=docker/dockerfile:1
 # Single-instance image for the hosted multi-user web app.
-# Build context is backend/:  docker build -t agentic-calendar backend/
+#
+# Multi-stage: build the React SPA, then serve it + the static landing from the
+# Python app (server:create_hosted_app). The build context is the REPO ROOT
+# (the image needs frontend/ and landing/, which are siblings of backend/), so
+# build/deploy from the repo root and point at this Dockerfile:
+#
+#   docker build -t agentic-calendar -f backend/Dockerfile .
+#   fly deploy . --config backend/fly.toml
+
+# --- Stage 1: build the SPA -> /fe/dist -----------------------------------
+FROM node:20-slim AS frontend
+WORKDIR /fe
+# Copy manifests first so `npm ci` is cached until the lockfile changes.
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+COPY frontend/ ./
+RUN npm run build
+
+# --- Stage 2: the Python app + static assets ------------------------------
 FROM python:3.11-slim
 
 ENV PYTHONUNBUFFERED=1 \
     UV_COMPILE_BYTECODE=1 \
-    UV_LINK_MODE=copy
+    UV_LINK_MODE=copy \
+    SPA_DIST_DIR=/app/frontend/dist \
+    LANDING_INDEX=/app/landing/index.html
 
 RUN pip install --no-cache-dir uv
 
 WORKDIR /app
-COPY . /app
-
-# Runtime deps only (no dev/test extras). Bundles fastapi/uvicorn/jinja2/etc.
+COPY backend/ /app
+# Runtime deps only (no dev/test extras). Bundles fastapi/uvicorn/etc.
 RUN uv sync --no-dev --frozen
+
+# The static surfaces the hosted server serves: the landing page at "/" and the
+# built SPA (index.html fallback for app routes, hashed bundles under /assets).
+# SPA_DIST_DIR / LANDING_INDEX (above) point the server at these paths.
+COPY landing/ /app/landing
+COPY --from=frontend /fe/dist /app/frontend/dist
 
 EXPOSE 8000
 

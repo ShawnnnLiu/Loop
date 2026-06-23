@@ -93,17 +93,26 @@ from agentic_calendar.validation import validate_syllabus_units, validate_task_p
 
 from .environment import AppEnvironment
 from .results import (
+    AccountabilityResult,
     AdjustResult,
     AdjustViolation,
     ApproveResult,
+    DraftView,
     IngestResult,
+    MeResult,
     OnboardResult,
     ProposeResult,
     StatusResult,
     TelemetryItemOutcome,
+    ThresholdFieldView,
+    ThresholdSectionView,
+    ThresholdsResult,
+    TodayResult,
+    TodayTask,
     WriteCycleResult,
 )
 from .state import OnboardingRecord, ReplanKind, RunRecord
+from .tuning import TUNABLE_SECTIONS, scalar_fields
 
 MAX_SCHEDULER_PLANNER_ITERATIONS = 2
 """Axiom 05 bound: at most two Scheduler→Planner iterations per run."""
@@ -580,6 +589,7 @@ class CycleService:
                 )
                 return self._propose_failure(
                     run,
+                    validation=result,
                     explanation=env.nodes.explanation.run(
                         run_id=run.run_id, validation_result=result
                     ),
@@ -706,6 +716,7 @@ class CycleService:
         self,
         run: RunRecord,
         *,
+        validation: ValidationResult | None = None,
         explanation: UserExplanation | None = None,
         output: SchedulerOutput | None = None,
     ) -> ProposeResult:
@@ -718,6 +729,7 @@ class CycleService:
             recovery_mode=run.recovery_mode,
             unscheduled_tasks=list(output.unscheduled_tasks) if output else [],
             repair_options=list(output.repair_options) if output else [],
+            violations=list(validation.violations) if validation else [],
             explanation=explanation,
         )
 
@@ -1387,3 +1399,173 @@ class CycleService:
             nudge_count=len(env.nudge_store.list_for_user(user_id)),
             checkin_count=len(env.checkin_store.all()),
         )
+
+    # ------------------------------------------------------------------ #
+    # Read projections (F-A): JSON the SPA renders from. All read-only and
+    # side-effect-free, deriving from the same stores the operator surfaces
+    # use. ``checkin`` is the one mutation here — it shares ``ingest`` but
+    # enforces the membership / due / idempotency guard the client cannot.
+    # ------------------------------------------------------------------ #
+
+    def _active_draft(self, user_id: str) -> DraftSchedule | None:
+        """The draft backing the user's *active* (written) plan, or ``None``.
+
+        Guards that the latest run's draft matches the active plan version, so a
+        replan-in-flight draft is never shown as today's schedule.
+        """
+        env = self._env
+        run = env.state.latest_run_for_user(user_id)
+        active = env.plan_store.get_active(user_id)
+        if active is None or run is None or run.draft_schedule_id is None:
+            return None
+        draft = env.state.get_draft(run.draft_schedule_id)
+        if draft is None or draft.plan_version != active.plan_version:
+            return None
+        return draft
+
+    def draft_view(
+        self, user_id: str, *, free_busy: Sequence[Mapping[str, str]] | None = None
+    ) -> DraftView:
+        """The pending draft + its canonical hash for the review/approval
+        screens. ``free_busy`` (the imported busy windows the grid draws as
+        fixed) is fetched by the web layer and passed through."""
+        env = self._env
+        run = env.state.latest_run_for_user(user_id)
+        draft: DraftSchedule | None = None
+        payload_hash: str | None = None
+        task_titles: dict[str, str] = {}
+        if run is not None and run.draft_schedule_id is not None:
+            draft = env.state.get_draft(run.draft_schedule_id)
+            if draft is not None:
+                payload_hash = canonical_payload_hash(draft, HASH_CANONICALIZATION_VERSION)
+                plan = env.plan_store.get(user_id, draft.plan_version)
+                if plan is not None:
+                    task_titles = {task.task_id: task.title for task in plan.plan.tasks}
+        return DraftView(
+            draft=draft,
+            payload_hash=payload_hash,
+            hash_canonicalization_version=HASH_CANONICALIZATION_VERSION,
+            free_busy=[dict(interval) for interval in (free_busy or [])],
+            task_titles=task_titles,
+        )
+
+    def today(self, user_id: str) -> TodayResult:
+        """The active plan's scheduled tasks as structured rows (tz-aware
+        datetimes; the client localizes). ``due`` marks a block whose time has
+        passed; ``reported`` marks one that already has telemetry."""
+        env = self._env
+        onboarding = env.state.get_onboarding(user_id)
+        timezone = onboarding.timezone if onboarding is not None else None
+        draft = self._active_draft(user_id)
+        active = env.plan_store.get_active(user_id)
+        if draft is None or active is None:
+            return TodayResult(timezone=timezone, tasks=[])
+        now = env.clock.now()
+        tasks = {task.task_id: task for task in active.plan.tasks}
+        rows: list[TodayTask] = []
+        for entry in draft.entries:
+            task = tasks.get(entry.task_id)
+            if task is None:
+                continue
+            rows.append(
+                TodayTask(
+                    task_id=entry.task_id,
+                    title=task.title,
+                    category=task.category.value,
+                    required_focus_level=task.required_focus_level.value,
+                    start=entry.start,
+                    end=entry.end,
+                    due=entry.end <= now,
+                    reported=bool(env.telemetry_store.list_for_task(entry.task_id)),
+                )
+            )
+        return TodayResult(timezone=timezone, tasks=rows)
+
+    def thresholds_view(self) -> ThresholdsResult:
+        """Effective deterministic tuning the system serves + the append-only
+        change journal. Compares each served value against the code default —
+        the same honest projection the ``show_thresholds`` CLI prints."""
+        env = self._env
+        sections: list[ThresholdSectionView] = []
+        for name, (config_type, default) in TUNABLE_SECTIONS.items():
+            effective = getattr(env.tuning, name)
+            fields: list[ThresholdFieldView] = []
+            for field_name in scalar_fields(config_type):
+                value = getattr(effective, field_name)
+                default_value = getattr(default, field_name)
+                fields.append(
+                    ThresholdFieldView(
+                        name=field_name,
+                        value=value,
+                        status="default" if value == default_value else "overridden",
+                    )
+                )
+            sections.append(ThresholdSectionView(name=name, fields=fields))
+        return ThresholdsResult(sections=sections, history=env.threshold_log_store.list_all())
+
+    def me(self, user_id: str) -> MeResult:
+        """Identity + saved profile for the wizard's prefill / edit-later."""
+        env = self._env
+        onboarding = env.state.get_onboarding(user_id)
+        credential = env.credential_store.get_by_user(user_id)
+        return MeResult(
+            user_id=user_id,
+            onboarded=onboarding is not None,
+            timezone=onboarding.timezone if onboarding is not None else None,
+            email=credential.email if credential is not None else None,
+            profile=onboarding.user_profile if onboarding is not None else None,
+        )
+
+    def accountability_view(self, user_id: str) -> AccountabilityResult:
+        """The read-only accountability projection plus whether the user has a
+        motivation profile — so the dashboard distinguishes "not set up"
+        (empty-state, axiom 21) from "no active plan yet"."""
+        env = self._env
+        onboarding = env.state.get_onboarding(user_id)
+        has_motivation_profile = (
+            onboarding is not None and onboarding.motivation_profile is not None
+        )
+        snapshot = self.accountability_snapshot(user_id)
+        return AccountabilityResult(
+            has_motivation_profile=has_motivation_profile,
+            checkin_status=snapshot.checkin_status.value if snapshot is not None else None,
+            state=snapshot.state if snapshot is not None else None,
+            decision=snapshot.decision if snapshot is not None else None,
+        )
+
+    def checkin(self, user_id: str, task_id: str, *, completed: bool) -> IngestResult:
+        """Report a scheduled block's outcome as completion telemetry.
+
+        Server-authoritative guard the client cannot bypass: the task must be in
+        the active schedule, its block must have ended (``due``), and it must not
+        already be reported (idempotency — no double-count). A completion carries
+        actuals + timestamp so ``data_quality`` stays ``complete``; a miss
+        carries neither. Then it flows through the same :meth:`ingest` path the
+        operator surface uses.
+        """
+        env = self._env
+        draft = self._active_draft(user_id)
+        entry = (
+            next((e for e in draft.entries if e.task_id == task_id), None)
+            if draft is not None
+            else None
+        )
+        if entry is None:
+            raise CycleError(f"task {task_id!r} is not in the active schedule")
+        if entry.end > env.clock.now():
+            raise CycleError(f"task {task_id!r} is not yet due")
+        if env.telemetry_store.list_for_task(task_id):
+            raise CycleError(f"task {task_id!r} has already been reported")
+        scheduled_min = int((entry.end - entry.start).total_seconds() // 60)
+        payload: dict[str, Any] = {
+            "telemetry_event_id": env.id_generator.new_id("telemetry"),
+            "task_id": task_id,
+            "scheduled_duration_min": scheduled_min,
+            "actual_duration_min": scheduled_min if completed else None,
+            "completed": completed,
+            "user_reschedule_count": 0,
+            "data_quality": "complete",
+        }
+        if completed:
+            payload["completion_timestamp"] = env.clock.now()
+        return self.ingest(user_id, [payload])

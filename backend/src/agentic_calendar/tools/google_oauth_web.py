@@ -181,3 +181,26 @@ def create_dedicated_calendar(
         # e.g. an insufficient-scope 403 from the Calendar API — typed, not a 500.
         raise GoogleOAuthError(f"could not create the dedicated calendar: {exc}") from exc
     return str(created["id"])
+
+
+def dedicated_calendar_exists(service: Any, calendar_id: str) -> bool:
+    """Whether ``calendar_id`` is still reachable for this token.
+
+    Returns ``False`` only when the calendar is definitively gone (HTTP 404/410)
+    — the signal to re-provision a fresh one on reconnect, so a deleted calendar
+    does not 404 the write path forever. Any other outcome (success, or an
+    ambiguous error such as a transient 5xx or an insufficient-scope 403 that
+    re-provisioning would not fix) returns ``True``, so a blip never spawns a
+    duplicate calendar.
+    """
+    try:
+        service.calendars().get(calendarId=calendar_id).execute()
+    except Exception as exc:
+        try:
+            from googleapiclient.errors import HttpError
+        except ImportError:  # pragma: no cover - dependency present in dev/prod
+            return True
+        # Missing (404/410) → re-provision; any other error is ambiguous, so
+        # treat the calendar as still present and never spawn a duplicate.
+        return not (isinstance(exc, HttpError) and int(exc.resp.status) in (404, 410))
+    return True

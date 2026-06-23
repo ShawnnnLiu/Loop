@@ -11,6 +11,8 @@ identical fixture-backed, claim-seeded, frozen-clock build.
 
 from __future__ import annotations
 
+from datetime import timedelta
+
 from fastapi.testclient import TestClient
 
 from agentic_calendar.app.web.app import create_app
@@ -156,3 +158,99 @@ def test_invalid_onboard_payload_maps_to_422() -> None:
     assert resp.status_code == 422
     body = resp.json()
     assert body["type"] == "ValidationError"
+
+
+# --------------------------------------------------------------------------- #
+# Read projections + guarded check-in (F-A): the JSON the SPA renders from.
+# --------------------------------------------------------------------------- #
+
+
+def test_read_endpoints_expose_projections() -> None:
+    client, _clock = _client()
+
+    me = client.get("/api/me")
+    assert me.status_code == 200
+    mbody = me.json()
+    assert mbody["onboarded"] is True
+    assert mbody["timezone"] == "UTC"
+    assert mbody["profile"]["target_role"] == "Backend SWE"
+
+    today = client.get("/api/today")
+    assert today.status_code == 200
+    assert today.json()["tasks"] == []  # no active plan yet
+
+    draft = client.get("/api/draft")
+    assert draft.status_code == 200
+    dbody = draft.json()
+    assert dbody["draft"] is None
+    assert dbody["hash_canonicalization_version"]
+    # Dev mode has no per-user calendar credential → server-side free/busy empty.
+    assert dbody["free_busy"] == []
+
+    thresholds = client.get("/api/thresholds")
+    assert thresholds.status_code == 200
+    assert thresholds.json()["sections"]
+
+    acct = client.get("/api/accountability")
+    assert acct.status_code == 200
+    assert acct.json()["has_motivation_profile"] is False  # empty-state (axiom 21)
+
+
+def test_draft_endpoint_exposes_pending_draft_with_approval_hash() -> None:
+    client, _clock = _client()
+    proposed = client.post("/api/propose", json={})
+    assert proposed.status_code == 200
+
+    draft = client.get("/api/draft")
+    assert draft.status_code == 200
+    dbody = draft.json()
+    assert dbody["draft"] is not None
+    # The grid renders against the same canonical hash the user approves (axiom 06).
+    assert dbody["payload_hash"] == proposed.json()["draft_payload_hash"]
+    assert {entry["task_id"] for entry in dbody["draft"]["entries"]} == set(PLAN_TASK_IDS)
+
+
+def test_checkin_records_completion_once_block_is_due() -> None:
+    client, clock = _client()
+    client.post("/api/propose", json={})
+    client.post("/api/approve", json={})
+    assert client.post("/api/write", json={}).status_code == 200
+    # Advance past every scheduled block so the tasks are "due".
+    clock.advance(seconds=8 * 86400)
+
+    resp = client.post("/api/checkin", json={"task_id": "dp_001", "outcome": "complete"})
+    assert resp.status_code == 200
+    assert resp.json()["ingested_count"] == 1
+
+    today = client.get("/api/today").json()
+    row = next(r for r in today["tasks"] if r["task_id"] == "dp_001")
+    assert row["reported"] is True
+
+
+def test_checkin_before_block_due_maps_to_409() -> None:
+    client, _clock = _client()
+    client.post("/api/propose", json={})
+    client.post("/api/approve", json={})
+    client.post("/api/write", json={})
+    # No clock advance: the block is still in the future, so it is not yet due.
+    resp = client.post("/api/checkin", json={"task_id": "dp_001", "outcome": "complete"})
+    assert resp.status_code == 409
+
+
+def test_checkin_invalid_outcome_maps_to_422() -> None:
+    client, _clock = _client()
+    resp = client.post("/api/checkin", json={"task_id": "dp_001", "outcome": "kinda"})
+    assert resp.status_code == 422
+
+
+def test_propose_honors_body_free_busy_in_dev() -> None:
+    """Dev mode trusts the body's free_busy (the operator/test surface keeps
+    control). An all-horizon busy block leaves no room, so scheduling fails with
+    a typed reason_code — proving the supplied list flows through the route.
+    (Hosted mode instead fetches free/busy server-side; see routes_cycle.)"""
+    client, clock = _client()
+    now = clock.now()
+    busy = [{"start": now.isoformat(), "end": (now + timedelta(days=14)).isoformat()}]
+    resp = client.post("/api/propose", json={"free_busy": busy, "horizon_days": 14})
+    assert resp.status_code == 200
+    assert resp.json()["reason_code"]

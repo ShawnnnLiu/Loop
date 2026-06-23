@@ -12,12 +12,23 @@ modes:
 
 Either way every calendar mutation still flows through :class:`CycleService`,
 so no axiom-06 invariant is relaxed for the web surface.
+
+The user-facing product is the React SPA in ``frontend/`` (built to
+``frontend/dist/``). When a built ``spa_dist`` is supplied, it is served as
+static assets with an SPA-routing fallback: the client router owns the app
+routes, and ``/api`` / ``/auth`` / ``/healthz`` are registered first so they
+always win over the catch-all. The SPA is a thin client — every mutation is a
+normal ``/api`` call subject to the same server checks, so it can never bypass
+an axiom-06 invariant.
 """
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import ValidationError
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -27,9 +38,45 @@ from agentic_calendar.common.errors import AgenticCalendarError
 from agentic_calendar.common.secrets import TokenCipher
 
 from .config import WebAuthConfig
-from .pages import router as pages_router
 from .routes_auth import router as auth_router
 from .routes_cycle import router as cycle_router
+
+
+def default_spa_dist() -> Path:
+    """The repo's built SPA directory (``frontend/dist``), relative to this file.
+
+    Used by the composition roots (dev ``__main__`` and hosted ``server``) so a
+    run from a repo checkout serves the SPA without configuration. Hosted deploys
+    may override the location with ``SPA_DIST_DIR``."""
+    return Path(__file__).resolve().parents[5] / "frontend" / "dist"
+
+
+def default_landing_index() -> Path:
+    """The repo's static landing page (``landing/index.html``), relative to here.
+
+    The unauthenticated marketing entry served at ``/``; hosted deploys may
+    override it with ``LANDING_INDEX``."""
+    return Path(__file__).resolve().parents[5] / "landing" / "index.html"
+
+
+def _mount_spa(app: FastAPI, dist_dir: Path) -> None:
+    """Serve the built SPA: hashed bundles under ``/assets`` and ``index.html``
+    as the fallback for every other GET, so the client router owns app routes
+    (``/onboarding``, ``/today``, …). Registered last, after ``/api`` / ``/auth``
+    / ``/healthz``, which therefore take precedence over this catch-all."""
+    index = dist_dir / "index.html"
+    assets = dist_dir / "assets"
+    if assets.is_dir():
+        app.mount("/assets", StaticFiles(directory=assets), name="assets")
+
+    @app.get("/{spa_path:path}", include_in_schema=False)
+    def spa(spa_path: str) -> FileResponse:
+        # A real top-level static file (favicon, etc.) is served as-is, confined
+        # to the dist dir; anything else is an SPA route -> hand back index.html.
+        candidate = (dist_dir / spa_path).resolve()
+        if spa_path and candidate.is_file() and candidate.is_relative_to(dist_dir.resolve()):
+            return FileResponse(candidate)
+        return FileResponse(index)
 
 
 def _error_body(exc: Exception) -> dict[str, str]:
@@ -42,11 +89,17 @@ def create_app(
     auth_config: WebAuthConfig | None = None,
     token_cipher: TokenCipher | None = None,
     default_user_id: str | None = None,
+    spa_dist: Path | None = None,
+    landing_index: Path | None = None,
 ) -> FastAPI:
     """Build the app over a wired :class:`AppEnvironment`.
 
     Hosted mode needs ``auth_config`` + ``token_cipher``; dev mode needs
-    ``default_user_id``.
+    ``default_user_id``. ``spa_dist`` (a built ``frontend/dist``) is served as
+    the SPA when present; omit it (the default) for API-only test builds.
+    ``landing_index`` (a static ``landing/index.html``) is served at ``/`` when
+    present — the SPA then owns the app routes (the OAuth callback lands users on
+    ``/app``), so the marketing root and the app don't fight over ``/``.
     """
     if auth_config is not None and token_cipher is None:
         raise ValueError("hosted mode (auth_config) requires a token_cipher")
@@ -69,7 +122,6 @@ def create_app(
             https_only=auth_config.https_only,
         )
         app.include_router(auth_router)
-        app.include_router(pages_router)
 
     @app.get("/healthz")
     def healthz() -> dict[str, str]:
@@ -100,4 +152,20 @@ def create_app(
         return JSONResponse(status_code=400, content=_error_body(exc))
 
     app.include_router(cycle_router)
+
+    # The static landing owns "/" (registered before the SPA catch-all so it
+    # wins there). The app routes belong to the SPA; the OAuth callback lands a
+    # signed-in user on "/app", never here, so there is no session-conditional
+    # rendering at "/".
+    if landing_index is not None and landing_index.is_file():
+
+        @app.get("/", include_in_schema=False)
+        def landing() -> FileResponse:
+            return FileResponse(landing_index)
+
+    # The SPA fallback is registered LAST so its catch-all never shadows the API,
+    # auth, health, or landing routes above. Only mounted when a real build is
+    # present, so API-only test builds (no dist) keep a clean 404 on non-API paths.
+    if spa_dist is not None and (spa_dist / "index.html").is_file():
+        _mount_spa(app, spa_dist)
     return app

@@ -1,6 +1,10 @@
 # Fly.io config for the single-instance hosted app.
-# Run flyctl from backend/ (build context = this directory, where the
-# Dockerfile lives). Replace the app name and redirect URI with your own.
+# Deploy from the REPO ROOT so the build context is the repo root (the image
+# needs frontend/ and landing/, siblings of backend/):
+#   fly deploy . --config backend/fly.toml
+# The positional "." sets the build context to the repo root; `dockerfile` below
+# is resolved relative to THIS file's directory (backend/), so it stays "Dockerfile".
+# Replace the app name and redirect URI with your own.
 #
 # IMPORTANT: exactly ONE machine. SQLite + WAL is a one-process store, so do
 # not scale past 1 (`fly scale count 1`) and do not add workers.
@@ -9,7 +13,7 @@ app = "acme-agentic-cal"          # <-- your app name; domain is <app>.fly.dev
 primary_region = "lax"            # <-- a region near your testers
 
 [build]
-  dockerfile = "Dockerfile"
+  dockerfile = "Dockerfile"   # relative to this fly.toml's dir (backend/) -> backend/Dockerfile
 
 [http_service]
   internal_port = 8000

@@ -19,7 +19,7 @@ session-derived (Increment 3).
 
 from __future__ import annotations
 
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Body, Depends, Request
 from fastapi.responses import JSONResponse
@@ -70,6 +70,13 @@ class AdjustRequest(BaseModel):
     run_id: str | None = None
 
 
+class CheckinRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    task_id: str
+    outcome: Literal["complete", "missed"]
+
+
 def _json(result: BaseModel) -> JSONResponse:
     """Serialize exactly as the CLI does (``model_dump_json``) — no FastAPI
     response-model coercion, so the body is byte-identical to the operator
@@ -93,15 +100,25 @@ def onboard(
 
 @router.post("/propose")
 def propose(
+    request: Request,
     service: Service,
     user_id: ActingUser,
     body: ProposeRequest | None = None,
 ) -> JSONResponse:
     body = body or ProposeRequest()
+    # Hosted: schedule around the user's real calendar, fetched server-side (the
+    # SPA cannot supply free/busy — it needs the per-user token cipher — and a
+    # client list is never trusted anyway). Dev: honor the body's free_busy so
+    # the operator/test surface keeps full control.
+    free_busy = (
+        _server_free_busy(request, user_id)
+        if request.app.state.auth_enabled
+        else body.free_busy
+    )
     return _json(
         service.propose(
             user_id,
-            free_busy=body.free_busy,
+            free_busy=free_busy,
             horizon_days=body.horizon_days,
             recovery_mode=body.recovery_mode,
         )
@@ -118,10 +135,10 @@ def approve(
     return _json(service.approve(user_id, run_id=body.run_id, reject=body.reject))
 
 
-def _adjust_free_busy(request: Request, user_id: str) -> list[dict[str, str]]:
-    """The user's real busy windows, fetched server-side so adjust re-validation
-    never trusts the client's own conflict checking. Dev mode has no per-user
-    token, so it falls back to no calendar awareness there (best-effort)."""
+def _server_free_busy(request: Request, user_id: str) -> list[dict[str, str]]:
+    """The user's real busy windows, fetched server-side so scheduling and
+    adjust re-validation never trust a client-supplied list. Dev mode has no
+    per-user token, so it falls back to no calendar awareness (best-effort)."""
     if not request.app.state.auth_enabled:
         return []
     return best_effort_free_busy(
@@ -143,7 +160,7 @@ def adjust(
             user_id,
             body.adjustments,
             run_id=body.run_id,
-            free_busy=_adjust_free_busy(request, user_id),
+            free_busy=_server_free_busy(request, user_id),
         )
     )
 
@@ -197,3 +214,43 @@ def ingest(
 @router.get("/status")
 def status(service: Service, user_id: ActingUser) -> JSONResponse:
     return _json(service.status(user_id))
+
+
+# --------------------------------------------------------------------------- #
+# Read projections (F-A): JSON the SPA renders from. Each is a thin wrapper over
+# a side-effect-free ``CycleService`` projection; the acting user is always
+# session-derived. ``/checkin`` is the one mutation — its guard lives in the
+# service, so the SPA cannot double-count or report a non-due / foreign task.
+# --------------------------------------------------------------------------- #
+
+
+@router.get("/draft")
+def draft(request: Request, service: Service, user_id: ActingUser) -> JSONResponse:
+    # Free/busy is fetched server-side so the grid's "fixed" events are the real
+    # calendar, never a client-supplied list (same helper /api/adjust uses).
+    return _json(service.draft_view(user_id, free_busy=_server_free_busy(request, user_id)))
+
+
+@router.get("/today")
+def today(service: Service, user_id: ActingUser) -> JSONResponse:
+    return _json(service.today(user_id))
+
+
+@router.get("/accountability")
+def accountability(service: Service, user_id: ActingUser) -> JSONResponse:
+    return _json(service.accountability_view(user_id))
+
+
+@router.get("/thresholds")
+def thresholds(service: Service, user_id: ActingUser) -> JSONResponse:
+    return _json(service.thresholds_view())
+
+
+@router.get("/me")
+def me(service: Service, user_id: ActingUser) -> JSONResponse:
+    return _json(service.me(user_id))
+
+
+@router.post("/checkin")
+def checkin(service: Service, user_id: ActingUser, body: CheckinRequest) -> JSONResponse:
+    return _json(service.checkin(user_id, body.task_id, completed=body.outcome == "complete"))

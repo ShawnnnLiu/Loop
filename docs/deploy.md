@@ -61,10 +61,15 @@ uv run uvicorn agentic_calendar.app.web.server:create_hosted_app \
     --factory --host 0.0.0.0 --port 8000
 ```
 
-Or via the image (build context `backend/`):
+Or via the image. It is **multi-stage**: it builds the React SPA
+(`frontend/dist`) and bundles it plus the static landing page, so the one
+container serves the whole product — the landing at `/`, the SPA app routes, and
+the JSON API. The build context is the **repo root** (it needs `frontend/` and
+`landing/`, siblings of `backend/`), so build from the repo root and point at
+`backend/Dockerfile`:
 
 ```bash
-docker build -t agentic-calendar backend/
+docker build -t agentic-calendar -f backend/Dockerfile .   # from the repo root
 docker run -p 8000:8000 \
     -v /srv/agentic-calendar:/data \
     -e SHARED_DB_PATH=/data/app.db \
@@ -83,29 +88,48 @@ automatic HTTPS) so the public URL is `https://<your-domain>`.
 ### Fly.io (single machine + volume)
 
 `backend/fly.toml` is preconfigured; edit `app`, `primary_region`, and the
-`OAUTH_REDIRECT_URI` to match your app name. Run flyctl from `backend/`:
+`OAUTH_REDIRECT_URI` to match your app name. Because the image now builds the
+SPA, the build context is the **repo root** — run flyctl from there (not from
+`backend/`), pointing at the config and Dockerfile explicitly:
 
 ```bash
-cd backend
-fly launch --no-deploy --copy-config --name <your-app>   # reuse fly.toml
-fly volumes create data --region <region> --size 1        # persistent SQLite
-fly secrets set \
+# from the repo root
+fly launch --no-deploy --copy-config --config backend/fly.toml --name <your-app>
+fly volumes create data --config backend/fly.toml --region <region> --size 1   # persistent SQLite
+fly secrets set --config backend/fly.toml \
   APP_SESSION_SECRET="$(python -c 'import secrets;print(secrets.token_urlsafe(48))')" \
   APP_TOKEN_ENCRYPTION_KEY="$(python -c 'from cryptography.fernet import Fernet;print(Fernet.generate_key().decode())')" \
   TESTER_ALLOWLIST="a@example.com,b@example.com" \
   ANTHROPIC_API_KEY="sk-ant-..." \
   GOOGLE_OAUTH_CLIENT_SECRET_JSON="$(cat client_secret.json)"
-fly deploy
-fly scale count 1   # exactly one machine — SQLite is single-process
+fly deploy . --config backend/fly.toml   # "." = build context is the repo root
+fly scale count 1 --config backend/fly.toml   # exactly one machine — SQLite is single-process
 ```
 
 The public URL is `https://<your-app>.fly.dev`; its `/auth/callback` must be
-the Authorized redirect URI from step 1.
+the Authorized redirect URI from step 1. Watch the first `fly deploy` build log:
+the Node stage runs `npm ci && npm run build`, then the Python stage copies
+`frontend/dist` + `landing/` into the image.
 
 ## 4. Operate
 
 - **Back up the volume** holding `SHARED_DB_PATH` — it contains personal data
   and encrypted refresh tokens.
 - Add/remove testers by editing `TESTER_ALLOWLIST` and restarting.
-- Onboarding is currently done via the JSON API (`POST /api/onboard`) per
-  signed-in user; the profile form is a follow-up.
+- A signed-in tester completes the whole loop in the **React SPA**: the landing
+  at `/` → Connect Google → onboarding wizard → generate → drag-adjust → approve
+  → write/verify → today/check-in. (The JSON API at `/api/*` still backs every
+  step and remains directly callable.)
+
+## 5. Smoke-test after deploy
+
+```bash
+curl -s https://<your-app>.fly.dev/healthz                 # {"status":"ok"}
+curl -s -o /dev/null -w '%{http_code}\n' https://<your-app>.fly.dev/   # 200 (landing)
+curl -s -o /dev/null -w '%{http_code}\n' https://<your-app>.fly.dev/api/status   # 401 (session-gated)
+```
+
+Then open `https://<your-app>.fly.dev/` in a browser, click **Connect Google
+Calendar**, sign in with an allowlisted account, and walk the wizard → approve →
+write. A non-allowlisted account is rejected at `/auth/callback` with 403 — add
+it to `TESTER_ALLOWLIST` and restart.

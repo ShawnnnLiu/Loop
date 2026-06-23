@@ -81,3 +81,16 @@ export function dayHeader(mondayMs: number, dayIdx: number): { dow: string; labe
   const month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
   return { dow: DAY_LABELS[dayIdx], label: `${month[date.getUTCMonth()]} ${date.getUTCDate()}` }
 }
+
+/** "Tue Jun 23 · 10:30a" for one tz-aware ISO start, by its wall-clock time. */
+export function fmtWhen(iso: string): string {
+  const w = parseWall(iso)
+  const dayMs = dayUtcMs(w)
+  const head = dayHeader(weekMondayMs(dayMs), mondayIndex(dayMs))
+  return `${head.dow} ${head.label} · ${fmtMinutes(minutesOfDay(w))}`
+}
+
+/** Just the wall-clock time of an ISO datetime, e.g. "11:30a". */
+export function fmtClock(iso: string): string {
+  return fmtMinutes(minutesOfDay(parseWall(iso)))
+}

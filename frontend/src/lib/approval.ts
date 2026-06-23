@@ -3,12 +3,12 @@
 // (screens/Approval.tsx) renders from these; the server remains authoritative.
 
 import type { DraftView, WriteCycleResult } from '../api/types'
-import { dayHeader, dayUtcMs, fmtMinutes, minutesOfDay, mondayIndex, parseWall, weekMondayMs } from './datetime'
+import { fmtWhen } from './datetime'
 
 export interface WriteBlock {
   taskId: string
   title: string
-  when: string // "Mon Jun 23 · 4:00p"
+  when: string // "Mon Jun 23 · 4p"
   sortKey: number // ms, for chronological order
 }
 
@@ -16,17 +16,12 @@ export interface WriteBlock {
 export function toWriteBlocks(view: DraftView): WriteBlock[] {
   const titles = view.task_titles
   return (view.draft?.entries ?? [])
-    .map((entry) => {
-      const w = parseWall(entry.start)
-      const dayMs = dayUtcMs(w)
-      const head = dayHeader(weekMondayMs(dayMs), mondayIndex(dayMs))
-      return {
-        taskId: entry.task_id,
-        title: titles[entry.task_id] ?? entry.task_id,
-        when: `${head.dow} ${head.label} · ${fmtMinutes(minutesOfDay(w))}`,
-        sortKey: Date.parse(entry.start),
-      }
-    })
+    .map((entry) => ({
+      taskId: entry.task_id,
+      title: titles[entry.task_id] ?? entry.task_id,
+      when: fmtWhen(entry.start),
+      sortKey: Date.parse(entry.start),
+    }))
     .sort((a, b) => a.sortKey - b.sortKey)
 }
 

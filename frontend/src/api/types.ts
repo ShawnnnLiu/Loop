@@ -185,16 +185,47 @@ export interface ThresholdSectionView {
   fields: ThresholdFieldView[]
 }
 
+/** Mirror of contracts/threshold_change_log.py::ThresholdChange. Append-only
+ *  journal of every effective tuning change (axiom 07). */
+export interface ThresholdChange {
+  config_section: string
+  threshold_field: string
+  prior_value: number
+  new_value: number
+  effective_at: string // ISO, tz-aware
+  justification: string
+  dataset_reference: string
+}
+
 export interface ThresholdsResult {
   sections: ThresholdSectionView[]
-  history: unknown[]
+  history: ThresholdChange[]
+}
+
+/** Subset of contracts/accountability_state.py::AccountabilityState the
+ *  dashboard reads (the full state carries more deterministic fields). */
+export interface AccountabilityState {
+  completion_rate_7d: number
+  completion_rate_14d: number
+  missed_tasks_7d: number
+  reschedule_count_7d: number
+  behind_schedule_percent: number
+  current_status: string
+  sponsor_report_allowed: boolean
+}
+
+/** Subset of InterventionDecision — the chosen deterministic intervention. */
+export interface InterventionDecision {
+  action: string | null
+  reason_code: ReasonCode | null
+  sponsor_action: string | null
 }
 
 export interface AccountabilityResult {
   has_motivation_profile: boolean
   checkin_status: string | null
-  state: unknown | null
-  decision: unknown | null
+  state: AccountabilityState | null
+  decision: InterventionDecision | null
 }
 
 /** Mirror of ApproveResult. `approval_event_id` + `approved_payload_hash` are

@@ -6,6 +6,8 @@ const NAV = [
   { to: '/today', label: 'Today' },
   { to: '/review', label: 'Week' },
   { to: '/plan', label: 'Plan' },
+  { to: '/accountability', label: 'Progress' },
+  { to: '/thresholds', label: 'Tuning' },
 ] as const
 
 export function Topbar({ email }: { email: string | null }) {

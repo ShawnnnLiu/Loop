@@ -4,11 +4,13 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { ApiError, api } from './api/client'
 import type { MeResult } from './api/types'
 import { Topbar } from './components/Topbar'
+import { AccountabilityScreen } from './screens/Accountability'
 import { ApprovalScreen } from './screens/Approval'
 import { GenerationScreen } from './screens/Generation'
 import { OnboardingScreen } from './screens/Onboarding'
 import { ScheduleReviewScreen } from './screens/ScheduleReview'
-import { AccountabilityScreen, ThresholdsScreen, TodayScreen } from './screens/placeholders'
+import { ThresholdsScreen } from './screens/Thresholds'
+import { TodayScreen } from './screens/Today'
 
 type LoadState =
   | { status: 'loading' }

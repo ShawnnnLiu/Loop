@@ -82,6 +82,17 @@ export interface ProposeRequest {
   recovery_mode?: string
 }
 
+/** One typed, structured violation from a terminal validation failure
+ *  (mirror of contracts/validation_result.py::Violation). `details` holds
+ *  deterministic numeric facts; the client formats them into a specific
+ *  recovery message. `type` is the contract surface (a ViolationType value). */
+export interface Violation {
+  type: string
+  task_id: string | null
+  module_id: string | null
+  details: Record<string, unknown>
+}
+
 /** Subset of ProposeResult the generation screen reads. A *workflow* failure
  *  arrives here as a 200 with `reason_code` set (not an ApiError). */
 export interface ProposeResult {
@@ -91,6 +102,7 @@ export interface ProposeResult {
   draft_schedule_id: string | null
   draft_payload_hash: string | null
   scheduled_task_count: number
+  violations: Violation[]
   explanation: Record<string, unknown> | null
 }
 

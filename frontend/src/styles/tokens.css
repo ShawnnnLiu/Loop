@@ -714,6 +714,20 @@ select.input {
   padding: 3px 8px;
   background: #fff;
 }
+.fit-specifics {
+  margin: 12px 0 0;
+  padding: 10px 14px 10px 28px;
+  list-style: disc;
+  background: #fff;
+  border: 1px solid #e3b7ab;
+  border-radius: 10px;
+  font-size: 13px;
+  color: var(--ink);
+  line-height: 1.5;
+}
+.fit-specifics li + li {
+  margin-top: 6px;
+}
 
 /* ——— Approval gate ——— */
 .approve-wrap {

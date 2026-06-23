@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { ApiError, api, errorMessage } from '../api/client'
-import type { ExperienceLevel, MeResult, OnboardPayload, UserProfile, Weekday } from '../api/types'
+import type { ExperienceLevel, MeResult, OnboardPayload, Weekday } from '../api/types'
 
 // The deterministic onboarding wizard. Every field maps straight onto the
 // UserProfile contract, which is the single validation oracle — the wizard only
@@ -12,6 +12,7 @@ import type { ExperienceLevel, MeResult, OnboardPayload, UserProfile, Weekday } 
 // the connection rather than triggering OAuth.
 
 const DAYS: Weekday[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+const WEEKDAYS: Weekday[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
 const LEVELS: ExperienceLevel[] = ['beginner', 'intermediate', 'advanced']
 const STEP_LABELS = ['Goal', 'Time & constraints', 'Skills', 'Résumé & targets', 'Connect']
 
@@ -50,7 +51,8 @@ function browserTimezone(): string {
   }
 }
 
-function initialForm(profile: UserProfile | null): FormState {
+function initialForm(me: MeResult): FormState {
+  const profile = me.profile
   const windows = profile?.deep_work_windows ?? []
   return {
     goal: profile?.goal ?? '',
@@ -59,11 +61,17 @@ function initialForm(profile: UserProfile | null): FormState {
     timeline_weeks: profile?.timeline_weeks ?? 10,
     weekly_hours: profile?.weekly_hours ?? 8,
     preferred_session_length_min: profile?.preferred_session_length_min ?? 60,
-    max_session_length_min: profile?.max_session_length_min ?? 120,
-    dwwDays: windows.map((w) => w.day),
+    max_session_length_min: profile?.max_session_length_min ?? 180,
+    // New users start with weekday deep-work windows pre-selected so a
+    // click-through onboard has real windows for the scheduler; an existing
+    // profile keeps whatever days it saved (even none).
+    dwwDays: profile ? windows.map((w) => w.day) : WEEKDAYS,
     dwwStart: windows[0]?.start ?? '18:00',
     dwwEnd: windows[0]?.end ?? '21:00',
-    timezone: profile ? '' : browserTimezone(),
+    // Prefer a real saved zone; "UTC" is the server's fallback default (not a
+    // zone a user picks), so treat it as unset and re-detect from the browser —
+    // this runs for returning users too, who previously kept the UTC default.
+    timezone: me.timezone && me.timezone !== 'UTC' ? me.timezone : browserTimezone(),
     no_events_before: profile?.hard_constraints.no_events_before ?? '08:00',
     no_events_after: profile?.hard_constraints.no_events_after ?? '22:30',
     allow_weekends: profile?.hard_constraints.allow_weekends ?? true,
@@ -190,7 +198,7 @@ function ConfigRow({
 export function OnboardingScreen({ me }: { me: MeResult }) {
   const navigate = useNavigate()
   const [step, setStep] = useState(0)
-  const [form, setForm] = useState<FormState>(() => initialForm(me.profile))
+  const [form, setForm] = useState<FormState>(() => initialForm(me))
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -215,7 +223,7 @@ export function OnboardingScreen({ me }: { me: MeResult }) {
   async function submit() {
     setSubmitting(true)
     setError(null)
-    const timezone = (form.timezone.trim() || me.timezone || 'UTC').trim()
+    const timezone = form.timezone.trim() || browserTimezone() || 'UTC'
     try {
       await api.onboard(buildPayload(form, timezone))
       navigate('/plan') // next: generate the plan (F-D)
@@ -373,7 +381,7 @@ export function OnboardingScreen({ me }: { me: MeResult }) {
             <input
               id="tz"
               className="input tz"
-              value={form.timezone || me.timezone || ''}
+              value={form.timezone}
               onChange={(e) => set('timezone', e.target.value)}
               placeholder="America/Los_Angeles"
             />

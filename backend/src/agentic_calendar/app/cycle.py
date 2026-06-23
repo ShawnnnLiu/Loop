@@ -589,6 +589,7 @@ class CycleService:
                 )
                 return self._propose_failure(
                     run,
+                    validation=result,
                     explanation=env.nodes.explanation.run(
                         run_id=run.run_id, validation_result=result
                     ),
@@ -715,6 +716,7 @@ class CycleService:
         self,
         run: RunRecord,
         *,
+        validation: ValidationResult | None = None,
         explanation: UserExplanation | None = None,
         output: SchedulerOutput | None = None,
     ) -> ProposeResult:
@@ -727,6 +729,7 @@ class CycleService:
             recovery_mode=run.recovery_mode,
             unscheduled_tasks=list(output.unscheduled_tasks) if output else [],
             repair_options=list(output.repair_options) if output else [],
+            violations=list(validation.violations) if validation else [],
             explanation=explanation,
         )
 

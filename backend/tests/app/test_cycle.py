@@ -71,6 +71,7 @@ from agentic_calendar.contracts.syllabus_units import SyllabusUnits
 from agentic_calendar.contracts.task_plan import TaskPlan
 from agentic_calendar.contracts.user_profile import UserProfile
 from agentic_calendar.contracts.validation_result import ValidationResult
+from agentic_calendar.contracts.violation_types import ViolationType
 from agentic_calendar.llm_nodes.planner import FixturePlanner
 from agentic_calendar.llm_nodes.reflection_summary import DeterministicReflectionSummary
 from agentic_calendar.llm_nodes.strategist import FixtureStrategist
@@ -459,6 +460,18 @@ def test_planner_repair_retries_receive_failed_validation_result() -> None:
         assert repair.valid is False
         assert repair.violations
         assert repair.reason_code is ReasonCode.USER_FIT_VIOLATED
+
+    # The terminal ProposeResult carries the typed, structured violations from
+    # the failed validation so clients can surface the specific reason (the
+    # 150-min non-splittable task vs the fixture's 120-min max session) instead
+    # of a generic message.
+    assert result.violations
+    assert any(
+        v.type is ViolationType.DURATION_EXCEEDS_USER_MAX_SESSION
+        and v.details["duration_min"] == 150
+        and v.details["max_session_length_min"] == 120
+        for v in result.violations
+    )
 
     run = env.state.get_run(result.run_id)
     assert run is not None

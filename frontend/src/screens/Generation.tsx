@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { ApiError, api, errorMessage } from '../api/client'
+import { formatViolations } from '../lib/fit'
 
 // The generation surface. Triggers POST /api/propose and shows the deterministic
 // pipeline while it runs. The pipeline animation is cosmetic — propose is one
@@ -26,8 +27,8 @@ const REASONS: Record<string, { title: string; what: string }> = {
     what: 'Your goal needs more hours than your weekly budget allows. Raise weekly hours or extend the timeline.',
   },
   USER_FIT_VIOLATED: {
-    title: "Doesn't fit your constraints",
-    what: "Some blocks couldn't fit inside your deep-work windows and hard limits. Relaxing a constraint usually clears it.",
+    title: "Doesn't fit your time setup",
+    what: "The plan didn't fit your session-length, weekly-hours, or timeline limits. Loosening one of those usually clears it.",
   },
   REPAIR_LIMIT_EXCEEDED: {
     title: 'Constraints too tight',
@@ -60,7 +61,7 @@ function describe(code: string | null): { title: string; what: string } {
 }
 
 type Phase = 'ready' | 'running' | 'failed'
-type Failure = { code: string | null; message: string }
+type Failure = { code: string | null; message: string; specifics: string[] }
 
 export function GenerationScreen() {
   const navigate = useNavigate()
@@ -82,7 +83,11 @@ export function GenerationScreen() {
     try {
       const result = await api.propose()
       if (result.reason_code) {
-        setFailure({ code: result.reason_code, message: '' })
+        setFailure({
+          code: result.reason_code,
+          message: '',
+          specifics: formatViolations(result.violations ?? []),
+        })
         setPhase('failed')
         return
       }
@@ -93,7 +98,7 @@ export function GenerationScreen() {
         navigate('/onboarding') // not set up yet
         return
       }
-      setFailure({ code: null, message: errorMessage(err) })
+      setFailure({ code: null, message: errorMessage(err), specifics: [] })
       setPhase('failed')
     }
   }
@@ -115,6 +120,13 @@ export function GenerationScreen() {
           <p style={{ fontSize: 13.5, color: 'var(--ink-soft)', marginTop: 6, lineHeight: 1.5 }}>
             {failure.message || what}
           </p>
+          {failure.specifics.length > 0 && (
+            <ul className="fit-specifics">
+              {failure.specifics.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          )}
           <div className="row" style={{ gap: 9, marginTop: 16 }}>
             <button className="btn btn-primary" type="button" onClick={() => void generate()}>
               Try again

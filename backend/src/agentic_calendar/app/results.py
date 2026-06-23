@@ -22,6 +22,7 @@ from agentic_calendar.contracts.reason_codes import ReasonCode
 from agentic_calendar.contracts.scheduler_output import RepairOption, UnscheduledTask
 from agentic_calendar.contracts.threshold_change_log import ThresholdChange
 from agentic_calendar.contracts.user_profile import UserProfile
+from agentic_calendar.contracts.validation_result import Violation
 from agentic_calendar.llm_nodes.reflection_summary import ReflectionSummary
 from agentic_calendar.llm_nodes.user_facing_explanation import UserExplanation
 from agentic_calendar.supervisor.state import SupervisorState
@@ -57,6 +58,10 @@ class ProposeResult(BaseModel):
     scheduled_task_count: int = 0
     unscheduled_tasks: list[UnscheduledTask] = Field(default_factory=list)
     repair_options: list[RepairOption] = Field(default_factory=list)
+    violations: list[Violation] = Field(default_factory=list)
+    """Typed, structured violations from a terminal validation failure (e.g.
+    user-fit). Deterministic numeric facts only — clients format them into a
+    specific recovery message; the typed ``reason_code`` stays the contract."""
     explanation: UserExplanation | None = None
     """LLM prose attachment (validation wording); never control-plane."""
 

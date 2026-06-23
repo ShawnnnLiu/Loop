@@ -102,7 +102,8 @@ def test_full_login_authenticates_and_persists_encrypted_token(
     client, env, cipher = _app()
     resp = _complete_login(client, monkeypatch)
     assert resp.status_code == 307
-    assert resp.headers["location"] == "/"
+    # A signed-in user lands in the app entry, not the marketing root.
+    assert resp.headers["location"] == "/app"
 
     user_id = _user_id_for_sub(SUB)
     status = client.get("/api/status")

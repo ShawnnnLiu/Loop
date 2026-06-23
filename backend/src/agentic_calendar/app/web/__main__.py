@@ -21,7 +21,7 @@ from agentic_calendar.app.environment import AppEnvironment, build_environment
 from agentic_calendar.tools.llm_smoke import sample_fixture_inputs
 from agentic_calendar.tools.run_cycle import _fixture_bundle
 
-from .app import create_app, default_spa_dist
+from .app import create_app, default_landing_index, default_spa_dist
 
 
 def build_demo_environment() -> tuple[AppEnvironment, str]:
@@ -44,7 +44,12 @@ def main() -> None:
     import uvicorn
 
     env, user_id = build_demo_environment()
-    app = create_app(env=env, default_user_id=user_id, spa_dist=default_spa_dist())
+    app = create_app(
+        env=env,
+        default_user_id=user_id,
+        spa_dist=default_spa_dist(),
+        landing_index=default_landing_index(),
+    )
     uvicorn.run(app, host="127.0.0.1", port=8000)
 
 

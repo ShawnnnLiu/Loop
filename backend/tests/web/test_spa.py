@@ -18,6 +18,7 @@ from tests.app.test_cycle import USER_ID, make_service
 
 _INDEX_HTML = "<!doctype html><title>Loop</title><div id=root></div>"
 _ASSET_JS = "console.log('loop')"
+_LANDING_HTML = "<!doctype html><title>Loop — landing</title><h1>LANDING_MARKER</h1>"
 
 
 def _dist(tmp_path: Path) -> Path:
@@ -27,6 +28,13 @@ def _dist(tmp_path: Path) -> Path:
     (dist / "assets" / "index-abc123.js").write_text(_ASSET_JS)
     (dist / "favicon.svg").write_text("<svg/>")
     return dist
+
+
+def _landing(tmp_path: Path) -> Path:
+    index = tmp_path / "landing" / "index.html"
+    index.parent.mkdir(parents=True)
+    index.write_text(_LANDING_HTML)
+    return index
 
 
 def _client(tmp_path: Path) -> TestClient:
@@ -79,3 +87,44 @@ def test_no_dist_means_no_spa_mount() -> None:
     assert client.get("/", follow_redirects=False).status_code == 404
     assert client.get("/today", follow_redirects=False).status_code == 404
     assert client.get("/healthz").status_code == 200
+
+
+# --------------------------------------------------------------------------- #
+# Landing (L-B): the static marketing page owns "/", the SPA owns app routes.
+# --------------------------------------------------------------------------- #
+
+
+def test_landing_owns_root_and_spa_owns_app_routes(tmp_path: Path) -> None:
+    _service, env, _clock = make_service()
+    client = TestClient(
+        create_app(
+            env=env,
+            default_user_id=USER_ID,
+            spa_dist=_dist(tmp_path),
+            landing_index=_landing(tmp_path),
+        )
+    )
+    # "/" serves the landing, NOT the SPA index — the explicit route wins over
+    # the SPA catch-all.
+    root = client.get("/")
+    assert root.status_code == 200
+    assert "LANDING_MARKER" in root.text
+    assert _INDEX_HTML not in root.text
+    # App routes (incl. the /app entry the OAuth callback lands on) still serve
+    # the SPA so the client router boots.
+    for route in ("/app", "/today", "/onboarding"):
+        resp = client.get(route)
+        assert resp.status_code == 200, route
+        assert _INDEX_HTML in resp.text
+    # The API still wins over both.
+    assert client.get("/api/status").json()["user_id"] == USER_ID
+
+
+def test_landing_served_without_a_spa_build(tmp_path: Path) -> None:
+    # Landing present but no SPA build: "/" is the landing, app routes 404.
+    _service, env, _clock = make_service()
+    client = TestClient(
+        create_app(env=env, default_user_id=USER_ID, landing_index=_landing(tmp_path))
+    )
+    assert "LANDING_MARKER" in client.get("/").text
+    assert client.get("/today", follow_redirects=False).status_code == 404

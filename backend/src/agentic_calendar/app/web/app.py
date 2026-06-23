@@ -51,6 +51,14 @@ def default_spa_dist() -> Path:
     return Path(__file__).resolve().parents[5] / "frontend" / "dist"
 
 
+def default_landing_index() -> Path:
+    """The repo's static landing page (``landing/index.html``), relative to here.
+
+    The unauthenticated marketing entry served at ``/``; hosted deploys may
+    override it with ``LANDING_INDEX``."""
+    return Path(__file__).resolve().parents[5] / "landing" / "index.html"
+
+
 def _mount_spa(app: FastAPI, dist_dir: Path) -> None:
     """Serve the built SPA: hashed bundles under ``/assets`` and ``index.html``
     as the fallback for every other GET, so the client router owns app routes
@@ -82,12 +90,16 @@ def create_app(
     token_cipher: TokenCipher | None = None,
     default_user_id: str | None = None,
     spa_dist: Path | None = None,
+    landing_index: Path | None = None,
 ) -> FastAPI:
     """Build the app over a wired :class:`AppEnvironment`.
 
     Hosted mode needs ``auth_config`` + ``token_cipher``; dev mode needs
     ``default_user_id``. ``spa_dist`` (a built ``frontend/dist``) is served as
     the SPA when present; omit it (the default) for API-only test builds.
+    ``landing_index`` (a static ``landing/index.html``) is served at ``/`` when
+    present — the SPA then owns the app routes (the OAuth callback lands users on
+    ``/app``), so the marketing root and the app don't fight over ``/``.
     """
     if auth_config is not None and token_cipher is None:
         raise ValueError("hosted mode (auth_config) requires a token_cipher")
@@ -141,9 +153,19 @@ def create_app(
 
     app.include_router(cycle_router)
 
+    # The static landing owns "/" (registered before the SPA catch-all so it
+    # wins there). The app routes belong to the SPA; the OAuth callback lands a
+    # signed-in user on "/app", never here, so there is no session-conditional
+    # rendering at "/".
+    if landing_index is not None and landing_index.is_file():
+
+        @app.get("/", include_in_schema=False)
+        def landing() -> FileResponse:
+            return FileResponse(landing_index)
+
     # The SPA fallback is registered LAST so its catch-all never shadows the API,
-    # auth, or health routes above. Only mounted when a real build is present, so
-    # API-only test builds (no dist) keep a clean 404 on non-API paths.
+    # auth, health, or landing routes above. Only mounted when a real build is
+    # present, so API-only test builds (no dist) keep a clean 404 on non-API paths.
     if spa_dist is not None and (spa_dist / "index.html").is_file():
         _mount_spa(app, spa_dist)
     return app

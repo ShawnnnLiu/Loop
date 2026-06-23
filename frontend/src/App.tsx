@@ -53,7 +53,10 @@ export function App() {
       <Topbar email={me.email} />
       <main className="app-main">
         <Routes>
-          {/* A connected user with no profile lands in onboarding; otherwise Today. */}
+          {/* "/app" is the app entry the OAuth callback lands on (the static
+              landing owns "/"); "/" inside the SPA behaves the same. A connected
+              user with no profile lands in onboarding; otherwise Today. */}
+          <Route path="/app" element={<Navigate to={me.onboarded ? '/today' : '/onboarding'} replace />} />
           <Route path="/" element={<Navigate to={me.onboarded ? '/today' : '/onboarding'} replace />} />
           <Route path="/onboarding" element={<OnboardingScreen me={me} />} />
           <Route path="/plan" element={<GenerationScreen />} />

@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom'
+import { Link, NavLink } from 'react-router-dom'
 
 import { logout } from '../auth/session'
 
@@ -13,10 +13,10 @@ const NAV = [
 export function Topbar({ email }: { email: string | null }) {
   return (
     <header className="tb">
-      <div className="brand">
+      <Link to="/app" className="brand" style={{ textDecoration: 'none', color: 'inherit' }}>
         <span className="glyph">L</span>
         <span className="word">Loop</span>
-      </div>
+      </Link>
       <nav className="tb-nav">
         {NAV.map((item) => (
           <NavLink key={item.to} to={item.to} className={({ isActive }) => (isActive ? 'on' : '')}>

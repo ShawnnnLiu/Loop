@@ -41,9 +41,11 @@ def _set_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv("TESTER_ALLOWLIST", "a@example.com, b@example.com")
     monkeypatch.setenv("ANTHROPIC_API_KEY", "dummy-key-no-network")
     monkeypatch.setenv("APP_HTTPS_ONLY", "0")
-    # Don't depend on a built frontend/dist: keep the SPA fallback unmounted so
-    # the unauthenticated entry is a deterministic 404, not the (gitignored) SPA.
+    # Don't depend on the in-repo SPA build or landing page: keep both unmounted
+    # so the unauthenticated entry is a deterministic 404. The static-serving
+    # behavior is covered in test_spa.py with temp files.
     monkeypatch.setenv("SPA_DIST_DIR", str(tmp_path / "no-spa-build"))
+    monkeypatch.setenv("LANDING_INDEX", str(tmp_path / "no-landing.html"))
 
 
 def test_create_hosted_app_wires_from_env(
@@ -54,7 +56,7 @@ def test_create_hosted_app_wires_from_env(
 
     assert client.get("/healthz").json() == {"status": "ok"}
     # No server-rendered login page anymore (the Jinja surface was retired); with
-    # no SPA build mounted, the unauthenticated entry is a plain 404.
+    # neither the SPA build nor the landing mounted here, "/" is a plain 404.
     assert client.get("/", follow_redirects=False).status_code == 404
     # Hosted mode: the API is session-gated.
     assert client.get("/api/status").status_code == 401

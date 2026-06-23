@@ -126,7 +126,9 @@ def callback(request: Request, code: str, state: str) -> RedirectResponse:
 
     request.session["user_id"] = user_id
     request.session["email"] = identity.email
-    return RedirectResponse("/", status_code=307)
+    # Land in the app, not the marketing root: "/app" is the SPA entry that
+    # forwards to onboarding or today based on the user's state.
+    return RedirectResponse("/app", status_code=307)
 
 
 @router.post("/logout")

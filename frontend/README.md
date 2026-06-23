@@ -28,17 +28,20 @@ npm run dev          # http://localhost:5173  (proxies /api,/auth,/healthz → :
 ```
 
 **B · Production-like single server (verify the cutover).** Build the SPA, then
-the same keyless backend serves `frontend/dist/` directly at `/`:
+the same keyless backend serves the static landing at `/` and the SPA at the app
+routes (entry `/app`):
 
 ```bash
 npm run build                                        # writes frontend/dist/
 cd ../backend && uv run python -m agentic_calendar.app.web   # http://127.0.0.1:8000
 ```
 
-In production (`server:create_hosted_app`) the backend serves the built assets
-the same way (SPA fallback for app routes; `/api`, `/auth`, `/healthz` win over
-the catch-all); `SPA_DIST_DIR` overrides the build location. There is no Vite in
-production. This is the F-H cutover — the Jinja page surface has been retired.
+`/` is the landing (`landing/index.html`); `/app`, `/today`, … serve the SPA
+(`index.html` fallback) so the client router boots. In production
+(`server:create_hosted_app`) the backend serves these the same way — `/api`,
+`/auth`, `/healthz` win over the SPA catch-all; `SPA_DIST_DIR` / `LANDING_INDEX`
+override the locations. There is no Vite in production. This is the F-H cutover
+(the Jinja page surface was retired) plus the L-B landing.
 
 ## Checks (the per-commit frontend gate)
 

@@ -1,6 +1,8 @@
 import type {
   AccountabilityResult,
   AdjustResult,
+  ApproveResult,
+  CheckinResult,
   DraftAdjustment,
   DraftView,
   MeResult,
@@ -11,6 +13,7 @@ import type {
   StatusResult,
   ThresholdsResult,
   TodayResult,
+  WriteCycleResult,
 } from './types'
 
 /** A non-OK HTTP response from the API (4xx/5xx). A *workflow* failure is NOT
@@ -76,6 +79,15 @@ export const api = {
   accountability: () => request<AccountabilityResult>('GET', '/accountability'),
   onboard: (payload: OnboardPayload) => request<OnboardResult>('POST', '/onboard', payload),
   propose: (body: ProposeRequest = {}) => request<ProposeResult>('POST', '/propose', body),
+  // Approval gate (F-F). `approve` records the explicit decision and mints the
+  // approval_event_id + hash the write requires; `write` is the only call that
+  // touches a calendar. The target calendar is server-derived in hosted mode —
+  // the client never names it (a body cannot redirect the write).
+  approve: (reject = false) => request<ApproveResult>('POST', '/approve', { reject }),
+  write: () => request<WriteCycleResult>('POST', '/write', {}),
+  // Check-in (F-G): completion telemetry, guarded server-side (due + idempotent).
+  checkin: (taskId: string, outcome: 'complete' | 'missed') =>
+    request<CheckinResult>('POST', '/checkin', { task_id: taskId, outcome }),
 }
 
 /** Best-effort human message out of an ApiError body (the ValidationError

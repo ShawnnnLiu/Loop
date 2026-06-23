@@ -714,3 +714,70 @@ select.input {
   padding: 3px 8px;
   background: #fff;
 }
+
+/* ——— Approval gate ——— */
+.approve-wrap {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 26px;
+  align-items: start;
+  padding: 28px clamp(16px, 4vw, 40px);
+  max-width: 1100px;
+  margin: 0 auto;
+}
+@media (max-width: 820px) {
+  .approve-wrap {
+    grid-template-columns: 1fr;
+  }
+}
+.guard {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--paper-2);
+  border: 1px solid var(--line-2);
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+.verify-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.verify-pill.ok {
+  color: var(--sage-deep);
+  border: 1px solid var(--sage);
+}
+.verify-pill.bad {
+  color: #a33;
+  border: 1px solid #d99;
+}
+
+/* ——— Modal / scrim ——— */
+.scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(22, 33, 46, 0.42);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  z-index: 100;
+}
+.modal {
+  width: min(480px, 100%);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}

@@ -4,15 +4,11 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { ApiError, api } from './api/client'
 import type { MeResult } from './api/types'
 import { Topbar } from './components/Topbar'
+import { ApprovalScreen } from './screens/Approval'
 import { GenerationScreen } from './screens/Generation'
 import { OnboardingScreen } from './screens/Onboarding'
 import { ScheduleReviewScreen } from './screens/ScheduleReview'
-import {
-  AccountabilityScreen,
-  ApprovalScreen,
-  ThresholdsScreen,
-  TodayScreen,
-} from './screens/placeholders'
+import { AccountabilityScreen, ThresholdsScreen, TodayScreen } from './screens/placeholders'
 
 type LoadState =
   | { status: 'loading' }
@@ -60,7 +56,7 @@ export function App() {
           <Route path="/onboarding" element={<OnboardingScreen me={me} />} />
           <Route path="/plan" element={<GenerationScreen />} />
           <Route path="/review" element={<ScheduleReviewScreen />} />
-          <Route path="/approve" element={<ApprovalScreen />} />
+          <Route path="/approve" element={<ApprovalScreen email={me.email} />} />
           <Route path="/today" element={<TodayScreen />} />
           <Route path="/accountability" element={<AccountabilityScreen />} />
           <Route path="/thresholds" element={<ThresholdsScreen />} />

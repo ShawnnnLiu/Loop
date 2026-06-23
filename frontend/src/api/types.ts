@@ -196,3 +196,44 @@ export interface AccountabilityResult {
   state: unknown | null
   decision: unknown | null
 }
+
+/** Mirror of ApproveResult. `approval_event_id` + `approved_payload_hash` are
+ *  the proof the write gate requires; the server, not the client, holds them. */
+export interface ApproveResult {
+  run_id: string
+  user_id: string
+  state: string
+  rejected: boolean
+  plan_version: string
+  approval_event_id: string | null
+  approved_payload_hash: string | null
+  expires_at_iso: string | null
+}
+
+/** Mirror of WriteCycleResult. A failed write (e.g. verification) arrives here
+ *  as a 200 with `reason_code` set — the engine has already auto-rolled-back the
+ *  unverified events, so the client only reports; it never rolls back itself. */
+export interface WriteCycleResult {
+  run_id: string
+  user_id: string
+  state: string
+  dry_run: boolean
+  write_status: string | null
+  reason_code: ReasonCode | null
+  planned_event_count: number
+  written_task_ids: string[]
+  verified_task_ids: string[]
+  failed_task_ids: string[]
+  mapping_status_by_task: Record<string, string>
+  error: string | null
+}
+
+/** Subset of IngestResult the check-in flow reads back (the full result carries
+ *  drift/accountability fields the steady-state surfaces don't render yet). */
+export interface CheckinResult {
+  user_id: string
+  ingested_count: number
+  duplicate_count: number
+  rejected_count: number
+  plan_completed: boolean
+}

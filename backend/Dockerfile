@@ -7,7 +7,7 @@
 # build/deploy from the repo root and point at this Dockerfile:
 #
 #   docker build -t agentic-calendar -f backend/Dockerfile .
-#   fly deploy . --config backend/fly.toml --dockerfile backend/Dockerfile
+#   fly deploy . --config backend/fly.toml
 
 # --- Stage 1: build the SPA -> /fe/dist -----------------------------------
 FROM node:20-slim AS frontend

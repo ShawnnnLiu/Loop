@@ -102,7 +102,7 @@ fly secrets set --config backend/fly.toml \
   TESTER_ALLOWLIST="a@example.com,b@example.com" \
   ANTHROPIC_API_KEY="sk-ant-..." \
   GOOGLE_OAUTH_CLIENT_SECRET_JSON="$(cat client_secret.json)"
-fly deploy . --config backend/fly.toml --dockerfile backend/Dockerfile
+fly deploy . --config backend/fly.toml   # "." = build context is the repo root
 fly scale count 1 --config backend/fly.toml   # exactly one machine — SQLite is single-process
 ```
 

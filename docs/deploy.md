@@ -87,23 +87,24 @@ automatic HTTPS) so the public URL is `https://<your-domain>`.
 
 ### Fly.io (single machine + volume)
 
-`backend/fly.toml` is preconfigured; edit `app`, `primary_region`, and the
-`OAUTH_REDIRECT_URI` to match your app name. Because the image now builds the
-SPA, the build context is the **repo root** — run flyctl from there (not from
-`backend/`), pointing at the config and Dockerfile explicitly:
+`fly.toml` lives at the **repo root** (preconfigured); edit `app`,
+`primary_region`, and `OAUTH_REDIRECT_URI` to match your app name. Run flyctl
+from the repo root — `fly.toml` is auto-detected, which sets the build context to
+the root (the image builds the SPA, so it needs `frontend/` and `landing/`,
+siblings of `backend/`):
 
 ```bash
-# from the repo root
-fly launch --no-deploy --copy-config --config backend/fly.toml --name <your-app>
-fly volumes create data --config backend/fly.toml --region <region> --size 1   # persistent SQLite
-fly secrets set --config backend/fly.toml \
+# from the repo root — fly.toml is picked up automatically
+fly launch --no-deploy --copy-config --name <your-app>
+fly volumes create data --region <region> --size 1   # persistent SQLite
+fly secrets set \
   APP_SESSION_SECRET="$(python -c 'import secrets;print(secrets.token_urlsafe(48))')" \
   APP_TOKEN_ENCRYPTION_KEY="$(python -c 'from cryptography.fernet import Fernet;print(Fernet.generate_key().decode())')" \
   TESTER_ALLOWLIST="a@example.com,b@example.com" \
   ANTHROPIC_API_KEY="sk-ant-..." \
   GOOGLE_OAUTH_CLIENT_SECRET_JSON="$(cat client_secret.json)"
-fly deploy . --config backend/fly.toml   # "." = build context is the repo root
-fly scale count 1 --config backend/fly.toml   # exactly one machine — SQLite is single-process
+fly deploy   # build context is the repo root, where fly.toml lives
+fly scale count 1   # exactly one machine — SQLite is single-process
 ```
 
 The public URL is `https://<your-app>.fly.dev`; its `/auth/callback` must be

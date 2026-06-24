@@ -63,6 +63,12 @@ class WriteRequest(BaseModel):
     dry_run: bool = False
 
 
+class DiscardRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    run_id: str | None = None
+
+
 class AdjustRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -133,6 +139,17 @@ def approve(
 ) -> JSONResponse:
     body = body or ApproveRequest()
     return _json(service.approve(user_id, run_id=body.run_id, reject=body.reject))
+
+
+@router.post("/discard")
+def discard(
+    service: Service,
+    user_id: ActingUser,
+    body: DiscardRequest | None = None,
+) -> JSONResponse:
+    """Abandon a run whose calendar write failed so the user can start over."""
+    body = body or DiscardRequest()
+    return _json(service.discard(user_id, run_id=body.run_id))
 
 
 def _server_free_busy(request: Request, user_id: str) -> list[dict[str, str]]:

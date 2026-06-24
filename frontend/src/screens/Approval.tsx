@@ -59,13 +59,25 @@ export function ApprovalScreen({ email }: { email: string | null }) {
       await api.approve(false)
       const result = await api.write()
       // A failed write is a 200 with reason_code set (verification, hash
-      // mismatch, transient calendar error) — the engine has already rolled
-      // back any unverified events; we only report.
+      // mismatch, transient calendar error). The MVP does not auto-roll-back —
+      // writeFailureMessage states what landed; the failed card offers Start over.
       setPhase(writeOutcome(result) === 'failed' ? { kind: 'failed', result } : { kind: 'verified', result })
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) return // redirected to login
       setPhase({ kind: 'error', message: errorMessage(err) })
     }
+  }
+
+  async function startOver() {
+    // Abandon the failed run so it is not a dead end, then build a fresh plan.
+    // Best-effort: even if discard fails (e.g. the run is already terminal),
+    // propose creates a new run, so always move the user forward.
+    try {
+      await api.discard()
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) return // redirected to login
+    }
+    navigate('/plan')
   }
 
   if (loading) return <div className="screen-center muted">Loading your draft…</div>
@@ -167,8 +179,8 @@ export function ApprovalScreen({ email }: { email: string | null }) {
             <div style={{ fontSize: 13.5, color: 'var(--ink-2)', marginTop: 10, lineHeight: 1.5 }}>
               {writeFailureMessage(phase.result)}
             </div>
-            <button className="btn btn-soft sm" type="button" style={{ marginTop: 12 }} onClick={() => navigate('/review')}>
-              Back to the draft
+            <button className="btn btn-primary sm" type="button" style={{ marginTop: 12 }} onClick={() => void startOver()}>
+              Start over
             </button>
           </div>
         )}

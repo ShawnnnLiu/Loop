@@ -799,6 +799,35 @@ class CycleService:
             expires_at_iso=approval.expires_at.isoformat(),
         )
 
+    def discard(self, user_id: str, *, run_id: str | None = None) -> ApproveResult:
+        """Abandon a run whose calendar write failed, so the user can start over.
+
+        From ``CALENDAR_WRITE_FAILED`` the only forward moves are the operator
+        rollback CLI and this: explicitly close the dead run (``USER_REJECTED`` →
+        ``TERMINAL_DISCARDED``) and discard its plan version, so a failed write is
+        not a permanent dead end in the SPA. This does NOT touch the calendar —
+        any events a partial write created still require the rollback path; this
+        only releases the run so a fresh ``propose`` starts cleanly.
+        """
+        env = self._env
+        run = self._require_run(
+            user_id, run_id, expected=S.CALENDAR_WRITE_FAILED_STATE
+        )
+        if run.plan_version is None:
+            raise CycleError("failed-write run has no plan version to discard")
+        plan_version = env.plan_store.get(user_id, run.plan_version)
+        env.plan_store.save(
+            plan_version.transition_to(LifecycleState.DISCARDED, now=env.clock.now())
+        )
+        run = self._transition(run, Sig.USER_REJECTED)
+        return ApproveResult(
+            run_id=run.run_id,
+            user_id=user_id,
+            state=run.state,
+            rejected=True,
+            plan_version=plan_version.plan_version,
+        )
+
     # ------------------------------------------------------------------ #
     # adjust (drag-to-adjust, pre-approval)
     # ------------------------------------------------------------------ #

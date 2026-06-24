@@ -61,6 +61,11 @@ TRANSITIONS: Mapping[tuple[S, Sig], S] = {
     # Failed writes self-loop while rollback runs, then exit to user attention.
     (S.CALENDAR_WRITE_FAILED_STATE, Sig.CALENDAR_ROLLBACK_REQUESTED): S.CALENDAR_WRITE_FAILED_STATE,
     (S.CALENDAR_WRITE_FAILED_STATE, Sig.CALENDAR_ROLLBACK_COMPLETED): S.ERROR_REQUIRES_USER,
+    # The user may also abandon a failed write outright (the SPA's "start over"):
+    # discard the dead run so it is not a permanent dead end. This releases the
+    # run for a fresh propose; it does NOT touch the calendar — any events a
+    # partial write created still require the rollback path above.
+    (S.CALENDAR_WRITE_FAILED_STATE, Sig.USER_REJECTED): S.TERMINAL_DISCARDED,
 
     # ---- ACTIVE PLAN / DRIFT / REPLAN LOOP (Phase 4, axiom 07) ----
     # Deterministic drift classification drives these signals; an LLM never

@@ -85,6 +85,9 @@ export const api = {
   // the client never names it (a body cannot redirect the write).
   approve: (reject = false) => request<ApproveResult>('POST', '/approve', { reject }),
   write: () => request<WriteCycleResult>('POST', '/write', {}),
+  // Abandon a run whose write failed so the user can start over (the SPA's only
+  // non-operator exit from CALENDAR_WRITE_FAILED). Does not touch the calendar.
+  discard: () => request<ApproveResult>('POST', '/discard', {}),
   // Check-in (F-G): completion telemetry, guarded server-side (due + idempotent).
   checkin: (taskId: string, outcome: 'complete' | 'missed') =>
     request<CheckinResult>('POST', '/checkin', { task_id: taskId, outcome }),

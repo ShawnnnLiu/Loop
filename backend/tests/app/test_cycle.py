@@ -758,6 +758,47 @@ def test_adapter_create_failure_preserves_reason_and_blocks_activation() -> None
     assert run.reason_code is ReasonCode.CALENDAR_WRITE_FAILED
 
 
+def test_discard_releases_a_failed_write_run_for_a_fresh_start() -> None:
+    """From CALENDAR_WRITE_FAILED the user can abandon the dead run: discard
+    moves it to TERMINAL_DISCARDED and discards its plan version (no calendar
+    touch), and a fresh propose then starts a clean run awaiting approval."""
+    adapter = InMemoryCalendarAdapter(
+        id_generator=DeterministicIdGenerator(),
+        failure_modes=FailureModes(fail_create_for_task_ids=frozenset({"dp_001"})),
+    )
+    service, env, _clock = make_service(calendar_adapter=adapter)
+    proposed = service.propose(USER_ID)
+    service.approve(USER_ID)
+    assert service.write(USER_ID).state is S.CALENDAR_WRITE_FAILED_STATE
+
+    result = service.discard(USER_ID)
+
+    assert result.rejected is True
+    assert result.state is S.TERMINAL_DISCARDED
+    assert result.plan_version == proposed.plan_version
+    run = env.state.get_run(proposed.run_id)
+    assert run is not None
+    assert run.state is S.TERMINAL_DISCARDED
+    assert env.plan_store.get(USER_ID, proposed.plan_version).state is (
+        LifecycleState.DISCARDED
+    )
+
+    # The user can now start over: a fresh propose makes a new run.
+    again = service.propose(USER_ID)
+    assert again.run_id != proposed.run_id
+    assert again.state is S.AWAITING_USER_APPROVAL
+
+
+def test_discard_requires_a_failed_write_run() -> None:
+    """Discard is only valid out of CALENDAR_WRITE_FAILED — it must not be a
+    back door to abandon a run that is merely awaiting approval or approved."""
+    service, _env, _clock = make_service()
+    service.propose(USER_ID)
+    service.approve(USER_ID)  # run is now CALENDAR_WRITE_APPROVED, not failed
+    with pytest.raises(CycleError, match="calendar_write_failed"):
+        service.discard(USER_ID)
+
+
 class _QueryRaisingAdapter:
     """:class:`ExternalCalendarAdapter` stub whose duplicate-guard query
     raises — the live dogfood failure mode (Google ``events.list`` failing

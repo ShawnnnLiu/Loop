@@ -77,6 +77,12 @@ class CheckinRequest(BaseModel):
     outcome: Literal["complete", "missed"]
 
 
+class CalendarSyncRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    enabled: bool
+
+
 def _json(result: BaseModel) -> JSONResponse:
     """Serialize exactly as the CLI does (``model_dump_json``) — no FastAPI
     response-model coercion, so the body is byte-identical to the operator
@@ -197,6 +203,51 @@ def write(
             run_id=body.run_id,
             target_calendar_id=body.target_calendar_id,
             dry_run=body.dry_run,
+        )
+    )
+
+
+@router.post("/calendar-sync")
+def calendar_sync(
+    service: Service,
+    user_id: ActingUser,
+    body: CalendarSyncRequest,
+) -> JSONResponse:
+    """Toggle the user's opt-in to inbound calendar reconciliation. Returns the
+    refreshed ``me`` projection so the client reflects the new setting."""
+    service.set_inbound_calendar_sync(user_id, enabled=body.enabled)
+    return _json(service.me(user_id))
+
+
+@router.post("/reconcile")
+def reconcile(request: Request, service: Service, user_id: ActingUser) -> JSONResponse:
+    """On-demand inbound reconciliation pull (the SPA triggers this on Today/Week
+    when a plan is active). Read-only against the calendar; a no-op result when
+    the user hasn't opted in. The hosted path targets *this* user's dedicated
+    calendar via a per-user adapter — the same trust boundary as ``write``; dev
+    mode uses the shared adapter and the default calendar."""
+    enabled = service.inbound_calendar_sync_enabled(user_id)
+    free_busy = _server_free_busy(request, user_id)
+    if request.app.state.auth_enabled:
+        user_service, calendar_id = build_user_calendar_service(
+            request.app.state.env,
+            user_id=user_id,
+            token_cipher=request.app.state.token_cipher,
+        )
+        return _json(
+            user_service.reconcile(
+                user_id,
+                target_calendar_id=calendar_id,
+                free_busy=free_busy,
+                enabled=enabled,
+            )
+        )
+    return _json(
+        service.reconcile(
+            user_id,
+            target_calendar_id=DEFAULT_TARGET_CALENDAR_ID,
+            free_busy=free_busy,
+            enabled=enabled,
         )
     )
 

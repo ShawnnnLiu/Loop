@@ -254,3 +254,38 @@ def test_propose_honors_body_free_busy_in_dev() -> None:
     resp = client.post("/api/propose", json={"free_busy": busy, "horizon_days": 14})
     assert resp.status_code == 200
     assert resp.json()["reason_code"]
+
+
+def _activate(client: TestClient) -> None:
+    assert client.post("/api/propose", json={}).status_code == 200
+    assert client.post("/api/approve", json={}).status_code == 200
+    assert client.post("/api/write", json={}).json()["state"] == "active_plan"
+
+
+def test_calendar_sync_toggle_round_trips_through_me() -> None:
+    client, _clock = _client()
+    assert client.get("/api/me").json()["inbound_calendar_sync_enabled"] is False
+
+    resp = client.post("/api/calendar-sync", json={"enabled": True})
+    assert resp.status_code == 200
+    assert resp.json()["inbound_calendar_sync_enabled"] is True
+    assert client.get("/api/me").json()["inbound_calendar_sync_enabled"] is True
+
+    off = client.post("/api/calendar-sync", json={"enabled": False})
+    assert off.json()["inbound_calendar_sync_enabled"] is False
+
+
+def test_reconcile_is_sync_disabled_until_opted_in() -> None:
+    client, _clock = _client()
+    _activate(client)
+    body = client.post("/api/reconcile").json()
+    assert body["outcome"] == "sync_disabled"
+    assert body["deltas"] == []
+
+
+def test_reconcile_opted_in_with_no_edits_is_no_change() -> None:
+    client, _clock = _client()
+    _activate(client)
+    client.post("/api/calendar-sync", json={"enabled": True})
+    body = client.post("/api/reconcile").json()
+    assert body["outcome"] == "no_change"

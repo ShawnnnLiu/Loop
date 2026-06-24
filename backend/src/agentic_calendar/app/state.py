@@ -62,6 +62,12 @@ class OnboardingRecord(BaseModel):
     user_profile: UserProfile
     timezone: str = Field(min_length=1)
     motivation_profile: MotivationProfile | None = None
+    # Opt-in to inbound calendar reconciliation (adopting the user's direct
+    # calendar edits). Off by default: the in-app schedule is the system of
+    # record, so treating the external calendar as authoritative is opt-in
+    # (axiom 06 lines 249-253; calendar-reconciliation spec). Defaulted so
+    # existing persisted onboarding rows deserialize unchanged.
+    inbound_calendar_sync_enabled: bool = False
     created_at: datetime
     updated_at: datetime
 

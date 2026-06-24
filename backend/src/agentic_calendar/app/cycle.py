@@ -238,8 +238,14 @@ class CycleService:
         )
         prior = env.state.get_onboarding(record.user_id)
         if prior is not None:
+            # Re-onboarding (a profile edit) keeps the original created_at and the
+            # user's inbound-calendar-sync preference (which onboarding never sets).
             record = OnboardingRecord.model_validate(
-                record.model_dump() | {"created_at": prior.created_at}
+                record.model_dump()
+                | {
+                    "created_at": prior.created_at,
+                    "inbound_calendar_sync_enabled": prior.inbound_calendar_sync_enabled,
+                }
             )
         env.state.save_onboarding(record)
         return OnboardResult(
@@ -1767,7 +1773,35 @@ class CycleService:
             timezone=onboarding.timezone if onboarding is not None else None,
             email=credential.email if credential is not None else None,
             profile=onboarding.user_profile if onboarding is not None else None,
+            inbound_calendar_sync_enabled=(
+                onboarding.inbound_calendar_sync_enabled if onboarding is not None else False
+            ),
         )
+
+    def inbound_calendar_sync_enabled(self, user_id: str) -> bool:
+        """Whether the user opted in to inbound calendar reconciliation (off until
+        they do; the reconcile trigger resolves this and passes it to
+        :meth:`reconcile`)."""
+        onboarding = self._env.state.get_onboarding(user_id)
+        return onboarding is not None and onboarding.inbound_calendar_sync_enabled
+
+    def set_inbound_calendar_sync(self, user_id: str, *, enabled: bool) -> bool:
+        """Set the user's inbound-calendar-sync opt-in; returns the new value.
+
+        Rebuilds the frozen onboarding record (re-running its validators) with a
+        fresh ``updated_at``; the original ``created_at`` is preserved.
+        """
+        env = self._env
+        onboarding = self._require_onboarding(user_id)
+        updated = OnboardingRecord.model_validate(
+            onboarding.model_dump()
+            | {
+                "inbound_calendar_sync_enabled": enabled,
+                "updated_at": env.clock.now(),
+            }
+        )
+        env.state.save_onboarding(updated)
+        return enabled
 
     def accountability_view(self, user_id: str) -> AccountabilityResult:
         """The read-only accountability projection plus whether the user has a

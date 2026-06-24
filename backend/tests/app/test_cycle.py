@@ -1493,3 +1493,32 @@ def test_reconcile_flags_an_external_deletion_without_recreating() -> None:
     assert any(e.task_id == leaf for e in _active_draft_entries(env))
     assert env.mapping_store.list_for_task(leaf)[-1].user_modified_bool is True
     assert leaf not in _events_by_task(adapter)
+
+
+def test_calendar_sync_opt_in_defaults_off_and_toggles() -> None:
+    service, _env, _clock = make_service()
+    assert service.inbound_calendar_sync_enabled(USER_ID) is False
+    assert service.me(USER_ID).inbound_calendar_sync_enabled is False
+
+    assert service.set_inbound_calendar_sync(USER_ID, enabled=True) is True
+    assert service.inbound_calendar_sync_enabled(USER_ID) is True
+    assert service.me(USER_ID).inbound_calendar_sync_enabled is True
+
+    service.set_inbound_calendar_sync(USER_ID, enabled=False)
+    assert service.inbound_calendar_sync_enabled(USER_ID) is False
+
+
+def test_reonboard_preserves_calendar_sync_opt_in() -> None:
+    service, _env, _clock = make_service()
+    service.set_inbound_calendar_sync(USER_ID, enabled=True)
+    # A profile edit (re-onboard) must not silently reset the preference.
+    service.onboard(
+        {"user_profile": _canonical_profile().model_dump(mode="json"), "timezone": "UTC"}
+    )
+    assert service.inbound_calendar_sync_enabled(USER_ID) is True
+
+
+def test_set_calendar_sync_without_onboarding_raises() -> None:
+    service, _env, _clock = make_service(onboard=False, seed_claims=False)
+    with pytest.raises(CycleError):
+        service.set_inbound_calendar_sync(USER_ID, enabled=True)

@@ -277,6 +277,7 @@ class MeResult(BaseModel):
     timezone: str | None = None
     email: str | None = None
     profile: UserProfile | None = None
+    inbound_calendar_sync_enabled: bool = False
 
 
 class AccountabilityResult(BaseModel):

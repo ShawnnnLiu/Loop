@@ -475,6 +475,31 @@ select.input {
   white-space: pre-wrap;
 }
 
+/* Reconciliation outcome banner (Week screen) */
+.recon-banner {
+  border-radius: 12px;
+  padding: 12px 14px;
+  border: 1px solid;
+}
+.recon-banner .recon-list {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12.5px;
+}
+.recon-ok {
+  border-color: var(--sage-soft);
+  background: var(--sage-soft);
+  color: var(--sage-deep);
+}
+.recon-warn {
+  border-color: var(--gold-soft);
+  background: var(--gold-soft);
+  color: #8a5a1e;
+}
+
 /* ——— Generation pipeline ——— */
 .gen-wrap {
   display: grid;

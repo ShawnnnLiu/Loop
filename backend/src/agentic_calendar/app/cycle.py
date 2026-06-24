@@ -37,6 +37,7 @@ from agentic_calendar.accountability.policy_engine import (
 )
 from agentic_calendar.accountability.projection import ProjectionInput
 from agentic_calendar.accountability.recommitment import request_recommitment
+from agentic_calendar.calendar_writer.errors import CalendarWriterError
 from agentic_calendar.calendar_writer.manager import WriteStatus
 from agentic_calendar.common.errors import AgenticCalendarError
 from agentic_calendar.contracts.accountability_intervention import (
@@ -49,12 +50,23 @@ from agentic_calendar.contracts.approval_event import (
     ApprovalEvent,
     HashAlgorithm,
 )
+from agentic_calendar.contracts.calendar_event_mapping import (
+    CalendarEventMapping,
+    CalendarWriteStatus,
+)
+from agentic_calendar.contracts.calendar_reconciliation import (
+    CalendarEditType,
+    CalendarEventDelta,
+    CalendarReconciliationResult,
+    ReconciliationDisposition,
+    ReconciliationOutcome,
+)
 from agentic_calendar.contracts.checkin_event import RecoveryAction
 from agentic_calendar.contracts.data_access_audit import (
     DataAccessor,
     DataAccessPurpose,
 )
-from agentic_calendar.contracts.draft_schedule import DraftSchedule
+from agentic_calendar.contracts.draft_schedule import DraftSchedule, DraftScheduleEntry
 from agentic_calendar.contracts.drift_event import DriftEvent, RecommendedPolicyAction
 from agentic_calendar.contracts.hashing import canonical_payload_hash
 from agentic_calendar.contracts.motivation_profile import RecoveryPreference
@@ -896,6 +908,247 @@ class CycleService:
             ),
             adjusted_task_ids=sorted(new_starts),
             scheduled_task_count=len(candidate.entries),
+        )
+
+    # ------------------------------------------------------------------ #
+    # reconcile (inbound calendar edits; calendar-reconciliation spec)
+    # ------------------------------------------------------------------ #
+
+    def reconcile(
+        self,
+        user_id: str,
+        *,
+        target_calendar_id: str,
+        free_busy: Sequence[Mapping[str, Any]] = (),
+        enabled: bool,
+    ) -> CalendarReconciliationResult:
+        """Inbound, adopt-if-valid reconciliation of the user's own edits to
+        app-created events on their dedicated calendar.
+
+        Canonical spec: ``docs/specs/calendar-reconciliation.schema.md``. Read-only
+        against the calendar — it never writes (axiom 06: the Calendar Write
+        Manager is the only writer). Off unless ``enabled`` (axiom 06 lines
+        249-253: the in-app schedule is the system of record, so treating an
+        external edit as authoritative is opt-in). A valid move/resize is adopted
+        into a fresh draft of the same plan version with no calendar write and no
+        re-approval; an invalid move, or a deletion, is flagged
+        (``user_modified_bool``) and left for the drift loop — never silently
+        rewritten, and a deletion is never silently cancelled.
+        """
+        env = self._env
+        onboarding = self._require_onboarding(user_id)
+        active = env.plan_store.get_active(user_id)
+        run = env.state.latest_run_for_user(user_id)
+        if active is None or run is None or run.draft_schedule_id is None:
+            raise CycleError("no active plan to reconcile")
+        draft = env.state.get_draft(run.draft_schedule_id)
+        if draft is None or draft.plan_version != active.plan_version:
+            raise CycleError("active plan has no current draft to reconcile")
+
+        now = env.clock.now()
+        run_id = run.run_id
+        plan_version = active.plan_version
+
+        def result(
+            outcome: ReconciliationOutcome,
+            *,
+            deltas: tuple[CalendarEventDelta, ...] = (),
+            adopted_draft_schedule_id: str | None = None,
+        ) -> CalendarReconciliationResult:
+            return CalendarReconciliationResult(
+                run_id=run_id,
+                plan_version=plan_version,
+                reconciled_at=now,
+                target_calendar_id=target_calendar_id,
+                outcome=outcome,
+                adopted_draft_schedule_id=adopted_draft_schedule_id,
+                deltas=deltas,
+            )
+
+        if not enabled:
+            return result(ReconciliationOutcome.SYNC_DISABLED)
+        # Never interleave with our own in-flight write (axiom 13).
+        if run.state in (S.CALENDAR_WRITE_APPROVED, S.CALENDAR_WRITE_IN_PROGRESS):
+            return result(ReconciliationOutcome.DEFERRED)
+
+        # The latest live mapping per task of the active plan — each carries the
+        # event id and the time WE believe the event sits at.
+        mappings: dict[str, CalendarEventMapping] = {}
+        for task in active.plan.tasks:
+            history = env.mapping_store.list_for_task(task.task_id)
+            if not history:
+                continue
+            latest = history[-1]
+            if latest.calendar_event_id is not None and latest.calendar_write_status in (
+                CalendarWriteStatus.WRITTEN,
+                CalendarWriteStatus.VERIFIED,
+            ):
+                mappings[task.task_id] = latest
+        if not mappings:
+            return result(ReconciliationOutcome.NO_CHANGE)
+
+        # Pull each event back (scoped to our own ids) and classify the delta.
+        change_by_task: dict[
+            str, tuple[CalendarEditType, datetime | None, datetime | None]
+        ] = {}
+        try:
+            for task_id, mapping in mappings.items():
+                event_id = mapping.calendar_event_id
+                if event_id is None:  # filtered above; defensive
+                    continue
+                record = env.write_manager.read_event(
+                    target_calendar_id=target_calendar_id, calendar_event_id=event_id
+                )
+                if record is None:
+                    change_by_task[task_id] = (CalendarEditType.DELETED, None, None)
+                    continue
+                obs_start, obs_end = record.scheduled_start, record.scheduled_end
+                if (
+                    obs_start == mapping.scheduled_start
+                    and obs_end == mapping.scheduled_end
+                ):
+                    change_by_task[task_id] = (
+                        CalendarEditType.UNCHANGED,
+                        obs_start,
+                        obs_end,
+                    )
+                else:
+                    same_dur = (obs_end - obs_start) == (
+                        mapping.scheduled_end - mapping.scheduled_start
+                    )
+                    change_by_task[task_id] = (
+                        CalendarEditType.MOVED if same_dur else CalendarEditType.RESIZED,
+                        obs_start,
+                        obs_end,
+                    )
+        except CalendarWriterError:
+            # A failed read-back is transient; reconcile again later, write nothing.
+            return result(ReconciliationOutcome.DEFERRED)
+
+        edited = {
+            CalendarEditType.MOVED,
+            CalendarEditType.RESIZED,
+            CalendarEditType.DELETED,
+        }
+        moved = {
+            t
+            for t, (k, _, _) in change_by_task.items()
+            if k in (CalendarEditType.MOVED, CalendarEditType.RESIZED)
+        }
+        if not any(k in edited for k, *_ in change_by_task.values()):
+            return result(ReconciliationOutcome.NO_CHANGE)
+
+        # Candidate placement we WOULD adopt: moved/resized at the observed time,
+        # everything else (incl. a deleted event, which stays in our plan) at its
+        # recorded time. Validate the WHOLE set and adopt all-or-nothing, exactly
+        # like a UI drag (draft-schedule spec, "Server-side re-validation").
+        candidate_entries: list[DraftScheduleEntry] = []
+        for entry in draft.entries:
+            change = change_by_task.get(entry.task_id)
+            adopted_times: tuple[datetime, datetime] | None = None
+            if change is not None and change[0] in (
+                CalendarEditType.MOVED,
+                CalendarEditType.RESIZED,
+            ):
+                _, cand_start, cand_end = change
+                if cand_start is not None and cand_end is not None:
+                    adopted_times = (cand_start, cand_end)
+            if adopted_times is not None:
+                candidate_entries.append(
+                    DraftScheduleEntry(
+                        task_id=entry.task_id,
+                        start=adopted_times[0],
+                        end=adopted_times[1],
+                        calendar_event_status=entry.calendar_event_status,
+                    )
+                )
+            else:
+                candidate_entries.append(entry)
+
+        conflicts = validate_placements(
+            candidate_entries,
+            plan=active.plan,
+            policy=policy_from_user_profile(onboarding.user_profile),
+            free_busy=[FreeBusyInterval.model_validate(dict(fb)) for fb in free_busy],
+            tz=onboarding.tzinfo(),
+        )
+        adopt = bool(moved) and not conflicts
+        conflict_code = {c.task_id: c.reason_code for c in conflicts}
+        fallback_code = conflicts[0].reason_code if conflicts else None
+
+        deltas: list[CalendarEventDelta] = []
+        for task_id, (kind, seen_start, seen_end) in sorted(change_by_task.items()):
+            mapping = mappings[task_id]
+            disposition = ReconciliationDisposition.UNCHANGED
+            code: ReasonCode | None = None
+            if kind is CalendarEditType.DELETED:
+                env.mapping_store.record_external_edit(mapping.run_id, task_id, now=now)
+                disposition = ReconciliationDisposition.FLAGGED_DELETED
+                code = ReasonCode.EXTERNAL_EVENT_DELETED
+            elif kind in (CalendarEditType.MOVED, CalendarEditType.RESIZED):
+                if adopt:
+                    env.mapping_store.record_external_edit(
+                        mapping.run_id,
+                        task_id,
+                        now=now,
+                        new_start=seen_start,
+                        new_end=seen_end,
+                    )
+                    disposition = ReconciliationDisposition.ADOPTED
+                else:
+                    env.mapping_store.record_external_edit(mapping.run_id, task_id, now=now)
+                    disposition = ReconciliationDisposition.REJECTED
+                    code = conflict_code.get(task_id, fallback_code)
+            deltas.append(
+                CalendarEventDelta(
+                    task_id=task_id,
+                    calendar_event_id=mapping.calendar_event_id,
+                    change_type=kind,
+                    recorded_start=mapping.scheduled_start,
+                    recorded_end=mapping.scheduled_end,
+                    observed_start=seen_start,
+                    observed_end=seen_end,
+                    disposition=disposition,
+                    reason_code=code,
+                )
+            )
+
+        adopted_draft_schedule_id: str | None = None
+        if adopt:
+            adopted_draft = DraftSchedule(
+                draft_schedule_id=env.id_generator.new_id("draft"),
+                plan_version=plan_version,
+                entries=tuple(candidate_entries),
+                created_at=now,
+            )
+            env.state.save_draft(user_id, adopted_draft)
+            self._save_run(run, draft_schedule_id=adopted_draft.draft_schedule_id)
+            adopted_draft_schedule_id = adopted_draft.draft_schedule_id
+
+        adopted_count = sum(
+            1 for d in deltas if d.disposition is ReconciliationDisposition.ADOPTED
+        )
+        flagged_count = sum(
+            1
+            for d in deltas
+            if d.disposition
+            in (
+                ReconciliationDisposition.REJECTED,
+                ReconciliationDisposition.FLAGGED_DELETED,
+            )
+        )
+        if adopted_count and flagged_count:
+            outcome = ReconciliationOutcome.MIXED
+        elif adopted_count:
+            outcome = ReconciliationOutcome.ADOPTED
+        elif flagged_count:
+            outcome = ReconciliationOutcome.FLAGGED
+        else:
+            outcome = ReconciliationOutcome.NO_CHANGE
+        return result(
+            outcome,
+            deltas=tuple(deltas),
+            adopted_draft_schedule_id=adopted_draft_schedule_id,
         )
 
     # ------------------------------------------------------------------ #

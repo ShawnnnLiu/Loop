@@ -32,6 +32,7 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from agentic_calendar.app.cycle import (
+    DEFAULT_TARGET_CALENDAR_ID,
     HASH_CANONICALIZATION_VERSION,
     CycleError,
     CycleService,
@@ -57,6 +58,11 @@ from agentic_calendar.calendar_writer.in_memory_adapter import (
 from agentic_calendar.common.clock import FrozenClock
 from agentic_calendar.common.errors import AgenticCalendarError
 from agentic_calendar.common.ids import DeterministicIdGenerator
+from agentic_calendar.contracts.calendar_reconciliation import (
+    CalendarEditType,
+    ReconciliationDisposition,
+    ReconciliationOutcome,
+)
 from agentic_calendar.contracts.checkin_event import RecoveryAction
 from agentic_calendar.contracts.data_access_audit import (
     DataAccessOutcome,
@@ -1329,3 +1335,161 @@ def test_checkin_rejects_double_submit() -> None:
     service.checkin(USER_ID, "dp_001", completed=True)
     with pytest.raises(CycleError, match="already been reported"):
         service.checkin(USER_ID, "dp_001", completed=True)
+
+
+# --------------------------------------------------------------------------- #
+# Inbound calendar reconciliation (adopt-if-valid, on-demand pull).
+# Spec: docs/specs/calendar-reconciliation.schema.md.
+# --------------------------------------------------------------------------- #
+
+
+def _reconcilable() -> tuple[CycleService, AppEnvironment, InMemoryCalendarAdapter]:
+    """An active plan written to a controllable in-memory calendar."""
+    adapter = InMemoryCalendarAdapter(id_generator=DeterministicIdGenerator())
+    service, env, _clock = make_service(calendar_adapter=adapter)
+    _activate_plan(service)
+    return service, env, adapter
+
+
+def _events_by_task(adapter: InMemoryCalendarAdapter) -> dict[str, ExternalEventRecord]:
+    return {rec.metadata["task_id"]: rec for rec in adapter.all_events()}
+
+
+def _a_scheduled_leaf(env: AppEnvironment, scheduled: set[str]) -> str:
+    """A scheduled task that nothing depends on — safe to move without breaking
+    a prerequisite ordering."""
+    active = env.plan_store.get_active(USER_ID)
+    assert active is not None
+    depended = {dep for task in active.plan.tasks for dep in task.dependencies}
+    for task in active.plan.tasks:
+        if task.task_id not in depended and task.task_id in scheduled:
+            return task.task_id
+    raise AssertionError("no scheduled leaf task in the active plan")
+
+
+def _active_draft_entries(env: AppEnvironment) -> list[DraftScheduleEntry]:
+    run = env.state.latest_run_for_user(USER_ID)
+    assert run is not None and run.draft_schedule_id is not None
+    draft = env.state.get_draft(run.draft_schedule_id)
+    assert draft is not None
+    return list(draft.entries)
+
+
+def test_reconcile_disabled_is_a_noop() -> None:
+    service, env, adapter = _reconcilable()
+    leaf = _a_scheduled_leaf(env, set(_events_by_task(adapter)))
+    rec = _events_by_task(adapter)[leaf]
+    adapter.simulate_external_move(
+        rec.calendar_event_id,
+        scheduled_start=rec.scheduled_start + timedelta(days=7),
+        scheduled_end=rec.scheduled_end + timedelta(days=7),
+    )
+
+    result = service.reconcile(
+        USER_ID, target_calendar_id=DEFAULT_TARGET_CALENDAR_ID, enabled=False
+    )
+
+    assert result.outcome is ReconciliationOutcome.SYNC_DISABLED
+    assert result.deltas == ()
+    assert result.adopted_draft_schedule_id is None
+    # Off means off: even a real divergence is not flagged.
+    assert env.mapping_store.list_for_task(leaf)[-1].user_modified_bool is False
+
+
+def test_reconcile_with_no_external_edits_is_no_change() -> None:
+    service, _env, _adapter = _reconcilable()
+    result = service.reconcile(
+        USER_ID, target_calendar_id=DEFAULT_TARGET_CALENDAR_ID, enabled=True
+    )
+    assert result.outcome is ReconciliationOutcome.NO_CHANGE
+    assert result.adopted_draft_schedule_id is None
+
+
+def test_reconcile_adopts_a_valid_move_without_writing() -> None:
+    service, env, adapter = _reconcilable()
+    events = _events_by_task(adapter)
+    leaf = _a_scheduled_leaf(env, set(events))
+    rec = events[leaf]
+    new_start = rec.scheduled_start + timedelta(days=7)  # same weekday + hour -> valid
+    new_end = rec.scheduled_end + timedelta(days=7)
+    adapter.simulate_external_move(
+        rec.calendar_event_id, scheduled_start=new_start, scheduled_end=new_end
+    )
+
+    result = service.reconcile(
+        USER_ID, target_calendar_id=DEFAULT_TARGET_CALENDAR_ID, enabled=True
+    )
+
+    assert result.outcome is ReconciliationOutcome.ADOPTED
+    assert result.adopted_draft_schedule_id is not None
+    delta = {d.task_id: d for d in result.deltas}[leaf]
+    assert delta.change_type is CalendarEditType.MOVED
+    assert delta.disposition is ReconciliationDisposition.ADOPTED
+    assert delta.reason_code is None
+    assert delta.observed_start == new_start
+    # The mapping adopts the calendar's truth and is flagged user-modified.
+    mapping = env.mapping_store.list_for_task(leaf)[-1]
+    assert mapping.user_modified_bool is True
+    assert mapping.scheduled_start == new_start
+    # The active draft now shows the adopted time.
+    moved = next(e for e in _active_draft_entries(env) if e.task_id == leaf)
+    assert moved.start == new_start
+    # No calendar write occurred: the event is exactly where the user left it,
+    # and nothing was created or deleted.
+    after = _events_by_task(adapter)
+    assert after[leaf].scheduled_start == new_start
+    assert len(after) == len(events)
+
+
+def test_reconcile_rejects_an_invalid_move_and_flags_divergence() -> None:
+    service, env, adapter = _reconcilable()
+    events = _events_by_task(adapter)
+    leaf = _a_scheduled_leaf(env, set(events))
+    rec = events[leaf]
+    duration = rec.scheduled_end - rec.scheduled_start
+    bad_start = rec.scheduled_start.replace(hour=7, minute=0)  # before 08:00
+
+    adapter.simulate_external_move(
+        rec.calendar_event_id, scheduled_start=bad_start, scheduled_end=bad_start + duration
+    )
+    result = service.reconcile(
+        USER_ID, target_calendar_id=DEFAULT_TARGET_CALENDAR_ID, enabled=True
+    )
+
+    assert result.outcome is ReconciliationOutcome.FLAGGED
+    assert result.adopted_draft_schedule_id is None
+    delta = {d.task_id: d for d in result.deltas}[leaf]
+    assert delta.disposition is ReconciliationDisposition.REJECTED
+    assert delta.reason_code is ReasonCode.OUTSIDE_ALLOWED_HOURS
+    # Flagged, but our recorded time is unchanged — the in-app schedule is the
+    # system of record, and we never silently rewrite the calendar.
+    mapping = env.mapping_store.list_for_task(leaf)[-1]
+    assert mapping.user_modified_bool is True
+    assert mapping.scheduled_start == rec.scheduled_start
+
+
+def test_reconcile_flags_an_external_deletion_without_recreating() -> None:
+    service, env, adapter = _reconcilable()
+    events = _events_by_task(adapter)
+    leaf = _a_scheduled_leaf(env, set(events))
+    rec = events[leaf]
+    adapter.delete_event(
+        target_calendar_id=DEFAULT_TARGET_CALENDAR_ID,
+        calendar_event_id=rec.calendar_event_id,
+    )
+
+    result = service.reconcile(
+        USER_ID, target_calendar_id=DEFAULT_TARGET_CALENDAR_ID, enabled=True
+    )
+
+    assert result.outcome is ReconciliationOutcome.FLAGGED
+    delta = {d.task_id: d for d in result.deltas}[leaf]
+    assert delta.change_type is CalendarEditType.DELETED
+    assert delta.disposition is ReconciliationDisposition.FLAGGED_DELETED
+    assert delta.reason_code is ReasonCode.EXTERNAL_EVENT_DELETED
+    assert delta.observed_start is None
+    # The task is NOT cancelled (cancellation-on-delete is itself opt-in) and the
+    # event is NOT silently recreated.
+    assert any(e.task_id == leaf for e in _active_draft_entries(env))
+    assert env.mapping_store.list_for_task(leaf)[-1].user_modified_bool is True
+    assert leaf not in _events_by_task(adapter)

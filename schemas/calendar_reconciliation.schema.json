@@ -1,63 +1,81 @@
 {
   "$defs": {
-    "DiffChangeType": {
-      "description": "Allowed values for ``TaskChange.change_type`` (spec lines 111-120).",
+    "CalendarEditType": {
+      "description": "How the live external event differs from our recorded placement.",
       "enum": [
-        "added",
-        "removed",
-        "rescheduled",
-        "duration_changed",
-        "dependency_changed",
-        "module_reassigned",
-        "priority_changed",
-        "unchanged"
+        "unchanged",
+        "moved",
+        "resized",
+        "deleted"
       ],
-      "title": "DiffChangeType",
+      "title": "CalendarEditType",
       "type": "string"
     },
-    "FieldChange": {
+    "CalendarEventDelta": {
       "additionalProperties": false,
-      "description": "Level 3 field-level diff (spec lines 122-145).",
+      "description": "One mapped task's recorded-vs-observed difference and its disposition.",
       "properties": {
-        "delta": {
+        "calendar_event_id": {
           "anyOf": [
             {
-              "type": "integer"
+              "type": "string"
             },
             {
               "type": "null"
             }
           ],
-          "default": null,
-          "title": "Delta"
+          "title": "Calendar Event Id"
         },
-        "delta_minutes": {
+        "change_type": {
+          "$ref": "#/$defs/CalendarEditType"
+        },
+        "disposition": {
+          "$ref": "#/$defs/ReconciliationDisposition"
+        },
+        "observed_end": {
           "anyOf": [
             {
-              "type": "integer"
+              "format": "date-time",
+              "type": "string"
             },
             {
               "type": "null"
             }
           ],
-          "default": null,
-          "title": "Delta Minutes"
+          "title": "Observed End"
         },
-        "field": {
-          "minLength": 1,
-          "title": "Field",
-          "type": "string"
-        },
-        "new_value": {
-          "default": null,
-          "title": "New Value"
-        },
-        "old_value": {
-          "default": null,
-          "title": "Old Value"
+        "observed_start": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Observed Start"
         },
         "reason_code": {
-          "$ref": "#/$defs/ReasonCode"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ReasonCode"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "recorded_end": {
+          "format": "date-time",
+          "title": "Recorded End",
+          "type": "string"
+        },
+        "recorded_start": {
+          "format": "date-time",
+          "title": "Recorded Start",
+          "type": "string"
         },
         "task_id": {
           "minLength": 1,
@@ -67,62 +85,15 @@
       },
       "required": [
         "task_id",
-        "field",
-        "reason_code"
+        "calendar_event_id",
+        "change_type",
+        "recorded_start",
+        "recorded_end",
+        "observed_start",
+        "observed_end",
+        "disposition"
       ],
-      "title": "FieldChange",
-      "type": "object"
-    },
-    "PlanDiffSummary": {
-      "additionalProperties": false,
-      "description": "Level 1 headline (spec lines 89-99).",
-      "properties": {
-        "modules_affected": {
-          "items": {
-            "type": "string"
-          },
-          "title": "Modules Affected",
-          "type": "array"
-        },
-        "net_weekly_load_change_min": {
-          "title": "Net Weekly Load Change Min",
-          "type": "integer"
-        },
-        "tasks_added": {
-          "minimum": 0,
-          "title": "Tasks Added",
-          "type": "integer"
-        },
-        "tasks_removed": {
-          "minimum": 0,
-          "title": "Tasks Removed",
-          "type": "integer"
-        },
-        "tasks_rescheduled": {
-          "minimum": 0,
-          "title": "Tasks Rescheduled",
-          "type": "integer"
-        },
-        "tasks_with_duration_changes": {
-          "minimum": 0,
-          "title": "Tasks With Duration Changes",
-          "type": "integer"
-        },
-        "timeline_change_days": {
-          "title": "Timeline Change Days",
-          "type": "integer"
-        }
-      },
-      "required": [
-        "tasks_added",
-        "tasks_removed",
-        "tasks_rescheduled",
-        "tasks_with_duration_changes",
-        "modules_affected",
-        "net_weekly_load_change_min",
-        "timeline_change_days"
-      ],
-      "title": "PlanDiffSummary",
+      "title": "CalendarEventDelta",
       "type": "object"
     },
     "ReasonCode": {
@@ -212,83 +183,85 @@
       "title": "ReasonCode",
       "type": "string"
     },
-    "TaskChange": {
-      "additionalProperties": false,
-      "description": "Level 2 per-task summary (spec lines 101-109).",
-      "properties": {
-        "change_type": {
-          "$ref": "#/$defs/DiffChangeType"
-        },
-        "task_id": {
-          "minLength": 1,
-          "title": "Task Id",
-          "type": "string"
-        },
-        "user_facing_summary": {
-          "minLength": 1,
-          "title": "User Facing Summary",
-          "type": "string"
-        }
-      },
-      "required": [
-        "task_id",
-        "change_type",
-        "user_facing_summary"
+    "ReconciliationDisposition": {
+      "description": "What the deterministic service did with a single delta.",
+      "enum": [
+        "unchanged",
+        "adopted",
+        "rejected",
+        "flagged_deleted"
       ],
-      "title": "TaskChange",
-      "type": "object"
+      "title": "ReconciliationDisposition",
+      "type": "string"
+    },
+    "ReconciliationOutcome": {
+      "description": "Roll-up of one reconciliation pull.",
+      "enum": [
+        "sync_disabled",
+        "deferred",
+        "no_change",
+        "adopted",
+        "flagged",
+        "mixed"
+      ],
+      "title": "ReconciliationOutcome",
+      "type": "string"
     }
   },
   "additionalProperties": false,
-  "description": "Immutable, read-only diff between two plan versions.",
+  "description": "Outcome of one on-demand reconciliation pull for an active run.",
   "properties": {
-    "computed_at": {
+    "adopted_draft_schedule_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Adopted Draft Schedule Id"
+    },
+    "deltas": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/CalendarEventDelta"
+      },
+      "title": "Deltas",
+      "type": "array"
+    },
+    "outcome": {
+      "$ref": "#/$defs/ReconciliationOutcome"
+    },
+    "plan_version": {
+      "minLength": 1,
+      "title": "Plan Version",
+      "type": "string"
+    },
+    "reconciled_at": {
       "format": "date-time",
-      "title": "Computed At",
+      "title": "Reconciled At",
       "type": "string"
     },
-    "diff_id": {
+    "run_id": {
       "minLength": 1,
-      "title": "Diff Id",
+      "title": "Run Id",
       "type": "string"
     },
-    "field_changes": {
-      "items": {
-        "$ref": "#/$defs/FieldChange"
-      },
-      "title": "Field Changes",
-      "type": "array"
-    },
-    "from_plan_version": {
+    "target_calendar_id": {
       "minLength": 1,
-      "title": "From Plan Version",
-      "type": "string"
-    },
-    "summary": {
-      "$ref": "#/$defs/PlanDiffSummary"
-    },
-    "task_changes": {
-      "items": {
-        "$ref": "#/$defs/TaskChange"
-      },
-      "title": "Task Changes",
-      "type": "array"
-    },
-    "to_plan_version": {
-      "minLength": 1,
-      "title": "To Plan Version",
+      "title": "Target Calendar Id",
       "type": "string"
     }
   },
   "required": [
-    "diff_id",
-    "from_plan_version",
-    "to_plan_version",
-    "computed_at",
-    "summary",
-    "task_changes",
-    "field_changes"
+    "run_id",
+    "plan_version",
+    "reconciled_at",
+    "target_calendar_id",
+    "outcome"
   ],
-  "title": "PlanDiff",
+  "title": "CalendarReconciliationResult",
   "type": "object"
 }

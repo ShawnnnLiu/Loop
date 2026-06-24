@@ -29,6 +29,9 @@ from agentic_calendar.contracts.accountability_intervention import InterventionD
 from agentic_calendar.contracts.accountability_state import AccountabilityState
 from agentic_calendar.contracts.approval_event import ApprovalEvent
 from agentic_calendar.contracts.calendar_event_mapping import CalendarEventMapping
+from agentic_calendar.contracts.calendar_reconciliation import (
+    CalendarReconciliationResult,
+)
 from agentic_calendar.contracts.checkin_event import CheckinEvent
 from agentic_calendar.contracts.company_target import CompanyTarget
 from agentic_calendar.contracts.consent_record import ConsentRecord
@@ -85,6 +88,7 @@ CONTRACTS: dict[str, type[BaseModel]] = {
     "draft_schedule": DraftSchedule,
     "approval_event": ApprovalEvent,
     "calendar_event_mapping": CalendarEventMapping,
+    "calendar_reconciliation": CalendarReconciliationResult,
     "plan_diff": PlanDiff,
     "sponsor": Sponsor,
     "sponsor_report": SponsorReport,

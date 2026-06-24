@@ -93,6 +93,16 @@ class CalendarEventMappingStore(Protocol):
         calendar_event_id: str | None = None,
     ) -> CalendarEventMapping: ...
 
+    def record_external_edit(
+        self,
+        run_id: str,
+        task_id: str,
+        *,
+        now: datetime,
+        new_start: datetime | None = None,
+        new_end: datetime | None = None,
+    ) -> CalendarEventMapping: ...
+
 
 class InMemoryCalendarEventMappingStore:
     """Default Phase 2 store. Thread-safe, ephemeral, non-persistent.
@@ -173,6 +183,34 @@ class InMemoryCalendarEventMappingStore:
             # success, so the prior value is preserved on failure.
             updated = prior.with_status(
                 new_status, now=now, calendar_event_id=calendar_event_id
+            )
+            self._by_key[key] = updated
+            return updated
+
+    def record_external_edit(
+        self,
+        run_id: str,
+        task_id: str,
+        *,
+        now: datetime,
+        new_start: datetime | None = None,
+        new_end: datetime | None = None,
+    ) -> CalendarEventMapping:
+        """Record a user's direct external-calendar edit (inbound reconciliation).
+
+        Sets ``user_modified_bool``, stamps ``last_verified_at``, and adopts new
+        scheduled times when supplied. This is not a status transition, so the
+        legal-transition table does not apply; the rebuild in
+        ``with_external_edit`` may still raise (e.g. ``new_end <= new_start``)
+        and the bucket is preserved on failure (assign only on success).
+        """
+        key = (run_id, task_id)
+        with self._lock:
+            if key not in self._by_key:
+                raise CalendarEventMappingNotFoundError(key)
+            prior = self._by_key[key]
+            updated = prior.with_external_edit(
+                now=now, new_start=new_start, new_end=new_end
             )
             self._by_key[key] = updated
             return updated

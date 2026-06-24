@@ -285,4 +285,5 @@ Phase 1 codes.
 - `../specs/approval-event.schema.md`
 - `../specs/calendar-event-mapping.schema.md`
 - `../specs/draft-schedule.schema.md`
+- `../specs/calendar-reconciliation.schema.md`
 - `../decisions/ADR-0002-preview-only-calendar-writes.md`

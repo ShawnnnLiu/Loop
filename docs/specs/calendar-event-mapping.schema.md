@@ -94,7 +94,7 @@ The Calendar Write Manager must attach app-level metadata to each external event
 - `scheduled_start` must be earlier than `scheduled_end`.
 - Rollback uses `calendar_event_id` and metadata, not title matching.
 - Duplicate prevention checks existing mappings and external metadata before creating events.
-- `user_modified_bool: true` mappings must preserve the user's edits and not be overwritten silently.
+- `user_modified_bool: true` mappings must preserve the user's edits and not be overwritten silently. This flag is produced only by inbound reconciliation when the user edits the event directly on the external calendar; see `calendar-reconciliation.schema.md`.
 
 ## Invalid Examples
 
@@ -133,4 +133,5 @@ Reason: end before start.
 - `../axioms/06-calendar-safety.md`
 - `../axioms/13-concurrency-model.md`
 - `approval-event.schema.md`
+- `calendar-reconciliation.schema.md`
 - `telemetry.schema.md`

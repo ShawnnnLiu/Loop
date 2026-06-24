@@ -130,3 +130,38 @@ class CalendarEventMapping(BaseModel):
         if calendar_event_id is not None:
             payload["calendar_event_id"] = calendar_event_id
         return CalendarEventMapping.model_validate(payload)
+
+    def with_external_edit(
+        self,
+        *,
+        now: datetime,
+        new_start: datetime | None = None,
+        new_end: datetime | None = None,
+    ) -> CalendarEventMapping:
+        """Return a copy recording that the user edited this event directly on
+        the external calendar (re-runs all validators).
+
+        Always sets ``user_modified_bool=True`` and stamps ``last_verified_at``
+        to ``now`` — inbound reconciliation read the event back from the
+        calendar (calendar-reconciliation spec). When ``new_start``/``new_end``
+        are supplied (an *adopted* move/resize) the scheduled times are updated
+        to the calendar's truth; for a flagged (rejected / deleted) edit they
+        are omitted and the prior internal time stays the system of record
+        (axiom 06: the in-app schedule is authoritative).
+
+        This is **not** a status transition: ``calendar_write_status`` and
+        ``calendar_event_id`` are preserved, so the store does not run the
+        legal-transition table for it. ``model_copy`` does not re-run validators
+        in Pydantic v2, so we rebuild via ``model_validate``.
+        """
+        if (new_start is None) != (new_end is None):
+            raise ValueError(
+                "with_external_edit requires both new_start and new_end, or neither"
+            )
+        payload: dict[str, object] = self.model_dump(mode="python")
+        payload["user_modified_bool"] = True
+        payload["last_verified_at"] = now
+        if new_start is not None and new_end is not None:
+            payload["scheduled_start"] = new_start
+            payload["scheduled_end"] = new_end
+        return CalendarEventMapping.model_validate(payload)

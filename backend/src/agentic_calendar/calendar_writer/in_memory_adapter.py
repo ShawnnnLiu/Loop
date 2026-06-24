@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import threading
 from collections.abc import Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime
 
 from agentic_calendar.common.ids import IdGenerator
@@ -70,6 +70,27 @@ class InMemoryCalendarAdapter:
         simulate the external service recovering; this is the supported way
         to do that — not reassigning the private ``_failure_modes``."""
         self._failure_modes = modes
+
+    def simulate_external_move(
+        self,
+        calendar_event_id: str,
+        *,
+        scheduled_start: datetime,
+        scheduled_end: datetime,
+    ) -> None:
+        """Test affordance: the user moved/resized one of our events directly on
+        the calendar (out of band). This is how an external edit shows up to
+        inbound reconciliation; like ``set_failure_modes`` it is the supported way
+        to mutate fake-calendar state mid-test rather than reaching into
+        ``_by_id``. No-op if the event id is unknown."""
+        with self._lock:
+            record = self._by_id.get(calendar_event_id)
+            if record is not None:
+                self._by_id[calendar_event_id] = replace(
+                    record,
+                    scheduled_start=scheduled_start,
+                    scheduled_end=scheduled_end,
+                )
 
     def create_event(
         self,

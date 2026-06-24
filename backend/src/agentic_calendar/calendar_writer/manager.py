@@ -40,7 +40,7 @@ from agentic_calendar.contracts.hashing import (
 )
 from agentic_calendar.contracts.reason_codes import ReasonCode
 
-from .adapter import ExternalCalendarAdapter
+from .adapter import ExternalCalendarAdapter, ExternalEventRecord
 from .errors import (
     ApprovalExpiredError,
     ApprovalHashAlgorithmUnsupportedError,
@@ -280,6 +280,19 @@ class CalendarWriteManager:
             adapter=self._adapter,
             target_calendar_id=target_calendar_id,
             clock=self._clock,
+        )
+
+    def read_event(
+        self, *, target_calendar_id: str, calendar_event_id: str
+    ) -> ExternalEventRecord | None:
+        """Read one of the app's own events back from the external calendar
+        (``None`` if it no longer exists). A read-only passthrough so inbound
+        reconciliation can diff the live calendar against the recorded mappings
+        without reaching past the manager — axiom 06's "the Write Manager is the
+        only code that touches the calendar". It performs no write."""
+        return self._adapter.read_event(
+            target_calendar_id=target_calendar_id,
+            calendar_event_id=calendar_event_id,
         )
 
     def rollback(

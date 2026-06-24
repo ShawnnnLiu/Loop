@@ -163,3 +163,43 @@ class SqliteCalendarEventMappingStore:
                 ),
             )
             return updated
+
+    def record_external_edit(
+        self,
+        run_id: str,
+        task_id: str,
+        *,
+        now: datetime,
+        new_start: datetime | None = None,
+        new_end: datetime | None = None,
+    ) -> CalendarEventMapping:
+        """Record a user's direct external-calendar edit (inbound reconciliation).
+
+        Sets ``user_modified_bool``, stamps ``last_verified_at``, and adopts new
+        scheduled times when supplied. Not a status transition; the read-modify-
+        write runs in one transaction and ``with_external_edit`` may raise (e.g.
+        ``new_end <= new_start``), whereupon the rollback preserves the prior row.
+        """
+        with self._db.transaction() as cur:
+            row = cur.execute(
+                "SELECT payload FROM calendar_event_mappings"
+                " WHERE run_id = ? AND task_id = ?",
+                (run_id, task_id),
+            ).fetchone()
+            if row is None:
+                raise CalendarEventMappingNotFoundError((run_id, task_id))
+            prior = CalendarEventMapping.model_validate_json(row[0])
+            updated = prior.with_external_edit(
+                now=now, new_start=new_start, new_end=new_end
+            )
+            cur.execute(
+                "UPDATE calendar_event_mappings SET status = ?, payload = ?"
+                " WHERE run_id = ? AND task_id = ?",
+                (
+                    updated.calendar_write_status.value,
+                    updated.model_dump_json(),
+                    run_id,
+                    task_id,
+                ),
+            )
+            return updated

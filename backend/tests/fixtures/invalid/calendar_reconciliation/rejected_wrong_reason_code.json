@@ -1,0 +1,21 @@
+{
+  "run_id": "run_2026_06_22_001",
+  "plan_version": "plan_004",
+  "reconciled_at": "2026-06-23T09:05:00-07:00",
+  "target_calendar_id": "gcal_dedicated_abc",
+  "outcome": "flagged",
+  "adopted_draft_schedule_id": null,
+  "deltas": [
+    {
+      "task_id": "graphs_004",
+      "calendar_event_id": "gcal_evt_def456",
+      "change_type": "moved",
+      "recorded_start": "2026-06-25T20:00:00-07:00",
+      "recorded_end": "2026-06-25T21:00:00-07:00",
+      "observed_start": "2026-06-25T06:00:00-07:00",
+      "observed_end": "2026-06-25T07:00:00-07:00",
+      "disposition": "rejected",
+      "reason_code": "LLM_REFUSAL"
+    }
+  ]
+}

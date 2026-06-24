@@ -667,6 +667,23 @@ select.input {
   border-color: #c0492f;
   border-left-color: #c0492f;
 }
+/* Read-only blocks once the draft is no longer awaiting approval. Sage =
+   actually written & verified on the calendar; neutral = not (yet) confirmed
+   (mid-write or a failed write) so it never reads as confirmed when it isn't. */
+.blk-confirmed {
+  background: var(--sage-soft);
+  border: 1px solid var(--sage);
+  border-left: 3px solid var(--sage-deep);
+  color: var(--sage-deep);
+  cursor: default;
+}
+.blk-readonly {
+  background: rgba(108, 120, 134, 0.08);
+  border: 1px solid rgba(108, 120, 134, 0.32);
+  border-left: 3px solid rgba(108, 120, 134, 0.5);
+  color: var(--muted);
+  cursor: default;
+}
 .blk .bt {
   font-weight: 600;
   white-space: nowrap;

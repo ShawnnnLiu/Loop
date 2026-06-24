@@ -150,6 +150,14 @@ class ReasonCode(StrEnum):
     """Partial-failure terminal: some events confirmed missing; no auto-retry.
     Surfaces the manual-retry UI (axiom 06 lines 228-232)."""
 
+    # --- Inbound calendar reconciliation (axiom 06; calendar-reconciliation spec) ---
+    EXTERNAL_EVENT_DELETED = "EXTERNAL_EVENT_DELETED"
+    """Inbound reconciliation found one of the app's own events deleted by the
+    user directly on the dedicated calendar. The delta is ``flagged_deleted`` and
+    drift-routed (``DRIFT_EXTERNAL_CONFLICT``); the MVP never silently re-creates
+    the event or cancels the task (axiom 06 line 253 — cancellation-on-delete is
+    itself opt-in)."""
+
     # --- Plan diff (axiom 15 / spec plan-diff) ---
     DEEP_WORK_WINDOW_CONFLICT = "DEEP_WORK_WINDOW_CONFLICT"
     """Field changed "to fit your deep work windows" (plan-diff spec line 137).

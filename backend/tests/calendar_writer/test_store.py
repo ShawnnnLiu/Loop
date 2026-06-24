@@ -314,3 +314,72 @@ def test_sqlite_state_survives_restart(tmp_path: Path) -> None:
     assert got == verified
     assert got.calendar_write_status is CalendarWriteStatus.VERIFIED
     assert got.last_verified_at == _NOW
+
+
+# --------------------------------------------------------------------------- #
+# External-edit recording (inbound reconciliation, calendar-reconciliation spec)
+# --------------------------------------------------------------------------- #
+
+_NEW_START = datetime(2026, 5, 5, 19, 30, tzinfo=UTC)
+_NEW_END = datetime(2026, 5, 5, 21, 0, tzinfo=UTC)
+
+
+def test_record_external_edit_adopts_new_times(
+    store: CalendarEventMappingStore,
+) -> None:
+    """An adopted move updates the scheduled times, flags the row user-modified,
+    stamps the read-back time, and preserves status + event id (not a transition)."""
+    store.save(_mapping(status=CalendarWriteStatus.VERIFIED))
+    updated = store.record_external_edit(
+        "run_001", "dp_001", now=_NOW, new_start=_NEW_START, new_end=_NEW_END
+    )
+    assert updated.scheduled_start == _NEW_START
+    assert updated.scheduled_end == _NEW_END
+    assert updated.user_modified_bool is True
+    assert updated.last_verified_at == _NOW
+    assert updated.calendar_write_status is CalendarWriteStatus.VERIFIED
+    assert updated.calendar_event_id == "gcal_evt_001"
+    assert store.get("run_001", "dp_001") == updated  # persisted
+
+
+def test_record_external_edit_flag_only_preserves_times(
+    store: CalendarEventMappingStore,
+) -> None:
+    """A flagged (rejected / deleted) edit keeps the prior internal time as the
+    system of record and only sets the divergence flag (axiom 06 lines 249-253)."""
+    original = _mapping()
+    store.save(original)
+    updated = store.record_external_edit("run_001", "dp_001", now=_NOW)
+    assert updated.scheduled_start == original.scheduled_start
+    assert updated.scheduled_end == original.scheduled_end
+    assert updated.user_modified_bool is True
+    assert updated.last_verified_at == _NOW
+    assert updated.calendar_write_status is original.calendar_write_status
+
+
+def test_record_external_edit_missing_raises(
+    store: CalendarEventMappingStore,
+) -> None:
+    with pytest.raises(CalendarEventMappingNotFoundError):
+        store.record_external_edit("run_x", "task_x", now=_NOW)
+
+
+def test_record_external_edit_rejects_inverted_times_and_preserves_prior(
+    store: CalendarEventMappingStore,
+) -> None:
+    store.save(_mapping())
+    with pytest.raises(ValueError, match="strictly after"):
+        store.record_external_edit(
+            "run_001", "dp_001", now=_NOW, new_start=_NEW_END, new_end=_NEW_START
+        )
+    preserved = store.get("run_001", "dp_001")
+    assert preserved.user_modified_bool is False  # prior row untouched on failure
+
+
+def test_record_external_edit_requires_both_or_neither_new_times(
+    store: CalendarEventMappingStore,
+) -> None:
+    store.save(_mapping())
+    with pytest.raises(ValueError, match="both new_start and new_end, or neither"):
+        store.record_external_edit("run_001", "dp_001", now=_NOW, new_start=_NEW_START)
+    assert store.get("run_001", "dp_001").user_modified_bool is False

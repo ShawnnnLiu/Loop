@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { ApiError, api, errorMessage } from '../api/client'
-import type { DraftView } from '../api/types'
+import type { DraftView, StatusResult } from '../api/types'
 import {
   dayHeader,
   dayUtcMs,
@@ -13,6 +13,7 @@ import {
   parseWall,
   weekMondayMs,
 } from '../lib/datetime'
+import { reviewBanner, reviewMode } from '../lib/review'
 
 // The drag-to-adjust schedule review (the signature interaction). PROPOSED
 // blocks are draggable (snap 15 min, move across the week's days); imported
@@ -87,6 +88,7 @@ const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n
 export function ScheduleReviewScreen() {
   const navigate = useNavigate()
   const [view, setView] = useState<DraftView | null>(null)
+  const [status, setStatus] = useState<StatusResult | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [weekIdx, setWeekIdx] = useState(0)
@@ -113,9 +115,16 @@ export function ScheduleReviewScreen() {
 
   useEffect(() => {
     let active = true
-    api
-      .draft()
-      .then((v) => active && (setView(v), setLoading(false)))
+    // Both come from server truth: the draft is what we render; the run state
+    // decides whether it is still an editable draft (awaiting approval) or an
+    // already-written schedule we must show read-only.
+    Promise.all([api.status(), api.draft()])
+      .then(([s, v]) => {
+        if (!active) return
+        setStatus(s)
+        setView(v)
+        setLoading(false)
+      })
       .catch((err: unknown) => {
         if (err instanceof ApiError && err.status === 401) return
         if (active) {
@@ -149,6 +158,14 @@ export function ScheduleReviewScreen() {
   const mondayMs = weeks[safeWeek]
   const weekBlocks = blocks.filter((b) => b.mondayMs === mondayMs)
   const weekBusy = busy.filter((b) => b.mondayMs === mondayMs)
+
+  // Drag + approval are valid only while the run awaits approval; once it's been
+  // written/active the same draft comes back from /draft, so we render it
+  // read-only instead of the (now-consumed) approval UI. The server enforces
+  // the same guard, so this is a UI mirror of its truth, not a new gate.
+  const mode = reviewMode(status)
+  const editable = mode === 'editable'
+  const banner = reviewBanner(mode)
 
   const posOf = (b: Block): { dayIdx: number; startMin: number } =>
     drag && drag.taskId === b.taskId ? { dayIdx: drag.dayIdx, startMin: drag.startMin } : b
@@ -230,13 +247,22 @@ export function ScheduleReviewScreen() {
     <div className="sched">
       <div className="sched-banner">
         <span className="agent-mark">✦</span>
-        <div style={{ flex: 1 }}>
-          <div className="t-h3">Review your proposed week</div>
-          <div className="muted" style={{ fontSize: 13, marginTop: 2 }}>
-            Drag any <b style={{ color: 'var(--clay-deep)' }}>proposed</b> block to a new time or
-            day. Your existing calendar events are fixed. Every move is re-checked on the server.
+        {editable ? (
+          <div style={{ flex: 1 }}>
+            <div className="t-h3">Review your proposed week</div>
+            <div className="muted" style={{ fontSize: 13, marginTop: 2 }}>
+              Drag any <b style={{ color: 'var(--clay-deep)' }}>proposed</b> block to a new time or
+              day. Your existing calendar events are fixed. Every move is re-checked on the server.
+            </div>
           </div>
-        </div>
+        ) : (
+          <div style={{ flex: 1 }}>
+            <div className="t-h3">{banner.title}</div>
+            <div className="muted" style={{ fontSize: 13, marginTop: 2 }}>
+              {banner.sub}
+            </div>
+          </div>
+        )}
         {weeks.length > 1 && (
           <div className="row" style={{ gap: 6 }}>
             <button
@@ -260,9 +286,19 @@ export function ScheduleReviewScreen() {
             </button>
           </div>
         )}
-        <button className="btn btn-primary lg" type="button" onClick={() => navigate('/approve')}>
-          Continue to approval →
-        </button>
+        {editable ? (
+          <button className="btn btn-primary lg" type="button" onClick={() => navigate('/approve')}>
+            Continue to approval →
+          </button>
+        ) : mode === 'failed' ? (
+          <button className="btn btn-primary lg" type="button" onClick={() => navigate('/plan')}>
+            Build a new plan →
+          </button>
+        ) : (
+          <button className="btn btn-primary lg" type="button" onClick={() => navigate('/today')}>
+            Go to Today →
+          </button>
+        )}
       </div>
 
       {violation && (
@@ -330,10 +366,15 @@ export function ScheduleReviewScreen() {
               return (
                 <div
                   key={b.taskId}
-                  className={`blk blk-proposed${dragging ? ' dragging' : ''}${bad ? ' bad' : ''}`}
-                  onPointerDown={(e) => onDown(e, b)}
-                  onPointerMove={onMove}
-                  onPointerUp={(e) => void onUp(e)}
+                  className={
+                    editable
+                      ? `blk blk-proposed${dragging ? ' dragging' : ''}${bad ? ' bad' : ''}`
+                      : `blk ${mode === 'written' ? 'blk-confirmed' : 'blk-readonly'}`
+                  }
+                  title={mode === 'written' ? 'On your Google Calendar · fixed' : undefined}
+                  onPointerDown={editable ? (e) => onDown(e, b) : undefined}
+                  onPointerMove={editable ? onMove : undefined}
+                  onPointerUp={editable ? (e) => void onUp(e) : undefined}
                   style={{
                     left: `${(pos.dayIdx / 7) * 100}%`,
                     width: `${100 / 7}%`,
@@ -341,7 +382,10 @@ export function ScheduleReviewScreen() {
                     height: heightPx(b.durMin),
                   }}
                 >
-                  <div className="bt">⠿ {b.title}</div>
+                  <div className="bt">
+                    {editable ? '⠿ ' : mode === 'written' ? '✓ ' : ''}
+                    {b.title}
+                  </div>
                   <div className="bm">
                     {fmtMinutes(pos.startMin)}–{fmtMinutes(pos.startMin + b.durMin)}
                   </div>
@@ -353,10 +397,28 @@ export function ScheduleReviewScreen() {
       </div>
 
       <div className="sched-legend">
-        <span>
-          <span className="sw" style={{ border: '1.5px dashed var(--clay)', background: 'var(--clay-tint)' }} />
-          proposed · drag to adjust
-        </span>
+        {editable ? (
+          <span>
+            <span className="sw" style={{ border: '1.5px dashed var(--clay)', background: 'var(--clay-tint)' }} />
+            proposed · drag to adjust
+          </span>
+        ) : (
+          <span>
+            <span
+              className="sw"
+              style={
+                mode === 'written'
+                  ? { border: '1px solid var(--sage)', background: 'var(--sage-soft)' }
+                  : { border: '1px solid rgba(108,120,134,0.4)', background: 'rgba(108,120,134,0.12)' }
+              }
+            />
+            {mode === 'written'
+              ? 'confirmed · on your Google Calendar'
+              : mode === 'writing'
+                ? 'writing…'
+                : 'not confirmed'}
+          </span>
+        )}
         <span>
           <span
             className="sw"
@@ -369,7 +431,7 @@ export function ScheduleReviewScreen() {
           imported · fixed
         </span>
         <span className="spacer" />
-        <span>{saving ? 'saving…' : 'snaps to 15 min · drag across days'}</span>
+        <span>{editable ? (saving ? 'saving…' : 'snaps to 15 min · drag across days') : 'read-only'}</span>
       </div>
     </div>
   )

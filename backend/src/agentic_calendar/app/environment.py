@@ -16,7 +16,7 @@ SDK).
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Collection, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol, runtime_checkable
@@ -149,6 +149,7 @@ class PlannerNode(Protocol):
         syllabus: SyllabusUnits,
         user_profile: UserProfile | None = None,
         repair: ValidationResult | None = None,
+        excluded_tasks: Collection[str] = (),
     ) -> TaskPlan: ...
 
 

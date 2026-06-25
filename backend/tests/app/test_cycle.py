@@ -23,7 +23,8 @@ Fixture facts these tests rely on (verified against ``tests/fixtures/valid``):
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+import logging
+from collections.abc import Collection, Mapping
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -165,10 +166,15 @@ class CountingPlanner:
         syllabus: SyllabusUnits,
         user_profile: UserProfile | None = None,
         repair: ValidationResult | None = None,
+        excluded_tasks: Collection[str] = (),
     ) -> TaskPlan:
         self.calls += 1
         return self._inner.run(
-            run_id=run_id, syllabus=syllabus, user_profile=user_profile, repair=repair
+            run_id=run_id,
+            syllabus=syllabus,
+            user_profile=user_profile,
+            repair=repair,
+            excluded_tasks=excluded_tasks,
         )
 
 
@@ -178,6 +184,7 @@ class RecordingPlanner:
     def __init__(self, plan: TaskPlan) -> None:
         self._plan = plan
         self.repairs: list[ValidationResult | None] = []
+        self.excluded: list[tuple[str, ...]] = []
 
     def run(
         self,
@@ -186,9 +193,11 @@ class RecordingPlanner:
         syllabus: SyllabusUnits,
         user_profile: UserProfile | None = None,
         repair: ValidationResult | None = None,
+        excluded_tasks: Collection[str] = (),
     ) -> TaskPlan:
         del run_id, syllabus, user_profile
         self.repairs.append(repair)
+        self.excluded.append(tuple(excluded_tasks))
         return self._plan
 
 
@@ -1795,3 +1804,28 @@ def test_drop_requires_active_plan() -> None:
     service.propose(USER_ID)  # AWAITING_USER_APPROVAL, not ACTIVE_PLAN
     with pytest.raises(CycleError):
         service.drop_tasks(USER_ID, ["dp_001"])
+
+
+# --------------------------------------------------------------------------- #
+# Regen honors drops (Phase E3): advisory planner exclusion
+# --------------------------------------------------------------------------- #
+
+
+def test_regen_threads_drop_projection_to_planner_and_logs_resurrection(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    # A recording planner that reproduces the canonical plan (which contains the
+    # dropped id) — proving the exclusion is ADVISORY, not enforced by code.
+    recording = RecordingPlanner(_canonical_plan())
+    service, env, _clock = make_service(planner=recording)
+    env.disposition_store.append(_dropped_disposition("dp_001"))
+
+    with caplog.at_level(logging.WARNING):
+        result = service.propose(USER_ID)
+
+    # Advisory only: a dropped id does NOT block regeneration.
+    assert result.state is S.AWAITING_USER_APPROVAL
+    # The dropped/completed projection reached the planner as excluded_tasks.
+    assert recording.excluded[-1] == ("dp_001",)
+    # The planner reproduced the dropped id anyway -> a logged advisory.
+    assert "reproduced dropped task" in caplog.text

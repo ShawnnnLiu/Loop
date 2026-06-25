@@ -40,6 +40,7 @@ from agentic_calendar.accountability.recommitment import request_recommitment
 from agentic_calendar.calendar_writer.errors import CalendarWriterError
 from agentic_calendar.calendar_writer.manager import WriteStatus
 from agentic_calendar.common.errors import AgenticCalendarError
+from agentic_calendar.common.logging import correlated, get_logger
 from agentic_calendar.contracts.accountability_intervention import (
     AccountabilityAction,
     InterventionDecision,
@@ -133,6 +134,8 @@ from .results import (
 )
 from .state import OnboardingRecord, ReplanKind, RunRecord
 from .tuning import TUNABLE_SECTIONS, scalar_fields
+
+_log = get_logger(__name__)
 
 MAX_SCHEDULER_PLANNER_ITERATIONS = 2
 """Axiom 05 bound: at most two Scheduler→Planner iterations per run."""
@@ -409,6 +412,7 @@ class CycleService:
 
         env.state.save_syllabus(onboarding.user_id, syllabus)
         bound_syllabus = syllabus
+        excluded = sorted(self._completed_or_dropped_ids(onboarding.user_id))
 
         def planner_pass(run_id: str, repair: ValidationResult | None) -> TaskPlan:
             return env.nodes.planner.run(
@@ -416,6 +420,7 @@ class CycleService:
                 syllabus=bound_syllabus,
                 user_profile=onboarding.user_profile,
                 repair=repair,
+                excluded_tasks=excluded,
             )
 
         return self._plan_pipeline(
@@ -506,11 +511,13 @@ class CycleService:
                 raise CycleError("deterministic recovery proposal carried no draft")
             deterministic_plan = proposal.draft.plan
             return lambda run_id, repair: deterministic_plan
+        excluded = sorted(self._completed_or_dropped_ids(onboarding.user_id))
         return lambda run_id, repair: env.nodes.planner.run(
             run_id=run_id,
             syllabus=syllabus,
             user_profile=onboarding.user_profile,
             repair=repair,
+            excluded_tasks=excluded,
         )
 
     def _recalibrated_plan(
@@ -627,6 +634,9 @@ class CycleService:
         env = self._env
         profile = onboarding.user_profile
         completed_or_dropped = sorted(self._completed_or_dropped_ids(onboarding.user_id))
+        dropped_ids = env.disposition_store.task_ids_with_disposition(
+            onboarding.user_id, TaskDispositionType.DROPPED
+        )
 
         scheduler_iterations = 0
         while True:
@@ -649,6 +659,15 @@ class CycleService:
                 if result.valid:
                     run = self._transition(run, Sig.VALIDATION_PASSED)
                     plan = candidate
+                    resurrected = sorted(
+                        dropped_ids & {t.task_id for t in candidate.tasks}
+                    )
+                    if resurrected:
+                        correlated(_log, run_id=run.run_id).warning(
+                            f"regeneration reproduced dropped task(s) {resurrected}; "
+                            "advisory exclusion only (axiom 20 partial regen is "
+                            "Phase 2/3)"
+                        )
                     break
                 if result.next_action is NextAction.PLANNER_REPAIR_RETRY:
                     run = self._transition(run, Sig.VALIDATION_FAILED_REPAIRABLE)

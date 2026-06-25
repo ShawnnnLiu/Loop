@@ -77,6 +77,8 @@ def test_every_contract_registered() -> None:
         "threshold_change_log",
         # Loop: inbound calendar reconciliation
         "calendar_reconciliation",
+        # Loop: completion / drop memory
+        "task_disposition",
     }
     assert set(CONTRACTS.keys()) == expected
 

@@ -63,6 +63,7 @@ from agentic_calendar.contracts.sponsor_report import (
 from agentic_calendar.contracts.strategist_input import StrategistInput
 from agentic_calendar.contracts.strategy_constraints import StrategyConstraints
 from agentic_calendar.contracts.syllabus_units import SyllabusUnits
+from agentic_calendar.contracts.task_disposition import TaskDispositionRecord
 from agentic_calendar.contracts.task_plan import TaskPlan
 from agentic_calendar.contracts.telemetry import TelemetryEvent
 from agentic_calendar.contracts.threshold_change_log import ThresholdChange
@@ -83,6 +84,7 @@ CONTRACTS: dict[str, type[BaseModel]] = {
     "cache_entry": CacheEntry,
     "milestone_template": MilestoneTemplate,
     "task_plan": TaskPlan,
+    "task_disposition": TaskDispositionRecord,
     "validation_result": ValidationResult,
     "scheduler_output": SchedulerOutput,
     "draft_schedule": DraftSchedule,

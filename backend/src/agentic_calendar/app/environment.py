@@ -77,6 +77,13 @@ from agentic_calendar.contracts.syllabus_units import SyllabusUnits
 from agentic_calendar.contracts.task_plan import TaskPlan
 from agentic_calendar.contracts.user_profile import UserProfile
 from agentic_calendar.contracts.validation_result import ValidationResult
+from agentic_calendar.disposition.disposition_store import (
+    InMemoryTaskDispositionStore,
+    TaskDispositionStore,
+)
+from agentic_calendar.disposition.sqlite_disposition_store import (
+    SqliteTaskDispositionStore,
+)
 from agentic_calendar.drift.classifier import DriftClassifier
 from agentic_calendar.identity.sqlite_store import SqliteGoogleCredentialStore
 from agentic_calendar.identity.store import (
@@ -201,6 +208,7 @@ class AppEnvironment:
     approval_store: ApprovalEventStore
     mapping_store: CalendarEventMappingStore
     telemetry_store: TelemetryEventStore
+    disposition_store: TaskDispositionStore
     consent_store: ConsentStore
     audit_store: DataAccessAuditStore
     checkin_store: CheckinEventStore
@@ -256,6 +264,7 @@ def build_environment(
         approval_store: ApprovalEventStore = InMemoryApprovalEventStore()
         mapping_store: CalendarEventMappingStore = InMemoryCalendarEventMappingStore()
         telemetry_store: TelemetryEventStore = InMemoryTelemetryEventStore()
+        disposition_store: TaskDispositionStore = InMemoryTaskDispositionStore()
         consent_store: ConsentStore = InMemoryConsentStore(clock)
         audit_store: DataAccessAuditStore = InMemoryDataAccessAuditStore()
         checkin_store: CheckinEventStore = InMemoryCheckinEventStore()
@@ -276,6 +285,7 @@ def build_environment(
         approval_store = SqliteApprovalEventStore(db)
         mapping_store = SqliteCalendarEventMappingStore(db)
         telemetry_store = SqliteTelemetryEventStore(db)
+        disposition_store = SqliteTaskDispositionStore(db)
         consent_store = SqliteConsentStore(db, clock)
         audit_store = SqliteDataAccessAuditStore(db)
         checkin_store = SqliteCheckinEventStore(db)
@@ -321,6 +331,7 @@ def build_environment(
         approval_store=approval_store,
         mapping_store=mapping_store,
         telemetry_store=telemetry_store,
+        disposition_store=disposition_store,
         consent_store=consent_store,
         audit_store=audit_store,
         checkin_store=checkin_store,

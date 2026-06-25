@@ -32,6 +32,7 @@ source_modules =
     agentic_calendar.templates
     agentic_calendar.consent
     agentic_calendar.identity
+    agentic_calendar.disposition
 forbidden_modules =
     openai
     anthropic
@@ -67,6 +68,7 @@ modules =
     agentic_calendar.drift
     agentic_calendar.consent
     agentic_calendar.identity
+    agentic_calendar.disposition
 
 # Note: `calendar_writer` is intentionally NOT in the independence set above.
 # The Calendar Write Manager must import :class:`ApprovalEventStore` from
@@ -430,3 +432,37 @@ forbidden_modules =
     agentic_calendar.cache
     agentic_calendar.templates
     agentic_calendar.consent
+
+# ---------------------------------------------------------------------------
+# Contract 16: Disposition leaf-deps (completion / drop memory).
+#
+# `disposition` (the append-only completion/skip/drop store) may depend only on
+# `common` and `contracts`. Like `accountability`/`telemetry`, it is a pure
+# leaf: the composition root (`app/`) projects its records into
+# `SchedulerInput.completed_task_ids` and the drag-to-adjust advisory check, and
+# the data-control CLI deletes it — all from outside the region set. Nothing
+# inside it may reach back into a region.
+# ---------------------------------------------------------------------------
+[importlinter:contract:disposition-is-leaf]
+name = disposition/ may only depend on common/ and contracts/.
+type = forbidden
+source_modules =
+    agentic_calendar.disposition
+forbidden_modules =
+    agentic_calendar.supervisor
+    agentic_calendar.validation
+    agentic_calendar.scheduler
+    agentic_calendar.planning
+    agentic_calendar.llm_nodes
+    agentic_calendar.prerequisites
+    agentic_calendar.calendar_writer
+    agentic_calendar.approval
+    agentic_calendar.accountability
+    agentic_calendar.telemetry
+    agentic_calendar.drift
+    agentic_calendar.duration_estimation
+    agentic_calendar.source_claims
+    agentic_calendar.cache
+    agentic_calendar.templates
+    agentic_calendar.consent
+    agentic_calendar.identity

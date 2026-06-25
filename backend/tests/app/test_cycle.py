@@ -1759,6 +1759,12 @@ def test_drop_approve_write_removes_only_dropped_event() -> None:
     service.approve(USER_ID)
     written = service.write(USER_ID)
     assert written.state is S.ACTIVE_PLAN
+    # The result surfaces the dropped task's rolled-back mapping status (built
+    # from the write result, since the dropped mapping stays under its old run).
+    assert (
+        written.mapping_status_by_task["dp_001"]
+        == CalendarWriteStatus.ROLLED_BACK.value
+    )
 
     # Active plan is now survivors-only; dp_001 pruned from dp_002's deps.
     active = env.plan_store.get_active(USER_ID)
@@ -1804,6 +1810,39 @@ def test_drop_requires_active_plan() -> None:
     service.propose(USER_ID)  # AWAITING_USER_APPROVAL, not ACTIVE_PLAN
     with pytest.raises(CycleError):
         service.drop_tasks(USER_ID, ["dp_001"])
+
+
+def test_drop_write_partial_failure_when_delete_raises() -> None:
+    adapter = InMemoryCalendarAdapter(id_generator=DeterministicIdGenerator())
+    service, env, _clock = make_service(calendar_adapter=adapter)
+    _activate_plan(service)
+    dp1_event = env.mapping_store.list_for_task("dp_001")[-1].calendar_event_id
+    assert dp1_event is not None
+
+    # The adapter raises when deleting dp_001's event.
+    adapter.set_failure_modes(
+        FailureModes(fail_delete_for_event_ids=frozenset({dp1_event}))
+    )
+    service.drop_tasks(USER_ID, ["dp_001"])
+    service.approve(USER_ID)
+    written = service.write(USER_ID)
+
+    # The drop write is a partial failure; the run does NOT activate a new plan.
+    assert written.write_status == "partial_failure"
+    assert written.reason_code is ReasonCode.CALENDAR_ROLLBACK_FAILED
+    assert written.state is not S.ACTIVE_PLAN
+    assert (
+        env.mapping_store.list_for_task("dp_001")[-1].calendar_write_status
+        is CalendarWriteStatus.ROLLBACK_FAILED
+    )
+    assert (
+        written.mapping_status_by_task["dp_001"]
+        == CalendarWriteStatus.ROLLBACK_FAILED.value
+    )
+    # The original plan stays active — the failed drop did not supersede it.
+    active = env.plan_store.get_active(USER_ID)
+    assert active is not None
+    assert {t.task_id for t in active.plan.tasks} == {"dp_001", "dp_002"}
 
 
 # --------------------------------------------------------------------------- #

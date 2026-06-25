@@ -289,7 +289,10 @@ class CalendarWriteManager:
         mappings (under their original run) are untouched.
 
         Reuses the rollback delete + status-transition ceremony (axiom 06 lines
-        132-137), scoped to the dropped tasks and gated behind the approval.
+        132-137), scoped to the dropped tasks and gated behind the approval. A
+        no-targets request (nothing on the calendar to remove) returns success
+        BEFORE the lock is taken — it makes no adapter call and mutates no
+        mapping, so the per-write lock (axiom 13) is unnecessary on that branch.
         """
         try:
             approval = self._validate_approval(

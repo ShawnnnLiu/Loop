@@ -4,7 +4,9 @@ Canonical spec: ``docs/specs/task-disposition.schema.md`` (ADR-0008; axioms 05,
 11, 20).
 
 A :class:`TaskDispositionRecord` is the append-only, durable memory of what a
-user has completed, skipped, or dropped. It feeds the scheduler projection
+user has completed or dropped (``skipped`` is a reserved disposition with no
+producer yet — see :class:`TaskDispositionType`). It feeds the scheduler
+projection
 (``SchedulerInput.completed_task_ids``) and the completion-relative
 drag-to-adjust advisory check (ADR-0008). The store decides nothing with an
 LLM; code records a disposition from a completion signal or an explicit drop

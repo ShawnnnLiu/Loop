@@ -1452,9 +1452,17 @@ class CycleService:
             )
 
         mappings = (
-            env.mapping_store.list_for_run(result.run_id)
-            if result.run_id is not None
-            else []
+            # A drop write updates the dropped tasks' mappings under their
+            # ORIGINAL run, not ``result.run_id`` (a fresh op id), so
+            # ``list_for_run(result.run_id)`` would be empty — surface their
+            # post-write status from the result's own records instead.
+            list(result.written_mappings)
+            if run.drop_task_ids
+            else (
+                env.mapping_store.list_for_run(result.run_id)
+                if result.run_id is not None
+                else []
+            )
         )
         verification = result.verification
         return WriteCycleResult(

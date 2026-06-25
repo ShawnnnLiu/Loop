@@ -139,16 +139,33 @@ applies a `{task_id: new_start}` mapping and returns the revised draft:
 
 The UI's own conflict checking is advisory. Before a revised draft is stored, the
 service re-validates the **entire** resulting placement against the user's
-scheduling policy and a freshly-fetched free/busy snapshot, and refuses the move
-with a typed `reason_code` if any of these hold (see
-`backend/src/agentic_calendar/scheduler/adjustment.py`):
+scheduling policy and a freshly-fetched free/busy snapshot (see
+`backend/src/agentic_calendar/scheduler/adjustment.py`). The validator returns
+both **hard conflicts** (which refuse the move) and **advisory warnings** (which
+are surfaced but do not block).
 
-| Condition | `reason_code` |
+A move is **refused** with a typed `reason_code` if any hard rule is broken:
+
+| Hard condition (refuses the move) | `reason_code` |
 | --- | --- |
 | Overlaps a fixed external event, or another proposed block | `NO_VALID_CONTIGUOUS_BLOCK` |
 | Runs outside `[no_events_before, no_events_after]`, or lands on a disabled weekend | `OUTSIDE_ALLOWED_HOURS` |
 | Pushes a calendar day over `max_daily_study_min` | `DAILY_LOAD_EXCEEDED` |
-| Starts before a prerequisite task ends | `DEPENDENCY_BLOCKED` |
+
+A move is **applied with a non-blocking warning** when it breaks only the advisory
+ordering rule:
+
+| Advisory condition (warns, move still applied) | `reason_code` |
+| --- | --- |
+| Starts before an **unfinished** prerequisite ends (one not in the user's completed/dropped set) | `DEPENDENCY_ADVISORY` |
+
+Prerequisite ordering is **completion-relative and advisory** for manual moves
+(`../decisions/ADR-0008-advisory-manual-ordering.md`): a prerequisite the user has
+already completed or dropped produces no warning, and an unfinished one produces
+`DEPENDENCY_ADVISORY` rather than a refusal. The hard `DEPENDENCY_BLOCKED` rule is
+kept only by the deterministic auto-placement scheduler, never by a manual
+override. The check stays deterministic — pure code over (dependencies,
+completion/drop state, placement times).
 
 Soft placement that the scheduler *optimizes for* but that is not a hard safety
 rule — deep-work-window adherence and `min_break_between_deep_blocks_min` — is

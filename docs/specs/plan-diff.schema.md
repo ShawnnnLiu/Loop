@@ -141,6 +141,7 @@ A single task may appear multiple times in `task_changes` if it has multiple cha
 | `EXTERNAL_CALENDAR_CONFLICT` | "because of an event on your calendar" |
 | `USER_PROFILE_CHANGE` | "based on your profile update" |
 | `DRIFT_REMEDIATION` | "to adapt to your recent completion pattern" |
+| `DEPENDENT_DROP_PRUNED` | "because a prerequisite was dropped" |
 
 The LLM may compose surrounding prose, but the source phrases come from this table.
 

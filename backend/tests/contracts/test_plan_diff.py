@@ -115,6 +115,7 @@ def test_field_change_rejects_non_diff_reason_code() -> None:
         ReasonCode.EXTERNAL_CALENDAR_CONFLICT,
         ReasonCode.USER_PROFILE_CHANGE,
         ReasonCode.DRIFT_REMEDIATION,
+        ReasonCode.DEPENDENT_DROP_PRUNED,
     ],
 )
 def test_field_change_accepts_each_allowed_reason_code(rc: ReasonCode) -> None:

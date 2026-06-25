@@ -89,6 +89,7 @@ from agentic_calendar.drift.classifier import DriftInput
 from agentic_calendar.duration_estimation.pooled import resolve_effective_multipliers
 from agentic_calendar.llm_nodes.base import LLMNodeError
 from agentic_calendar.llm_nodes.user_facing_explanation import UserExplanation
+from agentic_calendar.planning.drop import DropError, propose_dropped_plan
 from agentic_calendar.planning.plan_version import (
     GenerationStep,
     GenerationStepRecord,
@@ -116,6 +117,7 @@ from .results import (
     AdjustWarning,
     ApproveResult,
     DraftView,
+    DropResult,
     IngestResult,
     MeResult,
     OnboardResult,
@@ -1227,6 +1229,102 @@ class CycleService:
         )
 
     # ------------------------------------------------------------------ #
+    # drop (completion/drop memory)
+    # ------------------------------------------------------------------ #
+
+    def drop_tasks(
+        self,
+        user_id: str,
+        task_ids: Sequence[str],
+        *,
+        run_id: str | None = None,
+    ) -> DropResult:
+        """Drop unfinished tasks from the active plan (deterministic, draft-only).
+
+        Removes ``task_ids`` from the active plan, prunes them from survivors'
+        dependencies, and keeps survivors at their EXISTING placements
+        (``planning/drop.py``). Produces a survivors-only DRAFT on a fresh run
+        routed straight to approval — the active plan stays ACTIVE until the drop
+        is approved + written (a delete-only write that removes only the dropped
+        events). On reject the fresh run discards; the active plan is untouched.
+        """
+        env = self._env
+        if not task_ids:
+            raise CycleError("no tasks to drop")
+        self._require_onboarding(user_id)
+        active_run = self._require_run(user_id, run_id, expected=S.ACTIVE_PLAN)
+        active = env.plan_store.get_active(user_id)
+        if active is None:
+            raise CycleError("no active plan to drop from")
+        if active_run.draft_schedule_id is None:
+            raise CycleError("active run has no draft schedule to carry survivors forward")
+        current_draft = env.state.get_draft(active_run.draft_schedule_id)
+        if current_draft is None:
+            raise CycleError(f"draft {active_run.draft_schedule_id!r} not found")
+
+        try:
+            proposal = propose_dropped_plan(
+                active,
+                current_draft,
+                task_ids,
+                id_generator=env.id_generator,
+                clock=env.clock,
+            )
+        except DropError as exc:
+            raise CycleError(str(exc)) from exc
+
+        now = env.clock.now()
+        env.plan_store.save(proposal.plan_version)
+        env.state.save_draft(user_id, proposal.draft_schedule)
+        # Record the drop in durable memory BEFORE the write so a re-propose /
+        # regen sees it (idempotent content-derived id; task-disposition spec).
+        for task_id in proposal.dropped_ids:
+            disposition_id = f"disp_{user_id}_{active.plan_version}_{task_id}_dropped"
+            if not env.disposition_store.exists(disposition_id):
+                env.disposition_store.append(
+                    TaskDispositionRecord(
+                        disposition_id=disposition_id,
+                        user_id=user_id,
+                        plan_version=active.plan_version,
+                        task_id=task_id,
+                        disposition=TaskDispositionType.DROPPED,
+                        reason_code=ReasonCode.TASK_DROPPED_BY_USER,
+                        source=DispositionSource.USER,
+                        created_at=now,
+                    )
+                )
+        # A fresh run carries the drop to approval (reject leaves the active plan
+        # intact); write removes only these tasks' events (delete-only).
+        run = RunRecord(
+            run_id=env.id_generator.new_id("run"),
+            user_id=user_id,
+            state=S.INITIAL,
+            created_at=now,
+            updated_at=now,
+        )
+        env.state.save_run(run)
+        run = self._transition(
+            run,
+            Sig.DROP_REQUESTED,
+            plan_version=proposal.plan_version.plan_version,
+            draft_schedule_id=proposal.draft_schedule.draft_schedule_id,
+            drop_task_ids=proposal.dropped_ids,
+        )
+        return DropResult(
+            run_id=run.run_id,
+            user_id=user_id,
+            state=run.state,
+            plan_version=proposal.plan_version.plan_version,
+            parent_plan_version=active.plan_version,
+            draft_schedule_id=proposal.draft_schedule.draft_schedule_id,
+            draft_payload_hash=canonical_payload_hash(
+                proposal.draft_schedule, HASH_CANONICALIZATION_VERSION
+            ),
+            dropped_task_ids=list(proposal.dropped_ids),
+            survivor_task_count=len(proposal.draft_schedule.entries),
+        )
+
+    # ------------------------------------------------------------------ #
     # write
     # ------------------------------------------------------------------ #
 
@@ -1275,11 +1373,21 @@ class CycleService:
 
         run = self._transition(run, Sig.CALENDAR_WRITE_STARTED)
         try:
-            result = env.write_manager.approve_and_write(
-                approval_event_id=approval_event_id,
-                draft=draft,
-                target_calendar_id=target_calendar_id,
-            )
+            if run.drop_task_ids:
+                # Delete-only write for a drop: remove the dropped tasks' events,
+                # leaving survivor events in place (completion/drop memory).
+                result = env.write_manager.approve_and_remove(
+                    approval_event_id=approval_event_id,
+                    draft=draft,
+                    removed_task_ids=run.drop_task_ids,
+                    target_calendar_id=target_calendar_id,
+                )
+            else:
+                result = env.write_manager.approve_and_write(
+                    approval_event_id=approval_event_id,
+                    draft=draft,
+                    target_calendar_id=target_calendar_id,
+                )
         except AgenticCalendarError as exc:
             reason: ReasonCode = (
                 getattr(exc, "reason_code", None) or ReasonCode.CALENDAR_WRITE_FAILED
@@ -1303,10 +1411,11 @@ class CycleService:
                 # is safe to surface alongside the reason_code.
                 error=str(exc),
             )
-        verified = (
-            result.status is WriteStatus.SUCCESS
-            and result.verification is not None
-            and result.verification.all_verified
+        # A delete-only drop write has no created events to verify: its success
+        # IS the verification (the dropped events are gone).
+        verified = result.status is WriteStatus.SUCCESS and (
+            bool(run.drop_task_ids)
+            or (result.verification is not None and result.verification.all_verified)
         )
         if verified:
             run = self._transition(run, Sig.CALENDAR_WRITE_SUCCEEDED)

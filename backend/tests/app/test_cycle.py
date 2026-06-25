@@ -58,6 +58,7 @@ from agentic_calendar.calendar_writer.in_memory_adapter import (
 from agentic_calendar.common.clock import FrozenClock
 from agentic_calendar.common.errors import AgenticCalendarError
 from agentic_calendar.common.ids import DeterministicIdGenerator
+from agentic_calendar.contracts.calendar_event_mapping import CalendarWriteStatus
 from agentic_calendar.contracts.calendar_reconciliation import (
     CalendarEditType,
     ReconciliationDisposition,
@@ -1706,3 +1707,91 @@ def test_reconcile_adopts_move_before_unfinished_prereq_with_advisory() -> None:
     delta = {d.task_id: d for d in result.deltas}["dp_002"]
     assert delta.disposition is ReconciliationDisposition.ADOPTED
     assert delta.reason_code is ReasonCode.DEPENDENCY_ADVISORY
+
+
+# --------------------------------------------------------------------------- #
+# Deterministic drop (Phase E2): draft -> approve -> delete-only write
+# --------------------------------------------------------------------------- #
+
+
+def test_drop_records_disposition_and_keeps_active_plan_until_approved() -> None:
+    service, env, _clock = make_service()
+    _activate_plan(service)
+
+    dropped = service.drop_tasks(USER_ID, ["dp_001"])
+
+    assert dropped.state is S.AWAITING_USER_APPROVAL
+    assert dropped.dropped_task_ids == ["dp_001"]
+    assert dropped.survivor_task_count == 1
+    # The active plan is unchanged until the drop is approved + written.
+    active = env.plan_store.get_active(USER_ID)
+    assert active is not None
+    assert {t.task_id for t in active.plan.tasks} == {"dp_001", "dp_002"}
+    # The drop is recorded in durable memory (source=USER, typed reason).
+    dispositions = [
+        r
+        for r in env.disposition_store.list_for_user(USER_ID)
+        if r.disposition is TaskDispositionType.DROPPED
+    ]
+    assert [r.task_id for r in dispositions] == ["dp_001"]
+    assert dispositions[0].source is DispositionSource.USER
+    assert dispositions[0].reason_code is ReasonCode.TASK_DROPPED_BY_USER
+
+
+def test_drop_approve_write_removes_only_dropped_event() -> None:
+    service, env, _clock = make_service()
+    _activate_plan(service)
+    dp1_event = env.mapping_store.list_for_task("dp_001")[-1].calendar_event_id
+    dp2_event = env.mapping_store.list_for_task("dp_002")[-1].calendar_event_id
+    assert dp1_event is not None and dp2_event is not None
+
+    # Drop dp_001 (dp_002's prerequisite): dp_002 survives with the edge pruned.
+    service.drop_tasks(USER_ID, ["dp_001"])
+    service.approve(USER_ID)
+    written = service.write(USER_ID)
+    assert written.state is S.ACTIVE_PLAN
+
+    # Active plan is now survivors-only; dp_001 pruned from dp_002's deps.
+    active = env.plan_store.get_active(USER_ID)
+    assert active is not None
+    assert {t.task_id for t in active.plan.tasks} == {"dp_002"}
+    assert active.plan.tasks[0].dependencies == []
+
+    # The dropped task's event is GONE and its mapping is terminal (ROLLED_BACK).
+    assert (
+        env.write_manager.read_event(
+            target_calendar_id=DEFAULT_TARGET_CALENDAR_ID, calendar_event_id=dp1_event
+        )
+        is None
+    )
+    assert (
+        env.mapping_store.list_for_task("dp_001")[-1].calendar_write_status
+        is CalendarWriteStatus.ROLLED_BACK
+    )
+    # The survivor's event is untouched (same id, still present, still VERIFIED).
+    assert (
+        env.write_manager.read_event(
+            target_calendar_id=DEFAULT_TARGET_CALENDAR_ID, calendar_event_id=dp2_event
+        )
+        is not None
+    )
+    assert (
+        env.mapping_store.list_for_task("dp_002")[-1].calendar_write_status
+        is CalendarWriteStatus.VERIFIED
+    )
+
+
+def test_drop_rejects_unknown_task_and_dropping_all() -> None:
+    service, _env, _clock = make_service()
+    _activate_plan(service)
+    with pytest.raises(CycleError, match="unknown task_id"):
+        service.drop_tasks(USER_ID, ["ghost_999"])
+    with pytest.raises(CycleError, match="every task"):
+        service.drop_tasks(USER_ID, ["dp_001", "dp_002"])
+
+
+def test_drop_requires_active_plan() -> None:
+    service, _env, _clock = make_service()
+    service.propose(USER_ID)  # AWAITING_USER_APPROVAL, not ACTIVE_PLAN
+    with pytest.raises(CycleError):
+        service.drop_tasks(USER_ID, ["dp_001"])

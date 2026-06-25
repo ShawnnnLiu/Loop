@@ -145,6 +145,25 @@ def test_adjust_endpoint_advisory_move_applies_with_warnings() -> None:
     assert [w["reason_code"] for w in body["warnings"]] == ["DEPENDENCY_ADVISORY"]
 
 
+def test_drop_endpoint_produces_draft_then_approve_write() -> None:
+    client, _clock = _client()
+    client.post("/api/propose", json={})
+    client.post("/api/approve", json={})
+    client.post("/api/write", json={})
+
+    resp = client.post("/api/drop", json={"task_ids": ["dp_001"]})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["state"] == "awaiting_user_approval"
+    assert body["dropped_task_ids"] == ["dp_001"]
+    assert body["survivor_task_count"] == 1
+
+    client.post("/api/approve", json={})
+    written = client.post("/api/write", json={})
+    assert written.status_code == 200
+    assert written.json()["state"] == "active_plan"
+
+
 def test_adjust_before_propose_maps_to_409() -> None:
     client, _clock = _client()
     resp = client.post(

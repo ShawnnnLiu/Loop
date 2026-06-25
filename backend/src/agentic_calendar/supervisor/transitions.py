@@ -43,6 +43,13 @@ TRANSITIONS: Mapping[tuple[S, Sig], S] = {
     (S.AWAITING_USER_APPROVAL, Sig.USER_APPROVED): S.CALENDAR_WRITE_APPROVED,
     (S.AWAITING_USER_APPROVAL, Sig.USER_REJECTED): S.TERMINAL_DISCARDED,
 
+    # ---- DROP (completion/drop memory) ----
+    # A deterministic drop produces a survivors-only draft and routes a fresh run
+    # straight to approval — no scheduler (survivors keep their placements). The
+    # approval + delete-only write gate still applies (no silent write); on
+    # reject the fresh run discards and the active plan is untouched.
+    (S.INITIAL, Sig.DROP_REQUESTED): S.AWAITING_USER_APPROVAL,
+
     # ---- CALENDAR WRITE (Phase 2) ----
     # Pre-write gates can fail before the adapter is touched (lock busy,
     # hash mismatch); both route to the failure-handling state so rollback

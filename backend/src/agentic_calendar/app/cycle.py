@@ -73,6 +73,11 @@ from agentic_calendar.contracts.motivation_profile import RecoveryPreference
 from agentic_calendar.contracts.reason_codes import ReasonCode
 from agentic_calendar.contracts.scheduler_output import SchedulerOutput, ScheduleStatus
 from agentic_calendar.contracts.syllabus_units import SyllabusUnits
+from agentic_calendar.contracts.task_disposition import (
+    DispositionSource,
+    TaskDispositionRecord,
+    TaskDispositionType,
+)
 from agentic_calendar.contracts.task_plan import TaskPlan
 from agentic_calendar.contracts.telemetry import TelemetryEvent
 from agentic_calendar.contracts.validation_result import (
@@ -551,6 +556,49 @@ class CycleService:
         )
         return None if proposal is None else proposal.draft.plan
 
+    def _completed_or_dropped_ids(self, user_id: str) -> set[str]:
+        """Task ids the user has completed or dropped, across all plan versions.
+
+        The union of the COMPLETED and DROPPED disposition projections. Feeds the
+        scheduler's completion-aware filter (the previously-dead
+        ``SchedulerInput.completed_task_ids`` stub) and the completion-relative
+        drag-to-adjust advisory check (ADR-0008; task-disposition spec).
+        """
+        store = self._env.disposition_store
+        return store.task_ids_with_disposition(
+            user_id, TaskDispositionType.COMPLETED
+        ) | store.task_ids_with_disposition(user_id, TaskDispositionType.DROPPED)
+
+    def _mirror_completed_dispositions(
+        self, user_id: str, plan_version: str, completed_task_ids: set[str]
+    ) -> None:
+        """Record a COMPLETED disposition (``source=SYSTEM``) per completed task.
+
+        Idempotent: the ``disposition_id`` is content-derived from
+        ``(user_id, plan_version, task_id)``, so re-ingesting the same completion
+        is a no-op. Completion data already lived in telemetry; this mirrors it
+        into the durable completion/drop memory the scheduler projection and the
+        advisory check read (task-disposition spec).
+        """
+        store = self._env.disposition_store
+        now = self._env.clock.now()
+        for task_id in sorted(completed_task_ids):
+            disposition_id = f"disp_{user_id}_{plan_version}_{task_id}_completed"
+            if store.exists(disposition_id):
+                continue
+            store.append(
+                TaskDispositionRecord(
+                    disposition_id=disposition_id,
+                    user_id=user_id,
+                    plan_version=plan_version,
+                    task_id=task_id,
+                    disposition=TaskDispositionType.COMPLETED,
+                    reason_code=None,
+                    source=DispositionSource.SYSTEM,
+                    created_at=now,
+                )
+            )
+
     def _plan_pipeline(
         self,
         run: RunRecord,
@@ -575,6 +623,7 @@ class CycleService:
         """
         env = self._env
         profile = onboarding.user_profile
+        completed_or_dropped = sorted(self._completed_or_dropped_ids(onboarding.user_id))
 
         scheduler_iterations = 0
         while True:
@@ -634,6 +683,7 @@ class CycleService:
                     calendar_free_busy=[
                         FreeBusyInterval.model_validate(dict(fb)) for fb in free_busy
                     ],
+                    completed_task_ids=completed_or_dropped,
                     horizon_start=horizon_start,
                     horizon_end=horizon_start + timedelta(days=horizon_days),
                 )
@@ -1345,6 +1395,10 @@ class CycleService:
 
         # Plan completion ends the journey (axiom 02 terminal success).
         completed_ids = {e.task_id for e in events if e.completed}
+        # Mirror completions into durable completion/drop memory before the
+        # terminal-success check, so the final completing ingest is recorded too.
+        # Idempotent; the scheduler projection + advisory check read it.
+        self._mirror_completed_dispositions(user_id, active.plan_version, completed_ids)
         if completed_ids >= {t.task_id for t in plan.tasks}:
             run = self._transition(run, Sig.PLAN_COMPLETED)
             return IngestResult(

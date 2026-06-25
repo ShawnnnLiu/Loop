@@ -72,8 +72,14 @@ from agentic_calendar.contracts.draft_schedule import DraftSchedule, DraftSchedu
 from agentic_calendar.contracts.drift_event import DriftType
 from agentic_calendar.contracts.hashing import canonical_payload_hash
 from agentic_calendar.contracts.reason_codes import ReasonCode
+from agentic_calendar.contracts.scheduler_output import SchedulerOutput
 from agentic_calendar.contracts.source_claim import SourceClaim
 from agentic_calendar.contracts.syllabus_units import SyllabusUnits
+from agentic_calendar.contracts.task_disposition import (
+    DispositionSource,
+    TaskDispositionRecord,
+    TaskDispositionType,
+)
 from agentic_calendar.contracts.task_plan import TaskPlan
 from agentic_calendar.contracts.user_profile import UserProfile
 from agentic_calendar.contracts.validation_result import ValidationResult
@@ -85,6 +91,8 @@ from agentic_calendar.llm_nodes.user_facing_explanation import (
     DeterministicUserFacingExplanation,
 )
 from agentic_calendar.planning.plan_version import LifecycleState
+from agentic_calendar.scheduler import schedule
+from agentic_calendar.scheduler.inputs import SchedulerInput
 from agentic_calendar.supervisor.state import SupervisorState as S
 from tests._fixture_loader import iter_valid
 
@@ -1522,3 +1530,90 @@ def test_set_calendar_sync_without_onboarding_raises() -> None:
     service, _env, _clock = make_service(onboard=False, seed_claims=False)
     with pytest.raises(CycleError):
         service.set_inbound_calendar_sync(USER_ID, enabled=True)
+
+
+# --------------------------------------------------------------------------- #
+# Completion / drop memory (Phase C): projection, scheduler wiring, ingest mirror
+# --------------------------------------------------------------------------- #
+
+
+def _completed_disposition(
+    task_id: str, *, plan_version: str = "plan_004"
+) -> TaskDispositionRecord:
+    return TaskDispositionRecord(
+        disposition_id=f"disp_{USER_ID}_{plan_version}_{task_id}_completed",
+        user_id=USER_ID,
+        plan_version=plan_version,
+        task_id=task_id,
+        disposition=TaskDispositionType.COMPLETED,
+        reason_code=None,
+        source=DispositionSource.SYSTEM,
+        created_at=HAPPY_NOW,
+    )
+
+
+def _dropped_disposition(
+    task_id: str, *, plan_version: str = "plan_004"
+) -> TaskDispositionRecord:
+    return TaskDispositionRecord(
+        disposition_id=f"disp_{USER_ID}_{plan_version}_{task_id}_dropped",
+        user_id=USER_ID,
+        plan_version=plan_version,
+        task_id=task_id,
+        disposition=TaskDispositionType.DROPPED,
+        reason_code=ReasonCode.TASK_DROPPED_BY_USER,
+        source=DispositionSource.USER,
+        created_at=HAPPY_NOW,
+    )
+
+
+def test_completed_or_dropped_projection_unions_dispositions() -> None:
+    service, env, _clock = make_service()
+    env.disposition_store.append(_completed_disposition("dp_001"))
+    env.disposition_store.append(_dropped_disposition("dp_002"))
+    assert service._completed_or_dropped_ids(USER_ID) == {"dp_001", "dp_002"}
+
+
+def test_propose_passes_completion_projection_to_scheduler(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The previously-dead ``completed_task_ids`` stub now carries the projection."""
+    service, env, _clock = make_service()
+    env.disposition_store.append(_completed_disposition("dp_001"))
+    captured: dict[str, list[str]] = {}
+
+    def _spy(inp: SchedulerInput) -> SchedulerOutput:
+        captured["completed_task_ids"] = list(inp.completed_task_ids)
+        return schedule(inp)
+
+    monkeypatch.setattr("agentic_calendar.app.cycle.schedule", _spy)
+    result = service.propose(USER_ID)
+
+    assert result.state is S.AWAITING_USER_APPROVAL
+    assert "dp_001" in captured["completed_task_ids"]
+
+
+def test_ingest_mirrors_completion_into_disposition_store_idempotently() -> None:
+    service, env, _clock = make_service()
+    proposed = _activate_plan(service)
+    payload = _completed_event("tel_dp001", "dp_001", completed_at=HAPPY_NOW)
+
+    service.ingest(USER_ID, [payload])
+    completed = [
+        r
+        for r in env.disposition_store.list_for_user(USER_ID)
+        if r.disposition is TaskDispositionType.COMPLETED
+    ]
+    assert [r.task_id for r in completed] == ["dp_001"]
+    assert completed[0].source is DispositionSource.SYSTEM
+    assert completed[0].reason_code is None
+    assert completed[0].plan_version == proposed.plan_version
+
+    # Re-ingesting the same completion is a no-op (content-derived id).
+    service.ingest(USER_ID, [payload])
+    again = [
+        r
+        for r in env.disposition_store.list_for_user(USER_ID)
+        if r.disposition is TaskDispositionType.COMPLETED
+    ]
+    assert len(again) == 1

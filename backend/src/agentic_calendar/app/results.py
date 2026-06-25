@@ -67,7 +67,22 @@ class ProposeResult(BaseModel):
 
 
 class AdjustViolation(BaseModel):
-    """One typed reason a hand-adjusted placement was refused."""
+    """One typed reason a hand-adjusted placement was refused (a hard rule)."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    task_id: str
+    reason_code: ReasonCode
+    detail: str
+
+
+class AdjustWarning(BaseModel):
+    """One non-blocking advisory on an applied drag-to-adjust (ADR-0008).
+
+    Today the only code is ``DEPENDENCY_ADVISORY`` — a move that starts before an
+    unfinished prerequisite. A populated ``warnings`` with ``applied: true`` is
+    informational; clients must not infer failure from it.
+    """
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -96,6 +111,9 @@ class AdjustResult(BaseModel):
     adjusted_task_ids: list[str] = Field(default_factory=list)
     scheduled_task_count: int = 0
     violations: list[AdjustViolation] = Field(default_factory=list)
+    warnings: list[AdjustWarning] = Field(default_factory=list)
+    """Non-blocking advisories on an applied move (ADR-0008); empty on refusal.
+    A populated list with ``applied: true`` is informational, never failure."""
 
 
 class ApproveResult(BaseModel):

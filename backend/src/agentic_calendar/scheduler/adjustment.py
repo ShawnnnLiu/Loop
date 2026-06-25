@@ -6,15 +6,18 @@ conflict checking is advisory and never trusted. This module owns that pure
 check plus the typed adjustment request item.
 
 It enforces the hard safety + correctness rules a manual move must still
-satisfy and leaves the soft placement the scheduler optimizes for (deep-work
-windows, min break between deep blocks) deliberately relaxed: a manual move is
-an explicit override of placement. Field semantics follow
-``docs/specs/draft-schedule.schema.md`` and axiom 05.
+satisfy (overlap, allowed hours/weekend, daily load) and leaves the soft
+placement the scheduler optimizes for (deep-work windows, min break between
+deep blocks) deliberately relaxed. Prerequisite ordering is **advisory** for a
+manual override — completion-relative and non-blocking (``DEPENDENCY_ADVISORY``,
+ADR-0008), never a refusal — because a manual move is an explicit override of
+placement. Field semantics follow ``docs/specs/draft-schedule.schema.md`` and
+axiom 05.
 """
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Collection, Sequence
 from dataclasses import dataclass
 from datetime import date, datetime, time, tzinfo
 
@@ -51,11 +54,38 @@ class DraftAdjustment(BaseModel):
 
 @dataclass(frozen=True, slots=True)
 class PlacementConflict:
-    """One reason a hand-adjusted placement was refused."""
+    """One reason a hand-adjusted placement was refused (a hard rule)."""
 
     task_id: str
     reason_code: ReasonCode
     detail: str
+
+
+@dataclass(frozen=True, slots=True)
+class PlacementWarning:
+    """One non-blocking advisory on a hand-adjusted placement (ADR-0008).
+
+    The move is applied; the warning is surfaced. Today the only warning is
+    ``DEPENDENCY_ADVISORY`` — a manual move that starts before an *unfinished*
+    prerequisite ends.
+    """
+
+    task_id: str
+    reason_code: ReasonCode
+    detail: str
+
+
+@dataclass(frozen=True, slots=True)
+class PlacementReview:
+    """Outcome of re-validating a hand-adjusted placement (ADR-0008).
+
+    ``conflicts`` are hard-rule violations that refuse the move; ``warnings`` are
+    non-blocking advisories surfaced but not blocking. An empty ``conflicts``
+    means the move is applied (possibly carrying warnings).
+    """
+
+    conflicts: list[PlacementConflict]
+    warnings: list[PlacementWarning]
 
 
 def _to_time(hhmm: str) -> time:
@@ -70,34 +100,50 @@ def validate_placements(
     policy: SchedulingPolicy,
     free_busy: Sequence[FreeBusyInterval],
     tz: tzinfo,
-) -> list[PlacementConflict]:
-    """Re-validate a hand-adjusted set of placements; ``[]`` means all good.
+    completed_or_dropped_task_ids: Collection[str] = (),
+) -> PlacementReview:
+    """Re-validate a hand-adjusted set of placements (ADR-0008).
 
-    Enforces, with a typed ``reason_code`` per violation:
+    Returns a :class:`PlacementReview` splitting **hard conflicts** (which refuse
+    the move) from **non-blocking warnings** (surfaced, never blocking).
+
+    Hard rules — each a typed ``reason_code`` conflict:
 
     * no overlap with a fixed external event or another proposed block
       (``NO_VALID_CONTIGUOUS_BLOCK``);
     * within ``[no_events_before, no_events_after]`` and not on a disabled
       weekend (``OUTSIDE_ALLOWED_HOURS``);
     * a calendar day's total stays under ``max_daily_study_min``
-      (``DAILY_LOAD_EXCEEDED``);
-    * every task starts at or after each prerequisite's end
-      (``DEPENDENCY_BLOCKED``).
+      (``DAILY_LOAD_EXCEEDED``).
+
+    Advisory rule — a non-blocking warning, completion-relative:
+
+    * a task that starts before an **unfinished** prerequisite ends warns with
+      ``DEPENDENCY_ADVISORY``; a prerequisite in ``completed_or_dropped_task_ids``
+      never warns. The deterministic auto-placement scheduler keeps the hard
+      ``DEPENDENCY_BLOCKED`` rule — a manual override does not.
 
     Overlap and prerequisite checks are instant-based (timezone-independent);
-    the hour, weekday, and daily-load checks read each entry in the user's
-    local timezone ``tz`` so they are robust to however the stored datetime's
-    offset was normalized. Soft placement (deep-work windows, min break between
-    deep blocks) is intentionally not re-checked.
+    the hour, weekday, and daily-load checks read each entry in the user's local
+    timezone ``tz``. Soft placement (deep-work windows, min break between deep
+    blocks) is intentionally not re-checked.
     """
     conflicts: list[PlacementConflict] = []
-    seen: set[tuple[str, ReasonCode]] = set()
+    warnings: list[PlacementWarning] = []
+    seen_conflicts: set[tuple[str, ReasonCode]] = set()
+    seen_warnings: set[tuple[str, ReasonCode]] = set()
 
     def add(task_id: str, code: ReasonCode, detail: str) -> None:
         key = (task_id, code)
-        if key not in seen:
-            seen.add(key)
+        if key not in seen_conflicts:
+            seen_conflicts.add(key)
             conflicts.append(PlacementConflict(task_id, code, detail))
+
+    def warn(task_id: str, code: ReasonCode, detail: str) -> None:
+        key = (task_id, code)
+        if key not in seen_warnings:
+            seen_warnings.add(key)
+            warnings.append(PlacementWarning(task_id, code, detail))
 
     before = _to_time(policy.no_events_before)
     after = _to_time(policy.no_events_after)
@@ -165,18 +211,25 @@ def validate_placements(
                 f"{policy.max_daily_study_min}m daily cap",
             )
 
-    # 5. prerequisite order
+    # 5. prerequisite order — advisory + completion-relative (ADR-0008). A manual
+    #    override past an *unfinished* prerequisite warns (non-blocking); a
+    #    completed/dropped prerequisite is skipped. Auto-placement keeps the hard
+    #    DEPENDENCY_BLOCKED rule (the greedy scheduler), not this path.
+    done = set(completed_or_dropped_task_ids)
     end_by_task = {entry.task_id: entry.end for entry in entries}
     deps_by_task = {task.task_id: task.dependencies for task in plan.tasks}
     for entry in entries:
         for dependency in deps_by_task.get(entry.task_id, ()):
+            if dependency in done:
+                continue
             dependency_end = end_by_task.get(dependency)
             if dependency_end is not None and entry.start < dependency_end:
-                add(
+                warn(
                     entry.task_id,
-                    ReasonCode.DEPENDENCY_BLOCKED,
-                    f"{entry.task_id} starts before prerequisite {dependency} ends",
+                    ReasonCode.DEPENDENCY_ADVISORY,
+                    f"{entry.task_id} starts before unfinished prerequisite "
+                    f"{dependency} ends",
                 )
                 break
 
-    return conflicts
+    return PlacementReview(conflicts=conflicts, warnings=warnings)

@@ -113,6 +113,7 @@ from .results import (
     AccountabilityResult,
     AdjustResult,
     AdjustViolation,
+    AdjustWarning,
     ApproveResult,
     DraftView,
     IngestResult,
@@ -925,33 +926,36 @@ class CycleService:
             # Unknown task_id: the client tried to move a task not in the draft.
             raise CycleError(str(exc)) from exc
 
-        conflicts = validate_placements(
+        review = validate_placements(
             candidate.entries,
             plan=plan_version.plan,
             policy=policy_from_user_profile(onboarding.user_profile),
             free_busy=[FreeBusyInterval.model_validate(dict(fb)) for fb in free_busy],
             tz=tz,
+            completed_or_dropped_task_ids=self._completed_or_dropped_ids(user_id),
         )
-        if conflicts:
+        if review.conflicts:
             return AdjustResult(
                 run_id=run.run_id,
                 user_id=user_id,
                 state=run.state,
                 applied=False,
-                reason_code=conflicts[0].reason_code,
+                reason_code=review.conflicts[0].reason_code,
                 violations=[
                     AdjustViolation(
                         task_id=conflict.task_id,
                         reason_code=conflict.reason_code,
                         detail=conflict.detail,
                     )
-                    for conflict in conflicts
+                    for conflict in review.conflicts
                 ],
             )
 
         env.state.save_draft(user_id, candidate)
         # Pure artifact swap: the run stays in AWAITING_USER_APPROVAL (no
         # lifecycle transition) — only the pending draft it points at changes.
+        # An advisory (DEPENDENCY_ADVISORY) does not block: the move is applied
+        # and the heads-up rides in ``warnings`` (ADR-0008).
         run = self._save_run(run, draft_schedule_id=candidate.draft_schedule_id)
         return AdjustResult(
             run_id=run.run_id,
@@ -964,6 +968,14 @@ class CycleService:
             ),
             adjusted_task_ids=sorted(new_starts),
             scheduled_task_count=len(candidate.entries),
+            warnings=[
+                AdjustWarning(
+                    task_id=warning.task_id,
+                    reason_code=warning.reason_code,
+                    detail=warning.detail,
+                )
+                for warning in review.warnings
+            ],
         )
 
     # ------------------------------------------------------------------ #
@@ -1121,16 +1133,20 @@ class CycleService:
             else:
                 candidate_entries.append(entry)
 
-        conflicts = validate_placements(
+        review = validate_placements(
             candidate_entries,
             plan=active.plan,
             policy=policy_from_user_profile(onboarding.user_profile),
             free_busy=[FreeBusyInterval.model_validate(dict(fb)) for fb in free_busy],
             tz=onboarding.tzinfo(),
+            completed_or_dropped_task_ids=self._completed_or_dropped_ids(user_id),
         )
-        adopt = bool(moved) and not conflicts
-        conflict_code = {c.task_id: c.reason_code for c in conflicts}
-        fallback_code = conflicts[0].reason_code if conflicts else None
+        # Advisory ordering (DEPENDENCY_ADVISORY) does NOT block adoption (ADR-0008);
+        # only a hard conflict rejects an external move.
+        adopt = bool(moved) and not review.conflicts
+        conflict_code = {c.task_id: c.reason_code for c in review.conflicts}
+        fallback_code = review.conflicts[0].reason_code if review.conflicts else None
+        advisory_code = {w.task_id: w.reason_code for w in review.warnings}
 
         deltas: list[CalendarEventDelta] = []
         for task_id, (kind, seen_start, seen_end) in sorted(change_by_task.items()):
@@ -1151,6 +1167,9 @@ class CycleService:
                         new_end=seen_end,
                     )
                     disposition = ReconciliationDisposition.ADOPTED
+                    # An adopted move past an unfinished prerequisite carries a
+                    # DEPENDENCY_ADVISORY heads-up (ADR-0008); otherwise null.
+                    code = advisory_code.get(task_id)
                 else:
                     env.mapping_store.record_external_edit(mapping.run_id, task_id, now=now)
                     disposition = ReconciliationDisposition.REJECTED

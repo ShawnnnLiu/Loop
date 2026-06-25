@@ -92,6 +92,7 @@ from agentic_calendar.llm_nodes.user_facing_explanation import (
 )
 from agentic_calendar.planning.plan_version import LifecycleState
 from agentic_calendar.scheduler import schedule
+from agentic_calendar.scheduler.adjustment import DraftAdjustment
 from agentic_calendar.scheduler.inputs import SchedulerInput
 from agentic_calendar.supervisor.state import SupervisorState as S
 from tests._fixture_loader import iter_valid
@@ -1617,3 +1618,91 @@ def test_ingest_mirrors_completion_into_disposition_store_idempotently() -> None
         if r.disposition is TaskDispositionType.COMPLETED
     ]
     assert len(again) == 1
+
+
+# --------------------------------------------------------------------------- #
+# Advisory manual ordering (Phase D): drag-to-adjust + reconcile + write path
+# --------------------------------------------------------------------------- #
+
+
+def _advisory_new_start(env: AppEnvironment, draft_schedule_id: str) -> datetime:
+    """A start for dp_002 placed back-to-back BEFORE its prerequisite dp_001.
+
+    dp_001 lands Mon 18:00 (deep window, after the noon horizon), so
+    ``dp_001.start - 90m`` = Mon 16:30: in allowed hours, no overlap, Mon load
+    60+90=150 < 180. The only fault is ordering -> a DEPENDENCY_ADVISORY warning.
+    """
+    draft = env.state.get_draft(draft_schedule_id)
+    assert draft is not None
+    dp1 = next(e for e in draft.entries if e.task_id == "dp_001")
+    dp2 = next(e for e in draft.entries if e.task_id == "dp_002")
+    return dp1.start - (dp2.end - dp2.start)
+
+
+def test_adjust_move_before_unfinished_prereq_is_advisory_not_blocked() -> None:
+    service, env, _clock = make_service()
+    proposed = service.propose(USER_ID)
+    assert proposed.state is S.AWAITING_USER_APPROVAL
+    new_start = _advisory_new_start(env, proposed.draft_schedule_id)
+
+    result = service.adjust(USER_ID, [DraftAdjustment(task_id="dp_002", start=new_start)])
+
+    assert result.applied is True
+    assert result.reason_code is None
+    assert [w.reason_code for w in result.warnings] == [ReasonCode.DEPENDENCY_ADVISORY]
+    assert result.warnings[0].task_id == "dp_002"
+    assert result.draft_schedule_id is not None
+
+
+def test_adjust_move_before_completed_prereq_has_no_warning() -> None:
+    service, env, _clock = make_service()
+    proposed = service.propose(USER_ID)
+    # dp_001 completed -> the projection makes the ordering check completion-relative.
+    env.disposition_store.append(_completed_disposition("dp_001"))
+    new_start = _advisory_new_start(env, proposed.draft_schedule_id)
+
+    result = service.adjust(USER_ID, [DraftAdjustment(task_id="dp_002", start=new_start)])
+
+    assert result.applied is True
+    assert result.warnings == []
+
+
+def test_advisory_drag_then_approve_and_write_succeeds() -> None:
+    """D4: the approved draft's write recheck is hash-only (axiom 06) — it never
+    re-runs placement validation, so an advisory-adjusted draft writes cleanly."""
+    service, env, _clock = make_service()
+    proposed = service.propose(USER_ID)
+    new_start = _advisory_new_start(env, proposed.draft_schedule_id)
+    adjusted = service.adjust(USER_ID, [DraftAdjustment(task_id="dp_002", start=new_start)])
+    assert adjusted.applied is True
+    assert [w.reason_code for w in adjusted.warnings] == [ReasonCode.DEPENDENCY_ADVISORY]
+
+    service.approve(USER_ID)
+    written = service.write(USER_ID)
+    assert written.state is S.ACTIVE_PLAN
+    assert written.reason_code is None
+
+
+def test_reconcile_adopts_move_before_unfinished_prereq_with_advisory() -> None:
+    service, _env, adapter = _reconcilable()
+    events = _events_by_task(adapter)
+    dp1 = events["dp_001"]
+    dp2 = events["dp_002"]
+    duration = dp2.scheduled_end - dp2.scheduled_start
+    # Move dp_002 back-to-back BEFORE its (unfinished) prerequisite dp_001:
+    # in-hours, no overlap, but now starts before dp_001 ends -> adopted with
+    # a DEPENDENCY_ADVISORY heads-up, NOT rejected (ADR-0008).
+    adapter.simulate_external_move(
+        dp2.calendar_event_id,
+        scheduled_start=dp1.scheduled_start - duration,
+        scheduled_end=dp1.scheduled_start,
+    )
+
+    result = service.reconcile(
+        USER_ID, target_calendar_id=DEFAULT_TARGET_CALENDAR_ID, enabled=True
+    )
+
+    assert result.outcome is ReconciliationOutcome.ADOPTED
+    delta = {d.task_id: d for d in result.deltas}["dp_002"]
+    assert delta.disposition is ReconciliationDisposition.ADOPTED
+    assert delta.reason_code is ReasonCode.DEPENDENCY_ADVISORY

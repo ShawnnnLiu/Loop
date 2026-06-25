@@ -8,6 +8,7 @@ hour/weekday checks read the user's local timezone.
 
 from __future__ import annotations
 
+from collections.abc import Collection
 from datetime import UTC, datetime, timedelta, tzinfo
 from zoneinfo import ZoneInfo
 
@@ -20,6 +21,7 @@ from agentic_calendar.contracts.reason_codes import ReasonCode
 from agentic_calendar.contracts.task_plan import Task, TaskPlan
 from agentic_calendar.scheduler.adjustment import (
     DraftAdjustment,
+    PlacementReview,
     validate_placements,
 )
 from agentic_calendar.scheduler.inputs import FreeBusyInterval
@@ -74,6 +76,25 @@ def _plan(deps: dict[str, list[str]]) -> TaskPlan:
     )
 
 
+def _review(
+    entries: list[DraftScheduleEntry],
+    *,
+    plan: TaskPlan | None = None,
+    policy: SchedulingPolicy | None = None,
+    free_busy: list[FreeBusyInterval] | None = None,
+    tz: tzinfo = UTC,
+    completed_or_dropped: Collection[str] = (),
+) -> PlacementReview:
+    return validate_placements(
+        entries,
+        plan=plan or _plan({e.task_id: [] for e in entries}),
+        policy=policy or _policy(),
+        free_busy=free_busy or [],
+        tz=tz,
+        completed_or_dropped_task_ids=completed_or_dropped,
+    )
+
+
 def _validate(
     entries: list[DraftScheduleEntry],
     *,
@@ -82,14 +103,8 @@ def _validate(
     free_busy: list[FreeBusyInterval] | None = None,
     tz: tzinfo = UTC,
 ) -> list[ReasonCode]:
-    conflicts = validate_placements(
-        entries,
-        plan=plan or _plan({e.task_id: [] for e in entries}),
-        policy=policy or _policy(),
-        free_busy=free_busy or [],
-        tz=tz,
-    )
-    return [c.reason_code for c in conflicts]
+    review = _review(entries, plan=plan, policy=policy, free_busy=free_busy, tz=tz)
+    return [c.reason_code for c in review.conflicts]
 
 
 # --------------------------------------------------------------------------- #
@@ -168,28 +183,60 @@ def test_daily_load_exceeded_rejected() -> None:
 
 
 # --------------------------------------------------------------------------- #
-# prerequisite order -> DEPENDENCY_BLOCKED
+# prerequisite order -> advisory (DEPENDENCY_ADVISORY), completion-relative
 # --------------------------------------------------------------------------- #
 
 
-def test_prerequisite_order_violation_rejected() -> None:
+def test_prerequisite_order_violation_warns_not_blocks() -> None:
     plan = _plan({"dp_001": [], "dp_002": ["dp_001"]})
     # dp_002 placed entirely before its prerequisite dp_001 (no overlap, so the
-    # only fault is the ordering).
+    # only fault is the ordering) -> advisory warning, NOT a refusal (ADR-0008).
     entries = [
         _entry("dp_001", _at(MON, 18), 60),  # ends 19:00
         _entry("dp_002", _at(MON, 9), 90),  # starts 09:00 < 19:00
     ]
-    assert _validate(entries, plan=plan) == [ReasonCode.DEPENDENCY_BLOCKED]
+    review = _review(entries, plan=plan)
+    assert review.conflicts == []
+    assert [w.reason_code for w in review.warnings] == [ReasonCode.DEPENDENCY_ADVISORY]
+    assert review.warnings[0].task_id == "dp_002"
 
 
-def test_prerequisite_order_satisfied_passes() -> None:
+def test_prerequisite_order_satisfied_no_warning() -> None:
     plan = _plan({"dp_001": [], "dp_002": ["dp_001"]})
     entries = [
         _entry("dp_001", _at(MON, 18), 60),  # ends 19:00
         _entry("dp_002", _at(MON, 19, 30), 90),  # starts after 19:00
     ]
-    assert _validate(entries, plan=plan) == []
+    review = _review(entries, plan=plan)
+    assert review.conflicts == []
+    assert review.warnings == []
+
+
+def test_completed_or_dropped_prerequisite_suppresses_warning() -> None:
+    plan = _plan({"dp_001": [], "dp_002": ["dp_001"]})
+    entries = [
+        _entry("dp_001", _at(MON, 18), 60),
+        _entry("dp_002", _at(MON, 9), 90),  # before dp_001, but dp_001 is done
+    ]
+    review = _review(entries, plan=plan, completed_or_dropped={"dp_001"})
+    assert review.conflicts == []
+    assert review.warnings == []  # a completed/dropped prerequisite never warns
+
+
+def test_hard_conflict_and_advisory_coexist() -> None:
+    # dp_002 starts before its prerequisite dp_001 (advisory) AND overlaps a
+    # fixed event (hard). The hard conflict still blocks; the advisory surfaces.
+    plan = _plan({"dp_001": [], "dp_002": ["dp_001"]})
+    entries = [
+        _entry("dp_001", _at(MON, 18), 60),  # ends 19:00
+        _entry("dp_002", _at(MON, 9), 90),  # 09:00-10:30, before dp_001
+    ]
+    busy = [FreeBusyInterval(start=_at(MON, 9, 30), end=_at(MON, 10, 30))]
+    review = _review(entries, plan=plan, free_busy=busy)
+    assert [c.reason_code for c in review.conflicts] == [
+        ReasonCode.NO_VALID_CONTIGUOUS_BLOCK
+    ]
+    assert [w.reason_code for w in review.warnings] == [ReasonCode.DEPENDENCY_ADVISORY]
 
 
 # --------------------------------------------------------------------------- #

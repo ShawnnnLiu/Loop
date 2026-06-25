@@ -12,10 +12,12 @@ adapter and reuse the scheduler's placement validator, both sibling regions).
 
 Framing invariants enforced here (the spec's "Invariants" section):
 
-* An ``adopted`` delta carries a ``null`` ``reason_code`` — adoption means the
-  placement validated — and is only a ``moved`` or ``resized`` change.
-* A ``rejected`` delta carries one of the four drag-to-adjust placement codes
-  (the same vocabulary a UI move is refused with), never an unrelated code.
+* An ``adopted`` delta carries a ``null`` ``reason_code``, or
+  ``DEPENDENCY_ADVISORY`` when the adopted move now precedes an unfinished
+  prerequisite (ADR-0008) — and is only a ``moved`` or ``resized`` change.
+* A ``rejected`` delta carries one of the drag-to-adjust **hard** placement
+  codes (the same vocabulary a UI move is refused with), never an unrelated
+  code; prerequisite ordering is advisory and never rejects.
 * A ``deleted`` change is always ``flagged_deleted`` with the
   ``EXTERNAL_EVENT_DELETED`` code and ``null`` observed times (the event is
   gone); the MVP never silently re-creates or cancels it.
@@ -76,15 +78,16 @@ class ReconciliationOutcome(StrEnum):
     """Some edits adopted, some flagged."""
 
 
-#: A rejected reconciliation delta must carry one of the four drag-to-adjust
-#: placement codes (``scheduler/adjustment.py``) — a calendar move is refused
-#: for the same reasons a UI move is, so the vocabulary is shared.
+#: A rejected reconciliation delta must carry one of the drag-to-adjust **hard**
+#: placement codes (``scheduler/adjustment.py``) — a calendar move is refused for
+#: the same reasons a UI move is, so the vocabulary is shared. Prerequisite
+#: ordering is no longer here: it is advisory (``DEPENDENCY_ADVISORY``) and never
+#: rejects an external move (ADR-0008).
 ADJUSTMENT_REASON_CODES: frozenset[ReasonCode] = frozenset(
     {
         ReasonCode.NO_VALID_CONTIGUOUS_BLOCK,
         ReasonCode.OUTSIDE_ALLOWED_HOURS,
         ReasonCode.DAILY_LOAD_EXCEEDED,
-        ReasonCode.DEPENDENCY_BLOCKED,
     }
 )
 
@@ -154,10 +157,10 @@ class CalendarEventDelta(BaseModel):
                         "a null reason_code"
                     )
             case ReconciliationDisposition.ADOPTED:
-                if self.reason_code is not None:
+                if self.reason_code not in (None, ReasonCode.DEPENDENCY_ADVISORY):
                     raise ValueError(
-                        "an adopted reconciliation delta must have a null reason_code "
-                        "(adoption means the placement validated)"
+                        "an adopted reconciliation delta may carry only a null "
+                        "reason_code or DEPENDENCY_ADVISORY (ADR-0008)"
                     )
                 if self.change_type not in (
                     CalendarEditType.MOVED,

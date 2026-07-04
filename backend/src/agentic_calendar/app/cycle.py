@@ -100,6 +100,11 @@ from agentic_calendar.drift.classifier import (
 )
 from agentic_calendar.duration_estimation.pooled import resolve_effective_multipliers
 from agentic_calendar.llm_nodes.base import LLMNodeError
+from agentic_calendar.llm_nodes.prose_attachment import (
+    ProseAttachmentKind,
+    ProseAttachmentRecord,
+)
+from agentic_calendar.llm_nodes.reflection_summary import ReflectionSummary
 from agentic_calendar.llm_nodes.user_facing_explanation import UserExplanation
 from agentic_calendar.planning.drop import DropError, propose_dropped_plan
 from agentic_calendar.planning.plan_version import (
@@ -872,6 +877,34 @@ class CycleService:
         reason = getattr(exc, "reason_code", None) or ReasonCode.LLM_CALL_FAILED
         return self._transition(run, Sig.UNRECOVERABLE_ERROR, reason_code=reason)
 
+    def _persist_prose(
+        self,
+        run: RunRecord,
+        kind: ProseAttachmentKind,
+        *,
+        summary: str,
+        detail: Sequence[str],
+    ) -> None:
+        """Make user-facing prose durable (spec: prose-attachment).
+
+        Display + advisory-context data only — the run record's typed fields
+        stay the control plane; this copy exists so a user returning to a
+        parked run can read what the product already told them."""
+        env = self._env
+        env.prose_store.append(
+            ProseAttachmentRecord(
+                prose_attachment_id=env.id_generator.new_id("prose"),
+                user_id=run.user_id,
+                run_id=run.run_id,
+                plan_version=run.plan_version,
+                kind=kind,
+                summary=summary,
+                detail=tuple(detail),
+                reason_code=run.reason_code,
+                created_at=env.clock.now(),
+            )
+        )
+
     def _propose_failure(
         self,
         run: RunRecord,
@@ -880,6 +913,15 @@ class CycleService:
         explanation: UserExplanation | None = None,
         output: SchedulerOutput | None = None,
     ) -> ProposeResult:
+        if explanation is not None:
+            # By this point the terminal transition already stamped the run's
+            # typed reason_code — the persisted copy carries it for display.
+            self._persist_prose(
+                run,
+                ProseAttachmentKind.EXPLANATION,
+                summary=explanation.summary,
+                detail=explanation.detail,
+            )
         return ProposeResult(
             run_id=run.run_id,
             user_id=run.user_id,
@@ -1864,6 +1906,17 @@ class CycleService:
             else:
                 run = self._transition(run, Sig.REPLAN_NOT_REQUIRED)
 
+        if reflection is not None:
+            # Persist AFTER the transitions so the copy carries the run's
+            # final typed reason_code. Durable memory: the Week banner and the
+            # reflection history read this back; the sentence the product
+            # already wrote is no longer discarded with the response.
+            self._persist_prose(
+                run,
+                ProseAttachmentKind.REFLECTION,
+                summary=reflection.summary,
+                detail=reflection.detail,
+            )
         return IngestResult(
             **base_fields,
             run_id=run.run_id,
@@ -2288,6 +2341,31 @@ class CycleService:
                     mapping_status[task.task_id] = (
                         task_mappings[-1].calendar_write_status.value
                     )
+        # Reason-aware resume (B5): a parked run surfaces the prose the
+        # product already generated for it, so returning users see WHY —
+        # not a bare reason code. Read-only; the prose store is never
+        # consulted for routing.
+        explanation: UserExplanation | None = None
+        reflection: ReflectionSummary | None = None
+        if run is not None and run.state in (
+            S.ERROR_REQUIRES_USER,
+            S.CALENDAR_WRITE_FAILED_STATE,
+        ):
+            record = env.prose_store.latest_for_run(
+                run.run_id, kind=ProseAttachmentKind.EXPLANATION
+            )
+            if record is not None:
+                explanation = UserExplanation(
+                    summary=record.summary, detail=list(record.detail)
+                )
+        if run is not None and run.state in (S.REPLAN_REQUIRED, S.DRIFT_DETECTED):
+            record = env.prose_store.latest_for_run(
+                run.run_id, kind=ProseAttachmentKind.REFLECTION
+            )
+            if record is not None:
+                reflection = ReflectionSummary(
+                    summary=record.summary, detail=list(record.detail)
+                )
         return StatusResult(
             user_id=user_id,
             onboarded=onboarding is not None,
@@ -2308,6 +2386,8 @@ class CycleService:
                 and run.replan_kind is ReplanKind.RECOVERY
                 and run.recovery_mode is None
             ),
+            explanation=explanation,
+            reflection=reflection,
             mapping_status_by_task=mapping_status,
             telemetry_event_count=len(env.telemetry_store.all()),
             nudge_count=len(env.nudge_store.list_for_user(user_id)),

@@ -97,6 +97,13 @@ export interface Violation {
   details: Record<string, unknown>
 }
 
+/** LLM prose attachment (reflection / explanation): display copy, never
+ *  control-plane — the typed reason_code stays the contract. */
+export interface ProseSummary {
+  summary: string
+  detail: string[]
+}
+
 /** Subset of ProposeResult the generation screen reads. A *workflow* failure
  *  arrives here as a 200 with `reason_code` set (not an ApiError). */
 export interface ProposeResult {
@@ -107,7 +114,7 @@ export interface ProposeResult {
   draft_payload_hash: string | null
   scheduled_task_count: number
   violations: Violation[]
-  explanation: Record<string, unknown> | null
+  explanation: ProseSummary | null
 }
 
 /** Subset of StatusResult the UI reads; the endpoint returns more fields. */
@@ -127,6 +134,11 @@ export interface StatusResult {
    *  says ask_each_time): propose 409s until the client supplies a mode, so
    *  the Week screen renders the picker instead of a bare CTA. */
   recovery_mode_pending_user_choice: boolean
+  /** Persisted prose for a run parked in a failure state — what the product
+   *  already told the user about WHY (B5 reason-aware resume). */
+  explanation: ProseSummary | null
+  /** Persisted drift reflection for a parked replan (Week banner disclosure). */
+  reflection: ProseSummary | null
 }
 
 export interface DraftScheduleEntry {

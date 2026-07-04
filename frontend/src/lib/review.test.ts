@@ -7,6 +7,7 @@ import {
   replanReason,
   reviewBanner,
   reviewMode,
+  setupDeepLink,
 } from './review'
 
 function status(
@@ -26,6 +27,8 @@ function status(
     replan_kind: null,
     recovery_mode: null,
     recovery_mode_pending_user_choice: false,
+    explanation: null,
+    reflection: null,
     ...over,
   }
 }
@@ -117,6 +120,25 @@ describe('RECOVERY_OPTIONS', () => {
       'scope_reduction',
       'extend_timeline',
     ])
+  })
+})
+
+describe('setupDeepLink', () => {
+  it('time-setup failures land on the Time & constraints step', () => {
+    for (const code of [
+      'INSUFFICIENT_WEEKLY_CAPACITY',
+      'USER_FIT_VIOLATED',
+      'NO_VALID_CONTIGUOUS_BLOCK',
+      'DAILY_LOAD_EXCEEDED',
+      'COVERAGE_INCOMPLETE',
+    ]) {
+      expect(setupDeepLink(code)).toBe('/onboarding?step=1')
+    }
+  })
+
+  it('everything else starts at the top of the form', () => {
+    expect(setupDeepLink('LLM_REFUSAL')).toBe('/onboarding')
+    expect(setupDeepLink(null)).toBe('/onboarding')
   })
 })
 

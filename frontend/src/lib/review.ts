@@ -89,6 +89,22 @@ export const RECOVERY_OPTIONS: RecoveryOption[] = [
   },
 ]
 
+/** Reason-aware setup deep link (B5): failures caused by the user's time
+ *  setup land directly on the "Time & constraints" onboarding step instead of
+ *  the top of the form. Anything else starts at the beginning. */
+export function setupDeepLink(reasonCode: string | null | undefined): string {
+  switch (reasonCode) {
+    case 'INSUFFICIENT_WEEKLY_CAPACITY':
+    case 'USER_FIT_VIOLATED':
+    case 'NO_VALID_CONTIGUOUS_BLOCK':
+    case 'DAILY_LOAD_EXCEEDED':
+    case 'COVERAGE_INCOMPLETE':
+      return '/onboarding?step=1'
+    default:
+      return '/onboarding'
+  }
+}
+
 /** The "needs attention" chip for Today (and anywhere else the user lives):
  *  a parked run should be visible without visiting the Week screen. Returns
  *  null for every healthy/transient state. */

@@ -352,6 +352,23 @@ export function ScheduleReviewScreen() {
             <div className="muted" style={{ fontSize: 13, marginTop: 2 }}>
               {banner.sub}
             </div>
+            {mode === 'replan' && status?.reflection && (
+              // The persisted reflection prose (advisory, never control-plane):
+              // one line + a quiet disclosure, per the "friendly but not noisy"
+              // banner recommendation.
+              <details style={{ marginTop: 6 }}>
+                <summary className="muted" style={{ fontSize: 12.5, cursor: 'pointer' }}>
+                  Why? {status.reflection.summary}
+                </summary>
+                {status.reflection.detail.length > 0 && (
+                  <ul className="fit-specifics" style={{ marginTop: 4 }}>
+                    {status.reflection.detail.map((line) => (
+                      <li key={line}>{line}</li>
+                    ))}
+                  </ul>
+                )}
+              </details>
+            )}
           </div>
         )}
         {weeks.length > 1 && (

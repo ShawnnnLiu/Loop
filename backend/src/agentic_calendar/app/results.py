@@ -261,6 +261,12 @@ class StatusResult(BaseModel):
     recovery mode resolved (motivation profile says ask_each_time): ``propose``
     will 409 until the client supplies one. The SPA renders the mode picker
     from this flag."""
+    explanation: UserExplanation | None = None
+    """Persisted prose for a run parked in a failure state — what the product
+    already told the user about WHY. Display attachment; never control-plane."""
+    reflection: ReflectionSummary | None = None
+    """Persisted drift reflection for a parked replan (the Week banner's
+    disclosure). Display attachment; never control-plane."""
     mapping_status_by_task: dict[str, str] = Field(default_factory=dict)
     telemetry_event_count: int = 0
     nudge_count: int = 0

@@ -91,8 +91,13 @@ from agentic_calendar.identity.store import (
     InMemoryGoogleCredentialStore,
 )
 from agentic_calendar.llm_nodes.call_log import InMemoryLlmCallLogStore, LlmCallLogStore
+from agentic_calendar.llm_nodes.prose_attachment import (
+    InMemoryProseAttachmentStore,
+    ProseAttachmentStore,
+)
 from agentic_calendar.llm_nodes.reflection_summary import ReflectionSummary
 from agentic_calendar.llm_nodes.sqlite_call_log import SqliteLlmCallLogStore
+from agentic_calendar.llm_nodes.sqlite_prose_store import SqliteProseAttachmentStore
 from agentic_calendar.llm_nodes.user_facing_explanation import UserExplanation
 from agentic_calendar.planning.sqlite_store import SqlitePlanVersionStore
 from agentic_calendar.planning.store import InMemoryPlanVersionStore, PlanVersionStore
@@ -218,6 +223,7 @@ class AppEnvironment:
     recommitment_store: RecommitmentStore
     sponsor_store: SponsorStore
     call_log_store: LlmCallLogStore
+    prose_store: ProseAttachmentStore
     claim_store: SourceClaimStore
     credential_store: GoogleCredentialStore
     threshold_log_store: ThresholdChangeLogStore
@@ -274,6 +280,7 @@ def build_environment(
         recommitment_store: RecommitmentStore = InMemoryRecommitmentStore()
         sponsor_store: SponsorStore = InMemorySponsorStore(clock)
         call_log_store: LlmCallLogStore = InMemoryLlmCallLogStore()
+        prose_store: ProseAttachmentStore = InMemoryProseAttachmentStore()
         claim_store: SourceClaimStore = InMemorySourceClaimStore()
         credential_store: GoogleCredentialStore = InMemoryGoogleCredentialStore()
         threshold_log_store: ThresholdChangeLogStore = (
@@ -295,6 +302,7 @@ def build_environment(
         recommitment_store = SqliteRecommitmentStore(db)
         sponsor_store = SqliteSponsorStore(db, clock)
         call_log_store = SqliteLlmCallLogStore(db)
+        prose_store = SqliteProseAttachmentStore(db)
         claim_store = SqliteSourceClaimStore(db)
         credential_store = SqliteGoogleCredentialStore(db)
         threshold_log_store = SqliteThresholdChangeLogStore(db)
@@ -341,6 +349,7 @@ def build_environment(
         recommitment_store=recommitment_store,
         sponsor_store=sponsor_store,
         call_log_store=call_log_store,
+        prose_store=prose_store,
         claim_store=claim_store,
         credential_store=credential_store,
         threshold_log_store=threshold_log_store,

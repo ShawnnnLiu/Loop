@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 
 import { ApiError, api, errorMessage } from '../api/client'
 import type { ExperienceLevel, MeResult, OnboardPayload, Weekday } from '../api/types'
@@ -197,7 +197,15 @@ function ConfigRow({
 
 export function OnboardingScreen({ me }: { me: MeResult }) {
   const navigate = useNavigate()
-  const [step, setStep] = useState(0)
+  // Reason-aware deep link (B5): a capacity/fit failure sends the user
+  // straight to the step that caused it — /onboarding?step=1 opens
+  // "Time & constraints" instead of restarting the whole form.
+  const [searchParams] = useSearchParams()
+  const [step, setStep] = useState(() => {
+    const requested = Number.parseInt(searchParams.get('step') ?? '0', 10)
+    if (Number.isNaN(requested)) return 0
+    return Math.min(Math.max(requested, 0), STEP_LABELS.length - 1)
+  })
   const [form, setForm] = useState<FormState>(() => initialForm(me))
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)

@@ -79,6 +79,8 @@ def test_every_contract_registered() -> None:
         "calendar_reconciliation",
         # Loop: completion / drop memory
         "task_disposition",
+        # UX pass B5: durable reflections / explanations
+        "prose_attachment",
     }
     assert set(CONTRACTS.keys()) == expected
 

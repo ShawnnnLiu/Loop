@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 
 import { ApiError, api, errorMessage } from '../api/client'
-import type { ThresholdsResult } from '../api/types'
+import type { MeResult, ThresholdsResult } from '../api/types'
 import { fmtWhen } from '../lib/datetime'
 
 // Thresholds: a read-only mirror of the effective deterministic tuning the
@@ -18,14 +18,23 @@ function fmtValue(value: number | boolean): string {
 
 export function ThresholdsScreen() {
   const [result, setResult] = useState<ThresholdsResult | null>(null)
+  const [me, setMe] = useState<MeResult | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [syncing, setSyncing] = useState(false)
+  const [syncError, setSyncError] = useState<string | null>(null)
 
   useEffect(() => {
     let active = true
-    api
-      .thresholds()
-      .then((r) => active && (setResult(r), setLoading(false)))
+    // The thresholds are read-only tuning; `me` carries the one writable knob on
+    // this screen — the inbound-calendar-sync opt-in.
+    Promise.all([api.thresholds(), api.me()])
+      .then(([r, m]) => {
+        if (!active) return
+        setResult(r)
+        setMe(m)
+        setLoading(false)
+      })
       .catch((err: unknown) => {
         if (err instanceof ApiError && err.status === 401) return
         if (active) {
@@ -37,6 +46,24 @@ export function ThresholdsScreen() {
       active = false
     }
   }, [])
+
+  // Flip the opt-in and re-render from the refreshed me the server returns —
+  // server is the source of truth, never an optimistic local guess.
+  async function toggleSync() {
+    if (!me || syncing) return
+    setSyncing(true)
+    setSyncError(null)
+    try {
+      const refreshed = await api.setCalendarSync(!me.inbound_calendar_sync_enabled)
+      setMe(refreshed)
+    } catch (err) {
+      if (!(err instanceof ApiError && err.status === 401)) {
+        setSyncError(errorMessage(err))
+      }
+    } finally {
+      setSyncing(false)
+    }
+  }
 
   if (loading) return <div className="screen-center muted">Loading thresholds…</div>
   if (error) return <div className="screen-center">Couldn’t load thresholds — {error}</div>
@@ -51,11 +78,45 @@ export function ThresholdsScreen() {
         Thresholds
       </h1>
       <p className="muted" style={{ marginTop: 6, maxWidth: 640 }}>
-        The effective deterministic tuning the system serves from, and every change to it. This page
-        is <b>read-only</b>: tuning values change only via <span className="mono">tuning.toml</span>,
-        which journals each effective change here (axiom 07). All values are heuristic priors pending
-        calibration.
+        The effective deterministic tuning the system serves from, and every change to it. The
+        tuning values below are <b>read-only</b>: they change only via{' '}
+        <span className="mono">tuning.toml</span>, which journals each effective change here (axiom
+        07). All values are heuristic priors pending calibration.
       </p>
+
+      {me && (
+        <div className="card" style={{ marginTop: 18, padding: '6px 18px' }}>
+          <div className="label" style={{ padding: '12px 0 4px' }}>
+            Calendar sync
+          </div>
+          <div className="cfg-row">
+            <div>
+              <div className="cl">Adopt my Google Calendar edits</div>
+              <div className="cs" style={{ maxWidth: 560 }}>
+                When on, Loop checks the events it created on your calendar and updates your plan to
+                match any you moved or resized — but only when the new time still fits your plan. It
+                only ever reads its own events and never changes your calendar. Off by default.
+              </div>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={me.inbound_calendar_sync_enabled}
+              aria-label="Adopt my Google Calendar edits"
+              className={`switch${me.inbound_calendar_sync_enabled ? ' on' : ''}`}
+              disabled={syncing}
+              onClick={() => void toggleSync()}
+            >
+              <span className="knob" />
+            </button>
+          </div>
+          {syncError && (
+            <div className="banner-error" style={{ margin: '0 0 12px' }}>
+              Couldn’t update the setting — {syncError}
+            </div>
+          )}
+        </div>
+      )}
 
       {sections.map((section) => (
         <div key={section.name} className="card" style={{ marginTop: 16, padding: '6px 18px' }}>

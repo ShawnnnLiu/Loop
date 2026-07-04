@@ -2,6 +2,7 @@ import type {
   AccountabilityResult,
   AdjustResult,
   ApproveResult,
+  CalendarReconciliationResult,
   CheckinResult,
   DraftAdjustment,
   DraftView,
@@ -88,6 +89,14 @@ export const api = {
   // Check-in (F-G): completion telemetry, guarded server-side (due + idempotent).
   checkin: (taskId: string, outcome: 'complete' | 'missed') =>
     request<CheckinResult>('POST', '/checkin', { task_id: taskId, outcome }),
+  // Inbound calendar reconciliation (R-e). `setCalendarSync` flips the opt-in and
+  // returns the refreshed me projection. `reconcile` is an on-demand, read-only
+  // pull that adopts the user's valid edits to Loop's events; it 409s when no
+  // plan is active and returns `sync_disabled` when the opt-in is off, so the
+  // Week screen only calls it for an active plan with the opt-in on.
+  setCalendarSync: (enabled: boolean) =>
+    request<MeResult>('POST', '/calendar-sync', { enabled }),
+  reconcile: () => request<CalendarReconciliationResult>('POST', '/reconcile', {}),
 }
 
 /** Best-effort human message out of an ApiError body (the ValidationError

@@ -73,6 +73,10 @@ export interface MeResult {
   timezone: string | null
   email: string | null
   profile: UserProfile | null
+  /** Opt-in to inbound calendar reconciliation (adopt the user's own edits to
+   *  Loop's events). Off by default — axiom 06 keeps the in-app schedule the
+   *  system of record, so treating an external edit as authoritative is opt-in. */
+  inbound_calendar_sync_enabled: boolean
 }
 
 /** The SPA never supplies free/busy — the server fetches it (hosted) since it
@@ -168,6 +172,49 @@ export interface AdjustResult {
   adjusted_task_ids: string[]
   scheduled_task_count: number
   violations: AdjustViolation[]
+}
+
+// Inbound calendar reconciliation (mirror of
+// contracts/calendar_reconciliation.py). The engine detects the user's own
+// edits to Loop's events on their Google Calendar (move / resize / delete) and
+// ADOPTS valid edits into a fresh draft of the same plan version — read-only
+// against the calendar, it never writes back. Off unless opted in (axiom 06).
+export type CalendarEditType = 'unchanged' | 'moved' | 'resized' | 'deleted'
+export type ReconciliationDisposition = 'unchanged' | 'adopted' | 'rejected' | 'flagged_deleted'
+export type ReconciliationOutcome =
+  | 'sync_disabled'
+  | 'deferred'
+  | 'no_change'
+  | 'adopted'
+  | 'flagged'
+  | 'mixed'
+
+/** One mapped task's recorded-vs-observed difference and what the deterministic
+ *  service did with it. `reason_code` is null for adopted/unchanged, one of the
+ *  drag-to-adjust placement codes for `rejected`, and `EXTERNAL_EVENT_DELETED`
+ *  for `flagged_deleted` (observed_* are null when the event was deleted). */
+export interface CalendarEventDelta {
+  task_id: string
+  calendar_event_id: string | null
+  change_type: CalendarEditType
+  recorded_start: string
+  recorded_end: string
+  observed_start: string | null
+  observed_end: string | null
+  disposition: ReconciliationDisposition
+  reason_code: ReasonCode | null
+}
+
+export interface CalendarReconciliationResult {
+  run_id: string
+  plan_version: string
+  reconciled_at: string
+  target_calendar_id: string
+  outcome: ReconciliationOutcome
+  /** Non-null iff the outcome adopted ≥1 move (`adopted` / `mixed`) — the new
+   *  draft to refetch so the Week grid shows the adopted times. */
+  adopted_draft_schedule_id: string | null
+  deltas: CalendarEventDelta[]
 }
 
 export interface TodayTask {

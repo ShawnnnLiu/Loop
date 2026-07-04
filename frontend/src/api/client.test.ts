@@ -72,6 +72,40 @@ describe('api client request handling', () => {
     })
     expect(onUnauthenticated).not.toHaveBeenCalled()
   })
+
+  it('setCalendarSync posts the opt-in flag and reads back the refreshed me', async () => {
+    const fetchMock = vi.fn(async () =>
+      jsonResponse(200, { user_id: 'u_1', onboarded: true, inbound_calendar_sync_enabled: true }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    const me = await api.setCalendarSync(true)
+
+    expect(me.inbound_calendar_sync_enabled).toBe(true)
+    expect(fetchMock).toHaveBeenCalledWith('/api/calendar-sync', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled: true }),
+    })
+  })
+
+  it('reconcile posts an empty body and returns the typed reconciliation result', async () => {
+    const fetchMock = vi.fn(async () =>
+      jsonResponse(200, { run_id: 'run_1', outcome: 'sync_disabled', deltas: [] }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await api.reconcile()
+
+    expect(result.outcome).toBe('sync_disabled')
+    expect(fetchMock).toHaveBeenCalledWith('/api/reconcile', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    })
+  })
 })
 
 describe('errorMessage', () => {

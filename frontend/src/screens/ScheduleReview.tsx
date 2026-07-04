@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { ApiError, api, errorMessage } from '../api/client'
-import type { DraftView, StatusResult } from '../api/types'
+import type { CalendarReconciliationResult, DraftView, StatusResult } from '../api/types'
 import {
   dayHeader,
   dayUtcMs,
@@ -13,6 +13,7 @@ import {
   parseWall,
   weekMondayMs,
 } from '../lib/datetime'
+import { flaggedReason, reconcileBanner } from '../lib/reconcile'
 import { reviewBanner, reviewMode } from '../lib/review'
 
 // The drag-to-adjust schedule review (the signature interaction). PROPOSED
@@ -95,6 +96,11 @@ export function ScheduleReviewScreen() {
   const [drag, setDrag] = useState<DragState | null>(null)
   const [saving, setSaving] = useState(false)
   const [violation, setViolation] = useState<{ taskId: string; text: string } | null>(null)
+  const [syncEnabled, setSyncEnabled] = useState(false)
+  const [reconcileResult, setReconcileResult] = useState<CalendarReconciliationResult | null>(null)
+  const [reconcileError, setReconcileError] = useState<string | null>(null)
+  const reconciledRef = useRef(false)
+  const mountedRef = useRef(true)
   const colsRef = useRef<HTMLDivElement>(null)
   const geo = useRef<
     | {
@@ -117,12 +123,14 @@ export function ScheduleReviewScreen() {
     let active = true
     // Both come from server truth: the draft is what we render; the run state
     // decides whether it is still an editable draft (awaiting approval) or an
-    // already-written schedule we must show read-only.
-    Promise.all([api.status(), api.draft()])
-      .then(([s, v]) => {
+    // already-written schedule we must show read-only. `me` carries the
+    // inbound-calendar-sync opt-in that gates the reconcile pull below.
+    Promise.all([api.status(), api.draft(), api.me()])
+      .then(([s, v, m]) => {
         if (!active) return
         setStatus(s)
         setView(v)
+        setSyncEnabled(m.inbound_calendar_sync_enabled)
         setLoading(false)
       })
       .catch((err: unknown) => {
@@ -136,6 +144,53 @@ export function ScheduleReviewScreen() {
       active = false
     }
   }, [])
+
+  // Real mount state for the single-fire reconcile below. The read effects use a
+  // per-run `active` flag, but that pattern would drop this effect's one result:
+  // `reconciledRef` correctly limits reconcile to a single call across
+  // StrictMode's dev remount, yet that remount's cleanup would flip a per-run
+  // flag to false before the call resolves. A mount-scoped ref is true again
+  // once the remount settles, so the outcome still shows; it only suppresses a
+  // real unmount mid-flight.
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+    }
+  }, [])
+
+  // Inbound reconciliation (opt-in, off by default). Once status + me have
+  // loaded and a plan is active — the exact precondition the endpoint enforces,
+  // so no 409 — pull the user's own edits to Loop's events and adopt the valid
+  // ones. It is read-only against the calendar and only adopts edits that still
+  // fit the plan, so running it on mount is safe. An adopted/mixed outcome means
+  // the draft changed, so refetch it; the outcome is surfaced as a banner. The
+  // ref guard only dedupes StrictMode's in-place double-invoke — a genuine
+  // remount (navigating back to the week later) is a fresh instance and re-pulls,
+  // which is what we want.
+  useEffect(() => {
+    if (reconciledRef.current) return
+    if (!syncEnabled || !status || status.active_plan_version == null) return
+    reconciledRef.current = true
+    api
+      .reconcile()
+      .then(async (res) => {
+        if (!mountedRef.current) return
+        setReconcileResult(res)
+        if (res.adopted_draft_schedule_id != null) {
+          const refreshed = await api.draft()
+          if (mountedRef.current) setView(refreshed)
+        }
+      })
+      .catch((err: unknown) => {
+        // Surfacing-only: a transient reconcile fault must not break the
+        // read-only week, and we never claim a success we don't have — show a
+        // low-key note instead of a fake "all synced".
+        if (mountedRef.current && !(err instanceof ApiError && err.status === 401)) {
+          setReconcileError(errorMessage(err))
+        }
+      })
+  }, [syncEnabled, status])
 
   if (loading) return <div className="screen-center muted">Loading your draft…</div>
   if (error) return <div className="screen-center">Couldn’t load the draft — {error}</div>
@@ -166,6 +221,8 @@ export function ScheduleReviewScreen() {
   const mode = reviewMode(status)
   const editable = mode === 'editable'
   const banner = reviewBanner(mode)
+  const recon = reconcileResult ? reconcileBanner(reconcileResult) : null
+  const titleOf = (taskId: string): string => view?.task_titles[taskId] ?? taskId
 
   const posOf = (b: Block): { dayIdx: number; startMin: number } =>
     drag && drag.taskId === b.taskId ? { dayIdx: drag.dayIdx, startMin: drag.startMin } : b
@@ -304,6 +361,42 @@ export function ScheduleReviewScreen() {
       {violation && (
         <div className="banner-error" style={{ margin: '12px clamp(16px,4vw,26px) 0' }}>
           That move was rejected by the server — {violation.text}
+        </div>
+      )}
+
+      {recon && (
+        <div
+          className={`recon-banner ${recon.tone === 'adopted' ? 'recon-ok' : 'recon-warn'}`}
+          style={{ margin: '12px clamp(16px,4vw,26px) 0' }}
+          role="status"
+        >
+          <div style={{ fontWeight: 600, fontSize: 14 }}>{recon.title}</div>
+          <div style={{ fontSize: 13, marginTop: 2, opacity: 0.85 }}>{recon.sub}</div>
+          {recon.flagged.length > 0 && (
+            <ul className="recon-list">
+              {recon.flagged.map((d) => (
+                <li key={d.task_id}>
+                  <b>{titleOf(d.task_id)}</b> — {flaggedReason(d)}
+                </li>
+              ))}
+            </ul>
+          )}
+          {recon.tone !== 'adopted' && (
+            <button
+              className="btn btn-soft sm"
+              type="button"
+              style={{ marginTop: 10 }}
+              onClick={() => navigate('/plan')}
+            >
+              Build a new plan →
+            </button>
+          )}
+        </div>
+      )}
+
+      {reconcileError && (
+        <div className="muted" style={{ margin: '8px clamp(16px,4vw,26px) 0', fontSize: 12.5 }}>
+          Couldn’t check for calendar edits — {reconcileError}
         </div>
       )}
 

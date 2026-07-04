@@ -188,12 +188,26 @@ class EvalReport(BaseModel):
 
 
 class EvalThresholds(BaseModel):
-    """Alert thresholds. Eval runs report against these; they never gate CI."""
+    """Gate thresholds for recorded-output grading.
+
+    Amended axiom 22 distinguishes two surfaces: LIVE-call evals never gate
+    CI (non-deterministic, networked), but grading COMMITTED recordings is as
+    deterministic as the golden tests — ``run_llm_eval --strict`` turns a
+    breach into a failing exit for exactly that surface. The floors default
+    to None (off) until seeded from a real captured baseline — heuristic
+    priors until calibrated, like every other threshold in the repo."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     max_post_repair_invalid_rate: float = Field(default=0.05, ge=0, le=1)
     """Axiom 09 target: invalid Planner output rate <5% after repair."""
+
+    min_schema_validity_rate: float | None = Field(default=None, ge=0, le=1)
+    """Floor on first-attempt contract validity; None = not enforced."""
+
+    min_repair_recovery_rate: float | None = Field(default=None, ge=0, le=1)
+    """Floor on repair recovery (of initially-invalid cases); None = not
+    enforced. Vacuously satisfied when nothing needed repair."""
 
 
 class RateComparison(BaseModel):
@@ -421,6 +435,18 @@ def threshold_breaches(report: EvalReport, thresholds: EvalThresholds) -> list[s
         breaches.append(
             f"post_repair_invalid_rate {rate:.4f} exceeds "
             f"max {thresholds.max_post_repair_invalid_rate:.4f} (axiom 09 target)"
+        )
+    floor = thresholds.min_schema_validity_rate
+    if floor is not None and report.overall.schema_validity_rate < floor:
+        breaches.append(
+            f"schema_validity_rate {report.overall.schema_validity_rate:.4f} "
+            f"below floor {floor:.4f}"
+        )
+    recovery_floor = thresholds.min_repair_recovery_rate
+    recovery = report.overall.repair_recovery_rate
+    if recovery_floor is not None and recovery is not None and recovery < recovery_floor:
+        breaches.append(
+            f"repair_recovery_rate {recovery:.4f} below floor {recovery_floor:.4f}"
         )
     return breaches
 

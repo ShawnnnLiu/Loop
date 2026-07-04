@@ -27,3 +27,24 @@ jobs:
 
       - name: Lint, typecheck, boundaries, schema-check, tests
         run: make check
+
+  # Deterministic grading of COMMITTED eval recordings (amended axiom 22:
+  # live-call evals never run in CI; recorded-output grading may gate).
+  eval-gate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies (locked)
+        run: uv sync --extra dev --frozen
+
+      - name: Strict-grade committed recordings
+        run: make eval-gate

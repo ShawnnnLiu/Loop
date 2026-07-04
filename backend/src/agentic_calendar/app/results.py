@@ -172,6 +172,34 @@ class WriteCycleResult(BaseModel):
     never embed raw calendar content or secrets. ``None`` on success."""
 
 
+class RollbackCycleResult(BaseModel):
+    """Outcome of a user-triggered rollback of a failed calendar write.
+
+    ``dry_run=True`` reports what a rollback WOULD delete (the confirm-dialog
+    count) without touching the calendar. A completed rollback parks the run in
+    ``ERROR_REQUIRES_USER`` (the events are gone; the honest next step is a new
+    plan); a partial rollback keeps the run in the failure state so the user
+    can retry either recovery path.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    run_id: str
+    user_id: str
+    state: SupervisorState
+    dry_run: bool
+    rollbackable_event_count: int
+    """Events a rollback would delete (written/verified/verification-failed)."""
+    deleted_event_ids: list[str] = Field(default_factory=list)
+    failed_event_ids: list[str] = Field(default_factory=list)
+    fully_rolled_back: bool | None = None
+    """``None`` on dry-run; otherwise whether every event deletion succeeded."""
+    reason_code: ReasonCode | None = None
+    error: str | None = None
+    """Failure detail passed through from the write manager. Typed error
+    prose only — never raw calendar content. ``None`` on success/dry-run."""
+
+
 class TelemetryItemOutcome(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 

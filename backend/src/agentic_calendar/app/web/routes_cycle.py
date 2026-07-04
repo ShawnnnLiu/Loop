@@ -63,6 +63,21 @@ class WriteRequest(BaseModel):
     dry_run: bool = False
 
 
+class RollbackRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    run_id: str | None = None
+    target_calendar_id: str = DEFAULT_TARGET_CALENDAR_ID
+    dry_run: bool = False
+
+
+class RetryWriteRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    run_id: str | None = None
+    target_calendar_id: str = DEFAULT_TARGET_CALENDAR_ID
+
+
 class AdjustRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -221,6 +236,78 @@ def write(
             run_id=body.run_id,
             target_calendar_id=body.target_calendar_id,
             dry_run=body.dry_run,
+        )
+    )
+
+
+@router.post("/rollback")
+def rollback(
+    request: Request,
+    service: Service,
+    user_id: ActingUser,
+    body: RollbackRequest | None = None,
+) -> JSONResponse:
+    """Roll back a failed calendar write: delete the events it created.
+
+    ``dry_run`` returns the would-delete count for the SPA's confirmation
+    dialog without touching the calendar. Only valid while the run sits in
+    the write-failure state; a completed rollback exits the run to
+    ``ERROR_REQUIRES_USER``. Hosted mode targets *this* user's dedicated
+    calendar via a per-user adapter — the same trust boundary as ``write``.
+    """
+    body = body or RollbackRequest()
+    if request.app.state.auth_enabled:
+        user_service, calendar_id = build_user_calendar_service(
+            request.app.state.env,
+            user_id=user_id,
+            token_cipher=request.app.state.token_cipher,
+        )
+        return _json(
+            user_service.rollback(
+                user_id,
+                run_id=body.run_id,
+                target_calendar_id=calendar_id,
+                dry_run=body.dry_run,
+            )
+        )
+    return _json(
+        service.rollback(
+            user_id,
+            run_id=body.run_id,
+            target_calendar_id=body.target_calendar_id,
+            dry_run=body.dry_run,
+        )
+    )
+
+
+@router.post("/retry-write")
+def retry_write(
+    request: Request,
+    service: Service,
+    user_id: ActingUser,
+    body: RetryWriteRequest | None = None,
+) -> JSONResponse:
+    """Retry a failed calendar write, creating only confirmed-missing events
+    (the manager's crash-reconcile path; the approved_payload_hash recheck
+    runs again, so the approval gate holds). Only valid from the
+    write-failure state."""
+    body = body or RetryWriteRequest()
+    if request.app.state.auth_enabled:
+        user_service, calendar_id = build_user_calendar_service(
+            request.app.state.env,
+            user_id=user_id,
+            token_cipher=request.app.state.token_cipher,
+        )
+        return _json(
+            user_service.retry_write(
+                user_id, run_id=body.run_id, target_calendar_id=calendar_id
+            )
+        )
+    return _json(
+        service.retry_write(
+            user_id,
+            run_id=body.run_id,
+            target_calendar_id=body.target_calendar_id,
         )
     )
 

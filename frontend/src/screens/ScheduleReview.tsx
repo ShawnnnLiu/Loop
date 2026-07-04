@@ -354,8 +354,8 @@ export function ScheduleReviewScreen() {
             Continue to approval →
           </button>
         ) : mode === 'failed' ? (
-          <button className="btn btn-primary lg" type="button" onClick={() => navigate('/plan')}>
-            Build a new plan →
+          <button className="btn btn-primary lg" type="button" onClick={() => navigate('/approve')}>
+            Recover this write →
           </button>
         ) : (
           <button className="btn btn-primary lg" type="button" onClick={() => navigate('/today')}>

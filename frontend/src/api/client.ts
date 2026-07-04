@@ -11,6 +11,7 @@ import type {
   OnboardResult,
   ProposeRequest,
   ProposeResult,
+  RollbackResult,
   StatusResult,
   ThresholdsResult,
   TodayResult,
@@ -86,6 +87,14 @@ export const api = {
   // the client never names it (a body cannot redirect the write).
   approve: (reject = false) => request<ApproveResult>('POST', '/approve', { reject }),
   write: () => request<WriteCycleResult>('POST', '/write', {}),
+  // Write-failure recovery (B1). Both are valid only while the run sits in
+  // calendar_write_failed (409 otherwise) and re-gated server-side: rollback
+  // deletes by recorded mapping ids; retry re-runs the approved-hash recheck
+  // before creating only the confirmed-missing events. `rollback(true)` is the
+  // dry-run that feeds the confirmation dialog's event count.
+  rollback: (dryRun = false) =>
+    request<RollbackResult>('POST', '/rollback', { dry_run: dryRun }),
+  retryWrite: () => request<WriteCycleResult>('POST', '/retry-write', {}),
   // Check-in (F-G): completion telemetry, guarded server-side (due + idempotent).
   checkin: (taskId: string, outcome: 'complete' | 'missed') =>
     request<CheckinResult>('POST', '/checkin', { task_id: taskId, outcome }),

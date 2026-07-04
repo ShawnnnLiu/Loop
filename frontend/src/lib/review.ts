@@ -55,7 +55,7 @@ export function reviewBanner(mode: ReviewMode): ReviewBanner {
     case 'failed':
       return {
         title: 'The last write didn’t fully verify',
-        sub: 'These blocks aren’t confirmed on your calendar and your plan wasn’t activated. Build a new plan to try the write again.',
+        sub: 'These blocks aren’t confirmed on your calendar and your plan wasn’t activated. Open the approval screen to retry the missing events or remove what was written.',
       }
     case 'editable':
       return { title: 'Review your proposed week', sub: '' }

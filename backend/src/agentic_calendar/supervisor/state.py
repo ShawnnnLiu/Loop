@@ -70,6 +70,14 @@ class SupervisorSignal(StrEnum):
     CALENDAR_VERIFICATION_FAILED = "calendar_verification_failed"
     CALENDAR_ROLLBACK_REQUESTED = "calendar_rollback_requested"
     CALENDAR_ROLLBACK_COMPLETED = "calendar_rollback_completed"
+    CALENDAR_ROLLBACK_FAILED = "calendar_rollback_failed"
+    """Rollback ran but could not delete every written event. The run stays in
+    the failure state so the user can retry rollback or the missing-events
+    path — a partial rollback must never read as resolved."""
+    CALENDAR_WRITE_RETRY_REQUESTED = "calendar_write_retry_requested"
+    """User chose to retry the missing events after a failed/unverified write.
+    Re-enters the write pipeline via ``reconcile_after_crash``, which re-runs
+    the ``approved_payload_hash`` recheck — the axiom-06 gate holds."""
 
     # --- Active-plan / drift / replan loop (Phase 4, axiom 07) ---
     # The drift classifier is deterministic; the caller emits DRIFT_DETECTED

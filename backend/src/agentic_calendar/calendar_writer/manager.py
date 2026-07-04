@@ -597,6 +597,72 @@ class CalendarWriteManager:
                         error=str(heartbeat_exc),
                     )
 
+            # Draft entries that never got a mapping: the original write
+            # aborted before reaching them (create_event raised mid-loop), so
+            # they exist in neither the mapping store nor the calendar. The
+            # hash recheck above validated the draft they belong to, so the
+            # retry must create them too — otherwise a mid-write crash would
+            # "heal" into a verified plan with silently missing events.
+            mapped_task_ids = {m.task_id for m in mappings}
+            for entry in draft.entries:
+                if (
+                    entry.task_id in mapped_task_ids
+                    or entry.task_id in existing_task_ids
+                ):
+                    continue
+                metadata = build_event_metadata(
+                    run_id=run_id,
+                    plan_version=draft.plan_version,
+                    task_id=entry.task_id,
+                )
+                try:
+                    handle = self._adapter.create_event(
+                        target_calendar_id=target_calendar_id,
+                        scheduled_start=entry.start,
+                        scheduled_end=entry.end,
+                        metadata=metadata,
+                    )
+                except Exception as create_exc:
+                    correlated(
+                        _log,
+                        run_id=run_id,
+                        plan_version=draft.plan_version,
+                        task_id=entry.task_id,
+                    ).exception(
+                        "adapter.create_event raised during reconcile_after_crash "
+                        "(reason_code will be CALENDAR_WRITE_FAILED)"
+                    )
+                    raise CalendarWriteFailedError(
+                        "adapter.create_event raised during reconcile_after_crash",
+                        written=tuple(self._mapping_store.list_for_run(run_id)),
+                    ) from create_exc
+                self._mapping_store.save(
+                    CalendarEventMapping(
+                        task_id=entry.task_id,
+                        plan_version=draft.plan_version,
+                        run_id=run_id,
+                        calendar_event_id=handle.calendar_event_id,
+                        scheduled_start=entry.start,
+                        scheduled_end=entry.end,
+                        calendar_write_status=CalendarWriteStatus.WRITTEN,
+                        user_modified_bool=False,
+                        last_verified_at=None,
+                    )
+                )
+                try:
+                    token = self._lock_manager.heartbeat(token)
+                except CalendarWriteLockExpiredError as heartbeat_exc:
+                    return WriteResult(
+                        run_id=run_id,
+                        status=WriteStatus.PARTIAL_FAILURE,
+                        reason_code=ReasonCode.CALENDAR_WRITE_LOCK_EXPIRED,
+                        written_mappings=tuple(
+                            self._mapping_store.list_for_run(run_id)
+                        ),
+                        verification=None,
+                        error=str(heartbeat_exc),
+                    )
+
             return self._finalize_run(
                 run_id=run_id,
                 expected_mappings=self._mapping_store.list_for_run(run_id),

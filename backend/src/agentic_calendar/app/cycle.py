@@ -38,7 +38,7 @@ from agentic_calendar.accountability.policy_engine import (
 from agentic_calendar.accountability.projection import ProjectionInput
 from agentic_calendar.accountability.recommitment import request_recommitment
 from agentic_calendar.calendar_writer.errors import CalendarWriterError
-from agentic_calendar.calendar_writer.manager import WriteStatus
+from agentic_calendar.calendar_writer.manager import WriteResult, WriteStatus
 from agentic_calendar.common.errors import AgenticCalendarError
 from agentic_calendar.common.logging import correlated, get_logger
 from agentic_calendar.contracts.accountability_intervention import (
@@ -123,6 +123,7 @@ from .results import (
     MeResult,
     OnboardResult,
     ProposeResult,
+    RollbackCycleResult,
     StatusResult,
     TelemetryItemOutcome,
     ThresholdFieldView,
@@ -1486,6 +1487,19 @@ class CycleService:
                 # is safe to surface alongside the reason_code.
                 error=str(exc),
             )
+        return self._conclude_write(user_id, run, result)
+
+    def _conclude_write(
+        self, user_id: str, run: RunRecord, result: WriteResult
+    ) -> WriteCycleResult:
+        """Shared outcome sequencing for ``write`` and ``retry_write``.
+
+        Emits the success/verification-failed/failed transitions around the
+        manager's ``WriteResult``, records the manager's op id on the run
+        (``write_op_id``) so recovery can find the mappings later, and builds
+        the operator-facing summary.
+        """
+        env = self._env
         # A delete-only drop write has no created events to verify: its success
         # IS the verification (the dropped events are gone).
         verified = result.status is WriteStatus.SUCCESS and (
@@ -1493,7 +1507,14 @@ class CycleService:
             or (result.verification is not None and result.verification.all_verified)
         )
         if verified:
-            run = self._transition(run, Sig.CALENDAR_WRITE_SUCCEEDED)
+            # Clear any failure reason from a prior attempt: a run that
+            # recovered via retry_write must not read as still-failed.
+            run = self._transition(
+                run,
+                Sig.CALENDAR_WRITE_SUCCEEDED,
+                write_op_id=result.run_id,
+                reason_code=None,
+            )
             self._activate_plan(user_id, run)
             run = self._transition(run, Sig.PLAN_ACTIVATED)
         elif result.status is WriteStatus.SUCCESS:
@@ -1501,10 +1522,14 @@ class CycleService:
                 run,
                 Sig.CALENDAR_VERIFICATION_FAILED,
                 reason_code=ReasonCode.CALENDAR_VERIFICATION_FAILED,
+                write_op_id=result.run_id,
             )
         else:
             run = self._transition(
-                run, Sig.CALENDAR_WRITE_FAILED, reason_code=result.reason_code
+                run,
+                Sig.CALENDAR_WRITE_FAILED,
+                reason_code=result.reason_code,
+                write_op_id=result.run_id,
             )
 
         mappings = (
@@ -1541,6 +1566,169 @@ class CycleService:
             # None on success.
             error=result.error,
         )
+
+    def rollback(
+        self,
+        user_id: str,
+        *,
+        run_id: str | None = None,
+        target_calendar_id: str = DEFAULT_TARGET_CALENDAR_ID,
+        dry_run: bool = False,
+    ) -> RollbackCycleResult:
+        """Roll back a failed calendar write: delete the events it created.
+
+        Only valid from ``CALENDAR_WRITE_FAILED_STATE``. ``dry_run`` reports
+        the would-delete count (for the confirmation dialog) without touching
+        the calendar. A complete rollback exits to ``ERROR_REQUIRES_USER``;
+        a partial one stays in the failure state so recovery can be retried —
+        a partial rollback must never read as resolved.
+        """
+        env = self._env
+        run = self._require_run(user_id, run_id, expected=S.CALENDAR_WRITE_FAILED_STATE)
+        if run.drop_task_ids:
+            raise CycleError(
+                "a failed drop write has no rollback path (delete-only writes "
+                "create no events); build a new plan or re-request the drop"
+            )
+        write_op_id = run.write_op_id
+        if write_op_id is None:
+            raise CycleError(
+                "run has no recorded calendar write operation to roll back "
+                "(the write failed before any event was created); build a new plan"
+            )
+        rollbackable = [
+            m
+            for m in env.mapping_store.list_for_run(write_op_id)
+            if m.calendar_write_status
+            in (
+                CalendarWriteStatus.WRITTEN,
+                CalendarWriteStatus.VERIFIED,
+                CalendarWriteStatus.VERIFICATION_FAILED,
+            )
+        ]
+        if dry_run:
+            return RollbackCycleResult(
+                run_id=run.run_id,
+                user_id=user_id,
+                state=run.state,
+                dry_run=True,
+                rollbackable_event_count=len(rollbackable),
+            )
+
+        run = self._transition(run, Sig.CALENDAR_ROLLBACK_REQUESTED)
+        try:
+            result = env.write_manager.rollback(
+                run_id=write_op_id, target_calendar_id=target_calendar_id
+            )
+        except AgenticCalendarError as exc:
+            run = self._transition(
+                run,
+                Sig.CALENDAR_ROLLBACK_FAILED,
+                reason_code=ReasonCode.CALENDAR_ROLLBACK_FAILED,
+            )
+            return RollbackCycleResult(
+                run_id=run.run_id,
+                user_id=user_id,
+                state=run.state,
+                dry_run=False,
+                rollbackable_event_count=len(rollbackable),
+                fully_rolled_back=False,
+                reason_code=run.reason_code,
+                error=str(exc),
+            )
+        if result.fully_rolled_back:
+            # Keep the original write-failure reason_code on the record: the
+            # ERROR_REQUIRES_USER surface explains WHY the run ended here.
+            run = self._transition(run, Sig.CALENDAR_ROLLBACK_COMPLETED)
+        else:
+            run = self._transition(
+                run,
+                Sig.CALENDAR_ROLLBACK_FAILED,
+                reason_code=result.reason_code,
+            )
+        return RollbackCycleResult(
+            run_id=run.run_id,
+            user_id=user_id,
+            state=run.state,
+            dry_run=False,
+            rollbackable_event_count=len(rollbackable),
+            deleted_event_ids=list(result.deleted_event_ids),
+            failed_event_ids=list(result.failed_event_ids),
+            fully_rolled_back=result.fully_rolled_back,
+            reason_code=run.reason_code,
+        )
+
+    def retry_write(
+        self,
+        user_id: str,
+        *,
+        run_id: str | None = None,
+        target_calendar_id: str = DEFAULT_TARGET_CALENDAR_ID,
+    ) -> WriteCycleResult:
+        """Retry a failed calendar write, creating only the missing events.
+
+        Only valid from ``CALENDAR_WRITE_FAILED_STATE``. When the failed write
+        left mappings behind (mid-write crash, verification failure), this runs
+        the manager's ``reconcile_after_crash`` — which re-runs the
+        ``approved_payload_hash`` recheck and creates only confirmed-missing
+        events. When the write failed before creating anything (pre-write
+        abort), it falls back to a full ``approve_and_write``; the hash recheck
+        gates that path too, so axiom 06 holds on every retry.
+        """
+        env = self._env
+        run = self._require_run(user_id, run_id, expected=S.CALENDAR_WRITE_FAILED_STATE)
+        if run.drop_task_ids:
+            raise CycleError(
+                "a failed drop write has no retry path (delete-only writes "
+                "create no events); build a new plan or re-request the drop"
+            )
+        approval_event_id = run.approval_event_id
+        if approval_event_id is None or run.draft_schedule_id is None:
+            raise CycleError("run is missing approval/draft identifiers")
+        draft = env.state.get_draft(run.draft_schedule_id)
+        if draft is None:
+            raise CycleError(f"draft {run.draft_schedule_id!r} not found")
+
+        write_op_id = run.write_op_id
+        if write_op_id is not None and not env.mapping_store.list_for_run(write_op_id):
+            write_op_id = None
+        run = self._transition(run, Sig.CALENDAR_WRITE_RETRY_REQUESTED)
+        try:
+            if write_op_id is not None:
+                result = env.write_manager.reconcile_after_crash(
+                    approval_event_id=approval_event_id,
+                    draft=draft,
+                    run_id=write_op_id,
+                    target_calendar_id=target_calendar_id,
+                )
+            else:
+                # Nothing was ever written: a fresh full write is the honest
+                # retry (a missing-events reconcile over zero mappings would
+                # no-op and falsely report success).
+                result = env.write_manager.approve_and_write(
+                    approval_event_id=approval_event_id,
+                    draft=draft,
+                    target_calendar_id=target_calendar_id,
+                )
+        except AgenticCalendarError as exc:
+            reason: ReasonCode = (
+                getattr(exc, "reason_code", None) or ReasonCode.CALENDAR_WRITE_FAILED
+            )
+            run = self._transition(run, Sig.CALENDAR_WRITE_FAILED, reason_code=reason)
+            return WriteCycleResult(
+                run_id=run.run_id,
+                user_id=user_id,
+                state=run.state,
+                dry_run=False,
+                write_status="failed",
+                reason_code=run.reason_code,
+                written_task_ids=[],
+                verified_task_ids=[],
+                failed_task_ids=[],
+                mapping_status_by_task={},
+                error=str(exc),
+            )
+        return self._conclude_write(user_id, run, result)
 
     def _activate_plan(self, user_id: str, run: RunRecord) -> None:
         """APPROVED → ACTIVE, discarding any previously active plan first.

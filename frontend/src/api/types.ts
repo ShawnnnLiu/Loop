@@ -310,10 +310,12 @@ export interface ApproveResult {
 }
 
 /** Mirror of WriteCycleResult. A failed write (e.g. verification) arrives here
- *  as a 200 with `reason_code` set. The MVP does not auto-roll-back: unverified
- *  events are flagged VERIFICATION_FAILED and left on the calendar, and the plan
- *  is not activated. The client only reports the typed outcome — it never writes
- *  or rolls back itself. */
+ *  as a 200 with `reason_code` set. The engine does not auto-roll-back:
+ *  unverified events are flagged VERIFICATION_FAILED and left on the calendar,
+ *  and the plan is not activated. Recovery is explicit and user-triggered —
+ *  `/rollback` removes the written events, `/retry-write` re-creates the
+ *  missing ones (both re-gated server-side). The client only reports typed
+ *  outcomes and triggers those routes; it never touches the calendar itself. */
 export interface WriteCycleResult {
   run_id: string
   user_id: string
@@ -326,6 +328,24 @@ export interface WriteCycleResult {
   verified_task_ids: string[]
   failed_task_ids: string[]
   mapping_status_by_task: Record<string, string>
+  error: string | null
+}
+
+/** Mirror of RollbackCycleResult: the outcome of a user-triggered rollback of
+ *  a failed write. `dry_run` responses carry only the would-delete count (for
+ *  the confirmation dialog). A completed rollback moves the run to
+ *  `error_requires_user`; a partial one stays in `calendar_write_failed` so
+ *  recovery can be retried. */
+export interface RollbackResult {
+  run_id: string
+  user_id: string
+  state: string
+  dry_run: boolean
+  rollbackable_event_count: number
+  deleted_event_ids: string[]
+  failed_event_ids: string[]
+  fully_rolled_back: boolean | null
+  reason_code: ReasonCode | null
   error: string | null
 }
 

@@ -2,8 +2,17 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { ApiError, api, errorMessage } from '../api/client'
-import type { DraftView, WriteCycleResult } from '../api/types'
-import { shortHash, toWriteBlocks, writeFailureMessage, writeOutcome } from '../lib/approval'
+import type { DraftView, RollbackResult, WriteCycleResult } from '../api/types'
+import type { WriteFailureInfo } from '../lib/approval'
+import {
+  failureInfoFromRecovery,
+  failureInfoFromResult,
+  rollbackConfirmMessage,
+  rollbackOutcomeMessage,
+  shortHash,
+  toWriteBlocks,
+  writeOutcome,
+} from '../lib/approval'
 
 // The approval gate — the ONLY place the product writes to a calendar. The
 // backend gate (approval event, payload-hash recheck, write, per-event
@@ -13,18 +22,22 @@ import { shortHash, toWriteBlocks, writeFailureMessage, writeOutcome } from '../
 // then POST /api/write. The write re-checks the approved hash against the live
 // draft under the recorded canonicalization version; if the plan changed, it is
 // refused server-side. We render the outcome from the server's truth: N/N
-// verified activates the plan; on a typed reason_code the write FAILED — the MVP
-// does NOT auto-roll-back, so we report honestly that the unverified events are
-// flagged on the calendar and the plan was not activated (see writeFailureMessage).
-// There is NO manual "roll back" button and NO timed undo (the undo endpoint was
-// deferred) — the only control here is approve-or-cancel.
+// verified activates the plan; on a typed reason_code the write FAILED — the
+// engine does NOT auto-roll-back, so we report honestly what landed and what
+// didn't (see writeFailureMessage) and offer the two explicit, server-gated
+// recovery actions: retry the missing events (/retry-write, hash rechecked
+// again) or remove everything the write created (/rollback, behind its own
+// count-naming confirmation because deleting calendar events is destructive).
 
 type Phase =
   | { kind: 'gate' } // idle: blocks shown, gate not opened
   | { kind: 'confirm' } // the confirm modal is open
-  | { kind: 'writing' } // approve + write in flight
+  | { kind: 'writing' } // approve + write (or retry-write) in flight
   | { kind: 'verified'; result: WriteCycleResult }
-  | { kind: 'failed'; result: WriteCycleResult }
+  | { kind: 'failed'; info: WriteFailureInfo }
+  | { kind: 'rollbackConfirm'; info: WriteFailureInfo; count: number }
+  | { kind: 'rollingBack' }
+  | { kind: 'rolledBack'; result: RollbackResult }
   | { kind: 'error'; message: string }
 
 export function ApprovalScreen({ email }: { email: string | null }) {
@@ -36,16 +49,36 @@ export function ApprovalScreen({ email }: { email: string | null }) {
 
   useEffect(() => {
     let active = true
-    api
-      .draft()
-      .then((v) => active && (setView(v), setLoading(false)))
-      .catch((err: unknown) => {
+    async function load() {
+      try {
+        const [v, status] = await Promise.all([api.draft(), api.status()])
+        if (!active) return
+        setView(v)
+        // A run already parked in the write-failure state (e.g. the user
+        // navigated here via the Week screen's "Recover" CTA, or reloaded):
+        // open straight onto the recovery card. The dry-run supplies the
+        // removable-event count the card and confirm dialog name.
+        if (status.state === 'calendar_write_failed') {
+          const preview = await api.rollback(true)
+          if (!active) return
+          setPhase({
+            kind: 'failed',
+            info: failureInfoFromRecovery(
+              status.reason_code,
+              preview.rollbackable_event_count,
+            ),
+          })
+        }
+        setLoading(false)
+      } catch (err) {
         if (err instanceof ApiError && err.status === 401) return
         if (active) {
           setLoadError(errorMessage(err))
           setLoading(false)
         }
-      })
+      }
+    }
+    void load()
     return () => {
       active = false
     }
@@ -59,11 +92,55 @@ export function ApprovalScreen({ email }: { email: string | null }) {
       await api.approve(false)
       const result = await api.write()
       // A failed write is a 200 with reason_code set (verification, hash
-      // mismatch, transient calendar error) — the engine has already rolled
-      // back any unverified events; we only report.
-      setPhase(writeOutcome(result) === 'failed' ? { kind: 'failed', result } : { kind: 'verified', result })
+      // mismatch, transient calendar error). The engine does NOT roll back on
+      // its own — the failed card offers retry/rollback as explicit choices.
+      setPhase(
+        writeOutcome(result) === 'failed'
+          ? { kind: 'failed', info: failureInfoFromResult(result) }
+          : { kind: 'verified', result },
+      )
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) return // redirected to login
+      setPhase({ kind: 'error', message: errorMessage(err) })
+    }
+  }
+
+  async function retryMissing() {
+    setPhase({ kind: 'writing' })
+    try {
+      // Server-gated: only valid from calendar_write_failed, and the
+      // approved-hash recheck runs again before any event is created.
+      const result = await api.retryWrite()
+      setPhase(
+        writeOutcome(result) === 'failed'
+          ? { kind: 'failed', info: failureInfoFromResult(result) }
+          : { kind: 'verified', result },
+      )
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) return
+      setPhase({ kind: 'error', message: errorMessage(err) })
+    }
+  }
+
+  async function openRollbackConfirm(info: WriteFailureInfo) {
+    try {
+      // Dry-run: the server reports exactly how many events a rollback would
+      // delete; the confirmation names that count before anything happens.
+      const preview = await api.rollback(true)
+      setPhase({ kind: 'rollbackConfirm', info, count: preview.rollbackable_event_count })
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) return
+      setPhase({ kind: 'error', message: errorMessage(err) })
+    }
+  }
+
+  async function runRollback() {
+    setPhase({ kind: 'rollingBack' })
+    try {
+      const result = await api.rollback()
+      setPhase({ kind: 'rolledBack', result })
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) return
       setPhase({ kind: 'error', message: errorMessage(err) })
     }
   }
@@ -135,7 +212,10 @@ export function ApprovalScreen({ email }: { email: string | null }) {
             className="btn btn-primary lg"
             type="button"
             style={{ width: '100%', marginTop: 14 }}
-            disabled={phase.kind === 'writing'}
+            // Disabled once a write ran (or a parked failure was detected):
+            // approve would 409 outside AWAITING_USER_APPROVAL — the recovery
+            // card, not this gate, owns the next step.
+            disabled={phase.kind !== 'gate' && phase.kind !== 'confirm'}
             onClick={() => setPhase({ kind: 'confirm' })}
           >
             Review &amp; write to calendar →
@@ -156,20 +236,77 @@ export function ApprovalScreen({ email }: { email: string | null }) {
           </div>
         )}
 
-        {phase.kind === 'failed' && (
+        {(phase.kind === 'failed' || phase.kind === 'rollbackConfirm') && (
           <div className="err-card">
-            <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-              <span className="err-code">{phase.result.reason_code ?? 'CALENDAR_WRITE_FAILED'}</span>
-              <span className="verify-pill bad">
-                {phase.result.verified_task_ids.length} / {phase.result.planned_event_count} verified
-              </span>
+            {(() => {
+              const info = phase.info
+              return (
+                <>
+                  <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span className="err-code">{info.reasonCode ?? 'CALENDAR_WRITE_FAILED'}</span>
+                    {info.pill && <span className="verify-pill bad">{info.pill}</span>}
+                  </div>
+                  <div style={{ fontSize: 13.5, color: 'var(--ink-2)', marginTop: 10, lineHeight: 1.5 }}>
+                    {info.message}
+                  </div>
+                  <div className="col" style={{ gap: 8, marginTop: 12 }}>
+                    <button className="btn btn-primary sm" type="button" onClick={() => void retryMissing()}>
+                      Retry the missing events →
+                    </button>
+                    {info.removable && (
+                      <button
+                        className="btn btn-soft sm"
+                        type="button"
+                        onClick={() => void openRollbackConfirm(info)}
+                      >
+                        Remove the events that were written…
+                      </button>
+                    )}
+                    <button className="btn btn-quiet sm" type="button" onClick={() => navigate('/review')}>
+                      Back to the draft
+                    </button>
+                  </div>
+                </>
+              )
+            })()}
+          </div>
+        )}
+
+        {phase.kind === 'rollingBack' && (
+          <div className="card" style={{ padding: '16px 18px' }}>
+            <span className="spin" style={{ width: 12, height: 12, marginRight: 7 }} />
+            Removing the written events…
+          </div>
+        )}
+
+        {phase.kind === 'rolledBack' && (
+          <div
+            className="card"
+            style={
+              phase.result.fully_rolled_back
+                ? { padding: '16px 18px', borderColor: 'var(--sage)', background: 'var(--sage-soft)' }
+                : { padding: '16px 18px' }
+            }
+          >
+            <span className="label">
+              {phase.result.fully_rolled_back ? 'Events removed' : 'Rollback incomplete'}
+            </span>
+            <div style={{ fontSize: 13.5, color: 'var(--ink-soft)', marginTop: 10, lineHeight: 1.5 }}>
+              {rollbackOutcomeMessage(phase.result)}
             </div>
-            <div style={{ fontSize: 13.5, color: 'var(--ink-2)', marginTop: 10, lineHeight: 1.5 }}>
-              {writeFailureMessage(phase.result)}
+            <div className="row" style={{ gap: 8, marginTop: 12 }}>
+              {phase.result.fully_rolled_back ? (
+                <button className="btn btn-primary sm" type="button" onClick={() => navigate('/plan')}>
+                  Build a new plan →
+                </button>
+              ) : (
+                // The destructive intent was already confirmed; this retries
+                // deleting only what the first pass couldn't remove.
+                <button className="btn btn-primary sm" type="button" onClick={() => void runRollback()}>
+                  Try removing them again
+                </button>
+              )}
             </div>
-            <button className="btn btn-soft sm" type="button" style={{ marginTop: 12 }} onClick={() => navigate('/review')}>
-              Back to the draft
-            </button>
           </div>
         )}
 
@@ -179,6 +316,52 @@ export function ApprovalScreen({ email }: { email: string | null }) {
           </div>
         )}
       </div>
+
+      {phase.kind === 'rollbackConfirm' && (
+        <div className="scrim">
+          <div className="modal">
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--line)' }}>
+              <span className="label">Confirm removal</span>
+              <h3 className="t-h3" style={{ marginTop: 7 }}>
+                Remove {phase.count} {phase.count === 1 ? 'event' : 'events'} from Google Calendar?
+              </h3>
+            </div>
+            <div style={{ padding: '18px 24px' }}>
+              <p style={{ fontSize: 13.5, color: 'var(--ink-soft)', lineHeight: 1.5 }}>
+                {rollbackConfirmMessage(phase.count)}
+              </p>
+              <div className="guard">
+                <span>🔒</span>
+                <span>
+                  Only events this write created are deleted — matched by their recorded ids,
+                  never by title or time.
+                </span>
+              </div>
+            </div>
+            <div
+              className="row"
+              style={{
+                justifyContent: 'flex-end',
+                gap: 10,
+                padding: '14px 24px',
+                borderTop: '1px solid var(--line)',
+                background: 'var(--paper-2)',
+              }}
+            >
+              <button
+                className="btn btn-quiet"
+                type="button"
+                onClick={() => setPhase({ kind: 'failed', info: phase.info })}
+              >
+                Cancel
+              </button>
+              <button className="btn btn-primary" type="button" onClick={() => void runRollback()}>
+                Remove {phase.count === 1 ? 'the event' : `${phase.count} events`} →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {(phase.kind === 'confirm' || phase.kind === 'writing') && (
         <div className="scrim">

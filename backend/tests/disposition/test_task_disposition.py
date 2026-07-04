@@ -77,6 +77,22 @@ def test_skipped_allows_either_reason_code() -> None:
     assert with_code.reason_code is ReasonCode.DEPENDENCY_ADVISORY
 
 
+def test_event_deleted_record_round_trips() -> None:
+    record = _record(
+        disposition=TaskDispositionType.EVENT_DELETED,
+        reason_code=ReasonCode.EXTERNAL_EVENT_DELETED,
+        source=DispositionSource.SYSTEM,
+    )
+    reloaded = TaskDispositionRecord.model_validate_json(record.model_dump_json())
+    assert reloaded == record
+    assert reloaded.reason_code is ReasonCode.EXTERNAL_EVENT_DELETED
+
+
+def test_event_deleted_requires_reason_code() -> None:
+    with pytest.raises(ValidationError, match="event_deleted disposition must carry"):
+        _record(disposition=TaskDispositionType.EVENT_DELETED, reason_code=None)
+
+
 def test_created_at_must_be_timezone_aware() -> None:
     with pytest.raises(ValidationError, match="timezone-aware"):
         _record(created_at=datetime(2026, 6, 24, 19, 0))

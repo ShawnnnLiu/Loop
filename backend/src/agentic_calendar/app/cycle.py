@@ -609,6 +609,51 @@ class CycleService:
                 )
             )
 
+    def _record_event_deleted(
+        self, user_id: str, plan_version: str, task_id: str, *, now: datetime
+    ) -> None:
+        """Durable memory that the task's calendar event was deleted externally.
+
+        Idempotent: the ``disposition_id`` is content-derived, so repeated
+        reconcile pulls of the same deletion are a no-op. Event memory only —
+        the task stays planned, and EVENT_DELETED never joins the
+        completed/dropped scheduler projection (axiom 06 lines 249-253:
+        cancellation-on-delete is opt-in; task-disposition spec).
+        """
+        store = self._env.disposition_store
+        disposition_id = f"disp_{user_id}_{plan_version}_{task_id}_event_deleted"
+        if store.exists(disposition_id):
+            return
+        store.append(
+            TaskDispositionRecord(
+                disposition_id=disposition_id,
+                user_id=user_id,
+                plan_version=plan_version,
+                task_id=task_id,
+                disposition=TaskDispositionType.EVENT_DELETED,
+                reason_code=ReasonCode.EXTERNAL_EVENT_DELETED,
+                source=DispositionSource.SYSTEM,
+                created_at=now,
+            )
+        )
+
+    def _event_deleted_ids(self, user_id: str, plan_version: str) -> set[str]:
+        """Task ids of ``plan_version`` whose calendar event the user deleted
+        externally (EVENT_DELETED dispositions).
+
+        Scoped to a single plan version — a later regeneration mints fresh
+        events, so its tasks start clean. Feeds only the read projections
+        (``DraftView.deleted_task_ids``, ``TodayTask.deleted``); deliberately
+        NOT unioned into ``_completed_or_dropped_ids``.
+        """
+        return {
+            record.task_id
+            for record in self._env.disposition_store.list_for_plan(
+                user_id, plan_version
+            )
+            if record.disposition is TaskDispositionType.EVENT_DELETED
+        }
+
     def _plan_pipeline(
         self,
         run: RunRecord,
@@ -1178,6 +1223,9 @@ class CycleService:
                 env.mapping_store.record_external_edit(mapping.run_id, task_id, now=now)
                 disposition = ReconciliationDisposition.FLAGGED_DELETED
                 code = ReasonCode.EXTERNAL_EVENT_DELETED
+                # Durable, idempotent deletion memory (never a completion) — the
+                # read projections surface it as "deleted from calendar".
+                self._record_event_deleted(user_id, plan_version, task_id, now=now)
             elif kind in (CalendarEditType.MOVED, CalendarEditType.RESIZED):
                 if adopt:
                     env.mapping_store.record_external_edit(
@@ -1902,6 +1950,7 @@ class CycleService:
         draft: DraftSchedule | None = None
         payload_hash: str | None = None
         task_titles: dict[str, str] = {}
+        deleted_task_ids: list[str] = []
         if run is not None and run.draft_schedule_id is not None:
             draft = env.state.get_draft(run.draft_schedule_id)
             if draft is not None:
@@ -1909,18 +1958,24 @@ class CycleService:
                 plan = env.plan_store.get(user_id, draft.plan_version)
                 if plan is not None:
                     task_titles = {task.task_id: task.title for task in plan.plan.tasks}
+                deleted_task_ids = sorted(
+                    self._event_deleted_ids(user_id, draft.plan_version)
+                )
         return DraftView(
             draft=draft,
             payload_hash=payload_hash,
             hash_canonicalization_version=HASH_CANONICALIZATION_VERSION,
             free_busy=[dict(interval) for interval in (free_busy or [])],
             task_titles=task_titles,
+            deleted_task_ids=deleted_task_ids,
         )
 
     def today(self, user_id: str) -> TodayResult:
         """The active plan's scheduled tasks as structured rows (tz-aware
         datetimes; the client localizes). ``due`` marks a block whose time has
-        passed; ``reported`` marks one that already has telemetry."""
+        passed; ``reported`` marks one that already has telemetry; ``deleted``
+        marks one whose calendar event the user deleted externally (the task
+        itself is still planned — never rendered as completed)."""
         env = self._env
         onboarding = env.state.get_onboarding(user_id)
         timezone = onboarding.timezone if onboarding is not None else None
@@ -1930,6 +1985,7 @@ class CycleService:
             return TodayResult(timezone=timezone, tasks=[])
         now = env.clock.now()
         tasks = {task.task_id: task for task in active.plan.tasks}
+        deleted_ids = self._event_deleted_ids(user_id, active.plan_version)
         rows: list[TodayTask] = []
         for entry in draft.entries:
             task = tasks.get(entry.task_id)
@@ -1945,6 +2001,7 @@ class CycleService:
                     end=entry.end,
                     due=entry.end <= now,
                     reported=bool(env.telemetry_store.list_for_task(entry.task_id)),
+                    deleted=entry.task_id in deleted_ids,
                 )
             )
         return TodayResult(timezone=timezone, tasks=rows)

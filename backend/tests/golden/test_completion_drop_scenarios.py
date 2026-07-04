@@ -1,8 +1,9 @@
 """Golden scenarios for completion/drop memory + advisory ordering.
 
-Covers ``docs/golden-test-cases.md`` scenarios 26-29 (ADR-0008). Each test maps
-1:1 to its English description and drives the deterministic cycle harness; the
-per-phase tests in ``tests/app`` cover the same paths in finer detail.
+Covers ``docs/golden-test-cases.md`` scenarios 26-30 (ADR-0008;
+task-disposition + calendar-reconciliation specs). Each test maps 1:1 to its
+English description and drives the deterministic cycle harness; the per-phase
+tests in ``tests/app`` cover the same paths in finer detail.
 """
 
 from __future__ import annotations
@@ -15,6 +16,9 @@ import pytest
 from agentic_calendar.app.cycle import DEFAULT_TARGET_CALENDAR_ID
 from agentic_calendar.app.environment import AppEnvironment
 from agentic_calendar.contracts.calendar_event_mapping import CalendarWriteStatus
+from agentic_calendar.contracts.calendar_reconciliation import (
+    ReconciliationDisposition,
+)
 from agentic_calendar.contracts.reason_codes import ReasonCode
 from agentic_calendar.contracts.task_disposition import (
     DispositionSource,
@@ -25,7 +29,14 @@ from agentic_calendar.contracts.task_plan import TaskPlan
 from agentic_calendar.scheduler.adjustment import DraftAdjustment
 from agentic_calendar.supervisor.state import SupervisorState as S
 from tests._fixture_loader import iter_valid
-from tests.app.test_cycle import USER_ID, RecordingPlanner, make_service
+from tests.app.test_cycle import (
+    USER_ID,
+    RecordingPlanner,
+    _a_scheduled_leaf,
+    _events_by_task,
+    _reconcilable,
+    make_service,
+)
 
 _NOW = datetime(2026, 5, 4, 12, 0, tzinfo=UTC)
 
@@ -127,3 +138,47 @@ def test_scenario_29_regen_does_not_resurrect_dropped(
     assert result.state is S.AWAITING_USER_APPROVAL
     assert "dp_001" in recording.excluded[-1]
     assert "reproduced dropped task" in caplog.text
+
+
+def test_scenario_30_external_deletion_remembered_never_shown_as_completion() -> None:
+    service, env, adapter = _reconcilable()
+    events = _events_by_task(adapter)
+    leaf = _a_scheduled_leaf(env, set(events))
+    adapter.delete_event(
+        target_calendar_id=DEFAULT_TARGET_CALENDAR_ID,
+        calendar_event_id=events[leaf].calendar_event_id,
+    )
+
+    first = service.reconcile(
+        USER_ID, target_calendar_id=DEFAULT_TARGET_CALENDAR_ID, enabled=True
+    )
+    service.reconcile(USER_ID, target_calendar_id=DEFAULT_TARGET_CALENDAR_ID, enabled=True)
+
+    # Flagged with the typed deletion code.
+    delta = {d.task_id: d for d in first.deltas}[leaf]
+    assert delta.disposition is ReconciliationDisposition.FLAGGED_DELETED
+    assert delta.reason_code is ReasonCode.EXTERNAL_EVENT_DELETED
+
+    # Exactly one idempotent event_deleted disposition (source: system).
+    active = env.plan_store.get_active(USER_ID)
+    assert active is not None
+    records = [
+        r
+        for r in env.disposition_store.list_for_plan(USER_ID, active.plan_version)
+        if r.disposition is TaskDispositionType.EVENT_DELETED
+    ]
+    assert [(r.task_id, r.source) for r in records] == [(leaf, DispositionSource.SYSTEM)]
+
+    # Never a completion/drop: the scheduler projection ignores it and the task
+    # stays in the draft (axiom 06 - cancellation-on-delete is opt-in).
+    store = env.disposition_store
+    assert leaf not in store.task_ids_with_disposition(
+        USER_ID, TaskDispositionType.COMPLETED
+    ) | store.task_ids_with_disposition(USER_ID, TaskDispositionType.DROPPED)
+
+    # Surfaced as a distinct deleted state on both read projections, with
+    # reported still false - a deleted event must never render as completed.
+    assert service.draft_view(USER_ID).deleted_task_ids == [leaf]
+    row = {t.task_id: t for t in service.today(USER_ID).tasks}[leaf]
+    assert row.deleted is True
+    assert row.reported is False

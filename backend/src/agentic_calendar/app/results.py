@@ -257,6 +257,11 @@ class DraftView(BaseModel):
     task_titles: dict[str, str] = Field(default_factory=dict)
     """task_id -> title for the draft's plan version, so the grid can label
     blocks (a draft entry carries only the task_id)."""
+    deleted_task_ids: list[str] = Field(default_factory=list)
+    """Sorted task_ids whose calendar event the user deleted externally
+    (``event_deleted`` dispositions for the draft's plan version). The grid
+    renders these as a distinct "deleted from calendar" state — never as the
+    written checkmark, and never as completion (the task is still planned)."""
 
 
 class TodayTask(BaseModel):
@@ -272,6 +277,10 @@ class TodayTask(BaseModel):
     """True once the block has ended — only a due task can be checked in."""
     reported: bool
     """True once a telemetry event exists for the task (idempotency)."""
+    deleted: bool
+    """True when the task's calendar event was deleted externally
+    (``event_deleted`` disposition). The task itself is still planned and can
+    still be checked in — a deleted event is not a completed task."""
 
 
 class TodayResult(BaseModel):

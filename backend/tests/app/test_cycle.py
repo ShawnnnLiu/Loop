@@ -1514,6 +1514,60 @@ def test_reconcile_flags_an_external_deletion_without_recreating() -> None:
     assert leaf not in _events_by_task(adapter)
 
 
+def test_reconcile_deletion_records_event_deleted_disposition_idempotently() -> None:
+    service, env, adapter = _reconcilable()
+    events = _events_by_task(adapter)
+    leaf = _a_scheduled_leaf(env, set(events))
+    adapter.delete_event(
+        target_calendar_id=DEFAULT_TARGET_CALENDAR_ID,
+        calendar_event_id=events[leaf].calendar_event_id,
+    )
+
+    # Two pulls of the same deletion -> exactly one durable record.
+    service.reconcile(USER_ID, target_calendar_id=DEFAULT_TARGET_CALENDAR_ID, enabled=True)
+    service.reconcile(USER_ID, target_calendar_id=DEFAULT_TARGET_CALENDAR_ID, enabled=True)
+
+    active = env.plan_store.get_active(USER_ID)
+    assert active is not None
+    records = [
+        r
+        for r in env.disposition_store.list_for_plan(USER_ID, active.plan_version)
+        if r.disposition is TaskDispositionType.EVENT_DELETED
+    ]
+    assert [r.task_id for r in records] == [leaf]
+    assert records[0].reason_code is ReasonCode.EXTERNAL_EVENT_DELETED
+    assert records[0].source is DispositionSource.SYSTEM
+    # Surfacing-only memory: a deleted event is neither a completion nor a drop,
+    # so the scheduler projection must not pick the task up (task-disposition
+    # spec; axiom 06 - cancellation-on-delete is opt-in).
+    assert leaf not in env.disposition_store.task_ids_with_disposition(
+        USER_ID, TaskDispositionType.COMPLETED
+    ) | env.disposition_store.task_ids_with_disposition(
+        USER_ID, TaskDispositionType.DROPPED
+    )
+
+
+def test_deleted_event_surfaces_on_draft_view_and_today_not_as_completion() -> None:
+    service, env, adapter = _reconcilable()
+    events = _events_by_task(adapter)
+    leaf = _a_scheduled_leaf(env, set(events))
+    adapter.delete_event(
+        target_calendar_id=DEFAULT_TARGET_CALENDAR_ID,
+        calendar_event_id=events[leaf].calendar_event_id,
+    )
+    service.reconcile(USER_ID, target_calendar_id=DEFAULT_TARGET_CALENDAR_ID, enabled=True)
+
+    view = service.draft_view(USER_ID)
+    assert view.deleted_task_ids == [leaf]
+
+    today = service.today(USER_ID)
+    rows = {t.task_id: t for t in today.tasks}
+    assert rows[leaf].deleted is True
+    # Deleted is a distinct state, never completion: no telemetry was invented.
+    assert rows[leaf].reported is False
+    assert all(t.deleted is False for t in today.tasks if t.task_id != leaf)
+
+
 def test_calendar_sync_opt_in_defaults_off_and_toggles() -> None:
     service, _env, _clock = make_service()
     assert service.inbound_calendar_sync_enabled(USER_ID) is False

@@ -11,8 +11,10 @@ Write Manager remains the only code that mutates an external calendar
 
 Active-plan lifecycle / Supervisor, deterministic drift classifier (rejected and
 deleted deltas), draft-schedule store (adopted moves), `CalendarEventMappingStore`
-(sets `user_modified_bool`), telemetry, audit log, and
-`UserFacingExplanationNode` (explanation only — it never decides a disposition).
+(sets `user_modified_bool`), the task-disposition store (an `event_deleted`
+record per observed deletion; `task-disposition.schema.md`), telemetry, audit
+log, and `UserFacingExplanationNode` (explanation only — it never decides a
+disposition).
 
 ## Purpose
 
@@ -98,7 +100,10 @@ The MVP uses on-demand pulls only — **no** webhooks, **no** polling daemon, **
    not adopted: the prior internal time remains the system of record, the mapping
    is flagged `user_modified_bool: true`, and a `DRIFT_EXTERNAL_CONFLICT` event is
    emitted so the deterministic drift → replan loop (axiom 07) can surface options
-   the user approves through the normal gate.
+   the user approves through the normal gate. A deletion additionally appends an
+   idempotent `event_deleted` `TaskDispositionRecord` (content-derived id,
+   `source: system`, reason `EXTERNAL_EVENT_DELETED`) — the durable memory the
+   read projections surface as a distinct "deleted from calendar" state.
 
 ## JSON Example
 
@@ -239,11 +244,15 @@ A delta's `reason_code` is a member of the system-wide `ReasonCode` enum
   `DRIFT_EXTERNAL_CONFLICT` carrying the hard-rule code as evidence, and surface
   it. The engine never silently rewrites the calendar to "correct" the user
   (that would be both a silent write and an override of the user's own calendar).
-- **Deleted → detect and surface only (MVP).** Set `user_modified_bool: true`,
-  emit `DRIFT_EXTERNAL_CONFLICT`, and surface. The engine never silently
-  re-creates the event (it would fight the user) and never silently cancels the
-  task (axiom 06 line 253 — cancellation-on-delete is itself opt-in). Richer
-  deletion semantics are deferred.
+- **Deleted → detect, remember, and surface (MVP).** Set
+  `user_modified_bool: true`, emit `DRIFT_EXTERNAL_CONFLICT`, append an
+  idempotent `event_deleted` disposition record, and surface the deletion as a
+  distinct per-task state (`DraftView.deleted_task_ids`, `TodayTask.deleted`) —
+  never as a completion: a deleted event is not a done task, and the two states
+  must be visually distinguishable. The engine never silently re-creates the
+  event (it would fight the user) and never silently cancels the task (axiom 06
+  line 253 — cancellation-on-delete is itself opt-in). Richer deletion semantics
+  (e.g. an opt-in "deleting an event drops the task") are deferred.
 
 ## Privacy Invariants
 
@@ -299,6 +308,9 @@ A delta's `reason_code` is a member of the system-wide `ReasonCode` enum
   `plan_version`; the active plan is never mutated in place (axiom 15).
 - Every rejected/deleted delta carries a typed `reason_code` and produces a
   `DRIFT_EXTERNAL_CONFLICT` event (axiom: every failure is typed).
+- Every deleted delta appends an `event_deleted` `TaskDispositionRecord`
+  (idempotent across repeated pulls); the record never joins the
+  completed/dropped scheduler projection — the task stays planned.
 - Reads are scoped by app metadata to the dedicated calendar; no raw event text is
   read or stored.
 - Deterministic end to end; defers to in-flight writes.
@@ -364,6 +376,7 @@ an unrelated `ReasonCode`. Prerequisite ordering is no longer a rejection reason
 - `calendar-event-mapping.schema.md` (`user_modified_bool`, `scheduled_*`)
 - `draft-schedule.schema.md` (adjustment re-validation rules reused here)
 - `drift-event.schema.md` (`DRIFT_EXTERNAL_CONFLICT` routing)
+- `task-disposition.schema.md` (`event_deleted` durable deletion memory)
 - `telemetry.schema.md`
 - `validation-result.schema.md`
 - `../decisions/ADR-0002-preview-only-calendar-writes.md`

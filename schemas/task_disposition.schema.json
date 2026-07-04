@@ -104,7 +104,8 @@
       "enum": [
         "completed",
         "skipped",
-        "dropped"
+        "dropped",
+        "event_deleted"
       ],
       "title": "TaskDispositionType",
       "type": "string"

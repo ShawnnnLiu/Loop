@@ -1,9 +1,18 @@
 import { describe, expect, it } from 'vitest'
 
 import type { StatusResult } from '../api/types'
-import { reviewBanner, reviewMode } from './review'
+import {
+  RECOVERY_OPTIONS,
+  attentionChip,
+  replanReason,
+  reviewBanner,
+  reviewMode,
+} from './review'
 
-function status(state: StatusResult['state']): StatusResult {
+function status(
+  state: StatusResult['state'],
+  over: Partial<StatusResult> = {},
+): StatusResult {
   return {
     user_id: 'u_1',
     onboarded: true,
@@ -14,6 +23,10 @@ function status(state: StatusResult['state']): StatusResult {
     active_plan_version: null,
     draft_schedule_id: 'draft_1',
     approval_event_id: null,
+    replan_kind: null,
+    recovery_mode: null,
+    recovery_mode_pending_user_choice: false,
+    ...over,
   }
 }
 
@@ -27,11 +40,14 @@ describe('reviewMode', () => {
       'calendar_write_verified',
       'active_plan',
       'drift_detected',
-      'replan_required',
       'terminal_success',
     ] as const) {
       expect(reviewMode(status(state))).toBe('written')
     }
+  })
+
+  it('replan_required is its own mode — it must NEVER read as "your week is scheduled"', () => {
+    expect(reviewMode(status('replan_required'))).toBe('replan')
   })
 
   it('the in-flight write states are read-only "writing"', () => {
@@ -61,5 +77,58 @@ describe('reviewBanner', () => {
     expect(sub).toContain('wasn’t activated')
     expect(sub.toLowerCase()).not.toContain('rolled back')
     expect(sub.toLowerCase()).not.toContain('roll back')
+  })
+
+  it('the replan banner names the typed drift cause and promises the approval gate', () => {
+    const s = status('replan_required', { reason_code: 'DRIFT_DURATION_UNDERESTIMATE' })
+    const { title, sub } = reviewBanner('replan', s)
+    expect(title).toBe('Your plan needs an update')
+    expect(sub).toContain('taking longer than planned')
+    expect(sub).toContain('approval')
+  })
+
+  it('the replan banner directs to the picker when the mode choice is pending', () => {
+    const s = status('replan_required', {
+      reason_code: 'ACCOUNTABILITY_MISMATCH',
+      recovery_mode_pending_user_choice: true,
+    })
+    expect(reviewBanner('replan', s).sub).toContain('Choose how to adjust')
+  })
+})
+
+describe('replanReason', () => {
+  it('maps every drift reason_code that can park a replan to plain language', () => {
+    expect(replanReason('DRIFT_EXTERNAL_CONFLICT')).toContain('conflict')
+    expect(replanReason('DRIFT_CAPACITY_MISMATCH')).toContain('time')
+    expect(replanReason('ACCOUNTABILITY_MISMATCH')).toContain('pace')
+  })
+
+  it('falls back honestly for unknown / missing codes', () => {
+    expect(replanReason(null)).toContain('drifted')
+    expect(replanReason('SOMETHING_NEW')).toContain('drifted')
+  })
+})
+
+describe('RECOVERY_OPTIONS', () => {
+  it('mirrors the backend RecoveryAction enum values exactly', () => {
+    expect(RECOVERY_OPTIONS.map((o) => o.mode)).toEqual([
+      'reschedule',
+      'scope_reduction',
+      'extend_timeline',
+    ])
+  })
+})
+
+describe('attentionChip', () => {
+  it('parked states produce a chip pointing at the right screen', () => {
+    expect(attentionChip('replan_required')?.to).toBe('/review')
+    expect(attentionChip('calendar_write_failed')?.to).toBe('/approve')
+    expect(attentionChip('error_requires_user')?.to).toBe('/plan')
+  })
+
+  it('healthy and transient states produce no chip', () => {
+    for (const state of ['active_plan', 'awaiting_user_approval', 'terminal_success', null, undefined]) {
+      expect(attentionChip(state)).toBeNull()
+    }
   })
 })

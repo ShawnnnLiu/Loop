@@ -255,6 +255,11 @@ class StatusResult(BaseModel):
     approval_event_id: str | None = None
     replan_kind: ReplanKind | None = None
     recovery_mode: RecoveryAction | None = None
+    recovery_mode_pending_user_choice: bool = False
+    """The run is parked in REPLAN_REQUIRED on the recovery path with no
+    recovery mode resolved (motivation profile says ask_each_time): ``propose``
+    will 409 until the client supplies one. The SPA renders the mode picker
+    from this flag."""
     mapping_status_by_task: dict[str, str] = Field(default_factory=dict)
     telemetry_event_count: int = 0
     nudge_count: int = 0

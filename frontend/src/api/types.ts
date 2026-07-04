@@ -121,6 +121,12 @@ export interface StatusResult {
   active_plan_version: string | null
   draft_schedule_id: string | null
   approval_event_id: string | null
+  replan_kind: 'recovery' | 'recalibration' | null
+  recovery_mode: string | null
+  /** REPLAN_REQUIRED on the recovery path with no mode resolved (the profile
+   *  says ask_each_time): propose 409s until the client supplies a mode, so
+   *  the Week screen renders the picker instead of a bare CTA. */
+  recovery_mode_pending_user_choice: boolean
 }
 
 export interface DraftScheduleEntry {

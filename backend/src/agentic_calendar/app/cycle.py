@@ -2106,6 +2106,12 @@ class CycleService:
             approval_event_id=run.approval_event_id if run else None,
             replan_kind=run.replan_kind if run else None,
             recovery_mode=run.recovery_mode if run else None,
+            recovery_mode_pending_user_choice=(
+                run is not None
+                and run.state is S.REPLAN_REQUIRED
+                and run.replan_kind is ReplanKind.RECOVERY
+                and run.recovery_mode is None
+            ),
             mapping_status_by_task=mapping_status,
             telemetry_event_count=len(env.telemetry_store.all()),
             nudge_count=len(env.nudge_store.list_for_user(user_id)),

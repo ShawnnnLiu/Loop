@@ -118,7 +118,9 @@
         "LLM_SCHEMA_REJECTED",
         "LLM_REFUSAL",
         "LLM_TRUNCATED",
-        "LLM_RETRY_LIMIT_EXCEEDED"
+        "LLM_RETRY_LIMIT_EXCEEDED",
+        "LLM_AUTH_FAILED",
+        "LLM_RATE_LIMITED"
       ],
       "title": "ReasonCode",
       "type": "string"

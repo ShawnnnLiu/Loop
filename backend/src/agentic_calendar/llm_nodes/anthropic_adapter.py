@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import time
 from collections.abc import Callable, Collection, Sequence
 from typing import Any, Protocol, cast, runtime_checkable
 
@@ -60,7 +61,24 @@ class TransportError(AgenticCalendarError):
     """Network, timeout, or provider error — the call produced no response.
 
     Messages must never contain credentials or raw request content; the real
-    transport reports the SDK exception *type*, not its body."""
+    transport reports the SDK exception *type*, not its body.
+
+    ``retryable`` discriminates transient provider weather (rate limit,
+    overload, connection blip, timeout — worth another bounded attempt, with
+    backoff) from permanent rejections (bad credentials, malformed request —
+    retrying is pure noise). ``reason_code`` carries the typed cause so the
+    call log and the user-facing explanation can say something true."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        retryable: bool = True,
+        reason_code: ReasonCode | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.retryable = retryable
+        self.reason_code = reason_code
 
 
 class TransportResult(BaseModel):
@@ -95,7 +113,49 @@ class AnthropicTransport(Protocol):
         user_prompt: str,
         output_contract: type[BaseModel],
         repair_suffix: str | None = None,
+        timeout_seconds: float = 300.0,
     ) -> TransportResult: ...
+
+
+def _translate_api_error(exc: Exception) -> TransportError:
+    """Map SDK exceptions onto the retryable/permanent taxonomy (C1).
+
+    Type-name-only messages: SDK exception bodies may quote request content.
+    The lazy import mirrors the transport's own (the SDK is only present when
+    a real adapter is wired).
+    """
+    import anthropic
+
+    name = type(exc).__name__
+    if isinstance(exc, anthropic.AuthenticationError | anthropic.PermissionDeniedError):
+        return TransportError(
+            f"provider rejected credentials: {name}",
+            retryable=False,
+            reason_code=ReasonCode.LLM_AUTH_FAILED,
+        )
+    if isinstance(exc, anthropic.RateLimitError):
+        return TransportError(
+            f"provider rate limited: {name}",
+            retryable=True,
+            reason_code=ReasonCode.LLM_RATE_LIMITED,
+        )
+    if isinstance(
+        exc,
+        anthropic.BadRequestError
+        | anthropic.NotFoundError
+        | anthropic.UnprocessableEntityError,
+    ):
+        return TransportError(
+            f"provider rejected the request: {name}",
+            retryable=False,
+            reason_code=ReasonCode.LLM_CALL_FAILED,
+        )
+    # Overloaded (529), 5xx, connection failures, timeouts: transient.
+    return TransportError(
+        f"provider call failed: {name}",
+        retryable=True,
+        reason_code=ReasonCode.LLM_CALL_FAILED,
+    )
 
 
 class AnthropicMessagesTransport:
@@ -127,6 +187,7 @@ class AnthropicMessagesTransport:
         user_prompt: str,
         output_contract: type[BaseModel],
         repair_suffix: str | None = None,
+        timeout_seconds: float = 300.0,
     ) -> TransportResult:
         import anthropic
 
@@ -160,10 +221,16 @@ class AnthropicMessagesTransport:
                 system=system,
                 messages=[{"role": "user", "content": content}],
                 output_config={"format": {"type": "json_schema", "schema": schema}},
+                # Explicit ceiling per call: without it a hung call is bounded
+                # only by the SDK's 10-minute default while the user watches
+                # the generation spinner. 300s default; calibrate from the
+                # call log's p99 once real latency data accumulates.
+                timeout=timeout_seconds,
             )
-        except anthropic.APIError as exc:
-            # Type name only: SDK exception bodies may quote request content.
-            raise TransportError(f"provider call failed: {type(exc).__name__}") from exc
+        # APIConnectionError is a SIBLING of APIError in the Python SDK — the
+        # old `except APIError` let pre-response network failures escape raw.
+        except (anthropic.APIError, anthropic.APIConnectionError) as exc:
+            raise _translate_api_error(exc) from exc
 
         # Walk the content blocks untyped: the SDK's block union is broad and
         # we only need the first text body, which is the structured-output JSON.
@@ -209,6 +276,15 @@ class AdapterConfig(BaseModel):
     """Transport retries per attempt (locked smoke safeguard: at most 2)."""
     max_repair_attempts: int = Field(default=2, ge=0, le=2)
     """Contract-repair re-prompts (axiom 04: at most 2)."""
+    timeout_seconds: float = Field(default=300.0, gt=0)
+    """Per-call ceiling passed to the provider SDK. Heuristic prior until
+    calibrated from the call log's observed p99 (the SDK's own default is a
+    generous 10 minutes — too long for a user watching a spinner)."""
+    retry_backoff_seconds: float = Field(default=1.0, ge=0)
+    """Base for exponential backoff between engine-level retries of transient
+    transport failures (delay = base * 2**retry). Pacing only — the retry
+    budget itself stays capped at 2. The SDK also backs off internally on
+    429/5xx within each call; this spaces OUR retries after those exhaust."""
 
     def estimate_cost_usd(self, *, input_tokens: int, output_tokens: int) -> float:
         """Deterministic estimate from the configured pricing — not a billing fact."""
@@ -302,6 +378,7 @@ class _GenerationEngine:
         clock: Clock,
         id_generator: IdGenerator,
         debug_raw_sink: Callable[[str], None] | None = None,
+        sleeper: Callable[[float], None] | None = None,
     ) -> None:
         self._node = node
         self._contract = contract
@@ -311,6 +388,8 @@ class _GenerationEngine:
         self._clock = clock
         self._ids = id_generator
         self._debug_raw_sink = debug_raw_sink
+        # Injected so tests never really sleep; production pacing is real.
+        self._sleeper = sleeper if sleeper is not None else time.sleep
 
     def generate(
         self,
@@ -377,12 +456,34 @@ class _GenerationEngine:
                     user_prompt=prompt,
                     output_contract=self._contract,
                     repair_suffix=repair_suffix,
+                    timeout_seconds=self._config.timeout_seconds,
                 )
             except TransportError as exc:
+                if not exc.retryable:
+                    # Permanent rejection (expired key, malformed request):
+                    # retrying is noise. Fail immediately with the taxonomy's
+                    # typed code so the explanation can say something true.
+                    code = exc.reason_code or ReasonCode.LLM_CALL_FAILED
+                    self._append_row(
+                        run_id=run_id,
+                        plan_version=plan_version,
+                        attempt=attempt,
+                        sdk_retry=sdk_retry,
+                        result=None,
+                        started=started,
+                        reason_code=code,
+                        truncated=False,
+                        refusal=False,
+                        prompt_hash=prompt_hash,
+                    )
+                    raise LLMGenerationError(
+                        f"{self._node.value} call rejected by the provider",
+                        reason_code=code,
+                    ) from exc
                 code = (
                     ReasonCode.LLM_RETRY_LIMIT_EXCEEDED
                     if is_last_retry
-                    else ReasonCode.LLM_CALL_FAILED
+                    else (exc.reason_code or ReasonCode.LLM_CALL_FAILED)
                 )
                 self._append_row(
                     run_id=run_id,
@@ -401,6 +502,10 @@ class _GenerationEngine:
                         f"{self._node.value} transport retries exhausted",
                         reason_code=ReasonCode.LLM_RETRY_LIMIT_EXCEEDED,
                     ) from exc
+                # Transient failure: pace the next attempt (exponential, no
+                # jitter — determinism beats thundering-herd concerns at one
+                # user per run). Budget unchanged; only spacing.
+                self._sleeper(self._config.retry_backoff_seconds * (2**sdk_retry))
                 continue
 
             if self._debug_raw_sink is not None and result.raw_text is not None:
@@ -652,6 +757,7 @@ class AnthropicStrategist:
         id_generator: IdGenerator,
         config: AdapterConfig | None = None,
         debug_raw_sink: Callable[[str], None] | None = None,
+        sleeper: Callable[[float], None] | None = None,
     ) -> None:
         self._engine = _GenerationEngine(
             node=LlmNodeName.STRATEGIST,
@@ -662,6 +768,7 @@ class AnthropicStrategist:
             clock=clock,
             id_generator=id_generator,
             debug_raw_sink=debug_raw_sink,
+            sleeper=sleeper,
         )
 
     def run(
@@ -722,6 +829,7 @@ class AnthropicPlanner:
         id_generator: IdGenerator,
         config: AdapterConfig | None = None,
         debug_raw_sink: Callable[[str], None] | None = None,
+        sleeper: Callable[[float], None] | None = None,
     ) -> None:
         self._engine = _GenerationEngine(
             node=LlmNodeName.PLANNER,
@@ -732,6 +840,7 @@ class AnthropicPlanner:
             clock=clock,
             id_generator=id_generator,
             debug_raw_sink=debug_raw_sink,
+            sleeper=sleeper,
         )
 
     def run(
@@ -816,6 +925,7 @@ class AnthropicReflectionSummary:
         id_generator: IdGenerator,
         config: AdapterConfig | None = None,
         debug_raw_sink: Callable[[str], None] | None = None,
+        sleeper: Callable[[float], None] | None = None,
     ) -> None:
         self._engine = _GenerationEngine(
             node=LlmNodeName.REFLECTION_SUMMARY,
@@ -826,6 +936,7 @@ class AnthropicReflectionSummary:
             clock=clock,
             id_generator=id_generator,
             debug_raw_sink=debug_raw_sink,
+            sleeper=sleeper,
         )
 
     def run(
@@ -869,6 +980,7 @@ class AnthropicUserFacingExplanation:
         id_generator: IdGenerator,
         config: AdapterConfig | None = None,
         debug_raw_sink: Callable[[str], None] | None = None,
+        sleeper: Callable[[float], None] | None = None,
     ) -> None:
         self._engine = _GenerationEngine(
             node=LlmNodeName.USER_FACING_EXPLANATION,
@@ -879,6 +991,7 @@ class AnthropicUserFacingExplanation:
             clock=clock,
             id_generator=id_generator,
             debug_raw_sink=debug_raw_sink,
+            sleeper=sleeper,
         )
 
     def run(

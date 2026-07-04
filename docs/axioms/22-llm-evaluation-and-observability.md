@@ -56,7 +56,15 @@ LLM_SCHEMA_REJECTED        # parsed but failed boundary contract re-validation
 LLM_REFUSAL                # model refused or returned a safety stop
 LLM_TRUNCATED              # output cut off (max tokens / incomplete)
 LLM_RETRY_LIMIT_EXCEEDED   # SDK-level retries exhausted; fallback engaged
+LLM_AUTH_FAILED            # credentials rejected (401/403) — permanent, never retried
+LLM_RATE_LIMITED           # rate limited / overloaded (429/529) — retried with backoff
 ```
+
+The transport discriminates permanent from transient provider errors: a
+permanent rejection (auth, malformed request) fails immediately with its
+typed code — retrying it is noise — while transient errors (rate limit,
+overload, connection, timeout) retry within the bounded cap with exponential
+backoff. Retry caps stay at 2 (axiom 09); backoff changes pacing, not budget.
 
 Each maps to a deterministic next action: transient failures (`LLM_CALL_FAILED`, `LLM_TRUNCATED`) retry within the SDK cap; `LLM_SCHEMA_REJECTED` enters the bounded validation repair loop; exhaustion routes to `error_requires_user`. These are separate from the validation/scheduling `RETRY_LIMIT_EXCEEDED` in `16-reliability-patterns.md`, which counts validation-repair attempts.
 

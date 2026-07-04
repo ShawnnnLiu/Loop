@@ -123,6 +123,8 @@ def _ok(payload: dict[str, Any] | None, *, stop_reason: str = "end_turn") -> Tra
 
 def _planner(
     script: list[TransportResult | Exception],
+    *,
+    sleeps: list[float] | None = None,
 ) -> tuple[AnthropicPlanner, InMemoryLlmCallLogStore, FakeTransport]:
     store = InMemoryLlmCallLogStore()
     transport = FakeTransport(script)
@@ -131,6 +133,9 @@ def _planner(
         store=store,
         clock=FrozenClock(_NOW),
         id_generator=DeterministicIdGenerator(),
+        # Never really sleep in tests; when given a list, record the backoff
+        # delays the engine asked for so pacing itself is assertable.
+        sleeper=sleeps.append if sleeps is not None else lambda _s: None,
     )
     return planner, store, transport
 
@@ -530,3 +535,93 @@ def test_reflection_psych_label_is_rejected_and_repaired() -> None:
     rows = store.list_all()
     assert rows[0].reason_code is ReasonCode.LLM_SCHEMA_REJECTED
     assert rows[1].validation_outcome is ValidationOutcome.PASS
+
+
+# --------------------------------------------------------------------------- #
+# Adapter resilience (UX pass C1): taxonomy, backoff pacing, timeout plumbing
+# --------------------------------------------------------------------------- #
+
+
+def test_non_retryable_transport_error_fails_immediately_with_typed_code() -> None:
+    """An auth rejection is permanent: exactly ONE call, one log row carrying
+    LLM_AUTH_FAILED, and a typed terminal error — never two wasted retries
+    against an expired key."""
+    sleeps: list[float] = []
+    planner, store, transport = _planner(
+        [
+            TransportError(
+                "provider rejected credentials: AuthenticationError",
+                retryable=False,
+                reason_code=ReasonCode.LLM_AUTH_FAILED,
+            )
+        ],
+        sleeps=sleeps,
+    )
+    with pytest.raises(LLMGenerationError) as exc_info:
+        _run_planner(planner)
+    assert exc_info.value.reason_code is ReasonCode.LLM_AUTH_FAILED
+    assert len(transport.requests) == 1
+    rows = store.list_all()
+    assert [r.reason_code for r in rows] == [ReasonCode.LLM_AUTH_FAILED]
+    assert sleeps == []  # no backoff for a permanent rejection
+
+
+def test_transient_retries_are_paced_with_exponential_backoff() -> None:
+    """Rate-limited attempts carry their typed code on the log rows and are
+    spaced 1s, 2s (base * 2**retry) — pacing changes, the 2-retry budget
+    does not."""
+    sleeps: list[float] = []
+    rate_limited = TransportError(
+        "provider rate limited: RateLimitError",
+        retryable=True,
+        reason_code=ReasonCode.LLM_RATE_LIMITED,
+    )
+    planner, store, _transport = _planner(
+        [rate_limited, rate_limited, _ok(_VALID_PLAN)], sleeps=sleeps
+    )
+    _run_planner(planner)
+    assert sleeps == [1.0, 2.0]
+    rows = store.list_all()
+    assert [r.reason_code for r in rows] == [
+        ReasonCode.LLM_RATE_LIMITED,
+        ReasonCode.LLM_RATE_LIMITED,
+        None,
+    ]
+
+
+def test_engine_passes_configured_timeout_to_the_transport() -> None:
+    planner, _store, transport = _planner([_ok(_VALID_PLAN)])
+    _run_planner(planner)
+    assert transport.requests[0]["timeout_seconds"] == 300.0
+
+
+def test_translate_api_error_maps_the_sdk_taxonomy() -> None:
+    """The SDK-exception → TransportError map: auth is permanent, rate limit
+    is transient with its own code, bad requests are permanent, everything
+    else (connection, overload) stays transient. Messages carry the exception
+    TYPE only — never a body that could quote request content."""
+    anthropic = pytest.importorskip("anthropic")
+    import httpx
+
+    from agentic_calendar.llm_nodes.anthropic_adapter import _translate_api_error
+
+    request = httpx.Request("POST", "https://api.anthropic.com/v1/messages")
+
+    def status_error(cls: type, status: int) -> Exception:
+        return cls(
+            "boom", response=httpx.Response(status, request=request), body=None
+        )
+
+    auth = _translate_api_error(status_error(anthropic.AuthenticationError, 401))
+    assert (auth.retryable, auth.reason_code) == (False, ReasonCode.LLM_AUTH_FAILED)
+
+    rate = _translate_api_error(status_error(anthropic.RateLimitError, 429))
+    assert (rate.retryable, rate.reason_code) == (True, ReasonCode.LLM_RATE_LIMITED)
+
+    bad = _translate_api_error(status_error(anthropic.BadRequestError, 400))
+    assert (bad.retryable, bad.reason_code) == (False, ReasonCode.LLM_CALL_FAILED)
+
+    conn = _translate_api_error(anthropic.APIConnectionError(request=request))
+    assert (conn.retryable, conn.reason_code) == (True, ReasonCode.LLM_CALL_FAILED)
+    assert "APIConnectionError" in str(conn)
+    assert "boom" not in str(auth)  # type name only, never the body

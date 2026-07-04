@@ -136,6 +136,7 @@ class _GuardedTransport:
         user_prompt: str,
         output_contract: type[BaseModel],
         repair_suffix: str | None = None,
+        timeout_seconds: float = 300.0,
     ) -> TransportResult:
         if self._calls + 1 > self._max_calls:
             raise SmokeGuardTripped(
@@ -168,6 +169,7 @@ class _GuardedTransport:
             user_prompt=user_prompt,
             output_contract=output_contract,
             repair_suffix=repair_suffix,
+            timeout_seconds=timeout_seconds,
         )
 
 

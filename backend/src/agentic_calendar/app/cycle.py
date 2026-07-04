@@ -26,7 +26,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import date, datetime, time, timedelta
 from typing import Any
 
 from agentic_calendar.accountability.checkin import CheckinStatus, evaluate_checkin
@@ -75,9 +75,11 @@ from agentic_calendar.contracts.draft_schedule import DraftSchedule, DraftSchedu
 from agentic_calendar.contracts.drift_event import DriftEvent, RecommendedPolicyAction
 from agentic_calendar.contracts.hashing import canonical_payload_hash
 from agentic_calendar.contracts.motivation_profile import RecoveryPreference
+from agentic_calendar.contracts.notification_log import NotificationStatus
 from agentic_calendar.contracts.reason_codes import ReasonCode
 from agentic_calendar.contracts.recommitment import RecommitmentChoice, RecommitmentRequest
 from agentic_calendar.contracts.scheduler_output import SchedulerOutput, ScheduleStatus
+from agentic_calendar.contracts.sponsor import SponsorStatus
 from agentic_calendar.contracts.syllabus_units import SyllabusUnits
 from agentic_calendar.contracts.task_disposition import (
     DispositionSource,
@@ -91,7 +93,11 @@ from agentic_calendar.contracts.validation_result import (
     NextAction,
     ValidationResult,
 )
-from agentic_calendar.drift.classifier import DriftInput
+from agentic_calendar.drift.classifier import (
+    DriftInput,
+    FragmentationSignal,
+    WeeklyCapacity,
+)
 from agentic_calendar.duration_estimation.pooled import resolve_effective_multipliers
 from agentic_calendar.llm_nodes.base import LLMNodeError
 from agentic_calendar.llm_nodes.user_facing_explanation import UserExplanation
@@ -156,6 +162,17 @@ DEFAULT_TARGET_CALENDAR_ID = "agentic-calendar-dogfood"
 """Writes go to a dedicated secondary calendar only (axiom 06; Phase 9c)."""
 
 HASH_CANONICALIZATION_VERSION = "v1"
+
+#: Heuristic priors until calibrated (axiom: thresholds are priors). Both feed
+#: the drift classifier's accountability/sponsor rules with caller-derived
+#: observable behavior — the classifier itself never reads stores or profiles.
+RECOMMITMENT_DECLINED_AFTER_DAYS = 7
+"""An unanswered recommitment request older than this counts as an explicit
+decline for the accountability-mismatch drift rule."""
+SPONSOR_PRESSURE_WINDOW_DAYS = 14
+"""Window for "recent" sponsor activity: a revocation inside it flags
+``sponsor_reporting_disabled``; sent reports inside it count toward the
+sponsor-pressure rule."""
 
 #: Drift recommendation → deterministic recovery mode, for drift that fires
 #: without an accountability recovery decision. ``None`` means the drift is
@@ -1816,7 +1833,7 @@ class CycleService:
             )
 
         drift_events = env.drift_classifier.classify(
-            DriftInput(plan=plan, events=events)
+            self._drift_input(onboarding, run, active, events)
         )
         reflection = (
             env.nodes.reflection.run(
@@ -1864,6 +1881,178 @@ class CycleService:
             replan_kind=replan.kind,
             recovery_mode=replan.mode,
             recovery_mode_pending_user_choice=replan.pending_user_choice,
+        )
+
+    def _drift_input(
+        self,
+        onboarding: OnboardingRecord,
+        run: RunRecord,
+        active: PlanVersion,
+        events: Sequence[TelemetryEvent],
+    ) -> DriftInput:
+        """Assemble the FULL classifier input from stored facts (UX pass B4).
+
+        ingest used to pass ``plan`` + ``events`` only, so four of the nine
+        deterministic drift rules could never fire in production (their
+        optional inputs were only ever supplied by the debug CLI). Every input
+        below is caller-derived observable behavior; the classifier itself
+        stays untouched — axiom 07's determinism is upheld by feeding it, not
+        changing it.
+
+        * ``weekly_cycles`` — scheduled vs completed minutes per fully elapsed
+          local calendar week, from the draft entries + telemetry.
+        * ``fragmentation`` — free time over the next 7 days inside the user's
+          scheduling window (policy day bounds minus remaining draft entries).
+        * ``external_conflict_task_ids`` — tasks whose events the user deleted
+          on the external calendar (EVENT_DELETED dispositions). Surfacing +
+          replan proposal only; never a completion/drop (axiom 06 stance).
+          Reconcile-rejected adoptions are not persisted today, so deletions —
+          the loudest external signal — are the sole source.
+        * ``declined_interventions`` / sponsor fields — stale unanswered
+          recommitment asks and recent sponsor revocations / sent reports.
+        """
+        env = self._env
+        user_id = onboarding.user_id
+        plan = active.plan
+        now = env.clock.now()
+        tz = onboarding.tzinfo()
+        now_local = now.astimezone(tz)
+        durations = {t.task_id: t.estimated_duration_min for t in plan.tasks}
+
+        entries: tuple[DraftScheduleEntry, ...] = ()
+        if run.draft_schedule_id is not None:
+            draft = env.state.get_draft(run.draft_schedule_id)
+            if draft is not None:
+                entries = tuple(draft.entries)
+
+        # --- weekly capacity cycles (fully elapsed local weeks) -----------
+        completed_min_by_task: dict[str, int] = {}
+        for e in events:
+            if e.completed:
+                completed_min_by_task[e.task_id] = (
+                    e.actual_duration_min or e.scheduled_duration_min
+                )
+        week_tasks: dict[date, set[str]] = {}
+        for entry in entries:
+            local_end = entry.end.astimezone(tz).date()
+            monday = local_end - timedelta(days=local_end.weekday())
+            week_tasks.setdefault(monday, set()).add(entry.task_id)
+        cycles: list[WeeklyCapacity] = []
+        for monday in sorted(week_tasks):
+            week_over = datetime.combine(monday + timedelta(days=7), time(0), tzinfo=tz)
+            if week_over > now_local:
+                continue  # only fully elapsed weeks are assessable
+            task_ids = week_tasks[monday]
+            cycles.append(
+                WeeklyCapacity(
+                    scheduled_min=sum(durations.get(tid, 0) for tid in task_ids),
+                    completed_min=sum(
+                        completed_min_by_task.get(tid, 0) for tid in task_ids
+                    ),
+                )
+            )
+
+        # --- fragmentation: free time in the next 7 days' window ----------
+        fragmentation = self._fragmentation_signal(onboarding, entries, now_local)
+
+        # --- external conflicts (user deletions on the real calendar) -----
+        external = frozenset(self._event_deleted_ids(user_id, active.plan_version))
+
+        # --- declined interventions + sponsor pressure ---------------------
+        stale_cutoff = now - timedelta(days=RECOMMITMENT_DECLINED_AFTER_DAYS)
+        declined = 0
+        for request in env.recommitment_store.all_requests():
+            if request.user_id != user_id:
+                continue
+            if env.recommitment_store.event_for_request(
+                request.recommitment_request_id
+            ) is not None:
+                continue
+            if request.requested_at <= stale_cutoff:
+                declined += 1
+        window_start = now - timedelta(days=SPONSOR_PRESSURE_WINDOW_DAYS)
+        revoked_recent = [
+            s
+            for s in env.sponsor_store.list_for_user(user_id)
+            if s.status is SponsorStatus.REVOKED
+            and s.revoked_at is not None
+            and s.revoked_at >= window_start
+        ]
+        declined += len(revoked_recent)
+        reports_recent = sum(
+            1
+            for log in env.notification_log_store.list_for_user(user_id)
+            if log.status is NotificationStatus.SENT
+            and not log.dry_run
+            and log.created_at >= window_start
+        )
+
+        return DriftInput(
+            plan=plan,
+            events=events,
+            weekly_cycles=tuple(cycles),
+            fragmentation=fragmentation,
+            external_conflict_task_ids=external,
+            declined_interventions=declined,
+            sponsor_reports_sent_recent=reports_recent,
+            sponsor_reporting_disabled=bool(revoked_recent),
+        )
+
+    def _fragmentation_signal(
+        self,
+        onboarding: OnboardingRecord,
+        entries: Sequence[DraftScheduleEntry],
+        now_local: datetime,
+    ) -> FragmentationSignal:
+        """Free-time facts for the upcoming week, from the schedule itself.
+
+        Deterministic and calendar-free: the free window is the user's own
+        scheduling bounds (profile day window, weekend rule) minus the
+        remaining draft entries. External busy time already shaped the draft
+        at scheduling time, so the draft is the best stored proxy.
+        """
+        policy = policy_from_user_profile(onboarding.user_profile)
+        tz = now_local.tzinfo
+
+        def _hhmm(value: str) -> time:
+            hour, minute = (int(p) for p in value.split(":"))
+            return time(hour, minute)
+
+        window_open = _hhmm(policy.no_events_before)
+        window_close = _hhmm(policy.no_events_after)
+        total_free = 0
+        largest_free = 0
+        for offset in range(7):
+            day = now_local.date() + timedelta(days=offset)
+            if not policy.allow_weekends and day.weekday() >= 5:
+                continue
+            day_start = datetime.combine(day, window_open, tzinfo=tz)
+            day_end = datetime.combine(day, window_close, tzinfo=tz)
+            if offset == 0:
+                day_start = max(day_start, now_local)
+            if day_end <= day_start:
+                continue
+            busy = sorted(
+                (
+                    max(e.start.astimezone(tz), day_start),
+                    min(e.end.astimezone(tz), day_end),
+                )
+                for e in entries
+                if e.end.astimezone(tz) > day_start and e.start.astimezone(tz) < day_end
+            )
+            cursor = day_start
+            for busy_start, busy_end in busy:
+                if busy_start > cursor:
+                    gap = int((busy_start - cursor).total_seconds() // 60)
+                    total_free += gap
+                    largest_free = max(largest_free, gap)
+                cursor = max(cursor, busy_end)
+            if day_end > cursor:
+                gap = int((day_end - cursor).total_seconds() // 60)
+                total_free += gap
+                largest_free = max(largest_free, gap)
+        return FragmentationSignal(
+            total_free_min=total_free, largest_free_block_min=largest_free
         )
 
     def _evaluate_accountability(

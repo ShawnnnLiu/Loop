@@ -55,6 +55,8 @@ export function replanReason(reasonCode: string | null | undefined): string {
       return 'recent check-ins suggest the current pace isn’t working'
     case 'SPONSOR_PRESSURE_MISMATCH':
       return 'your accountability setup needs adjusting'
+    case 'USER_RECOMMITMENT_REQUIRED':
+      return 'you chose to adjust your commitment'
     default:
       return 'your progress has drifted from the plan'
   }

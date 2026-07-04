@@ -27,6 +27,7 @@ from pydantic import BaseModel, ConfigDict
 
 from agentic_calendar.app.cycle import DEFAULT_TARGET_CALENDAR_ID, CycleService
 from agentic_calendar.contracts.checkin_event import RecoveryAction
+from agentic_calendar.contracts.recommitment import RecommitmentChoice
 from agentic_calendar.scheduler.adjustment import DraftAdjustment
 
 from .calendar_service import best_effort_free_busy, build_user_calendar_service
@@ -103,6 +104,20 @@ class CalendarSyncRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     enabled: bool
+
+
+class RecommitRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    choice: RecommitmentChoice
+    recommitment_request_id: str | None = None
+
+
+class WeeklyCheckinRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    blockers: str | None = None
+    recovery_action: RecoveryAction | None = None
 
 
 def _json(result: BaseModel) -> JSONResponse:
@@ -353,6 +368,42 @@ def reconcile(request: Request, service: Service, user_id: ActingUser) -> JSONRe
             target_calendar_id=DEFAULT_TARGET_CALENDAR_ID,
             free_busy=free_busy,
             enabled=enabled,
+        )
+    )
+
+
+@router.post("/recommit")
+def recommit(
+    service: Service,
+    user_id: ActingUser,
+    body: RecommitRequest,
+) -> JSONResponse:
+    """Answer the open recommitment ask with a typed choice. A revise_* choice
+    deterministically parks (or resolves) a recovery replan; the resulting
+    draft still flows through review + approval."""
+    return _json(
+        service.recommit(
+            user_id,
+            body.choice,
+            recommitment_request_id=body.recommitment_request_id,
+        )
+    )
+
+
+@router.post("/weekly-checkin")
+def weekly_checkin(
+    service: Service,
+    user_id: ActingUser,
+    body: WeeklyCheckinRequest | None = None,
+) -> JSONResponse:
+    """Submit the weekly check-in. Counts are computed server-side; the client
+    contributes only optional blockers prose and a recovery preference."""
+    body = body or WeeklyCheckinRequest()
+    return _json(
+        service.weekly_checkin(
+            user_id,
+            blockers=body.blockers,
+            recovery_action=body.recovery_action,
         )
     )
 

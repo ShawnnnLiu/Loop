@@ -24,7 +24,9 @@ from agentic_calendar.common.ids import DeterministicIdGenerator
 from tests.app.test_cycle import (
     PLAN_TASK_IDS,
     USER_ID,
+    _advance_past_draft,
     _canonical_profile,
+    _motivation_profile_payload,
     make_service,
 )
 
@@ -386,3 +388,34 @@ def test_recovery_routes_outside_failure_state_map_to_409() -> None:
     client.post("/api/propose", json={})
     assert client.post("/api/rollback", json={}).status_code == 409
     assert client.post("/api/retry-write", json={}).status_code == 409
+
+
+# Accountability loop routes (UX pass B3): weekly check-in + recommitment.
+
+
+def test_weekly_checkin_route_round_trips_through_accountability_view() -> None:
+    _service, env, clock = make_service(motivation_profile=_motivation_profile_payload())
+    client = TestClient(create_app(env=env, default_user_id=USER_ID))
+    proposed = client.post("/api/propose", json={}).json()
+    client.post("/api/approve", json={})
+    client.post("/api/write", json={})
+    _advance_past_draft(env, clock, proposed["draft_schedule_id"])
+
+    assert client.get("/api/accountability").json()["checkin_due"] is True
+
+    resp = client.post("/api/weekly-checkin", json={"blockers": "travel"})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["checkin_status"] == "completed"
+
+    view = client.get("/api/accountability").json()
+    assert view["checkin_due"] is False
+    assert view["checkin_status"] == "completed"
+
+
+def test_recommit_route_without_open_ask_maps_to_409() -> None:
+    _service, env, _clock = make_service(motivation_profile=_motivation_profile_payload())
+    client = TestClient(create_app(env=env, default_user_id=USER_ID))
+    client.post("/api/propose", json={})
+    resp = client.post("/api/recommit", json={"choice": "keep_plan"})
+    assert resp.status_code == 409

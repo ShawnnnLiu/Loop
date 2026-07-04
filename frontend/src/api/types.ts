@@ -300,6 +300,36 @@ export interface AccountabilityResult {
   checkin_status: string | null
   state: AccountabilityState | null
   decision: InterventionDecision | null
+  /** The weekly check-in is due or missed — render the check-in card. */
+  checkin_due: boolean
+  /** The latest unanswered recommitment ask — render the recommit card. */
+  open_recommitment_request_id: string | null
+}
+
+export type RecommitChoice = 'keep_plan' | 'revise_timeline' | 'revise_intensity' | 'revise_goal'
+
+/** Mirror of RecommitResult: the typed answer to a recommitment ask.
+ *  `replan_required` means the choice parked (or re-aimed) a recovery replan —
+ *  the draft still goes through review + approval. */
+export interface RecommitResult {
+  user_id: string
+  recommitment_request_id: string
+  recommitment_event_id: string
+  choice: RecommitChoice
+  recovery_mode: string | null
+  replan_required: boolean
+  state: string | null
+}
+
+/** Mirror of WeeklyCheckinResult. Counts are server-computed. */
+export interface WeeklyCheckinResult {
+  user_id: string
+  checkin_id: string
+  checkin_status: string
+  week_start: string // ISO date
+  week_end: string
+  scheduled_task_count: number
+  completed_task_count: number
 }
 
 /** Mirror of ApproveResult. `approval_event_id` + `approved_payload_hash` are

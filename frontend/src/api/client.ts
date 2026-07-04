@@ -11,10 +11,13 @@ import type {
   OnboardResult,
   ProposeRequest,
   ProposeResult,
+  RecommitChoice,
+  RecommitResult,
   RollbackResult,
   StatusResult,
   ThresholdsResult,
   TodayResult,
+  WeeklyCheckinResult,
   WriteCycleResult,
 } from './types'
 
@@ -106,6 +109,15 @@ export const api = {
   setCalendarSync: (enabled: boolean) =>
     request<MeResult>('POST', '/calendar-sync', { enabled }),
   reconcile: () => request<CalendarReconciliationResult>('POST', '/reconcile', {}),
+  // Accountability loop (B3): answer the open recommitment ask with a typed
+  // choice; submit the weekly check-in (counts are server-computed — the
+  // client contributes only optional blockers prose).
+  recommit: (choice: RecommitChoice) =>
+    request<RecommitResult>('POST', '/recommit', { choice }),
+  weeklyCheckin: (blockers?: string) =>
+    request<WeeklyCheckinResult>('POST', '/weekly-checkin', {
+      blockers: blockers?.trim() ? blockers.trim() : null,
+    }),
 }
 
 /** Best-effort human message out of an ApiError body (the ValidationError

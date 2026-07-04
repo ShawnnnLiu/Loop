@@ -101,6 +101,7 @@ describe('replanReason', () => {
     expect(replanReason('DRIFT_EXTERNAL_CONFLICT')).toContain('conflict')
     expect(replanReason('DRIFT_CAPACITY_MISMATCH')).toContain('time')
     expect(replanReason('ACCOUNTABILITY_MISMATCH')).toContain('pace')
+    expect(replanReason('USER_RECOMMITMENT_REQUIRED')).toContain('commitment')
   })
 
   it('falls back honestly for unknown / missing codes', () => {

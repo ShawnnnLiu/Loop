@@ -36,7 +36,11 @@ from agentic_calendar.accountability.policy_engine import (
     evaluate_accountability,
 )
 from agentic_calendar.accountability.projection import ProjectionInput
-from agentic_calendar.accountability.recommitment import request_recommitment
+from agentic_calendar.accountability.recommitment import (
+    RECOMMITMENT_CHOICE_TO_RECOVERY_MODE,
+    record_recommitment,
+    request_recommitment,
+)
 from agentic_calendar.calendar_writer.errors import CalendarWriterError
 from agentic_calendar.calendar_writer.manager import WriteResult, WriteStatus
 from agentic_calendar.common.errors import AgenticCalendarError
@@ -62,7 +66,7 @@ from agentic_calendar.contracts.calendar_reconciliation import (
     ReconciliationDisposition,
     ReconciliationOutcome,
 )
-from agentic_calendar.contracts.checkin_event import RecoveryAction
+from agentic_calendar.contracts.checkin_event import CheckinEvent, RecoveryAction
 from agentic_calendar.contracts.data_access_audit import (
     DataAccessor,
     DataAccessPurpose,
@@ -72,6 +76,7 @@ from agentic_calendar.contracts.drift_event import DriftEvent, RecommendedPolicy
 from agentic_calendar.contracts.hashing import canonical_payload_hash
 from agentic_calendar.contracts.motivation_profile import RecoveryPreference
 from agentic_calendar.contracts.reason_codes import ReasonCode
+from agentic_calendar.contracts.recommitment import RecommitmentChoice, RecommitmentRequest
 from agentic_calendar.contracts.scheduler_output import SchedulerOutput, ScheduleStatus
 from agentic_calendar.contracts.syllabus_units import SyllabusUnits
 from agentic_calendar.contracts.task_disposition import (
@@ -123,6 +128,7 @@ from .results import (
     MeResult,
     OnboardResult,
     ProposeResult,
+    RecommitResult,
     RollbackCycleResult,
     StatusResult,
     TelemetryItemOutcome,
@@ -131,6 +137,7 @@ from .results import (
     ThresholdsResult,
     TodayResult,
     TodayTask,
+    WeeklyCheckinResult,
     WriteCycleResult,
 )
 from .state import OnboardingRecord, ReplanKind, RunRecord
@@ -2281,11 +2288,185 @@ class CycleService:
             onboarding is not None and onboarding.motivation_profile is not None
         )
         snapshot = self.accountability_snapshot(user_id)
+        open_request = self._open_recommitment_request(user_id)
         return AccountabilityResult(
             has_motivation_profile=has_motivation_profile,
             checkin_status=snapshot.checkin_status.value if snapshot is not None else None,
             state=snapshot.state if snapshot is not None else None,
             decision=snapshot.decision if snapshot is not None else None,
+            checkin_due=(
+                snapshot is not None
+                and snapshot.checkin_status in (CheckinStatus.DUE, CheckinStatus.MISSED)
+            ),
+            open_recommitment_request_id=(
+                open_request.recommitment_request_id if open_request is not None else None
+            ),
+        )
+
+    def _open_recommitment_request(self, user_id: str) -> RecommitmentRequest | None:
+        """The newest recommitment ask this user has not answered yet."""
+        env = self._env
+        for request in reversed(env.recommitment_store.all_requests()):
+            if request.user_id != user_id:
+                continue
+            if env.recommitment_store.event_for_request(request.recommitment_request_id) is None:
+                return request
+        return None
+
+    def recommit(
+        self,
+        user_id: str,
+        choice: RecommitmentChoice,
+        *,
+        recommitment_request_id: str | None = None,
+    ) -> RecommitResult:
+        """Answer the open recommitment ask (the loop-closing half of the
+        nudge → recommitment flow; the ask half has always run in ingest).
+
+        The typed choice maps deterministically onto the recovery path:
+        ``revise_timeline`` → extend-timeline replan, ``revise_intensity`` →
+        reduced-load replan (RECOMMITMENT_CHOICE_TO_RECOVERY_MODE). Both park
+        the active run in REPLAN_REQUIRED — the draft still flows through
+        review + approval; nothing changes silently. ``keep_plan`` records
+        explicit re-approval; ``revise_goal`` records the intent and leaves
+        profile changes to onboarding. Answer-once is store-enforced.
+        """
+        env = self._env
+        self._require_onboarding(user_id)
+        if recommitment_request_id is not None:
+            request = env.recommitment_store.get_request(recommitment_request_id)
+            if request is None or request.user_id != user_id:
+                raise CycleError("recommitment request not found for this user")
+            if env.recommitment_store.event_for_request(recommitment_request_id) is not None:
+                raise CycleError("recommitment request already answered")
+        else:
+            maybe_request = self._open_recommitment_request(user_id)
+            if maybe_request is None:
+                raise CycleError("no open recommitment request to answer")
+            request = maybe_request
+
+        event = record_recommitment(
+            request,
+            choice,
+            store=env.recommitment_store,
+            clock=env.clock,
+            id_generator=env.id_generator,
+        )
+
+        mapped = RECOMMITMENT_CHOICE_TO_RECOVERY_MODE.get(choice)
+        run = env.state.latest_run_for_user(user_id)
+        replan_required = False
+        if mapped is not None and run is not None:
+            if run.state is S.ACTIVE_PLAN:
+                run = self._transition(
+                    run,
+                    Sig.RECOMMITMENT_ACCEPTED,
+                    replan_kind=ReplanKind.RECOVERY,
+                    recovery_mode=mapped,
+                    reason_code=ReasonCode.USER_RECOMMITMENT_REQUIRED,
+                )
+                replan_required = True
+            elif (
+                run.state is S.REPLAN_REQUIRED
+                and run.replan_kind is ReplanKind.RECOVERY
+            ):
+                # The run is already parked on the recovery path — the answer
+                # resolves a pending ask-each-time choice, or OVERRIDES the
+                # drift-derived mode: the user's explicit, typed choice beats
+                # the heuristic mapping. Metadata only — the state doesn't
+                # change, so no transition.
+                run = self._save_run(run, recovery_mode=mapped)
+                replan_required = True
+        return RecommitResult(
+            user_id=user_id,
+            recommitment_request_id=request.recommitment_request_id,
+            recommitment_event_id=event.recommitment_event_id,
+            choice=choice,
+            recovery_mode=mapped,
+            replan_required=replan_required,
+            state=run.state if run is not None else None,
+        )
+
+    def weekly_checkin(
+        self,
+        user_id: str,
+        *,
+        blockers: str | None = None,
+        recovery_action: RecoveryAction | None = None,
+    ) -> WeeklyCheckinResult:
+        """Submit the weekly check-in ("How did this week go?").
+
+        First production producer of :class:`CheckinEvent` — until it existed,
+        ``evaluate_checkin`` saw an empty history and the policy engine emitted
+        CHECKIN_DUE/MISSED forever. Counts are computed server-side from the
+        active draft + telemetry over the trailing week in the user's timezone;
+        the client contributes only optional blockers prose (stored, never a
+        prompt input) and an optional recovery preference.
+        """
+        env = self._env
+        onboarding = self._require_onboarding(user_id)
+        if onboarding.motivation_profile is None:
+            raise CycleError(
+                "weekly check-in requires a motivation profile (accountability is opt-in)"
+            )
+        active = env.plan_store.get_active(user_id)
+        run = env.state.latest_run_for_user(user_id)
+        if active is None or run is None:
+            raise CycleError("no active plan to check in on")
+
+        now = env.clock.now()
+        tz = onboarding.tzinfo()
+        week_end = now.astimezone(tz).date()
+        week_start = week_end - timedelta(days=6)
+
+        entries: tuple[Any, ...] = ()
+        if run.draft_schedule_id is not None:
+            draft = env.state.get_draft(run.draft_schedule_id)
+            if draft is not None:
+                entries = draft.entries
+        durations = {t.task_id: t.estimated_duration_min for t in active.plan.tasks}
+        week_task_ids = {
+            e.task_id
+            for e in entries
+            if week_start <= e.end.astimezone(tz).date() <= week_end
+        }
+        completed_by_task: dict[str, TelemetryEvent] = {}
+        for ev in self._events_for_plan(active.plan):
+            if ev.completed and ev.task_id in week_task_ids:
+                completed_by_task[ev.task_id] = ev
+
+        event = CheckinEvent(
+            checkin_id=env.id_generator.new_id("weekly_checkin"),
+            user_id=user_id,
+            plan_id=active.plan_version,
+            week_start=week_start,
+            week_end=week_end,
+            completed_task_count=len(completed_by_task),
+            scheduled_task_count=len(week_task_ids),
+            completed_minutes=sum(
+                (ev.actual_duration_min or ev.scheduled_duration_min)
+                for ev in completed_by_task.values()
+            ),
+            scheduled_minutes=sum(durations.get(tid, 0) for tid in week_task_ids),
+            user_reported_blockers=blockers,
+            user_selected_recovery_action=recovery_action,
+            created_at=now,
+        )
+        env.checkin_store.append(event)
+
+        contract = derive_accountability_contract(
+            onboarding.motivation_profile, id_generator=env.id_generator, clock=env.clock
+        )
+        checkins = env.checkin_store.list_for_plan(user_id, active.plan_version)
+        assessment = evaluate_checkin(contract, checkins, now=now, tz=tz)
+        return WeeklyCheckinResult(
+            user_id=user_id,
+            checkin_id=event.checkin_id,
+            checkin_status=assessment.status.value,
+            week_start=week_start,
+            week_end=week_end,
+            scheduled_task_count=event.scheduled_task_count,
+            completed_task_count=event.completed_task_count,
         )
 
     def checkin(self, user_id: str, task_id: str, *, completed: bool) -> IngestResult:

@@ -9,7 +9,7 @@ deterministic fields are always sufficient to act on without reading them.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -19,6 +19,7 @@ from agentic_calendar.contracts.checkin_event import RecoveryAction
 from agentic_calendar.contracts.draft_schedule import DraftSchedule
 from agentic_calendar.contracts.drift_event import DriftEvent
 from agentic_calendar.contracts.reason_codes import ReasonCode
+from agentic_calendar.contracts.recommitment import RecommitmentChoice
 from agentic_calendar.contracts.scheduler_output import RepairOption, UnscheduledTask
 from agentic_calendar.contracts.threshold_change_log import ThresholdChange
 from agentic_calendar.contracts.user_profile import UserProfile
@@ -373,3 +374,43 @@ class AccountabilityResult(BaseModel):
     checkin_status: str | None = None
     state: AccountabilityState | None = None
     decision: InterventionDecision | None = None
+    checkin_due: bool = False
+    """The weekly check-in is due or missed — the SPA renders the "How did
+    this week go?" card from this flag."""
+    open_recommitment_request_id: str | None = None
+    """The latest unanswered recommitment ask for this user, if any — the SPA
+    renders the interactive recommitment card from it. A system that asks and
+    cannot receive the answer reads as broken (UX pass B3)."""
+
+
+class RecommitResult(BaseModel):
+    """Outcome of answering a recommitment ask. ``replan_required`` is True
+    when the typed choice mapped to a recovery mode and parked (or resolved)
+    a replan — the draft still flows through review + approval."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    user_id: str
+    recommitment_request_id: str
+    recommitment_event_id: str
+    choice: RecommitmentChoice
+    recovery_mode: RecoveryAction | None = None
+    replan_required: bool = False
+    state: SupervisorState | None = None
+
+
+class WeeklyCheckinResult(BaseModel):
+    """Outcome of submitting the weekly check-in ("How did this week go?").
+    Counts are computed server-side from the active draft + telemetry — the
+    client supplies only optional blockers prose and an optional recovery
+    preference, never the numbers."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    user_id: str
+    checkin_id: str
+    checkin_status: str
+    week_start: date
+    week_end: date
+    scheduled_task_count: int
+    completed_task_count: int

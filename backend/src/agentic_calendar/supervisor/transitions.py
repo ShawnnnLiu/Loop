@@ -87,6 +87,11 @@ TRANSITIONS: Mapping[tuple[S, Sig], S] = {
     (S.ACTIVE_PLAN, Sig.DRIFT_DETECTED): S.DRIFT_DETECTED,
     (S.ACTIVE_PLAN, Sig.NO_DRIFT): S.ACTIVE_PLAN,
     (S.ACTIVE_PLAN, Sig.PLAN_COMPLETED): S.TERMINAL_SUCCESS,
+    # A revise_* recommitment answer is typed user feedback that requires a
+    # replan (choice → recovery mode is a deterministic map). Same guarantees
+    # as the drift path: the replan re-enters PLANNER_RUNNING via
+    # REPLAN_STARTED and never touches the calendar without approval.
+    (S.ACTIVE_PLAN, Sig.RECOMMITMENT_ACCEPTED): S.REPLAN_REQUIRED,
 
     (S.DRIFT_DETECTED, Sig.REPLAN_REQUIRED): S.REPLAN_REQUIRED,
     (S.DRIFT_DETECTED, Sig.REPLAN_NOT_REQUIRED): S.ACTIVE_PLAN,

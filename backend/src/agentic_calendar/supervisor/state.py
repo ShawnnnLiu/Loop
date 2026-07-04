@@ -92,5 +92,11 @@ class SupervisorSignal(StrEnum):
     REPLAN_REQUIRED = "replan_required"
     REPLAN_NOT_REQUIRED = "replan_not_required"
     REPLAN_STARTED = "replan_started"
+    RECOMMITMENT_ACCEPTED = "recommitment_accepted"
+    """The user answered a recommitment ask with a revise_* choice whose
+    deterministic mapping requires a replan (recommitment.py's
+    RECOMMITMENT_CHOICE_TO_RECOVERY_MODE). Typed user input, never prose —
+    parks the active plan in REPLAN_REQUIRED; the replan still flows through
+    planner → validation → scheduler → approval."""
 
     UNRECOVERABLE_ERROR = "unrecoverable_error"

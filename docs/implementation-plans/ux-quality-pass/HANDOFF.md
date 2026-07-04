@@ -3,7 +3,9 @@
 Status as of **2026-07-04**, branch **`ux-quality-pass`** (off `deleted-event-memory`,
 whose PR is still open). **A + B + C tracks are COMPLETE — 11 commits, all gates
 green** (backend `make check` 2691, frontend typecheck/lint/test(81)/build,
-`make eval-gate`, boundaries 16 kept). **D + E remain** and are specified below
+`make eval-gate`, boundaries 16 kept). **D3 is also DONE** (12th commit, same
+gates green; see the D3 section for what changed and what its landing means for
+capture choreography). **D1 + D2 + D4 + E remain** and are specified below
 for implementation in fresh context windows, one increment per session if needed.
 
 Read order for a fresh session: this file → `README.md` + the relevant numbered
@@ -48,13 +50,21 @@ from worst-case output caps (realistic spend well under $1). Then:
    ("UX pass: real eval baseline for the current prompts").
 
 **Re-capture choreography for D-track** (ask the user before each live run):
-after D1 → label `fewshot-YYYY-MM-DD`; after D2 → `voice-YYYY-MM-DD` (with
-`--judge`); after D3 → `sonnet-YYYY-MM-DD`. Compare each via
-`run_llm_eval --compare <previous report>` and put the deltas in the commit
-message. Note: a re-capture's recording will trip the prompt-bytes test's
-sibling expectation only if versions weren't bumped — bump `prompt_version`
-constants + the pinned hashes in `tests/llm_nodes/test_prompt_versions.py`
-in the SAME commit as any prompt edit.
+**D3 (Sonnet swap) landed 2026-07-04 BEFORE any capture ran** (baseline was
+blocked on the API key), so there is no pre-Sonnet baseline to record and no
+separate `sonnet-…` capture step anymore. The first capture IS the baseline
+and will record the Sonnet-tier models — that is fine: D1/D2 prompt changes
+are measured on the model tier they will ship on. Choreography now: baseline
+capture first (per the section above), then after D1 → label
+`fewshot-YYYY-MM-DD`; after D2 → `voice-YYYY-MM-DD` (with `--judge`).
+Compare each via `run_llm_eval --compare <previous report>` and put the
+deltas in the commit message. Report the per-run cost from `call_aggregates`
+in the baseline commit message (this absorbs D3's deferred cost-delta
+measurement). Note: a re-capture's recording will trip the prompt-bytes
+test's sibling expectation only if versions weren't bumped — bump
+`prompt_version` constants + the pinned hashes in
+`tests/llm_nodes/test_prompt_versions.py` in the SAME commit as any prompt
+edit.
 
 ## What was built (A/B/C) — one line per commit
 
@@ -145,27 +155,30 @@ spec-first for contract changes (`make schemas`); prompt edits ALWAYS bump
 - **Measure**: version bumps + hashes; ask user → capture `voice-…` WITH
   `--judge` → compare judge scores + rubric rates vs baseline.
 
-### D3 — Axiom 09 amendment + all-three Sonnet swap (plan 02§6; user approved)
+### D3 — Axiom 09 amendment + all-three Sonnet swap — ✅ DONE 2026-07-04
 
-- **Amend `docs/axioms/09-cost-and-metrics.md` FIRST**: tiering line (:~122)
-  → frontier Strategist / **Sonnet-tier** Planner+Reflection+Explanation;
-  pricing table; re-check the $4/month cap + hourly cap against the new
-  envelope; change-log entry.
-- Verified facts (claude-api skill, 2026-07-04): **`claude-sonnet-5`**,
-  $3/$15 per MTok (intro $2/$10 through 2026-08-31). **Gotchas:**
-  (a) omitting `thinking` on Sonnet 5 runs ADAPTIVE THINKING — thinking
-  tokens count inside `max_tokens`; either set `thinking={"type":"disabled"}`
-  in the transport for structured nodes or raise budgets deliberately
-  (prose nodes at 1024 will truncate under thinking — decide with eval data);
-  (b) non-default sampling params are REJECTED (temperature note already in
-  code); (c) new tokenizer ≈ +30% tokens vs Sonnet 4.6-era counts — cost
-  estimates shift; (d) confirm prompt-cache minimum for Sonnet 5 when
-  measuring cache_hit (Opus/Haiku = 4096; Sonnet 5 unlisted in the table).
-- Swap `PLANNER_CONFIG`/`REFLECTION_CONFIG`/`EXPLANATION_CONFIG` model +
-  prices (+ judge already on sonnet-5). Update the config-block comment.
-  `test_happy_path…` asserts the planner model string — update.
-- **Measure**: ask user → capture `sonnet-…` → compare. Report the per-run
-  cost delta from `call_aggregates` in the commit message.
+Implemented as specified (plan 02§6, user-approved). What shipped:
+
+- Axiom 09 amended first: Sonnet-tier line ($3/$15 sticker deliberately, not
+  the intro $2/$10 that lapses 2026-08-31), all cost tables regenerated
+  (~$1.70/mo expected, sensitivity $0.85–$3.40), **monthly cap raised
+  $4 → $8** to preserve the recorded ~5× headroom intent (hourly cap is
+  call-count-based, unchanged), plan-pricing margin re-checked (5–12% of
+  revenue — still fine), change-log entry + tokenizer (+~30%) caveat added.
+- `PLANNER_CONFIG`/`REFLECTION_CONFIG`/`EXPLANATION_CONFIG` →
+  `claude-sonnet-5` at $3/$15; Strategist stays `claude-opus-4-8`.
+- **Thinking pinned off at the transport** (`thinking={"type":"disabled"}` in
+  `AnthropicMessagesTransport.complete`) — resolves gotcha (a) for ALL
+  callers including the 256-cap eval judge; enabling thinking is a future
+  eval-driven decision. Asserted in the transport regression test.
+- Cache-minimum comment updated (sonnet-5 unlisted in the provider table —
+  verify via cache_read tokens on the first capture); config-block comment
+  rewritten; `test_happy_path…` model + cost-math assertions updated.
+- No prompt bytes changed → no `prompt_version` bumps; prompt-bytes pinned
+  hashes untouched.
+- **Measurement deferred** (capture still blocked on API key): the first
+  baseline capture doubles as the Sonnet measurement — see the re-capture
+  choreography note above.
 
 ### D4 — Prior-plan-aware replans (plan 03§3; no capture needed)
 
@@ -197,7 +210,7 @@ spec-first for contract changes (`make schemas`); prompt edits ALWAYS bump
 
 > Continue implementing the UX quality pass on branch `ux-quality-pass`.
 > Read `docs/implementation-plans/ux-quality-pass/HANDOFF.md` first — A/B/C
-> tracks are done (11 commits, gates green); follow the handoff exactly for
+> and D3 are done (12 commits, gates green); follow the handoff exactly for
 > the next remaining increment (baseline capture steps if not yet done, then
-> D1 → D2 → D3 → D4 → E), one commit per increment, asking me before any
+> D1 → D2 → D4 → E), one commit per increment, asking me before any
 > networked capture run.

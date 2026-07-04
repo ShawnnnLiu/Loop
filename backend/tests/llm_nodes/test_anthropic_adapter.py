@@ -160,10 +160,10 @@ def test_happy_path_returns_validated_plan_and_logs_one_complete_row() -> None:
     assert row.plan_version == "v1"
     assert row.node.value == "planner"
     assert row.prompt_version == "planner-v2-2026-06-23"
-    assert row.model_name == "claude-haiku-4-5"
+    assert row.model_name == "claude-sonnet-5"
     assert (row.attempt, row.sdk_retry) == (0, 0)
     assert (row.input_tokens, row.output_tokens) == (100, 50)
-    assert row.cost_estimate_usd == (100 * 1.00 + 50 * 5.00) / 1_000_000
+    assert row.cost_estimate_usd == (100 * 3.00 + 50 * 15.00) / 1_000_000
     assert row.prompt_hash is not None and row.response_hash is not None
     assert row.cache_hit is False
     # Schema-enforced generation was requested with the target contract.
@@ -481,6 +481,10 @@ def test_transport_hands_engine_raw_output_without_validating() -> None:
     # Generation was still shaped to the contract's schema via output_config.
     sent = client.messages.calls[0]["output_config"]["format"]
     assert sent["type"] == "json_schema" and sent["schema"]
+    # Thinking is pinned off: on sonnet-5 an OMITTED thinking param silently
+    # runs adaptive thinking, whose tokens bill inside max_tokens and would
+    # truncate the 1024-cap prose nodes. The pin must be explicit.
+    assert client.messages.calls[0]["thinking"] == {"type": "disabled"}
 
 
 def test_strategist_contract_violation_repairs_then_typed_error() -> None:

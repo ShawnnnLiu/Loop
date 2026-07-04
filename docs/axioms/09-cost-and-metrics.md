@@ -1,17 +1,20 @@
 # 09: Cost and Metrics
 
-## Pricing Assumptions (June 2026)
+## Pricing Assumptions (July 2026)
 
-All estimates assume current pricing as of June 2026 and must be revalidated quarterly:
+All estimates assume current pricing as of July 2026 and must be revalidated quarterly:
 
 - **Frontier model** (Strategist; `claude-opus-4-8` in the Phase 8 adapters): $5.00 per 1M input tokens, $25.00 per 1M output tokens.
-- **Mid-tier model** (Planner, Reflection, user-facing explanations; `claude-haiku-4-5`): $1.00 per 1M input tokens, $5.00 per 1M output tokens.
+- **Sonnet-tier model** (Planner, Reflection, user-facing explanations; `claude-sonnet-5`): $3.00 per 1M input tokens, $15.00 per 1M output tokens. Sticker price is encoded, not the introductory $2.00/$10.00 that runs through 2026-08-31 — encoding the promo would silently understate costs after it lapses.
 - **Embedding**: ~$0.02 per 1M tokens (assumption unchanged; not yet exercised).
+
+Token-count caveat: `claude-sonnet-5` uses a newer tokenizer that counts roughly 30% more tokens for the same text than the Haiku-era counts the budgets below were originally written against. The budgets are heuristic priors either way; recalibrate them from live call-log measurements, not by applying a blanket multiplier.
 
 If pricing changes by more than 25%, the cost tables below must be regenerated and the change recorded with effective date.
 
 Change log:
 
+- **2026-07-04**: Planner, Reflection, and Explanation upgraded from `claude-haiku-4-5` ($1.00/$5.00) to `claude-sonnet-5` ($3.00/$15.00) for user-facing quality (UX quality pass D3; Strategist stays frontier). Mid-tier prices tripled, so all tables regenerated. Monthly cap raised $4.00 → $8.00 to preserve the ~5× headroom intent.
 - **2026-06-11**: tables regenerated from the April 2026 assumptions ($3.00/$15.00 frontier, $0.15/$0.60 mid-tier) after >25% drift. First live measurement the same day (Phase 8 smoke test, one call per node, small sample inputs): 3,878 input / 2,382 output tokens, $0.0528 estimated — dominated by Strategist output tokens.
 
 ## Token Budget per Operation
@@ -21,58 +24,58 @@ Change log:
 | Operation | Model | Input tokens | Output tokens | Cost |
 | --- | --- | --- | --- | --- |
 | Strategist (initial syllabus) | Frontier | 8,000 | 4,000 | $0.140 |
-| Planner (initial task plan) | Mid-tier | 6,000 | 8,000 | $0.046 |
+| Planner (initial task plan) | Sonnet-tier | 6,000 | 8,000 | $0.138 |
 | RAG retrieval (8 queries) | Embedding | 2,000 | — | $0.00004 |
-| **Total onboarding** | | | | **~$0.19** |
+| **Total onboarding** | | | | **~$0.28** |
 
 ### Replan Cycle (drift-triggered, ~weekly per active user)
 
 | Operation | Model | Input tokens | Output tokens | Cost |
 | --- | --- | --- | --- | --- |
-| Reflection (telemetry → drift summary) | Mid-tier | 2,000 | 500 | $0.0045 |
+| Reflection (telemetry → drift summary) | Sonnet-tier | 2,000 | 500 | $0.0135 |
 | Strategist (incremental syllabus update) | Frontier | 6,000 | 3,000 | $0.105 |
-| Planner (revised tasks) | Mid-tier | 5,000 | 6,000 | $0.035 |
-| **Total per replan** | | | | **~$0.145** |
+| Planner (revised tasks) | Sonnet-tier | 5,000 | 6,000 | $0.105 |
+| **Total per replan** | | | | **~$0.22** |
 
 ### Validation Repair Retry
 
 | Operation | Model | Input tokens | Output tokens | Cost |
 | --- | --- | --- | --- | --- |
-| Planner (re-prompt with violations) | Mid-tier | 6,500 | 6,000 | $0.0365 |
+| Planner (re-prompt with violations) | Sonnet-tier | 6,500 | 6,000 | $0.1095 |
 
-Hard-capped at **2 repair attempts** per cycle. Maximum additional cost: **$0.073**.
+Hard-capped at **2 repair attempts** per cycle. Maximum additional cost: **$0.219**.
 
 ### Reflection-Only Cycle (daily batch)
 
 | Operation | Model | Input tokens | Output tokens | Cost |
 | --- | --- | --- | --- | --- |
-| Reflection per user | Mid-tier | 1,500 | 400 | $0.0035 |
+| Reflection per user | Sonnet-tier | 1,500 | 400 | $0.0105 |
 
 ### User-Facing Explanation Generation
 
 | Operation | Model | Input tokens | Output tokens | Cost |
 | --- | --- | --- | --- | --- |
-| Explanation (per call) | Mid-tier | 1,000 | 300 | $0.0025 |
+| Explanation (per call) | Sonnet-tier | 1,000 | 300 | $0.0075 |
 
-Approximately 3–5 explanations per active week → **~$0.010 / week**.
+Approximately 3–5 explanations per active week → **~$0.030 / week**.
 
 ## Per-User Monthly LLM Cost Estimate (Active User)
 
 | Component | Frequency | Monthly Cost |
 | --- | --- | --- |
-| Onboarding (amortized over 6 months) | 1 / 6 mo | $0.031 |
-| Replan cycles | ~4 / mo | $0.578 |
-| Validation retries | ~3 / mo | $0.110 |
-| Reflection batch | ~30 / mo | $0.105 |
-| Explanations | ~15 / mo | $0.038 |
-| **Total monthly LLM cost** | | **~$0.86** |
+| Onboarding (amortized over 6 months) | 1 / 6 mo | $0.046 |
+| Replan cycles | ~4 / mo | $0.894 |
+| Validation retries | ~3 / mo | $0.329 |
+| Reflection batch | ~30 / mo | $0.315 |
+| Explanations | ~15 / mo | $0.113 |
+| **Total monthly LLM cost** | | **~$1.70** |
 
 ## Sensitivity Analysis
 
 If assumptions are off by 2× in either direction:
 
-- **Conservative (high-usage power user)**: ~$1.75 / month.
-- **Aggressive (low-usage casual user)**: ~$0.45 / month.
+- **Conservative (high-usage power user)**: ~$3.40 / month.
+- **Aggressive (low-usage casual user)**: ~$0.85 / month.
 
 These numbers are order-of-magnitude estimates with explicit assumptions. Real numbers must be measured in production. They must not be used for pricing decisions without validation.
 
@@ -80,22 +83,22 @@ These numbers are order-of-magnitude estimates with explicit assumptions. Real n
 
 | Component | Monthly Range |
 | --- | --- |
-| LLM | $0.86 – $1.75 |
+| LLM | $1.70 – $3.40 |
 | Database (Postgres + pgvector) | $0.10 – $0.30 |
 | Background workers and queues | $0.05 – $0.15 |
 | Calendar API (free at current scale) | $0 |
 | Logging, observability, embedding refresh | $0.10 – $0.25 |
-| **Total per active user per month** | **$1.10 – $2.45** |
+| **Total per active user per month** | **$1.95 – $4.10** |
 
-Earlier informal targets ("$1 – $3 per active user per month, ceiling $5 – $10") are superseded by the table above. The range reflects the June 2026 regeneration and the cost controls below.
+Earlier informal targets ("$1 – $3 per active user per month, ceiling $5 – $10") are superseded by the table above. The range reflects the July 2026 regeneration (Sonnet-tier upgrade) and the cost controls below.
 
 ## At-Scale Estimates (Caveats Apply)
 
 | Active Users | Estimated Monthly Infrastructure |
 | --- | --- |
-| 1,000 | $1,100 – $2,450 |
-| 10,000 | $11,000 – $24,500 |
-| 100,000 | Requires renegotiated LLM pricing; likely $50,000 – $120,000 before discounts |
+| 1,000 | $1,950 – $4,100 |
+| 10,000 | $19,500 – $41,000 |
+| 100,000 | Requires renegotiated LLM pricing; likely $90,000 – $200,000 before discounts |
 
 These are order-of-magnitude estimates with explicit assumptions. They are not pricing inputs.
 
@@ -104,11 +107,13 @@ These are order-of-magnitude estimates with explicit assumptions. They are not p
 - **Monthly plan: $39 / month.**
 - **Annual plan: $33 / month, billed yearly ($396 / year).**
 
-Against the infrastructure estimate above, serving cost is roughly **3–7% of
-revenue** per active user ($1.10 – $2.45 of $33 – $39), with the LLM share at
-~2–5%. That headroom is the budget for everything else (support, payment
+Against the infrastructure estimate above, serving cost is roughly **5–12% of
+revenue** per active user ($1.95 – $4.10 of $33 – $39), with the LLM share at
+~4–10%. That headroom is the budget for everything else (support, payment
 fees, acquisition) and for the usage estimates being wrong — the sensitivity
-band, not the base case, is the planning number.
+band, not the base case, is the planning number. Re-checked 2026-07-04 after
+the Sonnet-tier upgrade: margins narrow but the plan prices still clear the
+conservative band comfortably; no pricing change required.
 
 Plan prices are the recorded product decision; the *cost* figures they are
 compared against remain estimates pending production measurement. Re-check
@@ -116,10 +121,10 @@ this section whenever the cost tables are regenerated.
 
 ## Cost Control Enforcement
 
-- **Per-user hourly cap:** 5 LLM calls per hour.
-- **Per-user monthly cap:** $4.00 LLM spend (~5× the expected ~$0.86; alert at 80%). Raised from $2.00 in the 2026-06-11 regeneration to preserve the 5× headroom intent.
+- **Per-user hourly cap:** 5 LLM calls per hour. Call-count-based, so unaffected by the pricing change; re-checked 2026-07-04 and kept.
+- **Per-user monthly cap:** $8.00 LLM spend (~5× the expected ~$1.70; alert at 80%). Raised from $4.00 in the 2026-07-04 regeneration (and from $2.00 in the 2026-06-11 one) to preserve the 5× headroom intent.
 - **Per-user retry caps:** 2 validation repair attempts; 2 Scheduler-Planner iterations.
-- **Model tiering:** frontier model only for `StrategistNode`; mid-tier for `PlannerNode`, `ReflectionSummaryNode`, and `UserFacingExplanationNode`.
+- **Model tiering:** frontier model only for `StrategistNode`; Sonnet-tier for `PlannerNode`, `ReflectionSummaryNode`, and `UserFacingExplanationNode` (upgraded from small-tier 2026-07-04 — these nodes write every task title and user-facing sentence, so perceived quality lives here).
 - **Aggressive caching:** identical `user_profile` inputs hit cache for 7 days; see `18-caching-strategy.md`.
 
 ## Scheduling Quality Metrics

@@ -202,9 +202,11 @@ class AnthropicMessagesTransport:
         # the cached prefix (system + base prompt) is reused across repair rounds
         # and retries — the repair suffix is the only re-processed content. The
         # breakpoint must be here and not on ``system``: providers only cache
-        # prefixes above a per-model minimum (4096 tokens on opus-4-8/haiku-4-5),
-        # which the system prompts alone never reach. Blocks below the minimum
-        # silently don't cache, so small prompts (prose nodes) are unaffected.
+        # prefixes above a per-model minimum (4096 tokens on opus-4-8; sonnet-5
+        # is unlisted in the provider table, sonnet-4-6 was 2048 — verify via
+        # cache_read tokens on the next capture), which the system prompts alone
+        # never reach. Blocks below the minimum silently don't cache, so small
+        # prompts (prose nodes) are unaffected.
         content: list[TextBlockParam] = [
             {
                 "type": "text",
@@ -221,6 +223,15 @@ class AnthropicMessagesTransport:
                 system=system,
                 messages=[{"role": "user", "content": content}],
                 output_config={"format": {"type": "json_schema", "schema": schema}},
+                # Thinking is pinned OFF, explicitly: on sonnet-5, OMITTING the
+                # param silently runs adaptive thinking whose tokens bill inside
+                # max_tokens — the 1024-cap prose nodes and the 256-cap eval
+                # judge would truncate. opus-4-8 accepts the explicit disabled
+                # too (there, omitting already means off), so one pin covers
+                # every tier this adapter targets and keeps output budgets
+                # deterministic. Enabling thinking is a future decision to make
+                # with eval data, alongside raised max_tokens.
+                thinking={"type": "disabled"},
                 # Explicit ceiling per call: without it a hung call is bounded
                 # only by the SDK's 10-minute default while the user watches
                 # the generation spinner. 300s default; calibrate from the
@@ -294,15 +305,20 @@ class AdapterConfig(BaseModel):
         ) / 1_000_000
 
 
-# Defaults follow axiom 09 model tiering (frontier Strategist, mid-tier rest).
-# Prices are $ per 1M tokens from the Claude model table cached 2026-05-26;
-# estimates pending production measurement (axiom 09 disclosure). The structured
-# nodes (Strategist syllabus / Planner task plan) get 16k after a real 2-page
-# résumé drove the generated JSON past the old 4k/8k caps and truncated mid-output
-# → LLM_RETRY_LIMIT_EXCEEDED. 16k stays within both models' output ceilings
-# (opus-4-8 128k, haiku-4-5 64k) and under the non-streaming SDK timeout budget
-# (this transport is non-streaming). The prose nodes keep 1024 — the smallest
-# round cap above their ~500/~300 budgets that leaves JSON-envelope headroom.
+# Defaults follow axiom 09 model tiering (frontier Strategist; Sonnet-tier
+# Planner/Reflection/Explanation since the 2026-07-04 amendment — those nodes
+# write every task title and user-facing sentence). Prices are $ per 1M tokens,
+# sticker not intro (sonnet-5's $2/$10 promo lapses 2026-08-31 and encoding it
+# would silently understate costs after that); estimates pending production
+# measurement (axiom 09 disclosure). The structured nodes (Strategist syllabus /
+# Planner task plan) get 16k after a real 2-page résumé drove the generated JSON
+# past the old 4k/8k caps and truncated mid-output → LLM_RETRY_LIMIT_EXCEEDED.
+# 16k stays within both models' output ceilings (opus-4-8 and sonnet-5 both
+# 128k) and under the non-streaming SDK timeout budget (this transport is
+# non-streaming). The prose nodes keep 1024 — the smallest round cap above
+# their ~500/~300 budgets that leaves JSON-envelope headroom; those caps are
+# only safe because the transport pins thinking off (see complete()) — on
+# sonnet-5, adaptive thinking would bill its tokens inside max_tokens.
 #
 # Sampling parameters (temperature/top_p/top_k) are deliberately NOT configured:
 # opus-4-8 rejects them with a 400 and sonnet-tier models reject non-default
@@ -317,25 +333,25 @@ STRATEGIST_CONFIG = AdapterConfig(
     output_price_per_mtok=25.00,
 )
 PLANNER_CONFIG = AdapterConfig(
-    model_name="claude-haiku-4-5",
+    model_name="claude-sonnet-5",
     prompt_version="planner-v2-2026-06-23",
     max_tokens=16384,
-    input_price_per_mtok=1.00,
-    output_price_per_mtok=5.00,
+    input_price_per_mtok=3.00,
+    output_price_per_mtok=15.00,
 )
 REFLECTION_CONFIG = AdapterConfig(
-    model_name="claude-haiku-4-5",
+    model_name="claude-sonnet-5",
     prompt_version="reflection-v2-2026-06-23",
     max_tokens=1024,
-    input_price_per_mtok=1.00,
-    output_price_per_mtok=5.00,
+    input_price_per_mtok=3.00,
+    output_price_per_mtok=15.00,
 )
 EXPLANATION_CONFIG = AdapterConfig(
-    model_name="claude-haiku-4-5",
+    model_name="claude-sonnet-5",
     prompt_version="explanation-v2-2026-06-23",
     max_tokens=1024,
-    input_price_per_mtok=1.00,
-    output_price_per_mtok=5.00,
+    input_price_per_mtok=3.00,
+    output_price_per_mtok=15.00,
 )
 
 

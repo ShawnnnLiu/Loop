@@ -1460,6 +1460,48 @@ def test_reconcile_adopts_a_valid_move_without_writing() -> None:
     assert len(after) == len(events)
 
 
+def test_reconcile_adopts_utc_read_backs_in_the_users_wall_clock() -> None:
+    """Google returns event instants normalized to UTC (the write path stores
+    timeZone=UTC), but draft entries carry the user's wall clock — the SPA
+    renders the offset embedded in the ISO string. An adopted external move
+    must therefore be restamped in the user's timezone: kept as UTC, a
+    10:45 PDT move draws as 17:45."""
+    adapter = InMemoryCalendarAdapter(id_generator=DeterministicIdGenerator())
+    service, env, _clock = make_service(calendar_adapter=adapter)
+    # Re-onboard in a western timezone (make_service onboards in UTC).
+    service.onboard(
+        {
+            "user_profile": _canonical_profile().model_dump(mode="json"),
+            "timezone": "America/Los_Angeles",
+        }
+    )
+    _activate_plan(service)
+    events = _events_by_task(adapter)
+    leaf = _a_scheduled_leaf(env, set(events))
+    rec = events[leaf]
+    # The same instants Google would return: moved a week, normalized to UTC.
+    new_start = (rec.scheduled_start + timedelta(days=7)).astimezone(UTC)
+    new_end = (rec.scheduled_end + timedelta(days=7)).astimezone(UTC)
+    adapter.simulate_external_move(
+        rec.calendar_event_id, scheduled_start=new_start, scheduled_end=new_end
+    )
+
+    result = service.reconcile(
+        USER_ID, target_calendar_id=DEFAULT_TARGET_CALENDAR_ID, enabled=True
+    )
+
+    assert result.outcome is ReconciliationOutcome.ADOPTED
+    tz = ZoneInfo("America/Los_Angeles")
+    moved = next(e for e in _active_draft_entries(env) if e.task_id == leaf)
+    assert moved.start == new_start  # same instant...
+    # ...stamped with the user's wall clock, not UTC digits.
+    assert moved.start.utcoffset() == moved.start.astimezone(tz).utcoffset()
+    assert moved.end.utcoffset() == moved.end.astimezone(tz).utcoffset()
+    delta = {d.task_id: d for d in result.deltas}[leaf]
+    assert delta.observed_start is not None
+    assert delta.observed_start.utcoffset() == delta.observed_start.astimezone(tz).utcoffset()
+
+
 def test_reconcile_rejects_an_invalid_move_and_flags_divergence() -> None:
     service, env, adapter = _reconcilable()
     events = _events_by_task(adapter)

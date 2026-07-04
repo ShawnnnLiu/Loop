@@ -1122,6 +1122,7 @@ class CycleService:
             return result(ReconciliationOutcome.NO_CHANGE)
 
         # Pull each event back (scoped to our own ids) and classify the delta.
+        user_tz = onboarding.tzinfo()
         change_by_task: dict[
             str, tuple[CalendarEditType, datetime | None, datetime | None]
         ] = {}
@@ -1136,7 +1137,14 @@ class CycleService:
                 if record is None:
                     change_by_task[task_id] = (CalendarEditType.DELETED, None, None)
                     continue
-                obs_start, obs_end = record.scheduled_start, record.scheduled_end
+                # Google returns event instants normalized to UTC (the write
+                # path stores timeZone=UTC), but draft entries and mappings
+                # carry the USER's wall clock — the SPA renders the offset
+                # embedded in the ISO string. Restamp before classifying so an
+                # adopted time isn't stored (and drawn) as UTC digits hours off;
+                # the comparisons below are instant-based either way.
+                obs_start = record.scheduled_start.astimezone(user_tz)
+                obs_end = record.scheduled_end.astimezone(user_tz)
                 if (
                     obs_start == mapping.scheduled_start
                     and obs_end == mapping.scheduled_end
@@ -1204,7 +1212,7 @@ class CycleService:
             plan=active.plan,
             policy=policy_from_user_profile(onboarding.user_profile),
             free_busy=[FreeBusyInterval.model_validate(dict(fb)) for fb in free_busy],
-            tz=onboarding.tzinfo(),
+            tz=user_tz,
             completed_or_dropped_task_ids=self._completed_or_dropped_ids(user_id),
         )
         # Advisory ordering (DEPENDENCY_ADVISORY) does NOT block adoption (ADR-0008);

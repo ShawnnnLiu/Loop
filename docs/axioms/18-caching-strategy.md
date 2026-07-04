@@ -84,6 +84,26 @@ The MVP realizes this in the `cache/` leaf kernel:
 
 The store is in-memory only in the MVP (no Redis/persistence).
 
+**Wiring status (2026-07-04):** the `cache/` kernel is realized and tested but
+deliberately **unwired** — no production composition root constructs a `Cache`,
+and the Strategist path never consults it. It awaits the RAG phase, whose
+retrieval results are the cache targets this axiom was written for. Wiring the
+syllabus-reuse short-circuit earlier would trade syllabus freshness for a cost
+saving the current UX-first cost posture does not need. Audits should treat the
+package as a dormant kernel, not dead code.
+
+## Provider-Side Prompt Caching
+
+Distinct from the object cache above, provider-side prompt caching (Anthropic
+`cache_control` breakpoints) is **in scope and enabled** in the LLM transport
+(`llm_nodes/anthropic_adapter.py`). The breakpoint sits on the stable base
+user-prompt block so repair rounds and retries reuse the processed
+system-plus-base prefix — a latency lever, not a persistence mechanism. Nothing
+user-personal is persisted by us: the provider caches the request prefix
+ephemerally (minutes) on its side, which is the same data the request itself
+already sends. The `cache_hit` flag on `LlmCallLog` rows is the observability
+surface for this.
+
 ## Related Docs
 
 - `08-rag-source-claims.md`

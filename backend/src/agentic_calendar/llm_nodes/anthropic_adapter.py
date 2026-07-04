@@ -94,6 +94,7 @@ class AnthropicTransport(Protocol):
         system: str,
         user_prompt: str,
         output_contract: type[BaseModel],
+        repair_suffix: str | None = None,
     ) -> TransportResult: ...
 
 
@@ -125,6 +126,7 @@ class AnthropicMessagesTransport:
         system: str,
         user_prompt: str,
         output_contract: type[BaseModel],
+        repair_suffix: str | None = None,
     ) -> TransportResult:
         import anthropic
 
@@ -132,14 +134,31 @@ class AnthropicMessagesTransport:
         # ``messages.stream`` apply to an ``output_format`` model, so generation
         # is shaped identically; we just stop short of the SDK's eager validate.
         from anthropic.lib._parse._transform import transform_schema
+        from anthropic.types import TextBlockParam
 
         schema = transform_schema(TypeAdapter(output_contract).json_schema())
+        # Prompt caching: the breakpoint sits on the stable base prompt block, so
+        # the cached prefix (system + base prompt) is reused across repair rounds
+        # and retries — the repair suffix is the only re-processed content. The
+        # breakpoint must be here and not on ``system``: providers only cache
+        # prefixes above a per-model minimum (4096 tokens on opus-4-8/haiku-4-5),
+        # which the system prompts alone never reach. Blocks below the minimum
+        # silently don't cache, so small prompts (prose nodes) are unaffected.
+        content: list[TextBlockParam] = [
+            {
+                "type": "text",
+                "text": user_prompt,
+                "cache_control": {"type": "ephemeral"},
+            }
+        ]
+        if repair_suffix is not None:
+            content.append({"type": "text", "text": repair_suffix})
         try:
             response = self._client.messages.create(
                 model=model_name,
                 max_tokens=max_tokens,
                 system=system,
-                messages=[{"role": "user", "content": user_prompt}],
+                messages=[{"role": "user", "content": content}],
                 output_config={"format": {"type": "json_schema", "schema": schema}},
             )
         except anthropic.APIError as exc:
@@ -208,6 +227,12 @@ class AdapterConfig(BaseModel):
 # (opus-4-8 128k, haiku-4-5 64k) and under the non-streaming SDK timeout budget
 # (this transport is non-streaming). The prose nodes keep 1024 — the smallest
 # round cap above their ~500/~300 budgets that leaves JSON-envelope headroom.
+#
+# Sampling parameters (temperature/top_p/top_k) are deliberately NOT configured:
+# opus-4-8 rejects them with a 400 and sonnet-tier models reject non-default
+# values, so sampling is pinned by the API on every tier this adapter targets.
+# Eval comparability therefore rests on prompt-byte pinning (the pinned-hash
+# test ties prompt_version to the prompt bytes), not on a temperature knob.
 STRATEGIST_CONFIG = AdapterConfig(
     model_name="claude-opus-4-8",
     prompt_version="strategist-v2-2026-06-23",
@@ -298,10 +323,12 @@ class _GenerationEngine:
     ) -> BaseModel:
         repair_context: str | None = None
         for attempt in range(self._config.max_repair_attempts + 1):
-            prompt = user_prompt
+            # The repair guidance travels as a separate suffix so the transport
+            # can keep the base prompt block byte-stable for prompt caching.
+            repair_suffix = None
             if repair_context is not None:
-                prompt = (
-                    f"{user_prompt}\n\nYour previous output was rejected by "
+                repair_suffix = (
+                    f"\n\nYour previous output was rejected by "
                     f"deterministic validation. Fix exactly these problems and "
                     f"return the corrected object:\n{repair_context}"
                 )
@@ -309,7 +336,8 @@ class _GenerationEngine:
                 run_id=run_id,
                 plan_version=plan_version,
                 system=system,
-                prompt=prompt,
+                prompt=user_prompt,
+                repair_suffix=repair_suffix,
                 attempt=attempt,
                 post_validate=post_validate,
             )
@@ -329,12 +357,15 @@ class _GenerationEngine:
         plan_version: str | None,
         system: str,
         prompt: str,
+        repair_suffix: str | None,
         attempt: int,
         post_validate: PostValidator | None,
     ) -> BaseModel | str:
         """One repair attempt: returns the validated model, or the rejection
         text to feed the next repair re-prompt. Terminal failures raise."""
-        prompt_hash = _sha256(f"{system}\n{prompt}")
+        # Hash the full rendered prompt (base + suffix) — the same bytes the
+        # model sees, and byte-identical to the pre-split hashing scheme.
+        prompt_hash = _sha256(f"{system}\n{prompt}{repair_suffix or ''}")
         for sdk_retry in range(self._config.max_sdk_retries + 1):
             is_last_retry = sdk_retry == self._config.max_sdk_retries
             started = self._clock.now()
@@ -345,6 +376,7 @@ class _GenerationEngine:
                     system=system,
                     user_prompt=prompt,
                     output_contract=self._contract,
+                    repair_suffix=repair_suffix,
                 )
             except TransportError as exc:
                 code = (

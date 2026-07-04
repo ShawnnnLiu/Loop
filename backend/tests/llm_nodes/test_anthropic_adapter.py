@@ -224,7 +224,10 @@ def test_malformed_output_triggers_repair_attempt() -> None:
     rows = store.list_all()
     assert rows[0].reason_code is ReasonCode.LLM_MALFORMED_OUTPUT
     assert [(r.attempt, r.sdk_retry) for r in rows] == [(0, 0), (1, 0)]
-    assert "rejected by deterministic validation" in transport.requests[1]["user_prompt"]
+    assert "rejected by deterministic validation" in transport.requests[1]["repair_suffix"]
+    # The base prompt block stays byte-identical across attempts so the
+    # provider prompt cache can serve it on the repair round.
+    assert transport.requests[1]["user_prompt"] == transport.requests[0]["user_prompt"]
 
 
 def test_boundary_revalidation_rejects_enforced_output() -> None:
@@ -237,7 +240,7 @@ def test_boundary_revalidation_rejects_enforced_output() -> None:
     assert rows[0].reason_code is ReasonCode.LLM_SCHEMA_REJECTED
     assert rows[1].validation_outcome is ValidationOutcome.PASS
     # The repair re-prompt carries the deterministic rejection, not prose.
-    assert "rejected by deterministic validation" in transport.requests[1]["user_prompt"]
+    assert "rejected by deterministic validation" in transport.requests[1]["repair_suffix"]
 
 
 def test_repair_cap_exhaustion_routes_to_error() -> None:
@@ -495,10 +498,16 @@ def test_strategist_contract_violation_repairs_then_typed_error() -> None:
     rows = store.list_all()
     assert [r.attempt for r in rows] == [0, 1, 2]
     assert all(r.reason_code is ReasonCode.LLM_SCHEMA_REJECTED for r in rows)
-    # The repair re-prompt carried the specific deterministic violation.
-    repair_prompt = client.messages.calls[1]["messages"][0]["content"]
-    assert "rejected by deterministic validation" in repair_prompt
-    assert "reason" in repair_prompt
+    # The repair re-prompt carried the specific deterministic violation, in a
+    # separate suffix block after the cache-stable base prompt block.
+    first_blocks = client.messages.calls[0]["messages"][0]["content"]
+    repair_blocks = client.messages.calls[1]["messages"][0]["content"]
+    assert len(first_blocks) == 1
+    assert first_blocks[0]["cache_control"] == {"type": "ephemeral"}
+    assert len(repair_blocks) == 2
+    assert repair_blocks[0]["text"] == first_blocks[0]["text"]
+    assert "rejected by deterministic validation" in repair_blocks[1]["text"]
+    assert "reason" in repair_blocks[1]["text"]
 
 
 def test_reflection_psych_label_is_rejected_and_repaired() -> None:

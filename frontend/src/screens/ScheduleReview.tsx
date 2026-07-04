@@ -13,7 +13,7 @@ import {
   parseWall,
   weekMondayMs,
 } from '../lib/datetime'
-import { flaggedReason, reconcileBanner } from '../lib/reconcile'
+import { flaggedReason, needsDraftRefetch, reconcileBanner } from '../lib/reconcile'
 import { reviewBanner, reviewMode } from '../lib/review'
 
 // The drag-to-adjust schedule review (the signature interaction). PROPOSED
@@ -177,7 +177,9 @@ export function ScheduleReviewScreen() {
       .then(async (res) => {
         if (!mountedRef.current) return
         setReconcileResult(res)
-        if (res.adopted_draft_schedule_id != null) {
+        // Adopted times AND freshly-recorded deletions both live server-side in
+        // the DraftView (entries / deleted_task_ids), so refetch for either.
+        if (needsDraftRefetch(res)) {
           const refreshed = await api.draft()
           if (mountedRef.current) setView(refreshed)
         }
@@ -223,6 +225,10 @@ export function ScheduleReviewScreen() {
   const banner = reviewBanner(mode)
   const recon = reconcileResult ? reconcileBanner(reconcileResult) : null
   const titleOf = (taskId: string): string => view?.task_titles[taskId] ?? taskId
+  // Durable event_deleted memory (server truth, not the transient banner): these
+  // blocks must never carry the written "✓" — the event is gone from the
+  // calendar, but the task is still planned.
+  const deletedIds = new Set(view?.deleted_task_ids ?? [])
 
   const posOf = (b: Block): { dayIdx: number; startMin: number } =>
     drag && drag.taskId === b.taskId ? { dayIdx: drag.dayIdx, startMin: drag.startMin } : b
@@ -456,15 +462,22 @@ export function ScheduleReviewScreen() {
               const pos = posOf(b)
               const dragging = drag?.taskId === b.taskId
               const bad = violation?.taskId === b.taskId
+              const gone = !editable && deletedIds.has(b.taskId)
               return (
                 <div
                   key={b.taskId}
                   className={
                     editable
                       ? `blk blk-proposed${dragging ? ' dragging' : ''}${bad ? ' bad' : ''}`
-                      : `blk ${mode === 'written' ? 'blk-confirmed' : 'blk-readonly'}`
+                      : `blk ${gone ? 'blk-deleted' : mode === 'written' ? 'blk-confirmed' : 'blk-readonly'}`
                   }
-                  title={mode === 'written' ? 'On your Google Calendar · fixed' : undefined}
+                  title={
+                    gone
+                      ? 'You deleted this event from your Google Calendar — the task is still in your plan'
+                      : mode === 'written'
+                        ? 'On your Google Calendar · fixed'
+                        : undefined
+                  }
                   onPointerDown={editable ? (e) => onDown(e, b) : undefined}
                   onPointerMove={editable ? onMove : undefined}
                   onPointerUp={editable ? (e) => void onUp(e) : undefined}
@@ -476,7 +489,7 @@ export function ScheduleReviewScreen() {
                   }}
                 >
                   <div className="bt">
-                    {editable ? '⠿ ' : mode === 'written' ? '✓ ' : ''}
+                    {editable ? '⠿ ' : gone ? '✕ ' : mode === 'written' ? '✓ ' : ''}
                     {b.title}
                   </div>
                   <div className="bm">
@@ -523,6 +536,15 @@ export function ScheduleReviewScreen() {
           />
           imported · fixed
         </span>
+        {!editable && weekBlocks.some((b) => deletedIds.has(b.taskId)) && (
+          <span>
+            <span
+              className="sw"
+              style={{ border: '1px dashed #c0492f', background: 'rgba(192,73,47,0.08)' }}
+            />
+            ✕ deleted from your calendar · still planned
+          </span>
+        )}
         <span className="spacer" />
         <span>{editable ? (saving ? 'saving…' : 'snaps to 15 min · drag across days') : 'read-only'}</span>
       </div>

@@ -147,6 +147,11 @@ export interface DraftView {
   hash_canonicalization_version: string
   free_busy: FreeBusyInterval[]
   task_titles: Record<string, string>
+  /** Tasks whose calendar event the user deleted externally (durable
+   *  `event_deleted` memory, scoped to the draft's plan version). Rendered as a
+   *  distinct "deleted from calendar" state — never the written checkmark; the
+   *  task itself is still planned. */
+  deleted_task_ids: string[]
 }
 
 /** A single move sent to /api/adjust; the server derives `end` from the
@@ -226,6 +231,10 @@ export interface TodayTask {
   end: string
   due: boolean
   reported: boolean
+  /** The user deleted this task's calendar event externally (`event_deleted`).
+   *  The task is still planned and can still be checked in — deleted is a
+   *  distinct state, never shown as completion. */
+  deleted: boolean
 }
 
 export interface TodayResult {

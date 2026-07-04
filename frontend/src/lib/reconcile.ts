@@ -76,6 +76,17 @@ export function reconcileBanner(result: CalendarReconciliationResult): Reconcile
   }
 }
 
+/** True when the pull changed server-side truth an already-fetched DraftView
+ *  cannot reflect: an adopted draft (new times) or a deletion (the pull just
+ *  recorded the durable `event_deleted` memory that feeds
+ *  `DraftView.deleted_task_ids`, so the grid must refetch to mark the block). */
+export function needsDraftRefetch(result: CalendarReconciliationResult): boolean {
+  return (
+    result.adopted_draft_schedule_id != null ||
+    result.deltas.some((d) => d.disposition === 'flagged_deleted')
+  )
+}
+
 /** A short, honest reason a single flagged edit could not be applied. Deletions
  *  and the four drag-to-adjust placement codes (the shared refusal vocabulary)
  *  get human phrasing; any other code falls back to the raw value rather than

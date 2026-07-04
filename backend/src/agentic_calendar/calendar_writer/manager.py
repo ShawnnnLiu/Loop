@@ -17,7 +17,7 @@ so output is byte-stable.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Collection, Mapping
 from dataclasses import dataclass
 from enum import StrEnum
 
@@ -263,6 +263,140 @@ class CalendarWriteManager:
             return self._translate_error(exc, run_id=run_id)
         finally:
             # --- Step 7: release lock -----------------------------------
+            self._lock_manager.release(token)
+
+    # ------------------------------------------------------------------ #
+    # approve_and_remove (delete-only write for a drop)
+    # ------------------------------------------------------------------ #
+
+    def approve_and_remove(
+        self,
+        *,
+        approval_event_id: str,
+        draft: DraftSchedule,
+        removed_task_ids: Collection[str],
+        target_calendar_id: str,
+    ) -> WriteResult:
+        """Delete-only write for a drop: remove the dropped tasks' events.
+
+        Survivor events are left exactly where they are (no create, no update);
+        only the ``removed_task_ids`` events are deleted. The approval + hash
+        recheck (axiom 06 lines 181-189) is mandatory and validates the
+        survivors-only ``draft`` the user approved — deleting the dropped events
+        is the deterministic effect of activating that draft. reconcile/status
+        read mappings by ``task_id``, so transitioning the dropped tasks' latest
+        mappings to ``ROLLED_BACK`` drops them from those views; survivor
+        mappings (under their original run) are untouched.
+
+        Reuses the rollback delete + status-transition ceremony (axiom 06 lines
+        132-137), scoped to the dropped tasks and gated behind the approval. A
+        no-targets request (nothing on the calendar to remove) returns success
+        BEFORE the lock is taken — it makes no adapter call and mutates no
+        mapping, so the per-write lock (axiom 13) is unnecessary on that branch.
+        """
+        try:
+            approval = self._validate_approval(
+                approval_event_id=approval_event_id, draft=draft
+            )
+        except CalendarWriterError as exc:
+            return self._translate_error(exc, run_id=None)
+
+        # Latest written mapping per dropped task — that is the live event.
+        targets: list[CalendarEventMapping] = []
+        for task_id in sorted(set(removed_task_ids)):
+            history = self._mapping_store.list_for_task(task_id)
+            if not history:
+                continue
+            latest = history[-1]
+            if latest.calendar_event_id is not None and latest.calendar_write_status in {
+                CalendarWriteStatus.WRITTEN,
+                CalendarWriteStatus.VERIFIED,
+                CalendarWriteStatus.VERIFICATION_FAILED,
+            }:
+                targets.append(latest)
+
+        op_id = self._id_generator.new_id("run")
+        if not targets:
+            # Nothing on the calendar to remove (idempotent) — the survivor draft
+            # is already the live state.
+            return WriteResult(
+                run_id=op_id,
+                status=WriteStatus.SUCCESS,
+                reason_code=None,
+                written_mappings=(),
+                verification=None,
+            )
+
+        try:
+            token = self._lock_manager.acquire(
+                user_id=approval.user_id, run_id=op_id
+            )
+        except CalendarWriteLockBusyError as exc:
+            return WriteResult(
+                run_id=op_id,
+                status=WriteStatus.LOCK_BUSY,
+                reason_code=ReasonCode.CALENDAR_WRITE_LOCK_BUSY,
+                written_mappings=(),
+                verification=None,
+                error=str(exc),
+            )
+        try:
+            now = self._clock.now()
+            for mapping in targets:
+                self._mapping_store.update_status(
+                    mapping.run_id,
+                    mapping.task_id,
+                    new_status=CalendarWriteStatus.ROLLBACK_PENDING,
+                    now=now,
+                )
+            refreshed = [
+                self._mapping_store.get(m.run_id, m.task_id) for m in targets
+            ]
+            failed: set[str] = set()
+            for mapping in refreshed:
+                if mapping.calendar_event_id is None:
+                    continue
+                try:
+                    self._adapter.delete_event(
+                        target_calendar_id=target_calendar_id,
+                        calendar_event_id=mapping.calendar_event_id,
+                    )
+                except Exception:
+                    correlated(_log, run_id=op_id, task_id=mapping.task_id).exception(
+                        "adapter.delete_event raised during drop removal "
+                        "(reason_code will be CALENDAR_ROLLBACK_FAILED)"
+                    )
+                    failed.add(mapping.task_id)
+            now = self._clock.now()
+            updated: list[CalendarEventMapping] = []
+            for mapping in refreshed:
+                status = (
+                    CalendarWriteStatus.ROLLBACK_FAILED
+                    if mapping.task_id in failed
+                    else CalendarWriteStatus.ROLLED_BACK
+                )
+                updated.append(
+                    self._mapping_store.update_status(
+                        mapping.run_id, mapping.task_id, new_status=status, now=now
+                    )
+                )
+            if failed:
+                return WriteResult(
+                    run_id=op_id,
+                    status=WriteStatus.PARTIAL_FAILURE,
+                    reason_code=ReasonCode.CALENDAR_ROLLBACK_FAILED,
+                    written_mappings=tuple(updated),
+                    verification=None,
+                    error=f"could not remove dropped events for tasks {sorted(failed)}",
+                )
+            return WriteResult(
+                run_id=op_id,
+                status=WriteStatus.SUCCESS,
+                reason_code=None,
+                written_mappings=tuple(updated),
+                verification=None,
+            )
+        finally:
             self._lock_manager.release(token)
 
     # ------------------------------------------------------------------ #

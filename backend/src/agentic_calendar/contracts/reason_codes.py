@@ -95,6 +95,36 @@ class ReasonCode(StrEnum):
     multiple placements per ``task_id`` a split would produce. Both land
     together in the Phase 3 scheduler upgrade (OR-Tools swap, axiom 05)."""
 
+    # --- Completion / drop memory + advisory ordering (ADR-0008) ---
+    #
+    # The manual-override placement path (drag-to-adjust, and an adopted
+    # external reconciliation move) treats prerequisite ordering as advisory,
+    # not a hard refusal: an *unfinished* prerequisite a move now precedes
+    # yields DEPENDENCY_ADVISORY (non-blocking); a completed/dropped one yields
+    # nothing. The deterministic auto-placement scheduler keeps the hard
+    # DEPENDENCY_BLOCKED. The drop transform records DROPPED dispositions.
+    DEPENDENCY_ADVISORY = "DEPENDENCY_ADVISORY"
+    """A manual placement override (drag-to-adjust, or an adopted external
+    reconciliation move) starts before an *unfinished* prerequisite ends. Unlike
+    the scheduler's hard ``DEPENDENCY_BLOCKED``, this is a **non-blocking**
+    warning: the move is applied and the heads-up rides in the adjust result's
+    ``warnings`` — or, for an adopted reconciliation delta, as the only non-null
+    ``reason_code`` on an ``adopted`` disposition. Completion-relative: a
+    completed/dropped prerequisite produces no warning (ADR-0008;
+    task-disposition spec)."""
+
+    TASK_DROPPED_BY_USER = "TASK_DROPPED_BY_USER"
+    """The user explicitly dropped an unfinished task. Recorded as a ``dropped``
+    ``TaskDispositionRecord`` (``source: user``); the deterministic drop
+    transform removes the task from a new plan version and prunes it from
+    survivors' dependencies, keeping surviving ``task_id``s stable
+    (task-disposition spec)."""
+
+    DEPENDENT_DROP_PRUNED = "DEPENDENT_DROP_PRUNED"
+    """A surviving task's ``dependencies`` were pruned of a dropped prerequisite
+    id by the deterministic drop transform. Carried on the ``PlanDiff``
+    field-change for that survivor (axiom 15), **not** on a disposition record."""
+
     # --- Supervisor / state machine (axiom 02 + axiom 16) ---
     INVALID_STATE_TRANSITION = "INVALID_STATE_TRANSITION"
     USER_APPROVAL_REQUIRED = "USER_APPROVAL_REQUIRED"

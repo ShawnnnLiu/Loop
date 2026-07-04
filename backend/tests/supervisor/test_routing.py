@@ -62,11 +62,13 @@ def test_terminal_states_have_no_outgoing_transitions() -> None:
         assert allowed_signals(terminal) == set()
 
 
-def test_initial_only_accepts_user_profile_collected() -> None:
+def test_initial_accepts_profile_collected_or_drop() -> None:
     # UNRECOVERABLE_ERROR is the typed panic edge, allowed from every
-    # non-terminal state (see test_transitions_table).
+    # non-terminal state (see test_transitions_table). DROP_REQUESTED routes a
+    # fresh drop run straight to approval (completion/drop memory).
     assert allowed_signals(SupervisorState.INITIAL) == {
         SupervisorSignal.USER_PROFILE_COLLECTED,
+        SupervisorSignal.DROP_REQUESTED,
         SupervisorSignal.UNRECOVERABLE_ERROR,
     }
 

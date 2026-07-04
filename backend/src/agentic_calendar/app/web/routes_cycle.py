@@ -70,6 +70,13 @@ class AdjustRequest(BaseModel):
     run_id: str | None = None
 
 
+class DropRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    task_ids: list[str]
+    run_id: str | None = None
+
+
 class CheckinRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -169,6 +176,17 @@ def adjust(
             free_busy=_server_free_busy(request, user_id),
         )
     )
+
+
+@router.post("/drop")
+def drop(
+    service: Service,
+    user_id: ActingUser,
+    body: DropRequest,
+) -> JSONResponse:
+    """Drop unfinished tasks: a deterministic plan edit producing a
+    survivors-only draft awaiting approval (then a delete-only write)."""
+    return _json(service.drop_tasks(user_id, body.task_ids, run_id=body.run_id))
 
 
 @router.post("/write")

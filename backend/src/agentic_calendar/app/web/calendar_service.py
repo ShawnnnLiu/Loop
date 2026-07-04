@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import dataclasses
 import json
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from agentic_calendar.app.cycle import CycleError, CycleService
 from agentic_calendar.app.environment import AppEnvironment
@@ -84,6 +84,12 @@ def fetch_user_free_busy(
     keeping with the no-raw-calendar-content axiom. Raises :class:`CycleError`
     if Google is not connected; a stored token that predates the ``freebusy``
     scope surfaces as a ``GoogleCalendarApiError`` (403) at query time.
+
+    Intervals are restamped in the user's timezone: Google returns UTC
+    instants, but the SPA grid draws the wall-clock digits embedded in the ISO
+    string, so serving UTC would paint a 2-3PM PDT event at 9-10PM. Validation
+    and overlap checks are instant-based, so the conversion is display-true and
+    behavior-neutral.
     """
     cred = env.credential_store.get_by_user(user_id)
     if cred is None:
@@ -93,7 +99,12 @@ def fetch_user_free_busy(
     intervals = transport.query_free_busy(
         calendar_id=calendar_id, time_min=time_min, time_max=time_max
     )
-    return [{"start": start.isoformat(), "end": end.isoformat()} for start, end in intervals]
+    onboarding = env.state.get_onboarding(user_id)
+    tz = onboarding.tzinfo() if onboarding is not None else UTC
+    return [
+        {"start": start.astimezone(tz).isoformat(), "end": end.astimezone(tz).isoformat()}
+        for start, end in intervals
+    ]
 
 
 def best_effort_free_busy(

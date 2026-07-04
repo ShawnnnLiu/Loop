@@ -33,13 +33,15 @@ def test_invalid_fixture_rejected(fixture: object) -> None:
         assert substr in msg, f"expected substring {substr!r} not in error message:\n{msg}"
 
 
-def test_adjustment_reason_codes_are_the_four_placement_codes() -> None:
-    """A rejected reconciliation delta reuses exactly the drag-to-adjust hard
-    rules, so a calendar move is refused for the same reasons a UI move is."""
+def test_adjustment_reason_codes_are_the_three_hard_placement_codes() -> None:
+    """A rejected reconciliation delta reuses exactly the drag-to-adjust HARD
+    rules. Prerequisite ordering is advisory (``DEPENDENCY_ADVISORY``) and never
+    rejects an external move (ADR-0008), so it is not in this set."""
     expected = {
         ReasonCode.NO_VALID_CONTIGUOUS_BLOCK,
         ReasonCode.OUTSIDE_ALLOWED_HOURS,
         ReasonCode.DAILY_LOAD_EXCEEDED,
-        ReasonCode.DEPENDENCY_BLOCKED,
     }
     assert expected == ADJUSTMENT_REASON_CODES
+    assert ReasonCode.DEPENDENCY_BLOCKED not in ADJUSTMENT_REASON_CODES
+    assert ReasonCode.DEPENDENCY_ADVISORY not in ADJUSTMENT_REASON_CODES

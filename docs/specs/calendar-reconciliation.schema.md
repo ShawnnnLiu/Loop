@@ -11,8 +11,10 @@ Write Manager remains the only code that mutates an external calendar
 
 Active-plan lifecycle / Supervisor, deterministic drift classifier (rejected and
 deleted deltas), draft-schedule store (adopted moves), `CalendarEventMappingStore`
-(sets `user_modified_bool`), telemetry, audit log, and
-`UserFacingExplanationNode` (explanation only — it never decides a disposition).
+(sets `user_modified_bool`), the task-disposition store (an `event_deleted`
+record per observed deletion; `task-disposition.schema.md`), telemetry, audit
+log, and `UserFacingExplanationNode` (explanation only — it never decides a
+disposition).
 
 ## Purpose
 
@@ -86,17 +88,22 @@ The MVP uses on-demand pulls only — **no** webhooks, **no** polling daemon, **
 5. **Re-validate the whole placement.** Substitute every adopted candidate time
    into the active draft and re-validate the **entire** resulting placement
    against the user's scheduling policy and a freshly fetched free/busy snapshot,
-   using the same hard rules as drag-to-adjust (`draft-schedule.schema.md`,
-   "Server-side re-validation").
-6. **Adopt-if-valid.** If the placement validates, assemble a new immutable draft
-   schedule with the adopted times, update each affected mapping, and record
-   telemetry. No write, no re-approval (no write occurs). State stays
-   `ACTIVE_PLAN`.
+   using the same **hard** rules as drag-to-adjust (`draft-schedule.schema.md`,
+   "Server-side re-validation"). Prerequisite ordering is advisory and never
+   rejects (ADR-0008).
+6. **Adopt-if-valid.** If the placement passes the hard rules, assemble a new
+   immutable draft schedule with the adopted times, update each affected mapping,
+   and record telemetry. An adopted move that now precedes an *unfinished*
+   prerequisite is still adopted and carries a `DEPENDENCY_ADVISORY` heads-up. No
+   write, no re-approval (no write occurs). State stays `ACTIVE_PLAN`.
 7. **Flag otherwise.** A move/resize that fails validation, or any deletion, is
    not adopted: the prior internal time remains the system of record, the mapping
    is flagged `user_modified_bool: true`, and a `DRIFT_EXTERNAL_CONFLICT` event is
    emitted so the deterministic drift → replan loop (axiom 07) can surface options
-   the user approves through the normal gate.
+   the user approves through the normal gate. A deletion additionally appends an
+   idempotent `event_deleted` `TaskDispositionRecord` (content-derived id,
+   `source: system`, reason `EXTERNAL_EVENT_DELETED`) — the durable memory the
+   read projections surface as a distinct "deleted from calendar" state.
 
 ## JSON Example
 
@@ -167,7 +174,7 @@ The MVP uses on-demand pulls only — **no** webhooks, **no** polling daemon, **
 | `adopted_draft_schedule_id` | New immutable draft holding the adopted times, or `null` |
 | `deltas[*].change_type` | `unchanged \| moved \| resized \| deleted` |
 | `deltas[*].disposition` | `unchanged \| adopted \| rejected \| flagged_deleted` |
-| `deltas[*].reason_code` | Why a delta was rejected (a hard-rule code) or deleted (`EXTERNAL_EVENT_DELETED`); `null` for `unchanged`/`adopted` |
+| `deltas[*].reason_code` | Why a delta was rejected (a hard-rule code) or deleted (`EXTERNAL_EVENT_DELETED`); `null` for `unchanged`/`adopted`, except an adopted move that now precedes an unfinished prerequisite carries `DEPENDENCY_ADVISORY` (ADR-0008) |
 
 ## Allowed `change_type` Values
 
@@ -189,24 +196,36 @@ The MVP uses on-demand pulls only — **no** webhooks, **no** polling daemon, **
 A delta's `reason_code` is a member of the system-wide `ReasonCode` enum
 (`backend/src/agentic_calendar/contracts/reason_codes.py`).
 
-- Rejected moves/resizes reuse the existing drag-to-adjust hard-rule codes, so a
-  rejection means the same thing whether the move came from the UI or the
+- Rejected moves/resizes reuse the existing drag-to-adjust **hard**-rule codes, so
+  a rejection means the same thing whether the move came from the UI or the
   calendar:
   - `NO_VALID_CONTIGUOUS_BLOCK` (overlaps a fixed external event or another block)
   - `OUTSIDE_ALLOWED_HOURS`
   - `DAILY_LOAD_EXCEEDED`
-  - `DEPENDENCY_BLOCKED`
-- Deletions use a new typed code **`EXTERNAL_EVENT_DELETED`** (this spec proposes
-  its addition to the closed `ReasonCode` enum).
+
+  Prerequisite ordering is **no longer a rejection reason** (ADR-0008): an
+  external move that lands before an unfinished prerequisite is *adopted* with a
+  `DEPENDENCY_ADVISORY` warning, not rejected — exactly as a UI drag is.
+- An **adopted** move/resize carries a `null` `reason_code` normally, or
+  `DEPENDENCY_ADVISORY` (its only allowed non-null code) when the adopted
+  placement now precedes an unfinished prerequisite.
+- Deletions use the typed code **`EXTERNAL_EVENT_DELETED`**.
 - Every rejected and deleted delta additionally produces a `DriftEvent` of
   `drift_type: external_conflict` / `DRIFT_EXTERNAL_CONFLICT`
-  (`drift-event.schema.md`); adopted moves do **not** (no conflict occurred).
+  (`drift-event.schema.md`); adopted moves do **not** (no conflict occurred),
+  including an adopted move carrying `DEPENDENCY_ADVISORY` — that is the user's own
+  reordering, not an external conflict.
 
 ## Adopt-If-Valid Rules
 
 - **Whole-placement validation.** Candidate times are validated as a set against
   policy + a freshly fetched free/busy snapshot — never the single moved block in
   isolation, and never the client's own conflict check.
+- **Ordering is advisory, not a gate (ADR-0008).** Prerequisite ordering does not
+  reject an external move. A move whose only issue is that it now precedes an
+  *unfinished* prerequisite is adopted and carries `DEPENDENCY_ADVISORY`; a move
+  before a completed/dropped prerequisite carries no code. Adoption is still gated
+  on the **hard** rules (overlap, allowed hours/weekend, daily load).
 - **Valid → adopt with no write.** Because the user's edit is already on the
   calendar, adoption is a record update, not a write:
   - Assemble a new **immutable** draft schedule (fresh `draft_schedule_id`, same
@@ -225,11 +244,15 @@ A delta's `reason_code` is a member of the system-wide `ReasonCode` enum
   `DRIFT_EXTERNAL_CONFLICT` carrying the hard-rule code as evidence, and surface
   it. The engine never silently rewrites the calendar to "correct" the user
   (that would be both a silent write and an override of the user's own calendar).
-- **Deleted → detect and surface only (MVP).** Set `user_modified_bool: true`,
-  emit `DRIFT_EXTERNAL_CONFLICT`, and surface. The engine never silently
-  re-creates the event (it would fight the user) and never silently cancels the
-  task (axiom 06 line 253 — cancellation-on-delete is itself opt-in). Richer
-  deletion semantics are deferred.
+- **Deleted → detect, remember, and surface (MVP).** Set
+  `user_modified_bool: true`, emit `DRIFT_EXTERNAL_CONFLICT`, append an
+  idempotent `event_deleted` disposition record, and surface the deletion as a
+  distinct per-task state (`DraftView.deleted_task_ids`, `TodayTask.deleted`) —
+  never as a completion: a deleted event is not a done task, and the two states
+  must be visually distinguishable. The engine never silently re-creates the
+  event (it would fight the user) and never silently cancels the task (axiom 06
+  line 253 — cancellation-on-delete is itself opt-in). Richer deletion semantics
+  (e.g. an opt-in "deleting an event drops the task") are deferred.
 
 ## Privacy Invariants
 
@@ -256,7 +279,9 @@ A delta's `reason_code` is a member of the system-wide `ReasonCode` enum
   mappings is serialized against the write path.
 - Adopted moves are user-initiated and are **not** external conflicts: only
   rejected/deleted deltas feed the drift classifier's `external_conflict_task_ids`
-  input. Whether adopted moves also increment a reschedule counter for the
+  input — an adopted move carrying `DEPENDENCY_ADVISORY` is likewise excluded (it
+  is the user's own reordering). Whether adopted moves also increment a reschedule
+  counter for the
   external-conflict correlation rule is a calibration decision, deferred to
   thresholds tuning.
 
@@ -283,6 +308,9 @@ A delta's `reason_code` is a member of the system-wide `ReasonCode` enum
   `plan_version`; the active plan is never mutated in place (axiom 15).
 - Every rejected/deleted delta carries a typed `reason_code` and produces a
   `DRIFT_EXTERNAL_CONFLICT` event (axiom: every failure is typed).
+- Every deleted delta appends an `event_deleted` `TaskDispositionRecord`
+  (idempotent across repeated pulls); the record never joins the
+  completed/dropped scheduler projection — the task stays planned.
 - Reads are scoped by app metadata to the dedicated calendar; no raw event text is
   read or stored.
 - Deterministic end to end; defers to in-flight writes.
@@ -298,8 +326,9 @@ A delta's `reason_code` is a member of the system-wide `ReasonCode` enum
 }
 ```
 
-Reason: an `adopted` delta must have a `null` `reason_code` — adoption means the
-placement validated.
+Reason: an `adopted` delta may carry only a `null` `reason_code` or
+`DEPENDENCY_ADVISORY` (ADR-0008). A **hard** placement code such as
+`OUTSIDE_ALLOWED_HOURS` means the move did not validate, so it cannot be adopted.
 
 ```json
 {
@@ -332,8 +361,9 @@ Reason: `outcome: "adopted"` requires a non-null `adopted_draft_schedule_id`.
 ```
 
 Reason: a rejected reconciliation delta must use a hard-rule placement code
-(`NO_VALID_CONTIGUOUS_BLOCK`, `OUTSIDE_ALLOWED_HOURS`, `DAILY_LOAD_EXCEEDED`,
-`DEPENDENCY_BLOCKED`), not an unrelated `ReasonCode`.
+(`NO_VALID_CONTIGUOUS_BLOCK`, `OUTSIDE_ALLOWED_HOURS`, `DAILY_LOAD_EXCEEDED`), not
+an unrelated `ReasonCode`. Prerequisite ordering is no longer a rejection reason
+(ADR-0008).
 
 ## Related Docs
 
@@ -346,6 +376,7 @@ Reason: a rejected reconciliation delta must use a hard-rule placement code
 - `calendar-event-mapping.schema.md` (`user_modified_bool`, `scheduled_*`)
 - `draft-schedule.schema.md` (adjustment re-validation rules reused here)
 - `drift-event.schema.md` (`DRIFT_EXTERNAL_CONFLICT` routing)
+- `task-disposition.schema.md` (`event_deleted` durable deletion memory)
 - `telemetry.schema.md`
 - `validation-result.schema.md`
 - `../decisions/ADR-0002-preview-only-calendar-writes.md`

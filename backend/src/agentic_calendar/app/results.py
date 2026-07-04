@@ -66,8 +66,45 @@ class ProposeResult(BaseModel):
     """LLM prose attachment (validation wording); never control-plane."""
 
 
+class DropResult(BaseModel):
+    """Outcome of one drop request: a survivors-only DRAFT awaiting approval.
+
+    A fresh run carries the drop to approval; the active plan stays ACTIVE until
+    the drop is approved + written (a delete-only write that removes only the
+    dropped events). Rejecting discards this run and leaves the active plan
+    untouched.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    run_id: str
+    user_id: str
+    state: SupervisorState
+    plan_version: str
+    parent_plan_version: str
+    draft_schedule_id: str
+    draft_payload_hash: str
+    dropped_task_ids: list[str] = Field(default_factory=list)
+    survivor_task_count: int = 0
+
+
 class AdjustViolation(BaseModel):
-    """One typed reason a hand-adjusted placement was refused."""
+    """One typed reason a hand-adjusted placement was refused (a hard rule)."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    task_id: str
+    reason_code: ReasonCode
+    detail: str
+
+
+class AdjustWarning(BaseModel):
+    """One non-blocking advisory on an applied drag-to-adjust (ADR-0008).
+
+    Today the only code is ``DEPENDENCY_ADVISORY`` — a move that starts before an
+    unfinished prerequisite. A populated ``warnings`` with ``applied: true`` is
+    informational; clients must not infer failure from it.
+    """
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -96,6 +133,9 @@ class AdjustResult(BaseModel):
     adjusted_task_ids: list[str] = Field(default_factory=list)
     scheduled_task_count: int = 0
     violations: list[AdjustViolation] = Field(default_factory=list)
+    warnings: list[AdjustWarning] = Field(default_factory=list)
+    """Non-blocking advisories on an applied move (ADR-0008); empty on refusal.
+    A populated list with ``applied: true`` is informational, never failure."""
 
 
 class ApproveResult(BaseModel):
@@ -217,6 +257,11 @@ class DraftView(BaseModel):
     task_titles: dict[str, str] = Field(default_factory=dict)
     """task_id -> title for the draft's plan version, so the grid can label
     blocks (a draft entry carries only the task_id)."""
+    deleted_task_ids: list[str] = Field(default_factory=list)
+    """Sorted task_ids whose calendar event the user deleted externally
+    (``event_deleted`` dispositions for the draft's plan version). The grid
+    renders these as a distinct "deleted from calendar" state — never as the
+    written checkmark, and never as completion (the task is still planned)."""
 
 
 class TodayTask(BaseModel):
@@ -232,6 +277,10 @@ class TodayTask(BaseModel):
     """True once the block has ended — only a due task can be checked in."""
     reported: bool
     """True once a telemetry event exists for the task (idempotency)."""
+    deleted: bool
+    """True when the task's calendar event was deleted externally
+    (``event_deleted`` disposition). The task itself is still planned and can
+    still be checked in — a deleted event is not a completed task."""
 
 
 class TodayResult(BaseModel):

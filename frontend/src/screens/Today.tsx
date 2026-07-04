@@ -104,6 +104,14 @@ export function TodayScreen() {
               )}
             </div>
             <div className="row" style={{ gap: 8, flex: 'none' }}>
+              {task.deleted && (
+                <span
+                  className="tag danger"
+                  title="You deleted this event from your Google Calendar — the task is still in your plan. Complete it or build a new plan."
+                >
+                  ✕ deleted from calendar
+                </span>
+              )}
               {task.reported ? (
                 <span className="tag ok">✓ reported</span>
               ) : task.due ? (

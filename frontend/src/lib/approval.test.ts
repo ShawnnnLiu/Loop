@@ -14,6 +14,7 @@ function draftView(over: Partial<DraftView> = {}): DraftView {
     hash_canonicalization_version: 'v1',
     free_busy: [],
     task_titles: {},
+    deleted_task_ids: [],
     ...over,
   }
 }

@@ -40,6 +40,7 @@ from agentic_calendar.accountability.recommitment import request_recommitment
 from agentic_calendar.calendar_writer.errors import CalendarWriterError
 from agentic_calendar.calendar_writer.manager import WriteStatus
 from agentic_calendar.common.errors import AgenticCalendarError
+from agentic_calendar.common.logging import correlated, get_logger
 from agentic_calendar.contracts.accountability_intervention import (
     AccountabilityAction,
     InterventionDecision,
@@ -73,6 +74,11 @@ from agentic_calendar.contracts.motivation_profile import RecoveryPreference
 from agentic_calendar.contracts.reason_codes import ReasonCode
 from agentic_calendar.contracts.scheduler_output import SchedulerOutput, ScheduleStatus
 from agentic_calendar.contracts.syllabus_units import SyllabusUnits
+from agentic_calendar.contracts.task_disposition import (
+    DispositionSource,
+    TaskDispositionRecord,
+    TaskDispositionType,
+)
 from agentic_calendar.contracts.task_plan import TaskPlan
 from agentic_calendar.contracts.telemetry import TelemetryEvent
 from agentic_calendar.contracts.validation_result import (
@@ -84,6 +90,7 @@ from agentic_calendar.drift.classifier import DriftInput
 from agentic_calendar.duration_estimation.pooled import resolve_effective_multipliers
 from agentic_calendar.llm_nodes.base import LLMNodeError
 from agentic_calendar.llm_nodes.user_facing_explanation import UserExplanation
+from agentic_calendar.planning.drop import DropError, propose_dropped_plan
 from agentic_calendar.planning.plan_version import (
     GenerationStep,
     GenerationStepRecord,
@@ -108,8 +115,10 @@ from .results import (
     AccountabilityResult,
     AdjustResult,
     AdjustViolation,
+    AdjustWarning,
     ApproveResult,
     DraftView,
+    DropResult,
     IngestResult,
     MeResult,
     OnboardResult,
@@ -125,6 +134,8 @@ from .results import (
 )
 from .state import OnboardingRecord, ReplanKind, RunRecord
 from .tuning import TUNABLE_SECTIONS, scalar_fields
+
+_log = get_logger(__name__)
 
 MAX_SCHEDULER_PLANNER_ITERATIONS = 2
 """Axiom 05 bound: at most two Scheduler→Planner iterations per run."""
@@ -401,6 +412,7 @@ class CycleService:
 
         env.state.save_syllabus(onboarding.user_id, syllabus)
         bound_syllabus = syllabus
+        excluded = sorted(self._completed_or_dropped_ids(onboarding.user_id))
 
         def planner_pass(run_id: str, repair: ValidationResult | None) -> TaskPlan:
             return env.nodes.planner.run(
@@ -408,6 +420,7 @@ class CycleService:
                 syllabus=bound_syllabus,
                 user_profile=onboarding.user_profile,
                 repair=repair,
+                excluded_tasks=excluded,
             )
 
         return self._plan_pipeline(
@@ -498,11 +511,13 @@ class CycleService:
                 raise CycleError("deterministic recovery proposal carried no draft")
             deterministic_plan = proposal.draft.plan
             return lambda run_id, repair: deterministic_plan
+        excluded = sorted(self._completed_or_dropped_ids(onboarding.user_id))
         return lambda run_id, repair: env.nodes.planner.run(
             run_id=run_id,
             syllabus=syllabus,
             user_profile=onboarding.user_profile,
             repair=repair,
+            excluded_tasks=excluded,
         )
 
     def _recalibrated_plan(
@@ -551,6 +566,94 @@ class CycleService:
         )
         return None if proposal is None else proposal.draft.plan
 
+    def _completed_or_dropped_ids(self, user_id: str) -> set[str]:
+        """Task ids the user has completed or dropped, across all plan versions.
+
+        The union of the COMPLETED and DROPPED disposition projections. Feeds the
+        scheduler's completion-aware filter (the previously-dead
+        ``SchedulerInput.completed_task_ids`` stub) and the completion-relative
+        drag-to-adjust advisory check (ADR-0008; task-disposition spec).
+        """
+        store = self._env.disposition_store
+        return store.task_ids_with_disposition(
+            user_id, TaskDispositionType.COMPLETED
+        ) | store.task_ids_with_disposition(user_id, TaskDispositionType.DROPPED)
+
+    def _mirror_completed_dispositions(
+        self, user_id: str, plan_version: str, completed_task_ids: set[str]
+    ) -> None:
+        """Record a COMPLETED disposition (``source=SYSTEM``) per completed task.
+
+        Idempotent: the ``disposition_id`` is content-derived from
+        ``(user_id, plan_version, task_id)``, so re-ingesting the same completion
+        is a no-op. Completion data already lived in telemetry; this mirrors it
+        into the durable completion/drop memory the scheduler projection and the
+        advisory check read (task-disposition spec).
+        """
+        store = self._env.disposition_store
+        now = self._env.clock.now()
+        for task_id in sorted(completed_task_ids):
+            disposition_id = f"disp_{user_id}_{plan_version}_{task_id}_completed"
+            if store.exists(disposition_id):
+                continue
+            store.append(
+                TaskDispositionRecord(
+                    disposition_id=disposition_id,
+                    user_id=user_id,
+                    plan_version=plan_version,
+                    task_id=task_id,
+                    disposition=TaskDispositionType.COMPLETED,
+                    reason_code=None,
+                    source=DispositionSource.SYSTEM,
+                    created_at=now,
+                )
+            )
+
+    def _record_event_deleted(
+        self, user_id: str, plan_version: str, task_id: str, *, now: datetime
+    ) -> None:
+        """Durable memory that the task's calendar event was deleted externally.
+
+        Idempotent: the ``disposition_id`` is content-derived, so repeated
+        reconcile pulls of the same deletion are a no-op. Event memory only —
+        the task stays planned, and EVENT_DELETED never joins the
+        completed/dropped scheduler projection (axiom 06 lines 249-253:
+        cancellation-on-delete is opt-in; task-disposition spec).
+        """
+        store = self._env.disposition_store
+        disposition_id = f"disp_{user_id}_{plan_version}_{task_id}_event_deleted"
+        if store.exists(disposition_id):
+            return
+        store.append(
+            TaskDispositionRecord(
+                disposition_id=disposition_id,
+                user_id=user_id,
+                plan_version=plan_version,
+                task_id=task_id,
+                disposition=TaskDispositionType.EVENT_DELETED,
+                reason_code=ReasonCode.EXTERNAL_EVENT_DELETED,
+                source=DispositionSource.SYSTEM,
+                created_at=now,
+            )
+        )
+
+    def _event_deleted_ids(self, user_id: str, plan_version: str) -> set[str]:
+        """Task ids of ``plan_version`` whose calendar event the user deleted
+        externally (EVENT_DELETED dispositions).
+
+        Scoped to a single plan version — a later regeneration mints fresh
+        events, so its tasks start clean. Feeds only the read projections
+        (``DraftView.deleted_task_ids``, ``TodayTask.deleted``); deliberately
+        NOT unioned into ``_completed_or_dropped_ids``.
+        """
+        return {
+            record.task_id
+            for record in self._env.disposition_store.list_for_plan(
+                user_id, plan_version
+            )
+            if record.disposition is TaskDispositionType.EVENT_DELETED
+        }
+
     def _plan_pipeline(
         self,
         run: RunRecord,
@@ -575,6 +678,10 @@ class CycleService:
         """
         env = self._env
         profile = onboarding.user_profile
+        completed_or_dropped = sorted(self._completed_or_dropped_ids(onboarding.user_id))
+        dropped_ids = env.disposition_store.task_ids_with_disposition(
+            onboarding.user_id, TaskDispositionType.DROPPED
+        )
 
         scheduler_iterations = 0
         while True:
@@ -597,6 +704,15 @@ class CycleService:
                 if result.valid:
                     run = self._transition(run, Sig.VALIDATION_PASSED)
                     plan = candidate
+                    resurrected = sorted(
+                        dropped_ids & {t.task_id for t in candidate.tasks}
+                    )
+                    if resurrected:
+                        correlated(_log, run_id=run.run_id).warning(
+                            f"regeneration reproduced dropped task(s) {resurrected}; "
+                            "advisory exclusion only (axiom 20 partial regen is "
+                            "Phase 2/3)"
+                        )
                     break
                 if result.next_action is NextAction.PLANNER_REPAIR_RETRY:
                     run = self._transition(run, Sig.VALIDATION_FAILED_REPAIRABLE)
@@ -634,6 +750,7 @@ class CycleService:
                     calendar_free_busy=[
                         FreeBusyInterval.model_validate(dict(fb)) for fb in free_busy
                     ],
+                    completed_task_ids=completed_or_dropped,
                     horizon_start=horizon_start,
                     horizon_end=horizon_start + timedelta(days=horizon_days),
                 )
@@ -875,33 +992,36 @@ class CycleService:
             # Unknown task_id: the client tried to move a task not in the draft.
             raise CycleError(str(exc)) from exc
 
-        conflicts = validate_placements(
+        review = validate_placements(
             candidate.entries,
             plan=plan_version.plan,
             policy=policy_from_user_profile(onboarding.user_profile),
             free_busy=[FreeBusyInterval.model_validate(dict(fb)) for fb in free_busy],
             tz=tz,
+            completed_or_dropped_task_ids=self._completed_or_dropped_ids(user_id),
         )
-        if conflicts:
+        if review.conflicts:
             return AdjustResult(
                 run_id=run.run_id,
                 user_id=user_id,
                 state=run.state,
                 applied=False,
-                reason_code=conflicts[0].reason_code,
+                reason_code=review.conflicts[0].reason_code,
                 violations=[
                     AdjustViolation(
                         task_id=conflict.task_id,
                         reason_code=conflict.reason_code,
                         detail=conflict.detail,
                     )
-                    for conflict in conflicts
+                    for conflict in review.conflicts
                 ],
             )
 
         env.state.save_draft(user_id, candidate)
         # Pure artifact swap: the run stays in AWAITING_USER_APPROVAL (no
         # lifecycle transition) — only the pending draft it points at changes.
+        # An advisory (DEPENDENCY_ADVISORY) does not block: the move is applied
+        # and the heads-up rides in ``warnings`` (ADR-0008).
         run = self._save_run(run, draft_schedule_id=candidate.draft_schedule_id)
         return AdjustResult(
             run_id=run.run_id,
@@ -914,6 +1034,14 @@ class CycleService:
             ),
             adjusted_task_ids=sorted(new_starts),
             scheduled_task_count=len(candidate.entries),
+            warnings=[
+                AdjustWarning(
+                    task_id=warning.task_id,
+                    reason_code=warning.reason_code,
+                    detail=warning.detail,
+                )
+                for warning in review.warnings
+            ],
         )
 
     # ------------------------------------------------------------------ #
@@ -994,6 +1122,7 @@ class CycleService:
             return result(ReconciliationOutcome.NO_CHANGE)
 
         # Pull each event back (scoped to our own ids) and classify the delta.
+        user_tz = onboarding.tzinfo()
         change_by_task: dict[
             str, tuple[CalendarEditType, datetime | None, datetime | None]
         ] = {}
@@ -1008,7 +1137,14 @@ class CycleService:
                 if record is None:
                     change_by_task[task_id] = (CalendarEditType.DELETED, None, None)
                     continue
-                obs_start, obs_end = record.scheduled_start, record.scheduled_end
+                # Google returns event instants normalized to UTC (the write
+                # path stores timeZone=UTC), but draft entries and mappings
+                # carry the USER's wall clock — the SPA renders the offset
+                # embedded in the ISO string. Restamp before classifying so an
+                # adopted time isn't stored (and drawn) as UTC digits hours off;
+                # the comparisons below are instant-based either way.
+                obs_start = record.scheduled_start.astimezone(user_tz)
+                obs_end = record.scheduled_end.astimezone(user_tz)
                 if (
                     obs_start == mapping.scheduled_start
                     and obs_end == mapping.scheduled_end
@@ -1071,16 +1207,20 @@ class CycleService:
             else:
                 candidate_entries.append(entry)
 
-        conflicts = validate_placements(
+        review = validate_placements(
             candidate_entries,
             plan=active.plan,
             policy=policy_from_user_profile(onboarding.user_profile),
             free_busy=[FreeBusyInterval.model_validate(dict(fb)) for fb in free_busy],
-            tz=onboarding.tzinfo(),
+            tz=user_tz,
+            completed_or_dropped_task_ids=self._completed_or_dropped_ids(user_id),
         )
-        adopt = bool(moved) and not conflicts
-        conflict_code = {c.task_id: c.reason_code for c in conflicts}
-        fallback_code = conflicts[0].reason_code if conflicts else None
+        # Advisory ordering (DEPENDENCY_ADVISORY) does NOT block adoption (ADR-0008);
+        # only a hard conflict rejects an external move.
+        adopt = bool(moved) and not review.conflicts
+        conflict_code = {c.task_id: c.reason_code for c in review.conflicts}
+        fallback_code = review.conflicts[0].reason_code if review.conflicts else None
+        advisory_code = {w.task_id: w.reason_code for w in review.warnings}
 
         deltas: list[CalendarEventDelta] = []
         for task_id, (kind, seen_start, seen_end) in sorted(change_by_task.items()):
@@ -1091,6 +1231,9 @@ class CycleService:
                 env.mapping_store.record_external_edit(mapping.run_id, task_id, now=now)
                 disposition = ReconciliationDisposition.FLAGGED_DELETED
                 code = ReasonCode.EXTERNAL_EVENT_DELETED
+                # Durable, idempotent deletion memory (never a completion) — the
+                # read projections surface it as "deleted from calendar".
+                self._record_event_deleted(user_id, plan_version, task_id, now=now)
             elif kind in (CalendarEditType.MOVED, CalendarEditType.RESIZED):
                 if adopt:
                     env.mapping_store.record_external_edit(
@@ -1101,6 +1244,9 @@ class CycleService:
                         new_end=seen_end,
                     )
                     disposition = ReconciliationDisposition.ADOPTED
+                    # An adopted move past an unfinished prerequisite carries a
+                    # DEPENDENCY_ADVISORY heads-up (ADR-0008); otherwise null.
+                    code = advisory_code.get(task_id)
                 else:
                     env.mapping_store.record_external_edit(mapping.run_id, task_id, now=now)
                     disposition = ReconciliationDisposition.REJECTED
@@ -1158,6 +1304,102 @@ class CycleService:
         )
 
     # ------------------------------------------------------------------ #
+    # drop (completion/drop memory)
+    # ------------------------------------------------------------------ #
+
+    def drop_tasks(
+        self,
+        user_id: str,
+        task_ids: Sequence[str],
+        *,
+        run_id: str | None = None,
+    ) -> DropResult:
+        """Drop unfinished tasks from the active plan (deterministic, draft-only).
+
+        Removes ``task_ids`` from the active plan, prunes them from survivors'
+        dependencies, and keeps survivors at their EXISTING placements
+        (``planning/drop.py``). Produces a survivors-only DRAFT on a fresh run
+        routed straight to approval — the active plan stays ACTIVE until the drop
+        is approved + written (a delete-only write that removes only the dropped
+        events). On reject the fresh run discards; the active plan is untouched.
+        """
+        env = self._env
+        if not task_ids:
+            raise CycleError("no tasks to drop")
+        self._require_onboarding(user_id)
+        active_run = self._require_run(user_id, run_id, expected=S.ACTIVE_PLAN)
+        active = env.plan_store.get_active(user_id)
+        if active is None:
+            raise CycleError("no active plan to drop from")
+        if active_run.draft_schedule_id is None:
+            raise CycleError("active run has no draft schedule to carry survivors forward")
+        current_draft = env.state.get_draft(active_run.draft_schedule_id)
+        if current_draft is None:
+            raise CycleError(f"draft {active_run.draft_schedule_id!r} not found")
+
+        try:
+            proposal = propose_dropped_plan(
+                active,
+                current_draft,
+                task_ids,
+                id_generator=env.id_generator,
+                clock=env.clock,
+            )
+        except DropError as exc:
+            raise CycleError(str(exc)) from exc
+
+        now = env.clock.now()
+        env.plan_store.save(proposal.plan_version)
+        env.state.save_draft(user_id, proposal.draft_schedule)
+        # Record the drop in durable memory BEFORE the write so a re-propose /
+        # regen sees it (idempotent content-derived id; task-disposition spec).
+        for task_id in proposal.dropped_ids:
+            disposition_id = f"disp_{user_id}_{active.plan_version}_{task_id}_dropped"
+            if not env.disposition_store.exists(disposition_id):
+                env.disposition_store.append(
+                    TaskDispositionRecord(
+                        disposition_id=disposition_id,
+                        user_id=user_id,
+                        plan_version=active.plan_version,
+                        task_id=task_id,
+                        disposition=TaskDispositionType.DROPPED,
+                        reason_code=ReasonCode.TASK_DROPPED_BY_USER,
+                        source=DispositionSource.USER,
+                        created_at=now,
+                    )
+                )
+        # A fresh run carries the drop to approval (reject leaves the active plan
+        # intact); write removes only these tasks' events (delete-only).
+        run = RunRecord(
+            run_id=env.id_generator.new_id("run"),
+            user_id=user_id,
+            state=S.INITIAL,
+            created_at=now,
+            updated_at=now,
+        )
+        env.state.save_run(run)
+        run = self._transition(
+            run,
+            Sig.DROP_REQUESTED,
+            plan_version=proposal.plan_version.plan_version,
+            draft_schedule_id=proposal.draft_schedule.draft_schedule_id,
+            drop_task_ids=proposal.dropped_ids,
+        )
+        return DropResult(
+            run_id=run.run_id,
+            user_id=user_id,
+            state=run.state,
+            plan_version=proposal.plan_version.plan_version,
+            parent_plan_version=active.plan_version,
+            draft_schedule_id=proposal.draft_schedule.draft_schedule_id,
+            draft_payload_hash=canonical_payload_hash(
+                proposal.draft_schedule, HASH_CANONICALIZATION_VERSION
+            ),
+            dropped_task_ids=list(proposal.dropped_ids),
+            survivor_task_count=len(proposal.draft_schedule.entries),
+        )
+
+    # ------------------------------------------------------------------ #
     # write
     # ------------------------------------------------------------------ #
 
@@ -1206,11 +1448,21 @@ class CycleService:
 
         run = self._transition(run, Sig.CALENDAR_WRITE_STARTED)
         try:
-            result = env.write_manager.approve_and_write(
-                approval_event_id=approval_event_id,
-                draft=draft,
-                target_calendar_id=target_calendar_id,
-            )
+            if run.drop_task_ids:
+                # Delete-only write for a drop: remove the dropped tasks' events,
+                # leaving survivor events in place (completion/drop memory).
+                result = env.write_manager.approve_and_remove(
+                    approval_event_id=approval_event_id,
+                    draft=draft,
+                    removed_task_ids=run.drop_task_ids,
+                    target_calendar_id=target_calendar_id,
+                )
+            else:
+                result = env.write_manager.approve_and_write(
+                    approval_event_id=approval_event_id,
+                    draft=draft,
+                    target_calendar_id=target_calendar_id,
+                )
         except AgenticCalendarError as exc:
             reason: ReasonCode = (
                 getattr(exc, "reason_code", None) or ReasonCode.CALENDAR_WRITE_FAILED
@@ -1234,10 +1486,11 @@ class CycleService:
                 # is safe to surface alongside the reason_code.
                 error=str(exc),
             )
-        verified = (
-            result.status is WriteStatus.SUCCESS
-            and result.verification is not None
-            and result.verification.all_verified
+        # A delete-only drop write has no created events to verify: its success
+        # IS the verification (the dropped events are gone).
+        verified = result.status is WriteStatus.SUCCESS and (
+            bool(run.drop_task_ids)
+            or (result.verification is not None and result.verification.all_verified)
         )
         if verified:
             run = self._transition(run, Sig.CALENDAR_WRITE_SUCCEEDED)
@@ -1255,9 +1508,17 @@ class CycleService:
             )
 
         mappings = (
-            env.mapping_store.list_for_run(result.run_id)
-            if result.run_id is not None
-            else []
+            # A drop write updates the dropped tasks' mappings under their
+            # ORIGINAL run, not ``result.run_id`` (a fresh op id), so
+            # ``list_for_run(result.run_id)`` would be empty — surface their
+            # post-write status from the result's own records instead.
+            list(result.written_mappings)
+            if run.drop_task_ids
+            else (
+                env.mapping_store.list_for_run(result.run_id)
+                if result.run_id is not None
+                else []
+            )
         )
         verification = result.verification
         return WriteCycleResult(
@@ -1345,6 +1606,10 @@ class CycleService:
 
         # Plan completion ends the journey (axiom 02 terminal success).
         completed_ids = {e.task_id for e in events if e.completed}
+        # Mirror completions into durable completion/drop memory before the
+        # terminal-success check, so the final completing ingest is recorded too.
+        # Idempotent; the scheduler projection + advisory check read it.
+        self._mirror_completed_dispositions(user_id, active.plan_version, completed_ids)
         if completed_ids >= {t.task_id for t in plan.tasks}:
             run = self._transition(run, Sig.PLAN_COMPLETED)
             return IngestResult(
@@ -1693,6 +1958,7 @@ class CycleService:
         draft: DraftSchedule | None = None
         payload_hash: str | None = None
         task_titles: dict[str, str] = {}
+        deleted_task_ids: list[str] = []
         if run is not None and run.draft_schedule_id is not None:
             draft = env.state.get_draft(run.draft_schedule_id)
             if draft is not None:
@@ -1700,18 +1966,24 @@ class CycleService:
                 plan = env.plan_store.get(user_id, draft.plan_version)
                 if plan is not None:
                     task_titles = {task.task_id: task.title for task in plan.plan.tasks}
+                deleted_task_ids = sorted(
+                    self._event_deleted_ids(user_id, draft.plan_version)
+                )
         return DraftView(
             draft=draft,
             payload_hash=payload_hash,
             hash_canonicalization_version=HASH_CANONICALIZATION_VERSION,
             free_busy=[dict(interval) for interval in (free_busy or [])],
             task_titles=task_titles,
+            deleted_task_ids=deleted_task_ids,
         )
 
     def today(self, user_id: str) -> TodayResult:
         """The active plan's scheduled tasks as structured rows (tz-aware
         datetimes; the client localizes). ``due`` marks a block whose time has
-        passed; ``reported`` marks one that already has telemetry."""
+        passed; ``reported`` marks one that already has telemetry; ``deleted``
+        marks one whose calendar event the user deleted externally (the task
+        itself is still planned — never rendered as completed)."""
         env = self._env
         onboarding = env.state.get_onboarding(user_id)
         timezone = onboarding.timezone if onboarding is not None else None
@@ -1721,6 +1993,7 @@ class CycleService:
             return TodayResult(timezone=timezone, tasks=[])
         now = env.clock.now()
         tasks = {task.task_id: task for task in active.plan.tasks}
+        deleted_ids = self._event_deleted_ids(user_id, active.plan_version)
         rows: list[TodayTask] = []
         for entry in draft.entries:
             task = tasks.get(entry.task_id)
@@ -1736,6 +2009,7 @@ class CycleService:
                     end=entry.end,
                     due=entry.end <= now,
                     reported=bool(env.telemetry_store.list_for_task(entry.task_id)),
+                    deleted=entry.task_id in deleted_ids,
                 )
             )
         return TodayResult(timezone=timezone, tasks=rows)

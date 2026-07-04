@@ -5,7 +5,7 @@ import type {
   CalendarReconciliationResult,
   ReconciliationOutcome,
 } from '../api/types'
-import { flaggedReason, reconcileBanner } from './reconcile'
+import { flaggedReason, needsDraftRefetch, reconcileBanner } from './reconcile'
 
 function delta(over: Partial<CalendarEventDelta>): CalendarEventDelta {
   return {
@@ -110,6 +110,22 @@ describe('reconcileBanner', () => {
         expect(text).not.toContain(forbidden)
       }
     }
+  })
+})
+
+describe('needsDraftRefetch', () => {
+  it('refetches after an adopted draft (new times live server-side)', () => {
+    expect(needsDraftRefetch(result('adopted', [adoptedDelta]))).toBe(true)
+  })
+
+  it('refetches after a deletion — the pull just recorded the event_deleted memory that feeds DraftView.deleted_task_ids', () => {
+    expect(needsDraftRefetch(result('flagged', [deletedDelta]))).toBe(true)
+    expect(needsDraftRefetch(result('mixed', [adoptedDelta, deletedDelta]))).toBe(true)
+  })
+
+  it('does not refetch when nothing server-side changed (no-op or rejected-only)', () => {
+    expect(needsDraftRefetch(result('no_change', []))).toBe(false)
+    expect(needsDraftRefetch(result('flagged', [rejectedDelta]))).toBe(false)
   })
 })
 

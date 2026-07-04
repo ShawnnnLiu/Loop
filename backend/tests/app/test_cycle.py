@@ -23,7 +23,8 @@ Fixture facts these tests rely on (verified against ``tests/fixtures/valid``):
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+import logging
+from collections.abc import Collection, Mapping
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -58,6 +59,7 @@ from agentic_calendar.calendar_writer.in_memory_adapter import (
 from agentic_calendar.common.clock import FrozenClock
 from agentic_calendar.common.errors import AgenticCalendarError
 from agentic_calendar.common.ids import DeterministicIdGenerator
+from agentic_calendar.contracts.calendar_event_mapping import CalendarWriteStatus
 from agentic_calendar.contracts.calendar_reconciliation import (
     CalendarEditType,
     ReconciliationDisposition,
@@ -72,8 +74,14 @@ from agentic_calendar.contracts.draft_schedule import DraftSchedule, DraftSchedu
 from agentic_calendar.contracts.drift_event import DriftType
 from agentic_calendar.contracts.hashing import canonical_payload_hash
 from agentic_calendar.contracts.reason_codes import ReasonCode
+from agentic_calendar.contracts.scheduler_output import SchedulerOutput
 from agentic_calendar.contracts.source_claim import SourceClaim
 from agentic_calendar.contracts.syllabus_units import SyllabusUnits
+from agentic_calendar.contracts.task_disposition import (
+    DispositionSource,
+    TaskDispositionRecord,
+    TaskDispositionType,
+)
 from agentic_calendar.contracts.task_plan import TaskPlan
 from agentic_calendar.contracts.user_profile import UserProfile
 from agentic_calendar.contracts.validation_result import ValidationResult
@@ -85,6 +93,9 @@ from agentic_calendar.llm_nodes.user_facing_explanation import (
     DeterministicUserFacingExplanation,
 )
 from agentic_calendar.planning.plan_version import LifecycleState
+from agentic_calendar.scheduler import schedule
+from agentic_calendar.scheduler.adjustment import DraftAdjustment
+from agentic_calendar.scheduler.inputs import SchedulerInput
 from agentic_calendar.supervisor.state import SupervisorState as S
 from tests._fixture_loader import iter_valid
 
@@ -155,10 +166,15 @@ class CountingPlanner:
         syllabus: SyllabusUnits,
         user_profile: UserProfile | None = None,
         repair: ValidationResult | None = None,
+        excluded_tasks: Collection[str] = (),
     ) -> TaskPlan:
         self.calls += 1
         return self._inner.run(
-            run_id=run_id, syllabus=syllabus, user_profile=user_profile, repair=repair
+            run_id=run_id,
+            syllabus=syllabus,
+            user_profile=user_profile,
+            repair=repair,
+            excluded_tasks=excluded_tasks,
         )
 
 
@@ -168,6 +184,7 @@ class RecordingPlanner:
     def __init__(self, plan: TaskPlan) -> None:
         self._plan = plan
         self.repairs: list[ValidationResult | None] = []
+        self.excluded: list[tuple[str, ...]] = []
 
     def run(
         self,
@@ -176,9 +193,11 @@ class RecordingPlanner:
         syllabus: SyllabusUnits,
         user_profile: UserProfile | None = None,
         repair: ValidationResult | None = None,
+        excluded_tasks: Collection[str] = (),
     ) -> TaskPlan:
         del run_id, syllabus, user_profile
         self.repairs.append(repair)
+        self.excluded.append(tuple(excluded_tasks))
         return self._plan
 
 
@@ -1441,6 +1460,48 @@ def test_reconcile_adopts_a_valid_move_without_writing() -> None:
     assert len(after) == len(events)
 
 
+def test_reconcile_adopts_utc_read_backs_in_the_users_wall_clock() -> None:
+    """Google returns event instants normalized to UTC (the write path stores
+    timeZone=UTC), but draft entries carry the user's wall clock — the SPA
+    renders the offset embedded in the ISO string. An adopted external move
+    must therefore be restamped in the user's timezone: kept as UTC, a
+    10:45 PDT move draws as 17:45."""
+    adapter = InMemoryCalendarAdapter(id_generator=DeterministicIdGenerator())
+    service, env, _clock = make_service(calendar_adapter=adapter)
+    # Re-onboard in a western timezone (make_service onboards in UTC).
+    service.onboard(
+        {
+            "user_profile": _canonical_profile().model_dump(mode="json"),
+            "timezone": "America/Los_Angeles",
+        }
+    )
+    _activate_plan(service)
+    events = _events_by_task(adapter)
+    leaf = _a_scheduled_leaf(env, set(events))
+    rec = events[leaf]
+    # The same instants Google would return: moved a week, normalized to UTC.
+    new_start = (rec.scheduled_start + timedelta(days=7)).astimezone(UTC)
+    new_end = (rec.scheduled_end + timedelta(days=7)).astimezone(UTC)
+    adapter.simulate_external_move(
+        rec.calendar_event_id, scheduled_start=new_start, scheduled_end=new_end
+    )
+
+    result = service.reconcile(
+        USER_ID, target_calendar_id=DEFAULT_TARGET_CALENDAR_ID, enabled=True
+    )
+
+    assert result.outcome is ReconciliationOutcome.ADOPTED
+    tz = ZoneInfo("America/Los_Angeles")
+    moved = next(e for e in _active_draft_entries(env) if e.task_id == leaf)
+    assert moved.start == new_start  # same instant...
+    # ...stamped with the user's wall clock, not UTC digits.
+    assert moved.start.utcoffset() == moved.start.astimezone(tz).utcoffset()
+    assert moved.end.utcoffset() == moved.end.astimezone(tz).utcoffset()
+    delta = {d.task_id: d for d in result.deltas}[leaf]
+    assert delta.observed_start is not None
+    assert delta.observed_start.utcoffset() == delta.observed_start.astimezone(tz).utcoffset()
+
+
 def test_reconcile_rejects_an_invalid_move_and_flags_divergence() -> None:
     service, env, adapter = _reconcilable()
     events = _events_by_task(adapter)
@@ -1495,6 +1556,60 @@ def test_reconcile_flags_an_external_deletion_without_recreating() -> None:
     assert leaf not in _events_by_task(adapter)
 
 
+def test_reconcile_deletion_records_event_deleted_disposition_idempotently() -> None:
+    service, env, adapter = _reconcilable()
+    events = _events_by_task(adapter)
+    leaf = _a_scheduled_leaf(env, set(events))
+    adapter.delete_event(
+        target_calendar_id=DEFAULT_TARGET_CALENDAR_ID,
+        calendar_event_id=events[leaf].calendar_event_id,
+    )
+
+    # Two pulls of the same deletion -> exactly one durable record.
+    service.reconcile(USER_ID, target_calendar_id=DEFAULT_TARGET_CALENDAR_ID, enabled=True)
+    service.reconcile(USER_ID, target_calendar_id=DEFAULT_TARGET_CALENDAR_ID, enabled=True)
+
+    active = env.plan_store.get_active(USER_ID)
+    assert active is not None
+    records = [
+        r
+        for r in env.disposition_store.list_for_plan(USER_ID, active.plan_version)
+        if r.disposition is TaskDispositionType.EVENT_DELETED
+    ]
+    assert [r.task_id for r in records] == [leaf]
+    assert records[0].reason_code is ReasonCode.EXTERNAL_EVENT_DELETED
+    assert records[0].source is DispositionSource.SYSTEM
+    # Surfacing-only memory: a deleted event is neither a completion nor a drop,
+    # so the scheduler projection must not pick the task up (task-disposition
+    # spec; axiom 06 - cancellation-on-delete is opt-in).
+    assert leaf not in env.disposition_store.task_ids_with_disposition(
+        USER_ID, TaskDispositionType.COMPLETED
+    ) | env.disposition_store.task_ids_with_disposition(
+        USER_ID, TaskDispositionType.DROPPED
+    )
+
+
+def test_deleted_event_surfaces_on_draft_view_and_today_not_as_completion() -> None:
+    service, env, adapter = _reconcilable()
+    events = _events_by_task(adapter)
+    leaf = _a_scheduled_leaf(env, set(events))
+    adapter.delete_event(
+        target_calendar_id=DEFAULT_TARGET_CALENDAR_ID,
+        calendar_event_id=events[leaf].calendar_event_id,
+    )
+    service.reconcile(USER_ID, target_calendar_id=DEFAULT_TARGET_CALENDAR_ID, enabled=True)
+
+    view = service.draft_view(USER_ID)
+    assert view.deleted_task_ids == [leaf]
+
+    today = service.today(USER_ID)
+    rows = {t.task_id: t for t in today.tasks}
+    assert rows[leaf].deleted is True
+    # Deleted is a distinct state, never completion: no telemetry was invented.
+    assert rows[leaf].reported is False
+    assert all(t.deleted is False for t in today.tasks if t.task_id != leaf)
+
+
 def test_calendar_sync_opt_in_defaults_off_and_toggles() -> None:
     service, _env, _clock = make_service()
     assert service.inbound_calendar_sync_enabled(USER_ID) is False
@@ -1522,3 +1637,330 @@ def test_set_calendar_sync_without_onboarding_raises() -> None:
     service, _env, _clock = make_service(onboard=False, seed_claims=False)
     with pytest.raises(CycleError):
         service.set_inbound_calendar_sync(USER_ID, enabled=True)
+
+
+# --------------------------------------------------------------------------- #
+# Completion / drop memory (Phase C): projection, scheduler wiring, ingest mirror
+# --------------------------------------------------------------------------- #
+
+
+def _completed_disposition(
+    task_id: str, *, plan_version: str = "plan_004"
+) -> TaskDispositionRecord:
+    return TaskDispositionRecord(
+        disposition_id=f"disp_{USER_ID}_{plan_version}_{task_id}_completed",
+        user_id=USER_ID,
+        plan_version=plan_version,
+        task_id=task_id,
+        disposition=TaskDispositionType.COMPLETED,
+        reason_code=None,
+        source=DispositionSource.SYSTEM,
+        created_at=HAPPY_NOW,
+    )
+
+
+def _dropped_disposition(
+    task_id: str, *, plan_version: str = "plan_004"
+) -> TaskDispositionRecord:
+    return TaskDispositionRecord(
+        disposition_id=f"disp_{USER_ID}_{plan_version}_{task_id}_dropped",
+        user_id=USER_ID,
+        plan_version=plan_version,
+        task_id=task_id,
+        disposition=TaskDispositionType.DROPPED,
+        reason_code=ReasonCode.TASK_DROPPED_BY_USER,
+        source=DispositionSource.USER,
+        created_at=HAPPY_NOW,
+    )
+
+
+def test_completed_or_dropped_projection_unions_dispositions() -> None:
+    service, env, _clock = make_service()
+    env.disposition_store.append(_completed_disposition("dp_001"))
+    env.disposition_store.append(_dropped_disposition("dp_002"))
+    assert service._completed_or_dropped_ids(USER_ID) == {"dp_001", "dp_002"}
+
+
+def test_propose_passes_completion_projection_to_scheduler(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The previously-dead ``completed_task_ids`` stub now carries the projection."""
+    service, env, _clock = make_service()
+    env.disposition_store.append(_completed_disposition("dp_001"))
+    captured: dict[str, list[str]] = {}
+
+    def _spy(inp: SchedulerInput) -> SchedulerOutput:
+        captured["completed_task_ids"] = list(inp.completed_task_ids)
+        return schedule(inp)
+
+    monkeypatch.setattr("agentic_calendar.app.cycle.schedule", _spy)
+    result = service.propose(USER_ID)
+
+    assert result.state is S.AWAITING_USER_APPROVAL
+    assert "dp_001" in captured["completed_task_ids"]
+
+
+def test_ingest_mirrors_completion_into_disposition_store_idempotently() -> None:
+    service, env, _clock = make_service()
+    proposed = _activate_plan(service)
+    payload = _completed_event("tel_dp001", "dp_001", completed_at=HAPPY_NOW)
+
+    service.ingest(USER_ID, [payload])
+    completed = [
+        r
+        for r in env.disposition_store.list_for_user(USER_ID)
+        if r.disposition is TaskDispositionType.COMPLETED
+    ]
+    assert [r.task_id for r in completed] == ["dp_001"]
+    assert completed[0].source is DispositionSource.SYSTEM
+    assert completed[0].reason_code is None
+    assert completed[0].plan_version == proposed.plan_version
+
+    # Re-ingesting the same completion is a no-op (content-derived id).
+    service.ingest(USER_ID, [payload])
+    again = [
+        r
+        for r in env.disposition_store.list_for_user(USER_ID)
+        if r.disposition is TaskDispositionType.COMPLETED
+    ]
+    assert len(again) == 1
+
+
+# --------------------------------------------------------------------------- #
+# Advisory manual ordering (Phase D): drag-to-adjust + reconcile + write path
+# --------------------------------------------------------------------------- #
+
+
+def _advisory_new_start(env: AppEnvironment, draft_schedule_id: str) -> datetime:
+    """A start for dp_002 placed back-to-back BEFORE its prerequisite dp_001.
+
+    dp_001 lands Mon 18:00 (deep window, after the noon horizon), so
+    ``dp_001.start - 90m`` = Mon 16:30: in allowed hours, no overlap, Mon load
+    60+90=150 < 180. The only fault is ordering -> a DEPENDENCY_ADVISORY warning.
+    """
+    draft = env.state.get_draft(draft_schedule_id)
+    assert draft is not None
+    dp1 = next(e for e in draft.entries if e.task_id == "dp_001")
+    dp2 = next(e for e in draft.entries if e.task_id == "dp_002")
+    return dp1.start - (dp2.end - dp2.start)
+
+
+def test_adjust_move_before_unfinished_prereq_is_advisory_not_blocked() -> None:
+    service, env, _clock = make_service()
+    proposed = service.propose(USER_ID)
+    assert proposed.state is S.AWAITING_USER_APPROVAL
+    new_start = _advisory_new_start(env, proposed.draft_schedule_id)
+
+    result = service.adjust(USER_ID, [DraftAdjustment(task_id="dp_002", start=new_start)])
+
+    assert result.applied is True
+    assert result.reason_code is None
+    assert [w.reason_code for w in result.warnings] == [ReasonCode.DEPENDENCY_ADVISORY]
+    assert result.warnings[0].task_id == "dp_002"
+    assert result.draft_schedule_id is not None
+
+
+def test_adjust_move_before_completed_prereq_has_no_warning() -> None:
+    service, env, _clock = make_service()
+    proposed = service.propose(USER_ID)
+    # dp_001 completed -> the projection makes the ordering check completion-relative.
+    env.disposition_store.append(_completed_disposition("dp_001"))
+    new_start = _advisory_new_start(env, proposed.draft_schedule_id)
+
+    result = service.adjust(USER_ID, [DraftAdjustment(task_id="dp_002", start=new_start)])
+
+    assert result.applied is True
+    assert result.warnings == []
+
+
+def test_advisory_drag_then_approve_and_write_succeeds() -> None:
+    """D4: the approved draft's write recheck is hash-only (axiom 06) — it never
+    re-runs placement validation, so an advisory-adjusted draft writes cleanly."""
+    service, env, _clock = make_service()
+    proposed = service.propose(USER_ID)
+    new_start = _advisory_new_start(env, proposed.draft_schedule_id)
+    adjusted = service.adjust(USER_ID, [DraftAdjustment(task_id="dp_002", start=new_start)])
+    assert adjusted.applied is True
+    assert [w.reason_code for w in adjusted.warnings] == [ReasonCode.DEPENDENCY_ADVISORY]
+
+    service.approve(USER_ID)
+    written = service.write(USER_ID)
+    assert written.state is S.ACTIVE_PLAN
+    assert written.reason_code is None
+
+
+def test_reconcile_adopts_move_before_unfinished_prereq_with_advisory() -> None:
+    service, _env, adapter = _reconcilable()
+    events = _events_by_task(adapter)
+    dp1 = events["dp_001"]
+    dp2 = events["dp_002"]
+    duration = dp2.scheduled_end - dp2.scheduled_start
+    # Move dp_002 back-to-back BEFORE its (unfinished) prerequisite dp_001:
+    # in-hours, no overlap, but now starts before dp_001 ends -> adopted with
+    # a DEPENDENCY_ADVISORY heads-up, NOT rejected (ADR-0008).
+    adapter.simulate_external_move(
+        dp2.calendar_event_id,
+        scheduled_start=dp1.scheduled_start - duration,
+        scheduled_end=dp1.scheduled_start,
+    )
+
+    result = service.reconcile(
+        USER_ID, target_calendar_id=DEFAULT_TARGET_CALENDAR_ID, enabled=True
+    )
+
+    assert result.outcome is ReconciliationOutcome.ADOPTED
+    delta = {d.task_id: d for d in result.deltas}["dp_002"]
+    assert delta.disposition is ReconciliationDisposition.ADOPTED
+    assert delta.reason_code is ReasonCode.DEPENDENCY_ADVISORY
+
+
+# --------------------------------------------------------------------------- #
+# Deterministic drop (Phase E2): draft -> approve -> delete-only write
+# --------------------------------------------------------------------------- #
+
+
+def test_drop_records_disposition_and_keeps_active_plan_until_approved() -> None:
+    service, env, _clock = make_service()
+    _activate_plan(service)
+
+    dropped = service.drop_tasks(USER_ID, ["dp_001"])
+
+    assert dropped.state is S.AWAITING_USER_APPROVAL
+    assert dropped.dropped_task_ids == ["dp_001"]
+    assert dropped.survivor_task_count == 1
+    # The active plan is unchanged until the drop is approved + written.
+    active = env.plan_store.get_active(USER_ID)
+    assert active is not None
+    assert {t.task_id for t in active.plan.tasks} == {"dp_001", "dp_002"}
+    # The drop is recorded in durable memory (source=USER, typed reason).
+    dispositions = [
+        r
+        for r in env.disposition_store.list_for_user(USER_ID)
+        if r.disposition is TaskDispositionType.DROPPED
+    ]
+    assert [r.task_id for r in dispositions] == ["dp_001"]
+    assert dispositions[0].source is DispositionSource.USER
+    assert dispositions[0].reason_code is ReasonCode.TASK_DROPPED_BY_USER
+
+
+def test_drop_approve_write_removes_only_dropped_event() -> None:
+    service, env, _clock = make_service()
+    _activate_plan(service)
+    dp1_event = env.mapping_store.list_for_task("dp_001")[-1].calendar_event_id
+    dp2_event = env.mapping_store.list_for_task("dp_002")[-1].calendar_event_id
+    assert dp1_event is not None and dp2_event is not None
+
+    # Drop dp_001 (dp_002's prerequisite): dp_002 survives with the edge pruned.
+    service.drop_tasks(USER_ID, ["dp_001"])
+    service.approve(USER_ID)
+    written = service.write(USER_ID)
+    assert written.state is S.ACTIVE_PLAN
+    # The result surfaces the dropped task's rolled-back mapping status (built
+    # from the write result, since the dropped mapping stays under its old run).
+    assert (
+        written.mapping_status_by_task["dp_001"]
+        == CalendarWriteStatus.ROLLED_BACK.value
+    )
+
+    # Active plan is now survivors-only; dp_001 pruned from dp_002's deps.
+    active = env.plan_store.get_active(USER_ID)
+    assert active is not None
+    assert {t.task_id for t in active.plan.tasks} == {"dp_002"}
+    assert active.plan.tasks[0].dependencies == []
+
+    # The dropped task's event is GONE and its mapping is terminal (ROLLED_BACK).
+    assert (
+        env.write_manager.read_event(
+            target_calendar_id=DEFAULT_TARGET_CALENDAR_ID, calendar_event_id=dp1_event
+        )
+        is None
+    )
+    assert (
+        env.mapping_store.list_for_task("dp_001")[-1].calendar_write_status
+        is CalendarWriteStatus.ROLLED_BACK
+    )
+    # The survivor's event is untouched (same id, still present, still VERIFIED).
+    assert (
+        env.write_manager.read_event(
+            target_calendar_id=DEFAULT_TARGET_CALENDAR_ID, calendar_event_id=dp2_event
+        )
+        is not None
+    )
+    assert (
+        env.mapping_store.list_for_task("dp_002")[-1].calendar_write_status
+        is CalendarWriteStatus.VERIFIED
+    )
+
+
+def test_drop_rejects_unknown_task_and_dropping_all() -> None:
+    service, _env, _clock = make_service()
+    _activate_plan(service)
+    with pytest.raises(CycleError, match="unknown task_id"):
+        service.drop_tasks(USER_ID, ["ghost_999"])
+    with pytest.raises(CycleError, match="every task"):
+        service.drop_tasks(USER_ID, ["dp_001", "dp_002"])
+
+
+def test_drop_requires_active_plan() -> None:
+    service, _env, _clock = make_service()
+    service.propose(USER_ID)  # AWAITING_USER_APPROVAL, not ACTIVE_PLAN
+    with pytest.raises(CycleError):
+        service.drop_tasks(USER_ID, ["dp_001"])
+
+
+def test_drop_write_partial_failure_when_delete_raises() -> None:
+    adapter = InMemoryCalendarAdapter(id_generator=DeterministicIdGenerator())
+    service, env, _clock = make_service(calendar_adapter=adapter)
+    _activate_plan(service)
+    dp1_event = env.mapping_store.list_for_task("dp_001")[-1].calendar_event_id
+    assert dp1_event is not None
+
+    # The adapter raises when deleting dp_001's event.
+    adapter.set_failure_modes(
+        FailureModes(fail_delete_for_event_ids=frozenset({dp1_event}))
+    )
+    service.drop_tasks(USER_ID, ["dp_001"])
+    service.approve(USER_ID)
+    written = service.write(USER_ID)
+
+    # The drop write is a partial failure; the run does NOT activate a new plan.
+    assert written.write_status == "partial_failure"
+    assert written.reason_code is ReasonCode.CALENDAR_ROLLBACK_FAILED
+    assert written.state is not S.ACTIVE_PLAN
+    assert (
+        env.mapping_store.list_for_task("dp_001")[-1].calendar_write_status
+        is CalendarWriteStatus.ROLLBACK_FAILED
+    )
+    assert (
+        written.mapping_status_by_task["dp_001"]
+        == CalendarWriteStatus.ROLLBACK_FAILED.value
+    )
+    # The original plan stays active — the failed drop did not supersede it.
+    active = env.plan_store.get_active(USER_ID)
+    assert active is not None
+    assert {t.task_id for t in active.plan.tasks} == {"dp_001", "dp_002"}
+
+
+# --------------------------------------------------------------------------- #
+# Regen honors drops (Phase E3): advisory planner exclusion
+# --------------------------------------------------------------------------- #
+
+
+def test_regen_threads_drop_projection_to_planner_and_logs_resurrection(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    # A recording planner that reproduces the canonical plan (which contains the
+    # dropped id) — proving the exclusion is ADVISORY, not enforced by code.
+    recording = RecordingPlanner(_canonical_plan())
+    service, env, _clock = make_service(planner=recording)
+    env.disposition_store.append(_dropped_disposition("dp_001"))
+
+    with caplog.at_level(logging.WARNING):
+        result = service.propose(USER_ID)
+
+    # Advisory only: a dropped id does NOT block regeneration.
+    assert result.state is S.AWAITING_USER_APPROVAL
+    # The dropped/completed projection reached the planner as excluded_tasks.
+    assert recording.excluded[-1] == ("dp_001",)
+    # The planner reproduced the dropped id anyway -> a logged advisory.
+    assert "reproduced dropped task" in caplog.text

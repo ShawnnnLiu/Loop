@@ -127,6 +127,43 @@ def test_adjust_endpoint_rejection_is_200_with_typed_reason() -> None:
     assert body["violations"]
 
 
+def test_adjust_endpoint_advisory_move_applies_with_warnings() -> None:
+    client, _clock = _client()
+    client.post("/api/propose", json={})
+
+    # Move dp_002 to Mon 16:30 — back-to-back BEFORE its prerequisite dp_001
+    # (Mon 18:00). In allowed hours, no overlap, Mon load 60+90=150<180: the only
+    # fault is ordering, which is advisory (ADR-0008), not a refusal.
+    resp = client.post(
+        "/api/adjust",
+        json={"adjustments": [{"task_id": "dp_002", "start": "2026-05-04T16:30:00+00:00"}]},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["applied"] is True
+    assert body["reason_code"] is None
+    assert [w["reason_code"] for w in body["warnings"]] == ["DEPENDENCY_ADVISORY"]
+
+
+def test_drop_endpoint_produces_draft_then_approve_write() -> None:
+    client, _clock = _client()
+    client.post("/api/propose", json={})
+    client.post("/api/approve", json={})
+    client.post("/api/write", json={})
+
+    resp = client.post("/api/drop", json={"task_ids": ["dp_001"]})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["state"] == "awaiting_user_approval"
+    assert body["dropped_task_ids"] == ["dp_001"]
+    assert body["survivor_task_count"] == 1
+
+    client.post("/api/approve", json={})
+    written = client.post("/api/write", json={})
+    assert written.status_code == 200
+    assert written.json()["state"] == "active_plan"
+
+
 def test_adjust_before_propose_maps_to_409() -> None:
     client, _clock = _client()
     resp = client.post(

@@ -31,7 +31,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Collection, Sequence
 from typing import Any, Protocol, cast, runtime_checkable
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
@@ -710,6 +710,7 @@ class AnthropicPlanner:
         plan_version: str | None = None,
         user_profile: UserProfile | None = None,
         repair: ValidationResult | None = None,
+        excluded_tasks: Collection[str] = (),
     ) -> TaskPlan:
         """Generate a ``TaskPlan`` from the validated syllabus.
 
@@ -741,6 +742,12 @@ class AnthropicPlanner:
             sections.append(
                 "Planning constraints (hard limits enforced by validation):\n"
                 + json.dumps(constraints, sort_keys=True)
+            )
+        if excluded_tasks:
+            sections.append(
+                "Do NOT regenerate these tasks — the user has completed or "
+                "dropped them (advisory exclusion):\n"
+                + json.dumps(sorted(excluded_tasks))
             )
         if repair is not None:
             failure = {

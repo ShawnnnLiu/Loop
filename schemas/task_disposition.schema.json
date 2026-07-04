@@ -1,55 +1,13 @@
 {
   "$defs": {
-    "EligibilityCriterion": {
-      "description": "The four gate criteria (spec \"Eligibility Criteria\").",
+    "DispositionSource": {
+      "description": "Who or what recorded the disposition.",
       "enum": [
-        "total_completions",
-        "category_completions",
-        "assessable_weeks",
-        "completion_rate_stability"
+        "user",
+        "system"
       ],
-      "title": "EligibilityCriterion",
+      "title": "DispositionSource",
       "type": "string"
-    },
-    "EligibilityCriterionEvaluation": {
-      "additionalProperties": false,
-      "description": "Audit record of one criterion check (PolicyRuleEvaluation pattern).",
-      "properties": {
-        "criterion": {
-          "$ref": "#/$defs/EligibilityCriterion"
-        },
-        "met": {
-          "title": "Met",
-          "type": "boolean"
-        },
-        "observed_value": {
-          "title": "Observed Value",
-          "type": "number"
-        },
-        "reason_code": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/ReasonCode"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
-        },
-        "threshold_value": {
-          "title": "Threshold Value",
-          "type": "number"
-        }
-      },
-      "required": [
-        "criterion",
-        "observed_value",
-        "threshold_value",
-        "met"
-      ],
-      "title": "EligibilityCriterionEvaluation",
-      "type": "object"
     },
     "ReasonCode": {
       "description": "All typed failure / outcome codes in the system.\n\nCodes are uppercase ``SCREAMING_SNAKE_CASE`` strings so they survive a\nJSON round-trip unchanged and so they read identically in logs, telemetry,\nand user-facing explanations.",
@@ -141,40 +99,56 @@
       "title": "ReasonCode",
       "type": "string"
     },
-    "TaskCategory": {
-      "description": "Allowed values for ``task.category`` (see task-plan spec).",
+    "TaskDispositionType": {
+      "description": "What became of a task.",
       "enum": [
-        "concept_review",
-        "practice",
-        "mock_interview",
-        "project",
-        "reflection",
-        "review"
+        "completed",
+        "skipped",
+        "dropped",
+        "event_deleted"
       ],
-      "title": "TaskCategory",
+      "title": "TaskDispositionType",
       "type": "string"
     }
   },
   "additionalProperties": false,
-  "description": "The auditable power-user gate decision for one ``(user, category)``.",
+  "description": "One append-only completion / skip / drop fact about a task.",
   "properties": {
-    "category": {
-      "$ref": "#/$defs/TaskCategory"
-    },
-    "criteria": {
-      "items": {
-        "$ref": "#/$defs/EligibilityCriterionEvaluation"
-      },
-      "title": "Criteria",
-      "type": "array"
-    },
-    "eligible": {
-      "title": "Eligible",
-      "type": "boolean"
-    },
-    "evaluated_at": {
+    "created_at": {
       "format": "date-time",
-      "title": "Evaluated At",
+      "title": "Created At",
+      "type": "string"
+    },
+    "disposition": {
+      "$ref": "#/$defs/TaskDispositionType"
+    },
+    "disposition_id": {
+      "minLength": 1,
+      "title": "Disposition Id",
+      "type": "string"
+    },
+    "plan_version": {
+      "minLength": 1,
+      "title": "Plan Version",
+      "type": "string"
+    },
+    "reason_code": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ReasonCode"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "source": {
+      "$ref": "#/$defs/DispositionSource"
+    },
+    "task_id": {
+      "minLength": 1,
+      "title": "Task Id",
       "type": "string"
     },
     "user_id": {
@@ -184,12 +158,14 @@
     }
   },
   "required": [
+    "disposition_id",
     "user_id",
-    "category",
-    "evaluated_at",
-    "eligible",
-    "criteria"
+    "plan_version",
+    "task_id",
+    "disposition",
+    "source",
+    "created_at"
   ],
-  "title": "PowerUserEligibility",
+  "title": "TaskDispositionRecord",
   "type": "object"
 }

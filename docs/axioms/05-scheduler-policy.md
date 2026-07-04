@@ -125,7 +125,11 @@ Scheduler failures may suggest deterministic repair options such as splitting a 
 - The Scheduler creates draft schedules only.
 - The Scheduler does not call calendar APIs.
 - The Scheduler does not bypass validation.
-- A task with unmet prerequisites must not be scheduled before its blockers in the MVP.
+- The Scheduler's deterministic auto-placement must not schedule a task with unmet
+  prerequisites before its blockers in the MVP (`DEPENDENCY_BLOCKED`). A **manual**
+  placement override is governed by the advisory rule under "Manual Adjustment
+  Re-validation" (`DEPENDENCY_ADVISORY`), not this hard rule. See
+  `../decisions/ADR-0008-advisory-manual-ordering.md`.
 
 ## Manual Adjustment Re-validation (drag-to-adjust)
 
@@ -135,12 +139,21 @@ is **re-validated server-side** — the client's own conflict checking is never
 trusted — and refused with a typed `reason_code` if it breaks a hard rule. A
 manual move must still satisfy:
 
-| Broken on a manual move | `reason_code` |
+| Broken on a manual move (hard — refused) | `reason_code` |
 | --- | --- |
 | Overlaps a fixed external event, or another proposed block | `NO_VALID_CONTIGUOUS_BLOCK` |
 | Runs outside `[no_events_before, no_events_after]`, or lands on a disabled weekend | `OUTSIDE_ALLOWED_HOURS` |
 | Pushes a calendar day over `max_daily_study_min` | `DAILY_LOAD_EXCEEDED` |
-| Starts before a prerequisite ends | `DEPENDENCY_BLOCKED` |
+
+**Prerequisite ordering on a manual move is advisory, not a refusal**
+(`../decisions/ADR-0008-advisory-manual-ordering.md`). Dragging a block before a
+prerequisite that is *unfinished* — not in the user's completed/dropped set —
+yields a non-blocking `DEPENDENCY_ADVISORY` warning and the move is still applied;
+a prerequisite the user has already completed or dropped yields no warning at all.
+The check stays deterministic and completion-relative. Only the deterministic
+auto-placement keeps the hard `DEPENDENCY_BLOCKED` rule. This narrows — it does
+not remove — the prerequisite guarantee: auto-placement is still topologically
+ordered, and the user's own override is surfaced rather than walled.
 
 A move also never changes a block's **duration** (the new end is derived from the
 original length, so a drag cannot resize). What is deliberately **relaxed** for a
@@ -149,7 +162,10 @@ is not a hard safety rule: **deep-work-window adherence** and
 **`min_break_between_deep_blocks_min`**. The user is explicitly overriding where a
 block sits, and the review grid spans a wider day than the deep-work windows;
 re-imposing those soft preferences would reject legitimate moves. The hard
-day/time/load bounds, no-overlap, and prerequisite order above are not relaxed.
+day/time/load bounds and no-overlap rule above are not relaxed. Prerequisite
+ordering, by contrast, is relaxed for a manual move to the advisory
+`DEPENDENCY_ADVISORY` heads-up described above (it remains hard only for
+deterministic auto-placement).
 Re-validation lives in `backend/src/agentic_calendar/scheduler/adjustment.py`; the
 revised draft is a new immutable `DraftSchedule` whose approval hash is recomputed
 from it, so axiom 06's write-time recheck still validates exactly what was

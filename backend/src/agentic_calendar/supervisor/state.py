@@ -59,6 +59,11 @@ class SupervisorSignal(StrEnum):
     SCHEDULER_FULL_FAILURE = "scheduler_full_failure"
     USER_APPROVED = "user_approved"
     USER_REJECTED = "user_rejected"
+    DROP_REQUESTED = "drop_requested"
+    """A user-initiated drop produced a survivors-only draft; route a fresh run
+    straight to ``AWAITING_USER_APPROVAL`` (no scheduler — survivors keep their
+    placements; completion/drop memory). The drop still passes the approval +
+    (delete-only) write gate — no silent calendar write."""
     CALENDAR_WRITE_STARTED = "calendar_write_started"
     CALENDAR_WRITE_SUCCEEDED = "calendar_write_succeeded"
     CALENDAR_WRITE_FAILED = "calendar_write_failed"

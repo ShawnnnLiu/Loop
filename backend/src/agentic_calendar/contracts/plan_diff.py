@@ -36,6 +36,7 @@ _ALLOWED_FIELD_CHANGE_REASON_CODES: frozenset[ReasonCode] = frozenset(
         ReasonCode.EXTERNAL_CALENDAR_CONFLICT,
         ReasonCode.USER_PROFILE_CHANGE,
         ReasonCode.DRIFT_REMEDIATION,
+        ReasonCode.DEPENDENT_DROP_PRUNED,
     }
 )
 

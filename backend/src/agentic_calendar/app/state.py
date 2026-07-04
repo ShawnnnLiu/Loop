@@ -128,6 +128,9 @@ class RunRecord(BaseModel):
     recovery_mode: RecoveryAction | None = None
     replan_kind: ReplanKind | None = None
     reason_code: ReasonCode | None = None
+    drop_task_ids: tuple[str, ...] = ()
+    """Set on a drop run: the task ids whose calendar events ``write`` must
+    remove via the delete-only path. Empty (``()``) for every other run."""
     created_at: datetime
     updated_at: datetime
 

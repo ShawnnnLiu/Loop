@@ -35,6 +35,14 @@ Each test must define expected output, typed `reason_code`, privacy behavior, an
 24. **Accountability contract disabled** — User disables the accountability contract. Expect `ACCOUNTABILITY_CONTRACT_INACTIVE`, no further sponsor reports or nudges, and that the active plan is unaffected.
 25. **Disallowed LLM sponsor wording** — LLM-generated sponsor summary attempts to include disallowed private details. Expect the privacy filter to reject the draft with `SPONSOR_VISIBILITY_VIOLATION` before send.
 
+## Completion and Drop Scenarios
+
+26. **Manual move before an unfinished prerequisite is advisory** — The user drags a block to start before a prerequisite that is **not** completed or dropped. Expect the move to be **applied** (not refused) with a non-blocking `DEPENDENCY_ADVISORY` warning, no hard conflict, the revised draft stored, and re-approval required before any write. (ADR-0008.)
+27. **Completion respected by the scheduler** — Two tasks in a dependency chain are completed and recorded as dispositions. Expect the scheduler projection to populate `completed_task_ids`, the completed prerequisites to be treated as met, and a manual move past a completed prerequisite to produce **no** advisory warning.
+28. **Drop a task with a downstream dependent** — The user drops an unfinished task that a surviving task depends on. Expect a new plan version with the dropped task removed and the surviving dependent's `dependencies` **pruned** of the dropped id (diff field-change `DEPENDENT_DROP_PRUNED`), surviving `task_id`s unchanged, a `dropped` / `TASK_DROPPED_BY_USER` disposition recorded, the active plan unchanged until approval, and the approved write **removing only the dropped task's calendar event** (survivor events untouched).
+29. **Full regeneration after a drop does not resurrect it** — After a task is dropped, a full syllabus regeneration runs. Expect the dropped (and completed) ids to be passed to the Planner as an **advisory** exclusion; if a dropped id reappears it is logged, not hard-blocked. (Hard "never resurrect" is out of scope — axiom 20 Phase 2/3.)
+30. **External deletion is remembered and surfaced, never shown as completion** — The user deletes an app-created event from their dedicated calendar and reconciliation runs (twice). Expect the delta flagged `flagged_deleted` / `EXTERNAL_EVENT_DELETED`, exactly **one** idempotent `event_deleted` disposition recorded (`source: system`), the task **absent** from the completed/dropped scheduler projection, the task still present in the draft, and the read projections (`DraftView.deleted_task_ids`, `TodayTask.deleted`) marking it deleted while `reported` stays false — a deleted event must never render as a completed task.
+
 ## Additional Required Scenarios
 
 The deterministic invariants in `axioms/16-reliability-patterns.md` also require:

@@ -8,7 +8,7 @@ leaves the method.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Collection, Mapping
 
 from agentic_calendar.contracts.syllabus_units import SyllabusUnits
 from agentic_calendar.contracts.task_plan import TaskPlan
@@ -33,15 +33,17 @@ class FixturePlanner:
         syllabus: SyllabusUnits,
         user_profile: UserProfile | None = None,
         repair: ValidationResult | None = None,
+        excluded_tasks: Collection[str] = (),
     ) -> TaskPlan:
         """Return the canned plan for ``syllabus.syllabus_version``.
 
-        ``user_profile`` and ``repair`` exist for protocol parity with
-        ``AnthropicPlanner`` (the real adapter embeds the profile's scheduling
-        constraints and the failed ``ValidationResult`` in its prompt). Canned
-        output cannot honor either, so both are accepted and ignored.
+        ``user_profile``, ``repair``, and ``excluded_tasks`` exist for protocol
+        parity with ``AnthropicPlanner`` (the real adapter embeds the profile's
+        scheduling constraints, the failed ``ValidationResult``, and the
+        dropped/completed exclusion in its prompt). Canned output cannot honor
+        them, so all three are accepted and ignored.
         """
-        del run_id, user_profile, repair
+        del run_id, user_profile, repair, excluded_tasks
         key = syllabus.syllabus_version
         if key not in self._fixtures:
             raise LLMNodeError(

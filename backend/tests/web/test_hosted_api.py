@@ -15,7 +15,7 @@ journey (session-derived user, per-user calendar) plus the read projections.
 
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
@@ -211,6 +211,42 @@ def test_propose_feeds_server_side_free_busy(monkeypatch: pytest.MonkeyPatch) ->
     # the SPA never supplies free/busy).
     time_min, time_max = captured["window"]
     assert time_max - time_min == timedelta(days=profile.timeline_weeks * 7)
+
+
+def test_free_busy_is_served_in_the_users_wall_clock(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Google freebusy returns UTC instants, but the SPA grid draws the
+    wall-clock digits embedded in the ISO string — served as UTC, a 2-3PM PDT
+    personal event painted at 9-10PM. The server must restamp intervals in the
+    user's timezone before they cross the API."""
+    client, _env, _clock = _client()
+    _login(client, monkeypatch)
+    _onboard(client, timezone="America/Los_Angeles")
+
+    class _FreeBusyTransport:
+        def query_free_busy(
+            self, *, calendar_id: str, time_min: datetime, time_max: datetime
+        ) -> list[tuple[datetime, datetime]]:
+            # 2026-07-03 2-3PM PDT, exactly as Google reports it: in UTC.
+            return [
+                (
+                    datetime(2026, 7, 3, 21, 0, tzinfo=UTC),
+                    datetime(2026, 7, 3, 22, 0, tzinfo=UTC),
+                )
+            ]
+
+    monkeypatch.setattr(calendar_service, "build_service_from_token", lambda token_json: object())
+    monkeypatch.setattr(
+        calendar_service, "GoogleApiHttpTransport", lambda service: _FreeBusyTransport()
+    )
+
+    view = client.get("/api/draft").json()
+    # Same instants, the user's wall clock — and non-empty, so a failure inside
+    # the best-effort wrapper can't silently pass as [].
+    assert view["free_busy"] == [
+        {"start": "2026-07-03T14:00:00-07:00", "end": "2026-07-03T15:00:00-07:00"}
+    ]
 
 
 # --------------------------------------------------------------------------- #

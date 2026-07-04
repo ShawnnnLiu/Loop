@@ -264,3 +264,73 @@ def test_eval_case_rejects_unknown_fields() -> None:
         EvalCase.model_validate(
             {"case_id": "c1", "node": "planner", "expected_prose": "exact words"}
         )
+
+
+# --------------------------------------------------------------------------- #
+# Tier-1 plan quality + Tier-2 judge plumbing (UX pass C2)
+# --------------------------------------------------------------------------- #
+
+
+def test_plan_quality_metrics_measure_depth_titles_and_granularity() -> None:
+    from agentic_calendar.contracts.task_plan import TaskPlan
+    from agentic_calendar.llm_nodes.eval import plan_quality_metrics
+
+    def task(task_id: str, deps: list[str], title: str) -> dict[str, object]:
+        return {
+            "task_id": task_id,
+            "module_id": "dp",
+            "title": title,
+            "dependencies": deps,
+            "estimated_duration_min": 60,
+            "cognitive_load": 3,
+            "category": "practice",
+            "required_focus_level": "medium",
+            "splittable": False,
+        }
+
+    plan = TaskPlan.model_validate(
+        {
+            "plan_version": "p1",
+            "tasks": [
+                task("a", [], "Review the basics"),
+                task("b", ["a"], "Solve two problems"),
+                task("c", ["b"], "Solve two problems"),  # duplicate title
+            ],
+        }
+    )
+    metrics = plan_quality_metrics([plan])
+    assert metrics is not None
+    assert metrics.plans_graded == 1
+    assert metrics.mean_max_dependency_depth == 3.0  # a -> b -> c
+    assert metrics.mean_distinct_title_ratio == round(2 / 3, 4)
+    assert metrics.mean_tasks_per_module == 3.0
+    assert plan_quality_metrics([]) is None
+
+
+def test_grade_recording_rejects_judge_scores_for_unknown_cases() -> None:
+    from agentic_calendar.llm_nodes.call_log import LlmNodeName
+    from agentic_calendar.llm_nodes.eval import (
+        EvalCase,
+        EvalError,
+        EvalRecording,
+        EvalSet,
+        grade_recording,
+    )
+
+    eval_set = EvalSet(
+        eval_set_version="vt",
+        cases=[
+            EvalCase(
+                case_id="reflection_case",
+                node=LlmNodeName.REFLECTION_SUMMARY,
+            )
+        ],
+    )
+    recording = EvalRecording(
+        prompt_version="t",
+        model_name="m",
+        outputs={"reflection_case": [{"summary": "Steady progress.", "detail": []}]},
+        judge_scores={"ghost_case": {"tone": 5, "specificity": 5, "actionability": 5}},
+    )
+    with pytest.raises(EvalError, match="unknown cases"):
+        grade_recording(eval_set, recording)

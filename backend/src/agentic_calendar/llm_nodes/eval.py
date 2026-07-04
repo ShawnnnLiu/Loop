@@ -63,6 +63,11 @@ class EvalCase(BaseModel):
     node: LlmNodeName
     description: str = ""
     required_substrings: list[str] = Field(default_factory=list)
+    inputs: dict[str, Any] = Field(default_factory=dict)
+    """The node's real call inputs (mirrors the adapter ``run()`` kwargs as
+    JSON). Empty for legacy fixture-only sets (v1); the capture tool refuses
+    to run a case without them — recordings must come from the actual
+    prompts, or the rates prove nothing (axiom 22 honesty rule)."""
 
 
 class EvalSet(BaseModel):
@@ -94,6 +99,10 @@ class EvalRecording(BaseModel):
     prompt_version: str = Field(min_length=1)
     model_name: str = Field(min_length=1)
     outputs: dict[str, list[dict[str, Any]]]
+    judge_scores: dict[str, dict[str, int]] = Field(default_factory=dict)
+    """Optional Tier-2 LLM-judge scores per prose case (1-5 per dimension).
+    Produced only by the offline capture tooling — advisory numbers in the
+    report, never gates and never runtime signals (axiom 22)."""
 
 
 class NodeMetrics(BaseModel):
@@ -125,6 +134,40 @@ class CallAggregates(BaseModel):
     mean_latency_ms: float
 
 
+class PlanQualityMetrics(BaseModel):
+    """Tier-1 deterministic plan-quality facts over valid Planner outputs.
+
+    "Good guidance" needs a number or model/prompt experiments get judged by
+    vibes. These are pure functions over the recorded ``TaskPlan``s — cheap,
+    objective, CI-safe. Judgment (is 0.8 distinctness good?) stays with the
+    human reading the before/after deltas."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    plans_graded: int
+    mean_distinct_title_ratio: float
+    """1.0 = every task title unique; low values read as template output
+    ("Practice session 1/2/3")."""
+    mean_max_dependency_depth: float
+    """Longest prerequisite chain per plan, averaged — a proxy for whether
+    dependencies encode pedagogy or are just flat lists."""
+    mean_tasks_per_module: float
+    """Coverage granularity: how finely modules decompose into tasks."""
+
+
+class JudgeScore(BaseModel):
+    """Tier-2 LLM-judge scores for one prose output (advisory only)."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    tone: int = Field(ge=1, le=5)
+    """Coach, not clinician: warm, supportive, no identity judgments."""
+    specificity: int = Field(ge=1, le=5)
+    """Names the user's actual situation vs generic filler."""
+    actionability: int = Field(ge=1, le=5)
+    """Ends with a concrete next step the user could take today."""
+
+
 class EvalReport(BaseModel):
     """One graded eval run, tagged for reproducible before/after comparison."""
 
@@ -136,6 +179,12 @@ class EvalReport(BaseModel):
     per_node: dict[str, NodeMetrics]
     overall: NodeMetrics
     call_aggregates: dict[str, CallAggregates] = Field(default_factory=dict)
+    plan_quality: PlanQualityMetrics | None = None
+    """Tier-1 deterministic quality facts (None when no planner case
+    produced a valid plan)."""
+    judge_scores: dict[str, JudgeScore] = Field(default_factory=dict)
+    """Tier-2 advisory judge scores, copied through from the recording when
+    present. Never a gate, never a runtime signal."""
 
 
 class EvalThresholds(BaseModel):
@@ -256,6 +305,43 @@ def _metrics_from_grades(grades: Sequence[_CaseGrade]) -> NodeMetrics:
     )
 
 
+def _max_dependency_depth(plan: TaskPlan) -> int:
+    """Longest prerequisite chain (contract guarantees the DAG is acyclic)."""
+    deps = {t.task_id: tuple(t.dependencies) for t in plan.tasks}
+    memo: dict[str, int] = {}
+
+    def depth(task_id: str) -> int:
+        if task_id in memo:
+            return memo[task_id]
+        parents = deps.get(task_id, ())
+        memo[task_id] = 1 + (max((depth(p) for p in parents), default=0))
+        return memo[task_id]
+
+    return max((depth(tid) for tid in deps), default=0)
+
+
+def plan_quality_metrics(plans: Sequence[TaskPlan]) -> PlanQualityMetrics | None:
+    """Tier-1 deterministic quality facts over valid plans (None when empty)."""
+    if not plans:
+        return None
+    ratios: list[float] = []
+    depths: list[int] = []
+    per_module: list[float] = []
+    for plan in plans:
+        titles = [t.title.strip().lower() for t in plan.tasks]
+        ratios.append(len(set(titles)) / len(titles))
+        depths.append(_max_dependency_depth(plan))
+        modules = {t.module_id for t in plan.tasks}
+        per_module.append(len(plan.tasks) / len(modules))
+    count = len(plans)
+    return PlanQualityMetrics(
+        plans_graded=count,
+        mean_distinct_title_ratio=round(sum(ratios) / count, 4),
+        mean_max_dependency_depth=round(sum(depths) / count, 4),
+        mean_tasks_per_module=round(sum(per_module) / count, 4),
+    )
+
+
 def aggregate_calls(calls: Sequence[LlmCallLog]) -> dict[str, CallAggregates]:
     """Per-node latency/token/cost aggregates from observability records.
 
@@ -297,6 +383,24 @@ def grade_recording(
     for grade in grades:
         by_node.setdefault(grade.node.value, []).append(grade)
 
+    # Tier-1 plan quality over every planner case's first VALID attempt.
+    valid_plans: list[TaskPlan] = []
+    for case in eval_set.cases:
+        if case.node is not LlmNodeName.PLANNER:
+            continue
+        _, validated = _first_valid_attempt(case, recording.outputs[case.case_id])
+        if isinstance(validated, TaskPlan):
+            valid_plans.append(validated)
+
+    # Tier-2 judge scores are advisory copies; unknown case ids are an error,
+    # not a silent drop — same honesty rule as the outputs themselves.
+    if unknown_judged := sorted(set(recording.judge_scores) - case_ids):
+        raise EvalError(f"recording has judge scores for unknown cases: {unknown_judged}")
+    judge_scores = {
+        case_id: JudgeScore.model_validate(scores)
+        for case_id, scores in sorted(recording.judge_scores.items())
+    }
+
     return EvalReport(
         eval_set_version=eval_set.eval_set_version,
         prompt_version=recording.prompt_version,
@@ -304,6 +408,8 @@ def grade_recording(
         per_node={node: _metrics_from_grades(g) for node, g in sorted(by_node.items())},
         overall=_metrics_from_grades(grades),
         call_aggregates=aggregate_calls(calls),
+        plan_quality=plan_quality_metrics(valid_plans),
+        judge_scores=judge_scores,
     )
 
 
@@ -352,13 +458,30 @@ def compare_reports(before: EvalReport, after: EvalReport) -> EvalComparison:
             f"vs {after.eval_set_version!r}"
         )
     shared_nodes = sorted(set(before.per_node) & set(after.per_node))
+    overall = _rate_comparisons(before.overall, after.overall)
+    if before.plan_quality is not None or after.plan_quality is not None:
+        for metric in (
+            "mean_distinct_title_ratio",
+            "mean_max_dependency_depth",
+            "mean_tasks_per_module",
+        ):
+            b = getattr(before.plan_quality, metric, None) if before.plan_quality else None
+            a = getattr(after.plan_quality, metric, None) if after.plan_quality else None
+            overall.append(
+                RateComparison(
+                    metric=metric,
+                    before=b,
+                    after=a,
+                    delta=(a - b) if a is not None and b is not None else None,
+                )
+            )
     return EvalComparison(
         eval_set_version=before.eval_set_version,
         before_prompt_version=before.prompt_version,
         after_prompt_version=after.prompt_version,
         before_model_name=before.model_name,
         after_model_name=after.model_name,
-        overall=_rate_comparisons(before.overall, after.overall),
+        overall=overall,
         per_node={
             node: _rate_comparisons(before.per_node[node], after.per_node[node])
             for node in shared_nodes

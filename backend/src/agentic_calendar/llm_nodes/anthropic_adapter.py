@@ -379,6 +379,7 @@ class _GenerationEngine:
         id_generator: IdGenerator,
         debug_raw_sink: Callable[[str], None] | None = None,
         sleeper: Callable[[float], None] | None = None,
+        attempt_recorder: Callable[[int, dict[str, Any] | None], None] | None = None,
     ) -> None:
         self._node = node
         self._contract = contract
@@ -390,6 +391,12 @@ class _GenerationEngine:
         self._debug_raw_sink = debug_raw_sink
         # Injected so tests never really sleep; production pacing is real.
         self._sleeper = sleeper if sleeper is not None else time.sleep
+        # Eval-capture hook: called once per transport result with the repair
+        # attempt index and the raw payload dict (None when unparseable). SDK
+        # retries within one attempt overwrite the same index — the LAST
+        # result is the one the engine actually judged. Observability only;
+        # never influences generation.
+        self._attempt_recorder = attempt_recorder
 
     def generate(
         self,
@@ -510,6 +517,8 @@ class _GenerationEngine:
 
             if self._debug_raw_sink is not None and result.raw_text is not None:
                 self._debug_raw_sink(result.raw_text)
+            if self._attempt_recorder is not None:
+                self._attempt_recorder(attempt, result.payload)
 
             truncated = result.stop_reason == "max_tokens"
             if result.stop_reason == "refusal":
@@ -758,6 +767,7 @@ class AnthropicStrategist:
         config: AdapterConfig | None = None,
         debug_raw_sink: Callable[[str], None] | None = None,
         sleeper: Callable[[float], None] | None = None,
+        attempt_recorder: Callable[[int, dict[str, Any] | None], None] | None = None,
     ) -> None:
         self._engine = _GenerationEngine(
             node=LlmNodeName.STRATEGIST,
@@ -769,6 +779,7 @@ class AnthropicStrategist:
             id_generator=id_generator,
             debug_raw_sink=debug_raw_sink,
             sleeper=sleeper,
+            attempt_recorder=attempt_recorder,
         )
 
     def run(
@@ -830,6 +841,7 @@ class AnthropicPlanner:
         config: AdapterConfig | None = None,
         debug_raw_sink: Callable[[str], None] | None = None,
         sleeper: Callable[[float], None] | None = None,
+        attempt_recorder: Callable[[int, dict[str, Any] | None], None] | None = None,
     ) -> None:
         self._engine = _GenerationEngine(
             node=LlmNodeName.PLANNER,
@@ -841,6 +853,7 @@ class AnthropicPlanner:
             id_generator=id_generator,
             debug_raw_sink=debug_raw_sink,
             sleeper=sleeper,
+            attempt_recorder=attempt_recorder,
         )
 
     def run(
@@ -926,6 +939,7 @@ class AnthropicReflectionSummary:
         config: AdapterConfig | None = None,
         debug_raw_sink: Callable[[str], None] | None = None,
         sleeper: Callable[[float], None] | None = None,
+        attempt_recorder: Callable[[int, dict[str, Any] | None], None] | None = None,
     ) -> None:
         self._engine = _GenerationEngine(
             node=LlmNodeName.REFLECTION_SUMMARY,
@@ -937,6 +951,7 @@ class AnthropicReflectionSummary:
             id_generator=id_generator,
             debug_raw_sink=debug_raw_sink,
             sleeper=sleeper,
+            attempt_recorder=attempt_recorder,
         )
 
     def run(
@@ -981,6 +996,7 @@ class AnthropicUserFacingExplanation:
         config: AdapterConfig | None = None,
         debug_raw_sink: Callable[[str], None] | None = None,
         sleeper: Callable[[float], None] | None = None,
+        attempt_recorder: Callable[[int, dict[str, Any] | None], None] | None = None,
     ) -> None:
         self._engine = _GenerationEngine(
             node=LlmNodeName.USER_FACING_EXPLANATION,
@@ -992,6 +1008,7 @@ class AnthropicUserFacingExplanation:
             id_generator=id_generator,
             debug_raw_sink=debug_raw_sink,
             sleeper=sleeper,
+            attempt_recorder=attempt_recorder,
         )
 
     def run(

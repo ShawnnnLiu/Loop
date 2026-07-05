@@ -48,16 +48,21 @@ schema-check:
 # gate merges (amended axiom 22; live-call evals still never run in CI).
 # The fixture_baseline recording deliberately contains a failing case (it
 # proves the harness measures failures), so the strict pair here is
-# fixture_improved. When a real v2 baseline is captured, add its pair with
-# floors seeded from that baseline, e.g.:
-#   uv run python -m agentic_calendar.tools.run_llm_eval --strict \
-#     --eval-set evalsets/eval_set_v2.json \
-#     --recording evalsets/recordings/baseline_YYYY_MM_DD.json \
-#     --min-schema-validity-rate <seeded> --min-repair-recovery-rate <seeded>
+# fixture_improved. The v2 pair grades the real baseline capture
+# (2026-07-05, Sonnet-tier swap already live). Floors are the MEASURED
+# baseline values: schema validity 1.0000; repair recovery was n/a (no case
+# needed repair), so its floor is vacuous on this recording and arms on the
+# first recording that exercises repair. Grading a committed recording is
+# deterministic — floors equal to measured always pass until a new
+# recording lands.
 eval-gate:
 	uv run python -m agentic_calendar.tools.run_llm_eval --strict \
 		--eval-set evalsets/eval_set_v1.json \
 		--recording evalsets/recordings/fixture_improved.json
+	uv run python -m agentic_calendar.tools.run_llm_eval --strict \
+		--eval-set evalsets/eval_set_v2.json \
+		--recording evalsets/recordings/baseline_2026_07_05.json \
+		--min-schema-validity-rate 1.0 --min-repair-recovery-rate 1.0
 
 visualize:
 	uv run agentic-calendar-visualize --scenario success --out ../schedule.html

@@ -334,7 +334,7 @@ STRATEGIST_CONFIG = AdapterConfig(
 )
 PLANNER_CONFIG = AdapterConfig(
     model_name="claude-sonnet-5",
-    prompt_version="planner-v3-2026-07-05",
+    prompt_version="planner-v4-2026-07-05",
     max_tokens=16384,
     input_price_per_mtok=3.00,
     output_price_per_mtok=15.00,
@@ -890,6 +890,12 @@ _PLANNER_SYSTEM = (
     "5.\n"
     "7. Forbidden field — never include a prerequisites_met field; the engine "
     "computes prerequisite status deterministically.\n\n"
+    "A user-goal context block (goal, target role, known weaknesses) may "
+    "accompany the syllabus. Use it ONLY to word task titles and descriptions "
+    "and to choose emphasis, so the plan reads as preparation for that "
+    "specific goal — it never changes plan structure: module coverage, "
+    "dependencies, durations, and budgets remain governed solely by the "
+    "syllabus and the planning constraints above.\n\n"
     "Self-check against all seven rules, then return only the structured "
     "object.\n\n"
     "Illustrative example of a valid output SHAPE only — task count, ids, "
@@ -1045,9 +1051,11 @@ class AnthropicPlanner:
         """Generate a ``TaskPlan`` from the validated syllabus.
 
         ``user_profile`` supplies the scheduling limits the deterministic
-        user-fit checks enforce downstream (``validation/user_fit.py``); the
-        constraints block is derived solely from the profile's typed fields —
-        callers cannot inject free text. ``repair`` is the failed
+        user-fit checks enforce downstream (``validation/user_fit.py``) plus
+        the user-goal context block (goal / target_role / known_weaknesses,
+        wording-and-emphasis only); both blocks are derived solely from the
+        profile's typed, onboarding-validated fields — callers cannot inject
+        free text of their own. ``repair`` is the failed
         ``ValidationResult`` from the previous pass of the bounded repair loop
         (axiom 04: at most two re-prompts), rendered through the same typed
         violation formatter the engine's schema-rejection channel uses (D1:
@@ -1074,6 +1082,18 @@ class AnthropicPlanner:
             sections.append(
                 "Planning constraints (hard limits enforced by validation):\n"
                 + json.dumps(constraints, sort_keys=True)
+            )
+            # Typed fields only (validated at onboarding) — no free-text
+            # injection path into the Planner. Steers titling/emphasis; the
+            # system prompt forbids using it for structure (D1b).
+            goal_context = {
+                "goal": user_profile.goal,
+                "target_role": user_profile.target_role,
+                "known_weaknesses": user_profile.known_weaknesses,
+            }
+            sections.append(
+                "User goal context (wording and emphasis only — never "
+                "structure):\n" + json.dumps(goal_context, sort_keys=True)
             )
         if excluded_tasks:
             sections.append(

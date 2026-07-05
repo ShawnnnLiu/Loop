@@ -11,6 +11,10 @@ for implementation in fresh context windows, one increment per session if needed
 Read order for a fresh session: this file → `README.md` + the relevant numbered
 plan file (`02-…`/`03-…`) → the code anchors named per increment.
 
+**Session split (2026-07-05):** `SESSION-SPLIT.md` carves the remaining work
+into five one-context-window pieces (baseline+D1a / D1b+capture / D2 /
+D4 / E) with per-piece kickoff prompts — start each fresh session from there.
+
 ## Approved decisions (user, 2026-07-04 — do not re-ask)
 
 1. **Axiom 09 amendment + ALL THREE model upgrades** (Planner, Reflection,
@@ -20,7 +24,15 @@ plan file (`02-…`/`03-…`) → the code anchors named per increment.
 4. **Live captures: agent runs them, asking before each run.** Baseline capture
    is currently **blocked on `ANTHROPIC_API_KEY`** (see next section).
 
-## ⏸ IMMEDIATE NEXT STEP — baseline capture (user-unlocked, networked, ~<$1)
+## ✅ DONE 2026-07-05 — baseline capture (was: ⏸ IMMEDIATE NEXT STEP)
+
+Ran as specified below (labeled `baseline-2026-07-05`, the actual date):
+16 calls, ~$0.1591; schema validity 1.0000, repair recovery n/a, rubric
+1.0000; judge scores recorded (explanation_repair_exhausted tone=2 is the
+D2 target). Gate seeded with measured floors. Commit `f869fef`. **D1a is
+also done** (commit `42edd48`, prompts at strategist-v3/planner-v3
+2026-07-05); the section below is kept for the run/grade/seed recipe that
+future captures reuse.
 
 The D-track prompt/model changes are only measurable against a recording of the
 **current** prompts. Run from `backend/` with the key in the environment:
@@ -102,6 +114,17 @@ edit.
   deliberately contains a failing case (harness proof) and must keep failing.
 - **The judge is NOT a workflow node**: no engine, no call-log rows; axiom 22
   now says so explicitly. Don't wire it into `LlmNodeName`.
+- **D1b's claim cap keys on the source-url HOST, not "company"** — company
+  identity is not a contract field (it exists only at ingestion via
+  operator-declared domains), so the deterministic per-company cap is a
+  per-source-host cap (`www.` stripped; subdomains are distinct buckets;
+  host-less URLs share one bucket).
+- **D1b curation knobs are a `claim_curation` tuning section**
+  (`min_confidence=0.30`, `max_per_host=5`), not bare constants — heuristic
+  priors journal through the axiom-07 threshold change log like every other
+  deterministic knob. The floor sits deliberately below the 0.35
+  personal-anecdote base: axiom 08 admits anecdotes "labeled low
+  confidence", so the default floor must not silently ban them.
 
 ## Remaining increments (D + E)
 

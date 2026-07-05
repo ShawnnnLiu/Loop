@@ -119,6 +119,7 @@ from agentic_calendar.scheduler import schedule
 from agentic_calendar.scheduler.adjustment import DraftAdjustment, validate_placements
 from agentic_calendar.scheduler.inputs import FreeBusyInterval, SchedulerInput
 from agentic_calendar.scheduler.policy import policy_from_user_profile
+from agentic_calendar.source_claims.curation import curate_claims
 from agentic_calendar.supervisor.routing import route
 from agentic_calendar.supervisor.state import SupervisorSignal as Sig
 from agentic_calendar.supervisor.state import SupervisorState as S
@@ -402,7 +403,25 @@ class CycleService:
         env.state.save_run(run)
         run = self._transition(run, Sig.USER_PROFILE_COLLECTED)
 
-        claims = list(env.claim_store.all())
+        # Deterministic pre-prompt curation (D1b, plan 03§5): expired, weak,
+        # and over-cap claims never reach the Strategist, instead of steering
+        # generation and then costing a repair round at validation. The
+        # registry is built from the KEPT set so a citation of a curated-out
+        # claim id is rejected as unknown, same as a hallucinated one.
+        curation = curate_claims(
+            list(env.claim_store.all()),
+            now=env.clock.now(),
+            config=env.tuning.claim_curation,
+        )
+        claims = list(curation.kept)
+        if curation.dropped_total:
+            correlated(_log, run_id=run.run_id).info(
+                f"claim curation dropped {curation.dropped_total} claim(s) "
+                f"before prompting: {len(curation.dropped_expired)} expired, "
+                f"{len(curation.dropped_below_floor)} below confidence floor, "
+                f"{len(curation.dropped_over_host_cap)} over per-host cap "
+                "(heuristic priors; tuning section claim_curation)"
+            )
         registry = {c.claim_id: c for c in claims}
 
         syllabus: SyllabusUnits | None = None

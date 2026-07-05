@@ -24,7 +24,7 @@ Fixture facts these tests rely on (verified against ``tests/fixtures/valid``):
 from __future__ import annotations
 
 import logging
-from collections.abc import Collection, Mapping
+from collections.abc import Collection, Mapping, Sequence
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -43,6 +43,7 @@ from agentic_calendar.app.environment import (
     LlmNodeBundle,
     NodeDependencies,
     PlannerNode,
+    StrategistNode,
     build_environment,
 )
 from agentic_calendar.app.state import ReplanKind, RunRecord
@@ -76,6 +77,7 @@ from agentic_calendar.contracts.hashing import canonical_payload_hash
 from agentic_calendar.contracts.reason_codes import ReasonCode
 from agentic_calendar.contracts.scheduler_output import SchedulerOutput
 from agentic_calendar.contracts.source_claim import SourceClaim
+from agentic_calendar.contracts.strategy_constraints import StrategyConstraints
 from agentic_calendar.contracts.syllabus_units import SyllabusUnits
 from agentic_calendar.contracts.task_disposition import (
     DispositionSource,
@@ -201,6 +203,30 @@ class RecordingPlanner:
         return self._plan
 
 
+class RecordingStrategist:
+    """Delegating strategist that records the claim ids each call received."""
+
+    def __init__(self, inner: FixtureStrategist) -> None:
+        self._inner = inner
+        self.seen_claims: list[tuple[str, ...]] = []
+
+    def run(
+        self,
+        *,
+        run_id: str,
+        user_profile: UserProfile,
+        source_claims: Sequence[SourceClaim] = (),
+        strategy_constraints: StrategyConstraints | None = None,
+    ) -> SyllabusUnits:
+        self.seen_claims.append(tuple(c.claim_id for c in source_claims))
+        return self._inner.run(
+            run_id=run_id,
+            user_profile=user_profile,
+            source_claims=source_claims,
+            strategy_constraints=strategy_constraints,
+        )
+
+
 def make_service(
     *,
     motivation_profile: Mapping[str, Any] | None = None,
@@ -208,6 +234,7 @@ def make_service(
     db_path: Path | None = None,
     strategist_fixtures: Mapping[str, SyllabusUnits] | None = None,
     planner_fixtures: Mapping[str, TaskPlan] | None = None,
+    strategist: StrategistNode | None = None,
     planner: PlannerNode | None = None,
     seed_claims: bool = True,
     onboard: bool = True,
@@ -228,9 +255,8 @@ def make_service(
     def factory(deps: NodeDependencies) -> LlmNodeBundle:
         del deps
         return LlmNodeBundle(
-            strategist=FixtureStrategist(
-                strategist_fixtures or {profile.target_role: syllabus}
-            ),
+            strategist=strategist
+            or FixtureStrategist(strategist_fixtures or {profile.target_role: syllabus}),
             planner=planner
             or FixturePlanner(planner_fixtures or {syllabus.syllabus_version: plan}),
             reflection=DeterministicReflectionSummary(),
@@ -358,6 +384,41 @@ def test_propose_happy_path_parks_run_awaiting_approval() -> None:
     syllabus = env.state.get_syllabus(USER_ID)
     assert syllabus is not None
     assert syllabus.syllabus_version == "syl_003"
+
+
+def test_propose_curates_claims_before_the_strategist_prompt() -> None:
+    """Expired and below-floor claims are filtered pre-prompt (D1b golden):
+    the Strategist never sees them and propose completes in one clean pass,
+    instead of a stale claim steering generation and then costing a repair
+    round when the post-generation validator rejects its citation."""
+    recorder = RecordingStrategist(
+        FixtureStrategist({_canonical_profile().target_role: _canonical_syllabus()})
+    )
+    service, env, _clock = make_service(strategist=recorder)
+    payloads = {
+        str(fixture.payload["claim_id"]): fixture.payload
+        for fixture in iter_valid("source_claim")
+    }
+    # Expired at HAPPY_NOW (inclusive boundary: expires_at == today) and a
+    # below-floor unclassified claim (0.2 < 0.30); both contract-valid.
+    env.claim_store.append(
+        SourceClaim.model_validate(
+            {
+                **payloads["claim_topic_dp"],
+                "claim_id": "claim_expired",
+                "expires_at": "2026-05-04",
+            }
+        )
+    )
+    env.claim_store.append(SourceClaim.model_validate(payloads["claim_unc_1"]))
+
+    result = service.propose(USER_ID)
+
+    assert result.state is S.AWAITING_USER_APPROVAL
+    assert result.reason_code is None
+    # Exactly one strategist pass (no repair round) that saw only the three
+    # curated-in claims the canonical syllabus cites.
+    assert recorder.seen_claims == [SYLLABUS_CLAIM_IDS]
 
 
 # --------------------------------------------------------------------------- #

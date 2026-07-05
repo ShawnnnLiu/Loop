@@ -35,8 +35,8 @@ _PINNED: list[tuple[str, object, str, str]] = [
     (
         "_PLANNER_SYSTEM",
         adapter.PLANNER_CONFIG,
-        "planner-v3-2026-07-05",
-        "c90d36545131255891d1498644ef793c932684572c9d0dacc4350d18603e324c",
+        "planner-v4-2026-07-05",
+        "e29f8d76d333751712cb5a2323dee0387b91b9f88eef026a66df690580daab51",
     ),
     (
         "_REFLECTION_SYSTEM",

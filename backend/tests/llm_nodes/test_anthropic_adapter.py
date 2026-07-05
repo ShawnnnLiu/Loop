@@ -161,7 +161,7 @@ def test_happy_path_returns_validated_plan_and_logs_one_complete_row() -> None:
     assert row.run_id == "run_t"
     assert row.plan_version == "v1"
     assert row.node.value == "planner"
-    assert row.prompt_version == "planner-v3-2026-07-05"
+    assert row.prompt_version == "planner-v4-2026-07-05"
     assert row.model_name == "claude-sonnet-5"
     assert (row.attempt, row.sdk_retry) == (0, 0)
     assert (row.input_tokens, row.output_tokens) == (100, 50)
@@ -336,6 +336,29 @@ def test_planner_prompt_has_no_constraints_block_without_profile() -> None:
     planner, _store, transport = _planner([_ok(_VALID_PLAN)])
     _run_planner(planner)
     assert "Planning constraints" not in transport.requests[0]["user_prompt"]
+
+
+def test_planner_prompt_carries_goal_context_from_typed_profile_fields() -> None:
+    """With a profile, the planner prompt embeds the user-goal block (D1b) —
+    exactly the three typed onboarding-validated fields, marked wording-only."""
+    planner, _store, transport = _planner([_ok(_VALID_PLAN)])
+    planner.run(
+        run_id="run_t",
+        syllabus=SyllabusUnits.model_validate(_SYLLABUS),
+        plan_version="v1",
+        user_profile=_profile(),
+    )
+    prompt = transport.requests[0]["user_prompt"]
+    assert "User goal context (wording and emphasis only — never structure):" in prompt
+    assert '"goal": "Backend SWE interview prep"' in prompt
+    assert '"target_role": "Backend SWE"' in prompt
+    assert '"known_weaknesses": ["dynamic programming", "system design"]' in prompt
+
+
+def test_planner_prompt_has_no_goal_block_without_profile() -> None:
+    planner, _store, transport = _planner([_ok(_VALID_PLAN)])
+    _run_planner(planner)
+    assert "User goal context" not in transport.requests[0]["user_prompt"]
 
 
 def test_planner_prompt_embeds_repair_violations_and_reason_code() -> None:

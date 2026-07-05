@@ -56,6 +56,21 @@ def test_accountability_view_exposes_the_open_ask() -> None:
     assert view.open_recommitment_request_id is not None
 
 
+def test_accountability_view_replays_reflection_history_newest_first() -> None:
+    """The view carries the persisted coaching notes (D2) — the same ingest
+    that parked the replan wrote one, and a fresh user has none."""
+    service, env, _clock = _nudged_service()
+    view = service.accountability_view(USER_ID)
+    assert len(view.reflection_history) == 1
+    latest = env.prose_store.list_for_user(USER_ID)[-1]
+    assert view.reflection_history[0].summary == latest.summary
+    assert view.reflection_history[0].created_at == latest.created_at
+    assert view.reflection_history[0].plan_version == latest.plan_version
+
+    fresh_service, _env2, _clock2 = make_service()
+    assert fresh_service.accountability_view(USER_ID).reflection_history == []
+
+
 def test_recommit_overrides_the_parked_recovery_mode_with_the_users_choice() -> None:
     """The drift mapping picked ``reschedule``; the user answers "revise
     intensity". Their explicit typed choice beats the heuristic — the parked

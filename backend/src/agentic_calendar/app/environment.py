@@ -143,8 +143,10 @@ class PlannerNode(Protocol):
     ``user_profile`` carries the scheduling limits the deterministic user-fit
     checks enforce; ``repair`` is the failed ``ValidationResult`` from the
     previous pass of the bounded repair loop (axiom 04) so retries are not
-    re-invoked blind. Both are optional: deterministic plan sources ignore
-    them.
+    re-invoked blind. ``behavioral_hints`` are the user's recent persisted
+    reflection sentences (D2) — advisory prose the replan path threads in for
+    sizing/emphasis; never parsed, never control-plane. All are optional:
+    deterministic plan sources ignore them.
     """
 
     def run(
@@ -155,12 +157,17 @@ class PlannerNode(Protocol):
         user_profile: UserProfile | None = None,
         repair: ValidationResult | None = None,
         excluded_tasks: Collection[str] = (),
+        behavioral_hints: Sequence[str] = (),
     ) -> TaskPlan: ...
 
 
 @runtime_checkable
 class ReflectionNode(Protocol):
-    """Structural surface shared by the deterministic and Anthropic reflection nodes."""
+    """Structural surface shared by the deterministic and Anthropic reflection nodes.
+
+    ``prior_reflections`` are the user's last few persisted reflection
+    sentences (D2) — advisory continuity context so successive notes read as
+    one coaching conversation; never parsed, never control-plane."""
 
     def run(
         self,
@@ -168,6 +175,7 @@ class ReflectionNode(Protocol):
         run_id: str,
         drift_events: Sequence[DriftEvent],
         completion_rate: float | None = None,
+        prior_reflections: Sequence[str] = (),
     ) -> ReflectionSummary: ...
 
 

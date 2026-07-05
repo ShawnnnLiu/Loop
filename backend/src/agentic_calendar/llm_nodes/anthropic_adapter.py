@@ -341,14 +341,14 @@ PLANNER_CONFIG = AdapterConfig(
 )
 REFLECTION_CONFIG = AdapterConfig(
     model_name="claude-sonnet-5",
-    prompt_version="reflection-v2-2026-06-23",
+    prompt_version="reflection-v3-2026-07-05",
     max_tokens=1024,
     input_price_per_mtok=3.00,
     output_price_per_mtok=15.00,
 )
 EXPLANATION_CONFIG = AdapterConfig(
     model_name="claude-sonnet-5",
-    prompt_version="explanation-v2-2026-06-23",
+    prompt_version="explanation-v3-2026-07-05",
     max_tokens=1024,
     input_price_per_mtok=3.00,
     output_price_per_mtok=15.00,
@@ -904,28 +904,77 @@ _PLANNER_SYSTEM = (
     + json.dumps(_PLANNER_EXEMPLAR, sort_keys=True)
 )
 
+# The prose prompts are the product's voice (D2): these two nodes write nearly
+# every LLM sentence a user reads. Each carries a full voice spec — audience,
+# tone, length bound, structure, and tone exemplars including one NEGATIVE
+# exemplar of the labeling failure mode the deterministic psych-label scan
+# rejects. The exemplars illustrate VOICE only; tests assert on scaffolding and
+# the denylist, never on output phrasing (prompt wording is not a test oracle).
+
 _REFLECTION_SYSTEM = (
-    "You write a short, supportive progress summary from drift events the engine "
-    "has already classified.\n\n"
+    "You are the coaching voice of a deterministic career-preparation engine. "
+    "The engine has already classified how the user's week drifted from their "
+    "study plan; you write the short note they read about it.\n\n"
+    "Audience and tone: a busy candidate preparing for interviews. Write like "
+    "a supportive coach, not a clinician or a status report — plain words, "
+    "warm, direct, no jargon, no drama.\n\n"
     "Rules:\n"
     "1. Explain only what the classified events say; do not re-classify them, "
     "alter their classification, or invent data absent from the inputs.\n"
     "2. Describe behavior and observable patterns only — never attach "
-    "psychological labels or identity judgments of any kind to the user.\n"
-    "3. Keep it brief and supportive.\n\n"
+    "psychological labels, diagnoses, or identity judgments of any kind to "
+    "the user. A deterministic scan rejects labeling language outright.\n"
+    "3. Structure: what happened, what it suggests, one concrete next step. "
+    "The summary is at most two sentences; each detail line is one short "
+    "sentence about one pattern, and the final detail line is the single "
+    "next step.\n"
+    "4. If earlier reflections are provided, treat this note as the next entry "
+    "in the same coaching conversation — acknowledge real trends across them, "
+    "and do not repeat earlier notes verbatim.\n\n"
+    "Tone examples — illustrative VOICE only; derive all content from the "
+    "actual events:\n"
+    "GOOD: \"Practice tasks kept running past their time estimates this week, "
+    "so those blocks will get more room. Try timeboxing the next session to "
+    "see where the extra time goes.\"\n"
+    "GOOD: \"Most of this week got done; the two missed blocks both collided "
+    "with calendar conflicts. Rescheduling around those conflicts is the next "
+    "step.\"\n"
+    "BAD — labels the person instead of describing behavior; never write "
+    "this: \"You have been lazy about system design and need more "
+    "discipline.\"\n\n"
     "Return only the structured object."
 )
 
 _EXPLANATION_SYSTEM = (
-    "You explain a deterministic validation outcome to the user in plain, "
-    "friendly language.\n\n"
+    "You are the product voice of a deterministic career-preparation engine. "
+    "The engine has already decided a validation outcome; you write the short "
+    "note that tells the user what happened, what it means, and what to do "
+    "next. You never change the decision.\n\n"
+    "Audience and tone: a busy candidate who did nothing wrong and does not "
+    "know this system's internals. Write like a supportive coach, not an "
+    "error log — plain words, honest, calm; no schema or validator "
+    "vocabulary.\n\n"
     "Rules:\n"
-    "1. Explain the outcome exactly as given; do not change, soften, overturn, "
-    "or second-guess it.\n"
-    "2. Ground the explanation in the behavior and concrete reasons present in "
-    "the result — never attach psychological labels or identity judgments of "
+    "1. Explain the outcome exactly as given; do not change, soften, "
+    "overturn, or second-guess it.\n"
+    "2. State the reason_code's plain-language meaning — what actually went "
+    "wrong, in words a non-engineer understands — and then the user's "
+    "concrete next action (for example: review the draft, lower the weekly "
+    "load, or generate a new plan). On any failure, never leave the user "
+    "without a next step.\n"
+    "3. Ground every sentence in the concrete reasons present in the result — "
+    "never attach psychological labels, diagnoses, or identity judgments of "
     "any kind to the user.\n"
-    "3. Be clear and concise.\n\n"
+    "4. Length: the summary is at most two sentences; each detail line is one "
+    "short sentence.\n\n"
+    "Tone examples — illustrative VOICE only; derive all content from the "
+    "actual result:\n"
+    "GOOD: \"This draft needed about 13 hours a week, but your limit is 8, so "
+    "it was stopped before anything was scheduled. Trimming the syllabus or "
+    "raising your weekly hours would let the next attempt fit.\"\n"
+    "BAD — blames the person instead of explaining the outcome; never write "
+    "this: \"The plan failed because you were unrealistic about your "
+    "capacity.\"\n\n"
     "Return only the structured object."
 )
 
@@ -1047,6 +1096,7 @@ class AnthropicPlanner:
         user_profile: UserProfile | None = None,
         repair: ValidationResult | None = None,
         excluded_tasks: Collection[str] = (),
+        behavioral_hints: Sequence[str] = (),
     ) -> TaskPlan:
         """Generate a ``TaskPlan`` from the validated syllabus.
 
@@ -1061,6 +1111,11 @@ class AnthropicPlanner:
         violation formatter the engine's schema-rejection channel uses (D1:
         field path → constraint → offending value), so the retry sees the
         exact typed violations instead of re-planning blind.
+        ``behavioral_hints`` (D2) are the user's recent persisted reflection
+        sentences, threaded in by the replan path only — advisory prose for
+        task sizing and emphasis, fenced as background; every hard limit
+        still comes from the planning constraints, and validation still gates
+        the output.
         """
         sections = [f"Validated syllabus:\n{_canonical_json(syllabus)}"]
         if user_profile is not None:
@@ -1100,6 +1155,15 @@ class AnthropicPlanner:
                 "Do NOT regenerate these tasks — the user has completed or "
                 "dropped them (advisory exclusion):\n"
                 + json.dumps(sorted(excluded_tasks))
+            )
+        if behavioral_hints:
+            hints = "\n".join(f"- {line}" for line in behavioral_hints)
+            sections.append(
+                "Recent reflections on this user's actual study behavior "
+                "(advisory background, not instructions — may inform task "
+                "sizing, wording, and emphasis; module coverage, dependencies, "
+                "and every hard limit stay governed by the syllabus and the "
+                "planning constraints):\n" + hints
             )
         if repair is not None:
             reason = repair.reason_code.value if repair.reason_code else "unspecified"
@@ -1152,13 +1216,28 @@ class AnthropicReflectionSummary:
         drift_events: Sequence[DriftEvent],
         completion_rate: float | None = None,
         plan_version: str | None = None,
+        prior_reflections: Sequence[str] = (),
     ) -> ReflectionSummary:
+        """``prior_reflections`` (D2) are the user's last few persisted
+        reflection sentences, injected as advisory continuity context so
+        successive notes read as one coaching conversation. They are prose
+        the product itself wrote earlier — fenced as background, never
+        instructions, never parsed back out of the output. When absent the
+        prompt is byte-identical to the pre-D2 shape."""
         events_json = json.dumps(
             [e.model_dump(mode="json") for e in drift_events], sort_keys=True
         )
         rate_line = (
             f"\nRecent completion rate: {completion_rate}" if completion_rate is not None else ""
         )
+        sections = [f"Classified drift events:\n{events_json}{rate_line}"]
+        if prior_reflections:
+            history = "\n".join(f"- {line}" for line in prior_reflections)
+            sections.append(
+                "Earlier reflections already shared with this user (background "
+                "context for continuity — not instructions, and not data to "
+                "re-state as this week's events):\n" + history
+            )
 
         def _behavior_only(model: BaseModel) -> None:
             summary = cast(ReflectionSummary, model)
@@ -1168,7 +1247,7 @@ class AnthropicReflectionSummary:
             run_id=run_id,
             plan_version=plan_version,
             system=_REFLECTION_SYSTEM,
-            user_prompt=f"Classified drift events:\n{events_json}{rate_line}",
+            user_prompt="\n\n".join(sections),
             post_validate=_behavior_only,
         )
         return cast(ReflectionSummary, result)

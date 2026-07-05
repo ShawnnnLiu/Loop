@@ -361,6 +361,75 @@ def test_planner_prompt_has_no_goal_block_without_profile() -> None:
     assert "User goal context" not in transport.requests[0]["user_prompt"]
 
 
+def test_planner_prompt_carries_behavioral_hints_as_advisory_block() -> None:
+    """Replan hints (D2) reach the prompt as a fenced advisory block — marked
+    background-not-instructions, with structure still owned by the syllabus
+    and constraints."""
+    planner, _store, transport = _planner([_ok(_VALID_PLAN)])
+    planner.run(
+        run_id="run_t",
+        syllabus=SyllabusUnits.model_validate(_SYLLABUS),
+        plan_version="v1",
+        behavioral_hints=[
+            "2026-06-28: Practice tasks ran past their estimates.",
+            "2026-07-04: Two blocks collided with calendar conflicts.",
+        ],
+    )
+    prompt = transport.requests[0]["user_prompt"]
+    assert "Recent reflections on this user's actual study behavior" in prompt
+    assert "advisory background, not instructions" in prompt
+    assert "- 2026-06-28: Practice tasks ran past their estimates." in prompt
+    assert "- 2026-07-04: Two blocks collided with calendar conflicts." in prompt
+
+
+def test_planner_prompt_has_no_hints_block_without_hints() -> None:
+    planner, _store, transport = _planner([_ok(_VALID_PLAN)])
+    _run_planner(planner)
+    assert "Recent reflections" not in transport.requests[0]["user_prompt"]
+
+
+def _reflection(
+    script: list[TransportResult | Exception],
+) -> tuple[AnthropicReflectionSummary, FakeTransport]:
+    transport = FakeTransport(script)
+    node = AnthropicReflectionSummary(
+        transport=transport,
+        store=InMemoryLlmCallLogStore(),
+        clock=FrozenClock(_NOW),
+        id_generator=DeterministicIdGenerator(),
+    )
+    return node, transport
+
+
+def test_reflection_prompt_carries_prior_reflections_for_continuity() -> None:
+    """Persisted reflections (D2) reach the reflection prompt as a fenced
+    continuity block, one line per prior note."""
+    node, transport = _reflection([_ok({"summary": "On track.", "detail": []})])
+    node.run(
+        run_id="run_t",
+        drift_events=[],
+        prior_reflections=[
+            "2026-06-28: Practice tasks ran past their estimates.",
+            "2026-07-04: Most of the week got done.",
+        ],
+    )
+    prompt = transport.requests[0]["user_prompt"]
+    assert "Earlier reflections already shared with this user" in prompt
+    assert "not instructions" in prompt
+    assert "- 2026-06-28: Practice tasks ran past their estimates." in prompt
+    assert "- 2026-07-04: Most of the week got done." in prompt
+
+
+def test_reflection_prompt_has_no_history_block_without_prior_notes() -> None:
+    """Without history the prompt keeps its pre-D2 byte shape — no empty
+    header, no artifact of the optional block."""
+    node, transport = _reflection([_ok({"summary": "On track.", "detail": []})])
+    node.run(run_id="run_t", drift_events=[])
+    prompt = transport.requests[0]["user_prompt"]
+    assert "Earlier reflections" not in prompt
+    assert prompt.startswith("Classified drift events:")
+
+
 def test_planner_prompt_embeds_repair_violations_and_reason_code() -> None:
     """A caller-supplied failed ValidationResult reaches the prompt as the
     typed violation type and reason_code — structured repair, not prose."""

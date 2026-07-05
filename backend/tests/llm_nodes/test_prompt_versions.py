@@ -41,14 +41,14 @@ _PINNED: list[tuple[str, object, str, str]] = [
     (
         "_REFLECTION_SYSTEM",
         adapter.REFLECTION_CONFIG,
-        "reflection-v2-2026-06-23",
-        "fa73d22e31882293c3a47f5d3f6c0e2cd3b3e0b7da5c9e602c2417e7ab1202c8",
+        "reflection-v3-2026-07-05",
+        "7683ed20e07104b9eb6fb0e60c1320f5ef3c4a4248a6d6d1fcfe3f1b37e3e684",
     ),
     (
         "_EXPLANATION_SYSTEM",
         adapter.EXPLANATION_CONFIG,
-        "explanation-v2-2026-06-23",
-        "9d558b3a714614315a799b2992282f49888266cfb895a51a7198356198c7ae01",
+        "explanation-v3-2026-07-05",
+        "cbd9e9a559f6e67ed77fa2ad28e58a7633340c00226b9f8ce0bbd8be7dde3a59",
     ),
 ]
 

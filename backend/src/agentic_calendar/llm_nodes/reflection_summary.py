@@ -33,7 +33,12 @@ from .base import LLMNodeError
 
 #: Identity/trait words the system must never emit about a user (axiom 07
 #: "Psychological Labeling Restrictions"). Behavior is describable; identity is
-#: not. Matched on word boundaries so ordinary words are unaffected.
+#: not. Matched on word boundaries so ordinary words are unaffected. Terms that
+#: legitimately describe the SYSTEM in this domain ("failure", "flaky",
+#: "unreliable") are deliberately absent — explanation prose talks about
+#: validation failures and provider errors, and a false positive here burns a
+#: bounded repair attempt. The list stays person-label-only: trait judgments,
+#: pejoratives, and clinical/diagnostic language.
 _PSYCH_DENYLIST: frozenset[str] = frozenset(
     {
         "lazy",
@@ -48,6 +53,25 @@ _PSYCH_DENYLIST: frozenset[str] = frozenset(
         "apathetic",
         "negligent",
         "incompetent",
+        # D2 review — trait/identity judgments in the same register:
+        "disorganized",
+        "forgetful",
+        "hopeless",
+        "helpless",
+        "incapable",
+        "inadequate",
+        "slacker",
+        "slacking",
+        "self-sabotage",
+        "self-sabotaging",
+        # D2 review — clinical/diagnostic language telemetry can never justify:
+        "burnout",
+        "burned out",
+        "burnt out",
+        "depressed",
+        "depression",
+        "adhd",
+        "neurotic",
     }
 )
 
@@ -139,8 +163,12 @@ class DeterministicReflectionSummary:
         run_id: str,
         drift_events: Sequence[DriftEvent],
         completion_rate: float | None = None,
+        prior_reflections: Sequence[str] = (),
     ) -> ReflectionSummary:
-        del run_id  # correlation only; deterministic output
+        # ``prior_reflections`` exists for protocol parity with the Anthropic
+        # node (advisory continuity context in its prompt); fixed phrasing
+        # cannot build on earlier notes, so it is accepted and ignored.
+        del run_id, prior_reflections  # correlation only; deterministic output
 
         detail: list[str] = []
         if completion_rate is not None:

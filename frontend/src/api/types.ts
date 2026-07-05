@@ -307,6 +307,14 @@ export interface InterventionDecision {
   sponsor_action: string | null
 }
 
+/** One persisted coaching note, replayed for display (D2). */
+export interface ReflectionHistoryEntry {
+  created_at: string
+  summary: string
+  detail: string[]
+  plan_version: string | null
+}
+
 export interface AccountabilityResult {
   has_motivation_profile: boolean
   checkin_status: string | null
@@ -316,6 +324,9 @@ export interface AccountabilityResult {
   checkin_due: boolean
   /** The latest unanswered recommitment ask — render the recommit card. */
   open_recommitment_request_id: string | null
+  /** Persisted reflections, newest first — independent of the snapshot,
+   *  so history renders even from the empty accountability state. */
+  reflection_history: ReflectionHistoryEntry[]
 }
 
 export type RecommitChoice = 'keep_plan' | 'revise_timeline' | 'revise_intensity' | 'revise_goal'

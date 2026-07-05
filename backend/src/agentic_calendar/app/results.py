@@ -369,6 +369,22 @@ class MeResult(BaseModel):
     inbound_calendar_sync_enabled: bool = False
 
 
+class ReflectionHistoryEntry(BaseModel):
+    """One persisted reflection, replayed for display (D2).
+
+    A read copy of a ``ProseAttachmentRecord`` — display only; nothing routes
+    on it. The history exists so the coaching notes read as a continuing
+    conversation on the Accountability screen, the same continuity the
+    reflection prompt now gets."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    created_at: datetime
+    summary: str
+    detail: list[str] = Field(default_factory=list)
+    plan_version: str | None = None
+
+
 class AccountabilityResult(BaseModel):
     """The read-only accountability projection. Empty-state until a motivation
     profile exists (axiom 21): ``has_motivation_profile`` is False and the
@@ -387,6 +403,9 @@ class AccountabilityResult(BaseModel):
     """The latest unanswered recommitment ask for this user, if any — the SPA
     renders the interactive recommitment card from it. A system that asks and
     cannot receive the answer reads as broken (UX pass B3)."""
+    reflection_history: list[ReflectionHistoryEntry] = Field(default_factory=list)
+    """The user's persisted reflections, newest first (D2) — independent of
+    the snapshot fields, so history survives an empty accountability state."""
 
 
 class RecommitResult(BaseModel):

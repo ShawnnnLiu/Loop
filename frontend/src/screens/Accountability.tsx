@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { ApiError, api, errorMessage } from '../api/client'
-import type { AccountabilityResult, RecommitChoice } from '../api/types'
+import type { AccountabilityResult, RecommitChoice, ReflectionHistoryEntry } from '../api/types'
 import {
   RECOMMIT_CHOICES,
   recommitOutcomeMessage,
   weeklyCheckinOutcomeMessage,
 } from '../lib/accountability'
+import { fmtDate } from '../lib/datetime'
 
 // Accountability: the projection of completion telemetry + weekly check-in
 // against the user's accountability contract, plus the two answerable asks
@@ -19,6 +20,38 @@ import {
 
 function pct(value: number): string {
   return `${Math.round(value * 100)}%`
+}
+
+// The persisted coaching notes, newest first (D2). Same records the engine
+// feeds back into the next reflection and the replan planner — display only.
+function ReflectionHistory({ entries }: { entries: ReflectionHistoryEntry[] }) {
+  if (entries.length === 0) return null
+  return (
+    <div className="card" style={{ marginTop: 14, padding: '16px 18px', maxWidth: 600 }}>
+      <div className="label" style={{ marginBottom: 6 }}>
+        Reflections
+      </div>
+      <p className="muted" style={{ fontSize: 13, marginTop: 0, lineHeight: 1.5 }}>
+        What Loop noticed about your recent weeks — newest first. Any plan change a note
+        suggests still comes back as a draft for your review.
+      </p>
+      <div className="col" style={{ gap: 12, marginTop: 10 }}>
+        {entries.map((entry, i) => (
+          <div key={`${entry.created_at}-${i}`}>
+            <div className="label" style={{ fontSize: 11 }}>{fmtDate(entry.created_at)}</div>
+            <div style={{ fontSize: 13.5, marginTop: 2, lineHeight: 1.5 }}>{entry.summary}</div>
+            {entry.detail.length > 0 && (
+              <ul className="muted" style={{ fontSize: 12.5, marginTop: 4, paddingLeft: 18, lineHeight: 1.5 }}>
+                {entry.detail.map((line, j) => (
+                  <li key={j}>{line}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
 }
 
 export function AccountabilityScreen() {
@@ -110,6 +143,7 @@ export function AccountabilityScreen() {
             )}
           </p>
         </div>
+        <ReflectionHistory entries={data?.reflection_history ?? []} />
       </section>
     )
   }
@@ -260,6 +294,8 @@ export function AccountabilityScreen() {
           </div>
         </div>
       )}
+
+      <ReflectionHistory entries={data?.reflection_history ?? []} />
     </section>
   )
 }

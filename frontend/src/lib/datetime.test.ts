@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   dayHeader,
   dayUtcMs,
+  fmtDate,
   fmtMinutes,
   isoAt,
   minutesOfDay,
@@ -110,5 +111,13 @@ describe('dayHeader', () => {
     expect(dayHeader(monday, 0)).toEqual({ dow: 'Mon', label: 'May 4' })
     expect(dayHeader(monday, 2)).toEqual({ dow: 'Wed', label: 'May 6' })
     expect(dayHeader(monday, 6)).toEqual({ dow: 'Sun', label: 'May 10' })
+  })
+})
+
+describe('fmtDate', () => {
+  it('formats the date as written, ignoring offset and time', () => {
+    expect(fmtDate('2026-06-21T09:00:00Z')).toBe('Jun 21')
+    expect(fmtDate('2026-05-04T23:30:00-07:00')).toBe('May 4')
+    expect(fmtDate('2026-12-31T00:00:00+00:00')).toBe('Dec 31')
   })
 })

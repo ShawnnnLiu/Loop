@@ -141,6 +141,7 @@ from .results import (
     OnboardResult,
     ProposeResult,
     RecommitResult,
+    ReflectionHistoryEntry,
     RollbackCycleResult,
     StatusResult,
     TelemetryItemOutcome,
@@ -159,6 +160,11 @@ _log = get_logger(__name__)
 
 MAX_SCHEDULER_PLANNER_ITERATIONS = 2
 """Axiom 05 bound: at most two Scheduler→Planner iterations per run."""
+
+_REFLECTION_HISTORY_LIMIT = 10
+"""Newest-first cap on the accountability view's reflection history — a
+screenful for the SPA, not the user's full archive (which stays readable via
+the prose store and its delete-for-user control)."""
 
 DEFAULT_APPROVAL_TTL = timedelta(days=7)
 """Dogfood approvals must survive a human-paced approve→write gap, but still
@@ -561,12 +567,18 @@ class CycleService:
             deterministic_plan = proposal.draft.plan
             return lambda run_id, repair: deterministic_plan
         excluded = sorted(self._completed_or_dropped_ids(onboarding.user_id))
+        # D2: the replan Planner sees the user's recent reflections as an
+        # advisory behavioral-hints block beside the exclusions — the drift
+        # prose that caused this replan informs sizing/emphasis. Frozen at
+        # decision time, like the exclusion list.
+        hints = self._recent_reflections(onboarding.user_id)
         return lambda run_id, repair: env.nodes.planner.run(
             run_id=run_id,
             syllabus=syllabus,
             user_profile=onboarding.user_profile,
             repair=repair,
             excluded_tasks=excluded,
+            behavioral_hints=hints,
         )
 
     def _recalibrated_plan(
@@ -923,6 +935,24 @@ class CycleService:
                 created_at=env.clock.now(),
             )
         )
+
+    def _recent_reflections(self, user_id: str, *, limit: int = 3) -> list[str]:
+        """The user's last few persisted reflection sentences, oldest first.
+
+        Advisory-context reader (D2): feeds the reflection node's continuity
+        block and the replan Planner's behavioral-hints block. Prose only —
+        the strings are rendered for a prompt and never parsed back; nothing
+        deterministic reads them. Summary lines only (not detail) to keep the
+        injected block small; the date prefix lets the model see spacing
+        between notes without any clock access."""
+        records = [
+            r
+            for r in self._env.prose_store.list_for_user(user_id)
+            if r.kind is ProseAttachmentKind.REFLECTION
+        ]
+        return [
+            f"{r.created_at.date().isoformat()}: {r.summary}" for r in records[-limit:]
+        ]
 
     def _propose_failure(
         self,
@@ -1901,6 +1931,10 @@ class CycleService:
                 run_id=run.run_id,
                 drift_events=drift_events,
                 completion_rate=completion_rate(events) if events else None,
+                # D2 continuity: the last few persisted reflections, read
+                # BEFORE this one is persisted below, so the note builds on
+                # what the product already told the user. Advisory prose only.
+                prior_reflections=self._recent_reflections(user_id),
             )
             if drift_events
             else None
@@ -2577,6 +2611,20 @@ class CycleService:
         )
         snapshot = self.accountability_snapshot(user_id)
         open_request = self._open_recommitment_request(user_id)
+        # Reflection history (D2): the coaching notes, newest first, replayed
+        # for display. Read-only copy of the prose store; independent of the
+        # snapshot so it survives an empty accountability state. Capped so the
+        # payload stays a screenful, not the user's full archive.
+        history = [
+            ReflectionHistoryEntry(
+                created_at=r.created_at,
+                summary=r.summary,
+                detail=list(r.detail),
+                plan_version=r.plan_version,
+            )
+            for r in reversed(env.prose_store.list_for_user(user_id))
+            if r.kind is ProseAttachmentKind.REFLECTION
+        ][:_REFLECTION_HISTORY_LIMIT]
         return AccountabilityResult(
             has_motivation_profile=has_motivation_profile,
             checkin_status=snapshot.checkin_status.value if snapshot is not None else None,
@@ -2589,6 +2637,7 @@ class CycleService:
             open_recommitment_request_id=(
                 open_request.recommitment_request_id if open_request is not None else None
             ),
+            reflection_history=history,
         )
 
     def _open_recommitment_request(self, user_id: str) -> RecommitmentRequest | None:

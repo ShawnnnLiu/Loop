@@ -43,6 +43,7 @@ from agentic_calendar.app.environment import (
     LlmNodeBundle,
     NodeDependencies,
     PlannerNode,
+    ReflectionNode,
     StrategistNode,
     build_environment,
 )
@@ -72,7 +73,7 @@ from agentic_calendar.contracts.data_access_audit import (
     DataAccessPurpose,
 )
 from agentic_calendar.contracts.draft_schedule import DraftSchedule, DraftScheduleEntry
-from agentic_calendar.contracts.drift_event import DriftType
+from agentic_calendar.contracts.drift_event import DriftEvent, DriftType
 from agentic_calendar.contracts.hashing import canonical_payload_hash
 from agentic_calendar.contracts.reason_codes import ReasonCode
 from agentic_calendar.contracts.scheduler_output import SchedulerOutput
@@ -89,7 +90,10 @@ from agentic_calendar.contracts.user_profile import UserProfile
 from agentic_calendar.contracts.validation_result import ValidationResult
 from agentic_calendar.contracts.violation_types import ViolationType
 from agentic_calendar.llm_nodes.planner import FixturePlanner
-from agentic_calendar.llm_nodes.reflection_summary import DeterministicReflectionSummary
+from agentic_calendar.llm_nodes.reflection_summary import (
+    DeterministicReflectionSummary,
+    ReflectionSummary,
+)
 from agentic_calendar.llm_nodes.strategist import FixtureStrategist
 from agentic_calendar.llm_nodes.user_facing_explanation import (
     DeterministicUserFacingExplanation,
@@ -169,6 +173,7 @@ class CountingPlanner:
         user_profile: UserProfile | None = None,
         repair: ValidationResult | None = None,
         excluded_tasks: Collection[str] = (),
+        behavioral_hints: Sequence[str] = (),
     ) -> TaskPlan:
         self.calls += 1
         return self._inner.run(
@@ -177,6 +182,7 @@ class CountingPlanner:
             user_profile=user_profile,
             repair=repair,
             excluded_tasks=excluded_tasks,
+            behavioral_hints=behavioral_hints,
         )
 
 
@@ -187,6 +193,7 @@ class RecordingPlanner:
         self._plan = plan
         self.repairs: list[ValidationResult | None] = []
         self.excluded: list[tuple[str, ...]] = []
+        self.hints: list[tuple[str, ...]] = []
 
     def run(
         self,
@@ -196,11 +203,36 @@ class RecordingPlanner:
         user_profile: UserProfile | None = None,
         repair: ValidationResult | None = None,
         excluded_tasks: Collection[str] = (),
+        behavioral_hints: Sequence[str] = (),
     ) -> TaskPlan:
         del run_id, syllabus, user_profile
         self.repairs.append(repair)
         self.excluded.append(tuple(excluded_tasks))
+        self.hints.append(tuple(behavioral_hints))
         return self._plan
+
+
+class RecordingReflection:
+    """Delegating reflection node that records the continuity context (D2)."""
+
+    def __init__(self) -> None:
+        self._inner = DeterministicReflectionSummary()
+        self.prior: list[tuple[str, ...]] = []
+
+    def run(
+        self,
+        *,
+        run_id: str,
+        drift_events: Sequence[DriftEvent],
+        completion_rate: float | None = None,
+        prior_reflections: Sequence[str] = (),
+    ) -> ReflectionSummary:
+        self.prior.append(tuple(prior_reflections))
+        return self._inner.run(
+            run_id=run_id,
+            drift_events=drift_events,
+            completion_rate=completion_rate,
+        )
 
 
 class RecordingStrategist:
@@ -236,6 +268,7 @@ def make_service(
     planner_fixtures: Mapping[str, TaskPlan] | None = None,
     strategist: StrategistNode | None = None,
     planner: PlannerNode | None = None,
+    reflection: ReflectionNode | None = None,
     seed_claims: bool = True,
     onboard: bool = True,
     now: datetime = HAPPY_NOW,
@@ -259,7 +292,7 @@ def make_service(
             or FixtureStrategist(strategist_fixtures or {profile.target_role: syllabus}),
             planner=planner
             or FixturePlanner(planner_fixtures or {syllabus.syllabus_version: plan}),
-            reflection=DeterministicReflectionSummary(),
+            reflection=reflection or DeterministicReflectionSummary(),
             explanation=DeterministicUserFacingExplanation(),
         )
 

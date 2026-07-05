@@ -29,14 +29,14 @@ _PINNED: list[tuple[str, object, str, str]] = [
     (
         "_STRATEGIST_SYSTEM",
         adapter.STRATEGIST_CONFIG,
-        "strategist-v2-2026-06-23",
-        "ae2d6eec4166a1ac48b777c363a3f1905863ac1bed99cc68a2721fa1603aac34",
+        "strategist-v3-2026-07-05",
+        "60fa04c32e9f33929f921fdc3c576ed72097b55a9c303d4309d9893175d4c093",
     ),
     (
         "_PLANNER_SYSTEM",
         adapter.PLANNER_CONFIG,
-        "planner-v2-2026-06-23",
-        "02c11843a9e7b9993567afabfb6144c2a17a208ffae4f27058fdee4126ebc5eb",
+        "planner-v3-2026-07-05",
+        "c90d36545131255891d1498644ef793c932684572c9d0dacc4350d18603e324c",
     ),
     (
         "_REFLECTION_SYSTEM",

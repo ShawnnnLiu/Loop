@@ -15,6 +15,7 @@ from agentic_calendar.common.ids import DeterministicIdGenerator
 from agentic_calendar.contracts.reason_codes import ReasonCode
 from agentic_calendar.contracts.strategy_constraints import StrategyConstraints
 from agentic_calendar.contracts.syllabus_units import SyllabusUnits
+from agentic_calendar.contracts.task_plan import TaskPlan
 from agentic_calendar.contracts.user_profile import UserProfile
 from agentic_calendar.contracts.validation_result import (
     ArtifactType,
@@ -23,6 +24,7 @@ from agentic_calendar.contracts.validation_result import (
     Violation,
 )
 from agentic_calendar.contracts.violation_types import ViolationType
+from agentic_calendar.llm_nodes import anthropic_adapter as adapter
 from agentic_calendar.llm_nodes.anthropic_adapter import (
     AnthropicMessagesTransport,
     AnthropicPlanner,
@@ -159,7 +161,7 @@ def test_happy_path_returns_validated_plan_and_logs_one_complete_row() -> None:
     assert row.run_id == "run_t"
     assert row.plan_version == "v1"
     assert row.node.value == "planner"
-    assert row.prompt_version == "planner-v2-2026-06-23"
+    assert row.prompt_version == "planner-v3-2026-07-05"
     assert row.model_name == "claude-sonnet-5"
     assert (row.attempt, row.sdk_retry) == (0, 0)
     assert (row.input_tokens, row.output_tokens) == (100, 50)
@@ -629,3 +631,120 @@ def test_translate_api_error_maps_the_sdk_taxonomy() -> None:
     assert (conn.retryable, conn.reason_code) == (True, ReasonCode.LLM_CALL_FAILED)
     assert "APIConnectionError" in str(conn)
     assert "boom" not in str(auth)  # type name only, never the body
+
+
+# --------------------------------------------------------------------------- #
+# Few-shot exemplars + unified repair formatting (UX pass D1a)
+# --------------------------------------------------------------------------- #
+
+
+def test_prompt_exemplars_validate_against_their_contracts() -> None:
+    """The embedded few-shot exemplars must be contract-valid by construction —
+    an exemplar that drifts invalid would teach the model an invalid shape."""
+    SyllabusUnits.model_validate(adapter._STRATEGIST_EXEMPLAR)
+    TaskPlan.model_validate(adapter._PLANNER_EXEMPLAR)
+
+
+def test_system_prompts_embed_exemplars_marked_illustrative() -> None:
+    strategist_json = json.dumps(adapter._STRATEGIST_EXEMPLAR, sort_keys=True)
+    planner_json = json.dumps(adapter._PLANNER_EXEMPLAR, sort_keys=True)
+    assert strategist_json in adapter._STRATEGIST_SYSTEM
+    assert planner_json in adapter._PLANNER_SYSTEM
+    marker = "Illustrative example of a valid output SHAPE only"
+    assert marker in adapter._STRATEGIST_SYSTEM
+    assert marker in adapter._PLANNER_SYSTEM
+    # The planner exemplar must not model the forbidden field (axiom 11), and
+    # the strategist exemplar must model the claim-evidence rule.
+    assert "prerequisites_met" not in planner_json
+    assert "claim_acme_01" in strategist_json
+
+
+def test_schema_rejection_repair_suffix_lists_typed_violations() -> None:
+    """Engine channel: a contract rejection re-prompts with the parsed
+    violation list — field path, constraint, clipped offending value — not a
+    raw str(ValidationError) dump."""
+    planner, _store, transport = _planner([_ok(_INVALID_PLAN), _ok(_VALID_PLAN)])
+    _run_planner(planner)
+    suffix = transport.requests[1]["repair_suffix"]
+    assert "rejected by deterministic validation" in suffix
+    assert "- field: (root)" in suffix  # model-level validator: no field path
+    assert "| constraint: value_error" in suffix
+    assert "duplicate task_id" in suffix
+    # The offending value (the whole rejected plan) is clipped, so the repair
+    # re-prompt stays guidance rather than a second copy of the bad output.
+    assert "…(clipped)" in suffix
+
+
+def test_field_level_rejection_names_the_field_path_and_value() -> None:
+    bad_plan = {
+        **_VALID_PLAN,
+        "tasks": [{**_VALID_PLAN["tasks"][0], "estimated_duration_min": 0}],
+    }
+    planner, _store, transport = _planner([_ok(bad_plan), _ok(_VALID_PLAN)])
+    _run_planner(planner)
+    suffix = transport.requests[1]["repair_suffix"]
+    assert "- field: tasks.0.estimated_duration_min" in suffix
+    assert "greater_than" in suffix
+    assert "| offending value: 0" in suffix
+
+
+def test_unparseable_repair_suffix_reminds_required_top_level_keys() -> None:
+    planner, _store, transport = _planner([_ok(None), _ok(_VALID_PLAN)])
+    _run_planner(planner)
+    suffix = transport.requests[1]["repair_suffix"]
+    assert "could not be parsed into the target schema" in suffix
+    assert "plan_version" in suffix
+    assert "tasks" in suffix
+
+
+def test_rubric_rejection_formats_through_the_unified_formatter() -> None:
+    """Post-validation raises (psych-label scan) take the non-ValidationError
+    path: one line, '(output)' as the path, the diagnosis as the constraint."""
+    transport = FakeTransport(
+        [
+            _ok({"summary": "You have been lazy this week.", "detail": []}),
+            _ok({"summary": "Practice tasks are taking longer than planned.", "detail": []}),
+        ]
+    )
+    AnthropicReflectionSummary(
+        transport=transport,
+        store=InMemoryLlmCallLogStore(),
+        clock=FrozenClock(_NOW),
+        id_generator=DeterministicIdGenerator(),
+    ).run(run_id="run_t", drift_events=[])
+    suffix = transport.requests[1]["repair_suffix"]
+    assert "- field: (output)" in suffix
+    assert "'lazy'" in suffix  # the scan's diagnosis, verbatim
+
+
+def test_inbound_repair_uses_the_same_violation_shape_as_the_engine() -> None:
+    """Planner inbound channel: a failed ValidationResult renders through the
+    SAME line shape as the engine's rejection channel (D1 unification)."""
+    repair = ValidationResult(
+        run_id="run_t",
+        artifact_type=ArtifactType.TASK_PLAN,
+        valid=False,
+        repairable=True,
+        reason_code=ReasonCode.USER_FIT_VIOLATED,
+        violations=[
+            Violation(
+                type=ViolationType.DURATION_EXCEEDS_USER_MAX_SESSION,
+                task_id="dp_001",
+                details={"duration_min": 150, "max_session_length_min": 120},
+            )
+        ],
+        repair_attempt=1,
+        next_action=NextAction.PLANNER_REPAIR_RETRY,
+    )
+    planner, _store, transport = _planner([_ok(_VALID_PLAN)])
+    planner.run(
+        run_id="run_t",
+        syllabus=SyllabusUnits.model_validate(_SYLLABUS),
+        plan_version="v1",
+        repair=repair,
+    )
+    prompt = transport.requests[0]["user_prompt"]
+    assert "reason_code: USER_FIT_VIOLATED" in prompt
+    assert "- field: tasks[task_id='dp_001']" in prompt
+    assert "| constraint: duration_exceeds_user_max_session" in prompt
+    assert '"duration_min": 150' in prompt

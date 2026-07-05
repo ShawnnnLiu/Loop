@@ -85,7 +85,7 @@ from agentic_calendar.contracts.task_disposition import (
     TaskDispositionRecord,
     TaskDispositionType,
 )
-from agentic_calendar.contracts.task_plan import TaskPlan
+from agentic_calendar.contracts.task_plan import Task, TaskPlan
 from agentic_calendar.contracts.user_profile import UserProfile
 from agentic_calendar.contracts.validation_result import ValidationResult
 from agentic_calendar.contracts.violation_types import ViolationType
@@ -174,6 +174,8 @@ class CountingPlanner:
         repair: ValidationResult | None = None,
         excluded_tasks: Collection[str] = (),
         behavioral_hints: Sequence[str] = (),
+        prior_plan_tasks: Sequence[Task] = (),
+        replan_mode: RecoveryAction | None = None,
     ) -> TaskPlan:
         self.calls += 1
         return self._inner.run(
@@ -183,6 +185,8 @@ class CountingPlanner:
             repair=repair,
             excluded_tasks=excluded_tasks,
             behavioral_hints=behavioral_hints,
+            prior_plan_tasks=prior_plan_tasks,
+            replan_mode=replan_mode,
         )
 
 
@@ -194,6 +198,8 @@ class RecordingPlanner:
         self.repairs: list[ValidationResult | None] = []
         self.excluded: list[tuple[str, ...]] = []
         self.hints: list[tuple[str, ...]] = []
+        self.prior_plans: list[tuple[Task, ...]] = []
+        self.replan_modes: list[RecoveryAction | None] = []
 
     def run(
         self,
@@ -204,11 +210,15 @@ class RecordingPlanner:
         repair: ValidationResult | None = None,
         excluded_tasks: Collection[str] = (),
         behavioral_hints: Sequence[str] = (),
+        prior_plan_tasks: Sequence[Task] = (),
+        replan_mode: RecoveryAction | None = None,
     ) -> TaskPlan:
         del run_id, syllabus, user_profile
         self.repairs.append(repair)
         self.excluded.append(tuple(excluded_tasks))
         self.hints.append(tuple(behavioral_hints))
+        self.prior_plans.append(tuple(prior_plan_tasks))
+        self.replan_modes.append(replan_mode)
         return self._plan
 
 

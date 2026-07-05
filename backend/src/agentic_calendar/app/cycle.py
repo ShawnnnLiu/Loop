@@ -572,6 +572,16 @@ class CycleService:
         # prose that caused this replan informs sizing/emphasis. Frozen at
         # decision time, like the exclusion list.
         hints = self._recent_reflections(onboarding.user_id)
+        # D4 stage 1: anchor the replan on what the user already approved —
+        # the active plan's surviving tasks (not completed/dropped) plus the
+        # recovery mode go into the Planner context with a
+        # preserve-unless-affected instruction. Context-only anchoring:
+        # validation is unchanged, and validator-enforced preservation stays
+        # axiom-20 Phase 2/3 work.
+        excluded_set = set(excluded)
+        surviving = tuple(
+            t for t in active.plan.tasks if t.task_id not in excluded_set
+        )
         return lambda run_id, repair: env.nodes.planner.run(
             run_id=run_id,
             syllabus=syllabus,
@@ -579,6 +589,8 @@ class CycleService:
             repair=repair,
             excluded_tasks=excluded,
             behavioral_hints=hints,
+            prior_plan_tasks=surviving,
+            replan_mode=mode,
         )
 
     def _recalibrated_plan(

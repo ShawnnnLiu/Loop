@@ -12,10 +12,11 @@ from pydantic import BaseModel
 
 from agentic_calendar.common.clock import FrozenClock
 from agentic_calendar.common.ids import DeterministicIdGenerator
+from agentic_calendar.contracts.checkin_event import RecoveryAction
 from agentic_calendar.contracts.reason_codes import ReasonCode
 from agentic_calendar.contracts.strategy_constraints import StrategyConstraints
 from agentic_calendar.contracts.syllabus_units import SyllabusUnits
-from agentic_calendar.contracts.task_plan import TaskPlan
+from agentic_calendar.contracts.task_plan import Task, TaskPlan
 from agentic_calendar.contracts.user_profile import UserProfile
 from agentic_calendar.contracts.validation_result import (
     ArtifactType,
@@ -161,7 +162,7 @@ def test_happy_path_returns_validated_plan_and_logs_one_complete_row() -> None:
     assert row.run_id == "run_t"
     assert row.plan_version == "v1"
     assert row.node.value == "planner"
-    assert row.prompt_version == "planner-v4-2026-07-05"
+    assert row.prompt_version == "planner-v5-2026-07-05"
     assert row.model_name == "claude-sonnet-5"
     assert (row.attempt, row.sdk_retry) == (0, 0)
     assert (row.input_tokens, row.output_tokens) == (100, 50)
@@ -386,6 +387,34 @@ def test_planner_prompt_has_no_hints_block_without_hints() -> None:
     planner, _store, transport = _planner([_ok(_VALID_PLAN)])
     _run_planner(planner)
     assert "Recent reflections" not in transport.requests[0]["user_prompt"]
+
+
+def test_planner_prompt_carries_prior_plan_anchor_with_recovery_mode() -> None:
+    """The replan anchor (D4 stage 1) reaches the prompt as a
+    preserve-unless-affected block: the surviving prior tasks as JSON plus the
+    recovery mode that triggered the replan."""
+    planner, _store, transport = _planner([_ok(_VALID_PLAN)])
+    prior = Task.model_validate(_VALID_PLAN["tasks"][0])
+    planner.run(
+        run_id="run_t",
+        syllabus=SyllabusUnits.model_validate(_SYLLABUS),
+        plan_version="v1",
+        prior_plan_tasks=[prior],
+        replan_mode=RecoveryAction.SCOPE_REDUCTION,
+    )
+    prompt = transport.requests[0]["user_prompt"]
+    assert "Prior approved plan — surviving tasks (replan anchor)" in prompt
+    assert "Recovery mode: scope_reduction." in prompt
+    assert "Preserve each task's task_id, title, and estimated_duration_min" in prompt
+    assert '"task_id": "dp_001"' in prompt
+    assert '"title": "Review DP state definitions"' in prompt
+
+
+def test_planner_prompt_has_no_anchor_block_without_prior_tasks() -> None:
+    planner, _store, transport = _planner([_ok(_VALID_PLAN)])
+    _run_planner(planner)
+    assert "Prior approved plan" not in transport.requests[0]["user_prompt"]
+    assert "Recovery mode:" not in transport.requests[0]["user_prompt"]
 
 
 def _reflection(

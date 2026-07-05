@@ -70,11 +70,12 @@ from agentic_calendar.consent.gate import ConsentGate
 from agentic_calendar.consent.sqlite_audit_store import SqliteDataAccessAuditStore
 from agentic_calendar.consent.sqlite_store import SqliteConsentStore
 from agentic_calendar.consent.store import ConsentStore, InMemoryConsentStore
+from agentic_calendar.contracts.checkin_event import RecoveryAction
 from agentic_calendar.contracts.drift_event import DriftEvent
 from agentic_calendar.contracts.source_claim import SourceClaim
 from agentic_calendar.contracts.strategy_constraints import StrategyConstraints
 from agentic_calendar.contracts.syllabus_units import SyllabusUnits
-from agentic_calendar.contracts.task_plan import TaskPlan
+from agentic_calendar.contracts.task_plan import Task, TaskPlan
 from agentic_calendar.contracts.user_profile import UserProfile
 from agentic_calendar.contracts.validation_result import ValidationResult
 from agentic_calendar.disposition.disposition_store import (
@@ -145,8 +146,11 @@ class PlannerNode(Protocol):
     previous pass of the bounded repair loop (axiom 04) so retries are not
     re-invoked blind. ``behavioral_hints`` are the user's recent persisted
     reflection sentences (D2) — advisory prose the replan path threads in for
-    sizing/emphasis; never parsed, never control-plane. All are optional:
-    deterministic plan sources ignore them.
+    sizing/emphasis; never parsed, never control-plane.
+    ``prior_plan_tasks`` + ``replan_mode`` (D4 stage 1) are the replan path's
+    anchor: the active plan's surviving tasks plus the recovery mode, so the
+    prompt can instruct preserve-unless-affected instead of regenerating
+    blind. All are optional: deterministic plan sources ignore them.
     """
 
     def run(
@@ -158,6 +162,8 @@ class PlannerNode(Protocol):
         repair: ValidationResult | None = None,
         excluded_tasks: Collection[str] = (),
         behavioral_hints: Sequence[str] = (),
+        prior_plan_tasks: Sequence[Task] = (),
+        replan_mode: RecoveryAction | None = None,
     ) -> TaskPlan: ...
 
 

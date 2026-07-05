@@ -40,13 +40,14 @@ from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
 from agentic_calendar.common.clock import Clock
 from agentic_calendar.common.errors import AgenticCalendarError
 from agentic_calendar.common.ids import IdGenerator
+from agentic_calendar.contracts.checkin_event import RecoveryAction
 from agentic_calendar.contracts.drift_event import DriftEvent
 from agentic_calendar.contracts.reason_codes import ReasonCode
 from agentic_calendar.contracts.source_claim import SourceClaim
 from agentic_calendar.contracts.strategist_input import StrategistInput
 from agentic_calendar.contracts.strategy_constraints import StrategyConstraints
 from agentic_calendar.contracts.syllabus_units import SyllabusUnits
-from agentic_calendar.contracts.task_plan import TaskPlan
+from agentic_calendar.contracts.task_plan import Task, TaskPlan
 from agentic_calendar.contracts.user_profile import UserProfile
 from agentic_calendar.contracts.validation_result import ValidationResult
 
@@ -334,7 +335,7 @@ STRATEGIST_CONFIG = AdapterConfig(
 )
 PLANNER_CONFIG = AdapterConfig(
     model_name="claude-sonnet-5",
-    prompt_version="planner-v4-2026-07-05",
+    prompt_version="planner-v5-2026-07-05",
     max_tokens=16384,
     input_price_per_mtok=3.00,
     output_price_per_mtok=15.00,
@@ -896,6 +897,14 @@ _PLANNER_SYSTEM = (
     "specific goal — it never changes plan structure: module coverage, "
     "dependencies, durations, and budgets remain governed solely by the "
     "syllabus and the planning constraints above.\n\n"
+    "On a replan, a prior-approved-plan block may list tasks the user has "
+    "already reviewed and accepted, along with the recovery mode that "
+    "triggered the replan. Anchor on it: reuse each listed task's task_id, "
+    "title, and estimated_duration_min exactly for every task the recovery "
+    "mode does not require changing — a replan that gratuitously renames, "
+    "resizes, or reshuffles accepted tasks destroys work the user already "
+    "invested. Change only what the recovery mode demands, and keep the full "
+    "returned plan consistent with every rule above.\n\n"
     "Self-check against all seven rules, then return only the structured "
     "object.\n\n"
     "Illustrative example of a valid output SHAPE only — task count, ids, "
@@ -1097,6 +1106,8 @@ class AnthropicPlanner:
         repair: ValidationResult | None = None,
         excluded_tasks: Collection[str] = (),
         behavioral_hints: Sequence[str] = (),
+        prior_plan_tasks: Sequence[Task] = (),
+        replan_mode: RecoveryAction | None = None,
     ) -> TaskPlan:
         """Generate a ``TaskPlan`` from the validated syllabus.
 
@@ -1116,6 +1127,13 @@ class AnthropicPlanner:
         task sizing and emphasis, fenced as background; every hard limit
         still comes from the planning constraints, and validation still gates
         the output.
+        ``prior_plan_tasks`` + ``replan_mode`` (D4 stage 1) are the replan
+        path's anchor: the active plan's surviving tasks (typed ``Task``
+        objects, filtered deterministically by the caller) plus the recovery
+        mode, rendered with a preserve-unless-affected instruction so a
+        replan stops reshuffling what the user already approved. Context-only
+        anchoring — deterministic validation is unchanged, and
+        validator-enforced preservation stays axiom-20 Phase 2/3 work.
         """
         sections = [f"Validated syllabus:\n{_canonical_json(syllabus)}"]
         if user_profile is not None:
@@ -1155,6 +1173,24 @@ class AnthropicPlanner:
                 "Do NOT regenerate these tasks — the user has completed or "
                 "dropped them (advisory exclusion):\n"
                 + json.dumps(sorted(excluded_tasks))
+            )
+        if prior_plan_tasks:
+            mode_line = (
+                f"Recovery mode: {replan_mode.value}.\n"
+                if replan_mode is not None
+                else ""
+            )
+            sections.append(
+                "Prior approved plan — surviving tasks (replan anchor): the "
+                "user already reviewed and approved these. " + mode_line
+                + "Preserve each task's task_id, title, and "
+                "estimated_duration_min exactly unless the recovery mode "
+                "requires changing that task; never rename, resize, or "
+                "reorder tasks the replan reason does not touch:\n"
+                + json.dumps(
+                    [t.model_dump(mode="json") for t in prior_plan_tasks],
+                    sort_keys=True,
+                )
             )
         if behavioral_hints:
             hints = "\n".join(f"- {line}" for line in behavioral_hints)

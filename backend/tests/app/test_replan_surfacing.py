@@ -16,8 +16,11 @@ from agentic_calendar.contracts.checkin_event import RecoveryAction
 from agentic_calendar.supervisor.state import SupervisorState as S
 from tests.app.test_cycle import (
     USER_ID,
+    RecordingPlanner,
     _activate_plan,
     _advance_past_draft,
+    _canonical_plan,
+    _completed_disposition,
     _missed_event,
     _motivation_profile_payload,
     make_service,
@@ -52,6 +55,38 @@ def test_status_surfaces_pending_recovery_choice_until_mode_supplied() -> None:
 
     resolved = service.status(USER_ID)
     assert resolved.recovery_mode_pending_user_choice is False
+
+
+def test_replan_planner_receives_prior_plan_anchor_with_recovery_mode() -> None:
+    """The recovery replan's Planner call carries the active plan's surviving
+    tasks plus the recovery mode (D4 stage 1) — the preserve-unless-affected
+    anchor. Completed/dropped tasks fall out of the anchor (they are already
+    excluded from regeneration), and the fresh propose carries no anchor."""
+    recording = RecordingPlanner(_canonical_plan())
+    payload = {**_motivation_profile_payload(), "recovery_mode_preference": "ask_each_time"}
+    service, env, clock = make_service(motivation_profile=payload, planner=recording)
+
+    proposed = _activate_plan(service)
+    assert recording.prior_plans[-1] == ()  # fresh propose: no anchor block
+    assert recording.replan_modes[-1] is None
+    _advance_past_draft(env, clock, proposed.draft_schedule_id)
+
+    result = service.ingest(USER_ID, [_missed_event("evt_001", "dp_001")])
+    assert result.state is S.REPLAN_REQUIRED
+
+    # dp_002 completes while the run is parked: the anchor is assembled at
+    # propose time, so the completed task must drop out of it.
+    active = env.plan_store.get_active(USER_ID)
+    assert active is not None
+    env.disposition_store.append(
+        _completed_disposition("dp_002", plan_version=active.plan_version)
+    )
+
+    continuation = service.propose(USER_ID, recovery_mode=RecoveryAction.SCOPE_REDUCTION)
+    assert continuation.state is S.AWAITING_USER_APPROVAL
+    expected = tuple(t for t in active.plan.tasks if t.task_id != "dp_002")
+    assert recording.prior_plans[-1] == expected
+    assert recording.replan_modes[-1] is RecoveryAction.SCOPE_REDUCTION
 
 
 def test_status_pending_flag_stays_false_for_resolved_and_recalibration_paths() -> None:

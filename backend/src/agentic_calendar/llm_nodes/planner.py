@@ -10,8 +10,9 @@ from __future__ import annotations
 
 from collections.abc import Collection, Mapping, Sequence
 
+from agentic_calendar.contracts.checkin_event import RecoveryAction
 from agentic_calendar.contracts.syllabus_units import SyllabusUnits
-from agentic_calendar.contracts.task_plan import TaskPlan
+from agentic_calendar.contracts.task_plan import Task, TaskPlan
 from agentic_calendar.contracts.user_profile import UserProfile
 from agentic_calendar.contracts.validation_result import ValidationResult
 
@@ -35,17 +36,22 @@ class FixturePlanner:
         repair: ValidationResult | None = None,
         excluded_tasks: Collection[str] = (),
         behavioral_hints: Sequence[str] = (),
+        prior_plan_tasks: Sequence[Task] = (),
+        replan_mode: RecoveryAction | None = None,
     ) -> TaskPlan:
         """Return the canned plan for ``syllabus.syllabus_version``.
 
-        ``user_profile``, ``repair``, ``excluded_tasks``, and
-        ``behavioral_hints`` exist for protocol parity with
-        ``AnthropicPlanner`` (the real adapter embeds the profile's scheduling
-        constraints, the failed ``ValidationResult``, the dropped/completed
-        exclusion, and the advisory reflection hints in its prompt). Canned
-        output cannot honor them, so all four are accepted and ignored.
+        ``user_profile``, ``repair``, ``excluded_tasks``,
+        ``behavioral_hints``, and the replan anchor (``prior_plan_tasks`` +
+        ``replan_mode``) exist for protocol parity with ``AnthropicPlanner``
+        (the real adapter embeds the profile's scheduling constraints, the
+        failed ``ValidationResult``, the dropped/completed exclusion, the
+        advisory reflection hints, and the prior-plan preserve-unless-affected
+        block in its prompt). Canned output cannot honor them, so all are
+        accepted and ignored.
         """
         del run_id, user_profile, repair, excluded_tasks, behavioral_hints
+        del prior_plan_tasks, replan_mode
         key = syllabus.syllabus_version
         if key not in self._fixtures:
             raise LLMNodeError(

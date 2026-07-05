@@ -172,7 +172,7 @@ Full HANDOFF §E:
 | piece | scope | status |
 |---|---|---|
 | 1 | baseline capture + D1a | **DONE 2026-07-05** — baseline `f869fef` (11 cases, 16 calls, ~$0.16; validity 1.0, gate seeded), D1a `42edd48` (v3 prompts) |
-| 2 | D1b + fewshot capture | pending |
+| 2 | D1b + fewshot capture | **DONE 2026-07-05** — D1b `476a361` (goal block, planner-v4; claim curation + `claim_curation` tuning section; per-host-cap deviation in HANDOFF), fewshot capture (11 calls, ~$0.157, no judge per choreography; validity/rubric flat at 1.0, depth −1.33, tasks/module +0.39) |
 | 3 | D2 + voice capture | pending |
 | 4 | D4 replans | pending |
 | 5 | E wrap-up | pending |

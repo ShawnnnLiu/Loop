@@ -15,7 +15,21 @@ Two different test surfaces, kept separate on purpose:
 
 This preserves the existing rule that prompt wording is not a test oracle. The eval set measures whether proposals satisfy the deterministic contracts at a high enough rate; it does not assert that a model emitted a specific string.
 
-Because eval runs are non-deterministic, they MUST NOT gate every commit the way golden tests do. They run on prompt-version or model changes and track trends with alert thresholds.
+Gating splits by determinism, not by "eval-ness" (amended 2026-07-04 — the
+original blanket "never gate CI" rule predated real recordings):
+
+- **Live-call eval runs** are non-deterministic and networked. They MUST NOT
+  run in CI or gate commits. They run manually on prompt-version or model
+  changes (the capture tool), and their recordings are committed.
+- **Grading committed recordings** is a pure function over checked-in data —
+  exactly as deterministic as the golden tests. `run_llm_eval --strict` (the
+  `make eval-gate` target, a separate CI job) MAY gate merges on threshold
+  breaches: a prompt edit that tanks first-try validity must not ship green.
+  Floors are seeded from a real captured baseline and are heuristic priors
+  until calibrated.
+
+Observability still never feeds runtime routing — gates apply to *merges*,
+never to *runs*.
 
 ## Fixed Eval Set
 
@@ -35,9 +49,11 @@ Per node, per eval run, tagged with `prompt_version` and `model_name`:
 - **Repair-recovery rate** — fraction of initially-invalid proposals that pass within the bounded 2-attempt repair cap (`04-validation-layer.md`).
 - **Post-repair invalid rate** — fraction still invalid after the cap. This is the metric behind the `Invalid Planner output rate <5% after repair` target in `09-cost-and-metrics.md`.
 - **Reflection quality** — drift-summary correctness graded against the deterministic rubric: does it match the deterministic `drift_type`, and does it describe behavior rather than diagnose identity. Any LLM-as-judge scoring is advisory only and must be labeled non-authoritative.
+- **Plan quality (Tier 1, deterministic)** — pure functions over recorded valid plans: distinct-title ratio, max dependency depth, tasks-per-module. Objective facts a human reads as before/after deltas; CI-safe.
+- **Prose quality (Tier 2, LLM-judge)** — permitted ONLY in offline eval tooling (`llm_nodes/eval_judge.py`, invoked from the capture CLI). The judge is deliberately not one of axiom 01's four workflow node classes: it grades already-recorded prose on tone/specificity/actionability, its scores ride the recording as advisory numbers, and they are never gates and never runtime signals.
 - **Latency per node and per plan** and **token cost per plan** — read from observability records, not re-measured.
 
-A prompt change must report before/after on these metrics (for example, "Planner schema-validity 78% → 96% after adding a schema example"). Regressions past threshold block the prompt change, not the build.
+A prompt change must report before/after on these metrics (for example, "Planner schema-validity 78% → 96% after adding a schema example"). Regressions past threshold block the prompt change — and, once the change's recording is committed, the strict recorded-output gate blocks the merge too (see the gating split above).
 
 ## Structured Generation Contract
 
@@ -56,7 +72,15 @@ LLM_SCHEMA_REJECTED        # parsed but failed boundary contract re-validation
 LLM_REFUSAL                # model refused or returned a safety stop
 LLM_TRUNCATED              # output cut off (max tokens / incomplete)
 LLM_RETRY_LIMIT_EXCEEDED   # SDK-level retries exhausted; fallback engaged
+LLM_AUTH_FAILED            # credentials rejected (401/403) — permanent, never retried
+LLM_RATE_LIMITED           # rate limited / overloaded (429/529) — retried with backoff
 ```
+
+The transport discriminates permanent from transient provider errors: a
+permanent rejection (auth, malformed request) fails immediately with its
+typed code — retrying it is noise — while transient errors (rate limit,
+overload, connection, timeout) retry within the bounded cap with exponential
+backoff. Retry caps stay at 2 (axiom 09); backoff changes pacing, not budget.
 
 Each maps to a deterministic next action: transient failures (`LLM_CALL_FAILED`, `LLM_TRUNCATED`) retry within the SDK cap; `LLM_SCHEMA_REJECTED` enters the bounded validation repair loop; exhaustion routes to `error_requires_user`. These are separate from the validation/scheduling `RETRY_LIMIT_EXCEEDED` in `16-reliability-patterns.md`, which counts validation-repair attempts.
 

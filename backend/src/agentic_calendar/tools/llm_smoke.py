@@ -135,6 +135,8 @@ class _GuardedTransport:
         system: str,
         user_prompt: str,
         output_contract: type[BaseModel],
+        repair_suffix: str | None = None,
+        timeout_seconds: float = 300.0,
     ) -> TransportResult:
         if self._calls + 1 > self._max_calls:
             raise SmokeGuardTripped(
@@ -150,8 +152,9 @@ class _GuardedTransport:
         spent = sum(row.cost_estimate_usd for row in self._store.list_all())
         # chars/4 input heuristic + the full output cap: a deliberate
         # worst-case-output estimate so the guard errs toward aborting.
+        prompt_chars = len(system) + len(user_prompt) + len(repair_suffix or "")
         estimated_next = (
-            (len(system) + len(user_prompt)) // 4 * input_price + max_tokens * output_price
+            prompt_chars // 4 * input_price + max_tokens * output_price
         ) / 1_000_000
         if spent + estimated_next > self._max_cost_usd:
             raise SmokeGuardTripped(
@@ -165,6 +168,8 @@ class _GuardedTransport:
             system=system,
             user_prompt=user_prompt,
             output_contract=output_contract,
+            repair_suffix=repair_suffix,
+            timeout_seconds=timeout_seconds,
         )
 
 

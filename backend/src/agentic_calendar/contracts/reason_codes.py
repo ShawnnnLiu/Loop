@@ -466,3 +466,14 @@ class ReasonCode(StrEnum):
     """SDK-level retries exhausted; deterministic fallback engaged. Distinct
     from the validation loop's ``REPAIR_LIMIT_EXCEEDED``, which counts repair
     re-prompts (axiom 22). Routes to ``error_requires_user``."""
+
+    LLM_AUTH_FAILED = "LLM_AUTH_FAILED"
+    """The provider rejected our credentials (401/403). Permanent for this
+    deployment: never retried — retrying an expired key is pure noise — and
+    the user-facing explanation can say something true ("the service isn't
+    authorized right now") instead of a generic failure."""
+
+    LLM_RATE_LIMITED = "LLM_RATE_LIMITED"
+    """The provider rate-limited or overloaded (429/529). Transient: retried
+    within the bounded cap WITH backoff — immediate retries during a rate
+    limit burn the budget for nothing."""

@@ -71,6 +71,7 @@ from agentic_calendar.contracts.user_duration_multipliers import UserDurationMul
 from agentic_calendar.contracts.user_profile import UserProfile
 from agentic_calendar.contracts.validation_result import ValidationResult
 from agentic_calendar.llm_nodes.call_log import LlmCallLog
+from agentic_calendar.llm_nodes.prose_attachment import ProseAttachmentRecord
 
 CONTRACTS: dict[str, type[BaseModel]] = {
     "user_profile": UserProfile,
@@ -113,6 +114,7 @@ CONTRACTS: dict[str, type[BaseModel]] = {
     "power_user_eligibility": PowerUserEligibility,
     "per_user_refinement": PerUserRefinement,
     "llm_call_log": LlmCallLog,
+    "prose_attachment": ProseAttachmentRecord,
     "threshold_change_log": ThresholdChange,
 }
 

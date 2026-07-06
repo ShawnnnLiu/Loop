@@ -62,6 +62,10 @@ from agentic_calendar.duration_estimation.power_user import (
     EligibilityConfig,
     RefinementConfig,
 )
+from agentic_calendar.source_claims.curation import (
+    DEFAULT_CLAIM_CURATION_CONFIG,
+    ClaimCurationConfig,
+)
 from agentic_calendar.telemetry.calibration import (
     DEFAULT_CALIBRATION_CONFIG,
     CalibrationConfig,
@@ -79,6 +83,7 @@ TUNABLE_SECTIONS: dict[str, tuple[type[Any], Any]] = {
     "pooled_serving": (PooledServingConfig, DEFAULT_POOLED_SERVING_CONFIG),
     "power_user_eligibility": (EligibilityConfig, DEFAULT_ELIGIBILITY_CONFIG),
     "per_user_refinement": (RefinementConfig, DEFAULT_REFINEMENT_CONFIG),
+    "claim_curation": (ClaimCurationConfig, DEFAULT_CLAIM_CURATION_CONFIG),
 }
 
 #: Top-level file keys that are not sections.
@@ -115,6 +120,7 @@ class EffectiveTuning:
     pooled_serving: PooledServingConfig
     power_user_eligibility: EligibilityConfig
     per_user_refinement: RefinementConfig
+    claim_curation: ClaimCurationConfig
 
 
 @dataclass(frozen=True)

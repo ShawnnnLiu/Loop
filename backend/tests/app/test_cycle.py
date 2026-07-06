@@ -24,7 +24,7 @@ Fixture facts these tests rely on (verified against ``tests/fixtures/valid``):
 from __future__ import annotations
 
 import logging
-from collections.abc import Collection, Mapping
+from collections.abc import Collection, Mapping, Sequence
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -43,6 +43,8 @@ from agentic_calendar.app.environment import (
     LlmNodeBundle,
     NodeDependencies,
     PlannerNode,
+    ReflectionNode,
+    StrategistNode,
     build_environment,
 )
 from agentic_calendar.app.state import ReplanKind, RunRecord
@@ -71,23 +73,27 @@ from agentic_calendar.contracts.data_access_audit import (
     DataAccessPurpose,
 )
 from agentic_calendar.contracts.draft_schedule import DraftSchedule, DraftScheduleEntry
-from agentic_calendar.contracts.drift_event import DriftType
+from agentic_calendar.contracts.drift_event import DriftEvent, DriftType
 from agentic_calendar.contracts.hashing import canonical_payload_hash
 from agentic_calendar.contracts.reason_codes import ReasonCode
 from agentic_calendar.contracts.scheduler_output import SchedulerOutput
 from agentic_calendar.contracts.source_claim import SourceClaim
+from agentic_calendar.contracts.strategy_constraints import StrategyConstraints
 from agentic_calendar.contracts.syllabus_units import SyllabusUnits
 from agentic_calendar.contracts.task_disposition import (
     DispositionSource,
     TaskDispositionRecord,
     TaskDispositionType,
 )
-from agentic_calendar.contracts.task_plan import TaskPlan
+from agentic_calendar.contracts.task_plan import Task, TaskPlan
 from agentic_calendar.contracts.user_profile import UserProfile
 from agentic_calendar.contracts.validation_result import ValidationResult
 from agentic_calendar.contracts.violation_types import ViolationType
 from agentic_calendar.llm_nodes.planner import FixturePlanner
-from agentic_calendar.llm_nodes.reflection_summary import DeterministicReflectionSummary
+from agentic_calendar.llm_nodes.reflection_summary import (
+    DeterministicReflectionSummary,
+    ReflectionSummary,
+)
 from agentic_calendar.llm_nodes.strategist import FixtureStrategist
 from agentic_calendar.llm_nodes.user_facing_explanation import (
     DeterministicUserFacingExplanation,
@@ -167,6 +173,9 @@ class CountingPlanner:
         user_profile: UserProfile | None = None,
         repair: ValidationResult | None = None,
         excluded_tasks: Collection[str] = (),
+        behavioral_hints: Sequence[str] = (),
+        prior_plan_tasks: Sequence[Task] = (),
+        replan_mode: RecoveryAction | None = None,
     ) -> TaskPlan:
         self.calls += 1
         return self._inner.run(
@@ -175,6 +184,9 @@ class CountingPlanner:
             user_profile=user_profile,
             repair=repair,
             excluded_tasks=excluded_tasks,
+            behavioral_hints=behavioral_hints,
+            prior_plan_tasks=prior_plan_tasks,
+            replan_mode=replan_mode,
         )
 
 
@@ -185,6 +197,9 @@ class RecordingPlanner:
         self._plan = plan
         self.repairs: list[ValidationResult | None] = []
         self.excluded: list[tuple[str, ...]] = []
+        self.hints: list[tuple[str, ...]] = []
+        self.prior_plans: list[tuple[Task, ...]] = []
+        self.replan_modes: list[RecoveryAction | None] = []
 
     def run(
         self,
@@ -194,11 +209,64 @@ class RecordingPlanner:
         user_profile: UserProfile | None = None,
         repair: ValidationResult | None = None,
         excluded_tasks: Collection[str] = (),
+        behavioral_hints: Sequence[str] = (),
+        prior_plan_tasks: Sequence[Task] = (),
+        replan_mode: RecoveryAction | None = None,
     ) -> TaskPlan:
         del run_id, syllabus, user_profile
         self.repairs.append(repair)
         self.excluded.append(tuple(excluded_tasks))
+        self.hints.append(tuple(behavioral_hints))
+        self.prior_plans.append(tuple(prior_plan_tasks))
+        self.replan_modes.append(replan_mode)
         return self._plan
+
+
+class RecordingReflection:
+    """Delegating reflection node that records the continuity context (D2)."""
+
+    def __init__(self) -> None:
+        self._inner = DeterministicReflectionSummary()
+        self.prior: list[tuple[str, ...]] = []
+
+    def run(
+        self,
+        *,
+        run_id: str,
+        drift_events: Sequence[DriftEvent],
+        completion_rate: float | None = None,
+        prior_reflections: Sequence[str] = (),
+    ) -> ReflectionSummary:
+        self.prior.append(tuple(prior_reflections))
+        return self._inner.run(
+            run_id=run_id,
+            drift_events=drift_events,
+            completion_rate=completion_rate,
+        )
+
+
+class RecordingStrategist:
+    """Delegating strategist that records the claim ids each call received."""
+
+    def __init__(self, inner: FixtureStrategist) -> None:
+        self._inner = inner
+        self.seen_claims: list[tuple[str, ...]] = []
+
+    def run(
+        self,
+        *,
+        run_id: str,
+        user_profile: UserProfile,
+        source_claims: Sequence[SourceClaim] = (),
+        strategy_constraints: StrategyConstraints | None = None,
+    ) -> SyllabusUnits:
+        self.seen_claims.append(tuple(c.claim_id for c in source_claims))
+        return self._inner.run(
+            run_id=run_id,
+            user_profile=user_profile,
+            source_claims=source_claims,
+            strategy_constraints=strategy_constraints,
+        )
 
 
 def make_service(
@@ -208,7 +276,9 @@ def make_service(
     db_path: Path | None = None,
     strategist_fixtures: Mapping[str, SyllabusUnits] | None = None,
     planner_fixtures: Mapping[str, TaskPlan] | None = None,
+    strategist: StrategistNode | None = None,
     planner: PlannerNode | None = None,
+    reflection: ReflectionNode | None = None,
     seed_claims: bool = True,
     onboard: bool = True,
     now: datetime = HAPPY_NOW,
@@ -228,12 +298,11 @@ def make_service(
     def factory(deps: NodeDependencies) -> LlmNodeBundle:
         del deps
         return LlmNodeBundle(
-            strategist=FixtureStrategist(
-                strategist_fixtures or {profile.target_role: syllabus}
-            ),
+            strategist=strategist
+            or FixtureStrategist(strategist_fixtures or {profile.target_role: syllabus}),
             planner=planner
             or FixturePlanner(planner_fixtures or {syllabus.syllabus_version: plan}),
-            reflection=DeterministicReflectionSummary(),
+            reflection=reflection or DeterministicReflectionSummary(),
             explanation=DeterministicUserFacingExplanation(),
         )
 
@@ -358,6 +427,41 @@ def test_propose_happy_path_parks_run_awaiting_approval() -> None:
     syllabus = env.state.get_syllabus(USER_ID)
     assert syllabus is not None
     assert syllabus.syllabus_version == "syl_003"
+
+
+def test_propose_curates_claims_before_the_strategist_prompt() -> None:
+    """Expired and below-floor claims are filtered pre-prompt (D1b golden):
+    the Strategist never sees them and propose completes in one clean pass,
+    instead of a stale claim steering generation and then costing a repair
+    round when the post-generation validator rejects its citation."""
+    recorder = RecordingStrategist(
+        FixtureStrategist({_canonical_profile().target_role: _canonical_syllabus()})
+    )
+    service, env, _clock = make_service(strategist=recorder)
+    payloads = {
+        str(fixture.payload["claim_id"]): fixture.payload
+        for fixture in iter_valid("source_claim")
+    }
+    # Expired at HAPPY_NOW (inclusive boundary: expires_at == today) and a
+    # below-floor unclassified claim (0.2 < 0.30); both contract-valid.
+    env.claim_store.append(
+        SourceClaim.model_validate(
+            {
+                **payloads["claim_topic_dp"],
+                "claim_id": "claim_expired",
+                "expires_at": "2026-05-04",
+            }
+        )
+    )
+    env.claim_store.append(SourceClaim.model_validate(payloads["claim_unc_1"]))
+
+    result = service.propose(USER_ID)
+
+    assert result.state is S.AWAITING_USER_APPROVAL
+    assert result.reason_code is None
+    # Exactly one strategist pass (no repair round) that saw only the three
+    # curated-in claims the canonical syllabus cites.
+    assert recorder.seen_claims == [SYLLABUS_CLAIM_IDS]
 
 
 # --------------------------------------------------------------------------- #
@@ -687,6 +791,9 @@ def test_dry_run_previews_without_side_effects_then_write_activates() -> None:
     assert written.dry_run is False
     assert written.state is S.ACTIVE_PLAN
     assert written.write_status == "success"
+    # The real write reports the same planned total the dry-run previewed —
+    # the "N / M verified" surface needs M on every outcome, not just dry-run.
+    assert written.planned_event_count == len(draft.entries)
     assert set(written.mapping_status_by_task) == set(PLAN_TASK_IDS)
     assert all(v == "verified" for v in written.mapping_status_by_task.values())
 
@@ -768,6 +875,9 @@ def test_adapter_create_failure_preserves_reason_and_blocks_activation() -> None
 
     assert written.state is S.CALENDAR_WRITE_FAILED_STATE
     assert written.reason_code is ReasonCode.CALENDAR_WRITE_FAILED
+    # A failed write still reports how many events were PLANNED — the verify
+    # pill must never render "0 / 0" on a failure (live smoke regression).
+    assert written.planned_event_count == len(PLAN_TASK_IDS)
     # The manager's failure text reaches the operator surface, not just the
     # bare reason_code (typed prose only, never raw content/secrets).
     assert written.error is not None
@@ -1855,6 +1965,9 @@ def test_drop_approve_write_removes_only_dropped_event() -> None:
     service.approve(USER_ID)
     written = service.write(USER_ID)
     assert written.state is S.ACTIVE_PLAN
+    # A drop write plans DELETIONS: the planned count is the dropped task
+    # set, not the survivor draft's entries.
+    assert written.planned_event_count == 1
     # The result surfaces the dropped task's rolled-back mapping status (built
     # from the write result, since the dropped mapping stays under its old run).
     assert (
@@ -1925,6 +2038,7 @@ def test_drop_write_partial_failure_when_delete_raises() -> None:
 
     # The drop write is a partial failure; the run does NOT activate a new plan.
     assert written.write_status == "partial_failure"
+    assert written.planned_event_count == 1  # planned deletions, even on failure
     assert written.reason_code is ReasonCode.CALENDAR_ROLLBACK_FAILED
     assert written.state is not S.ACTIVE_PLAN
     assert (

@@ -131,6 +131,13 @@ class RunRecord(BaseModel):
     drop_task_ids: tuple[str, ...] = ()
     """Set on a drop run: the task ids whose calendar events ``write`` must
     remove via the delete-only path. Empty (``()``) for every other run."""
+    write_op_id: str | None = None
+    """The write manager's own run id for this run's calendar write operation
+    (the id its calendar-event mappings are stored under — the manager mints a
+    fresh one per write). Recorded on every write outcome so the recovery
+    paths — rollback and retry-missing-events — can find the mappings
+    deterministically. ``None`` before any write, and when the write failed
+    before the manager produced a result."""
     created_at: datetime
     updated_at: datetime
 

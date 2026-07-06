@@ -16,10 +16,17 @@ from datetime import timedelta
 from fastapi.testclient import TestClient
 
 from agentic_calendar.app.web.app import create_app
+from agentic_calendar.calendar_writer.in_memory_adapter import (
+    FailureModes,
+    InMemoryCalendarAdapter,
+)
+from agentic_calendar.common.ids import DeterministicIdGenerator
 from tests.app.test_cycle import (
     PLAN_TASK_IDS,
     USER_ID,
+    _advance_past_draft,
     _canonical_profile,
+    _motivation_profile_payload,
     make_service,
 )
 
@@ -326,3 +333,89 @@ def test_reconcile_opted_in_with_no_edits_is_no_change() -> None:
     client.post("/api/calendar-sync", json={"enabled": True})
     body = client.post("/api/reconcile").json()
     assert body["outcome"] == "no_change"
+
+
+# Write-failure recovery routes (UX pass B1): the SPA's rollback / retry
+# affordances over a run parked in calendar_write_failed.
+
+
+def _failed_write_client() -> tuple[TestClient, InMemoryCalendarAdapter]:
+    adapter = InMemoryCalendarAdapter(
+        id_generator=DeterministicIdGenerator(),
+        failure_modes=FailureModes(corrupt_metadata_for_task_ids=frozenset({"dp_001"})),
+    )
+    _service, env, _clock = make_service(calendar_adapter=adapter)
+    app = create_app(env=env, default_user_id=USER_ID)
+    client = TestClient(app)
+    client.post("/api/propose", json={})
+    client.post("/api/approve", json={})
+    failed = client.post("/api/write", json={}).json()
+    assert failed["state"] == "calendar_write_failed"
+    adapter.set_failure_modes(FailureModes())
+    return client, adapter
+
+
+def test_rollback_route_dry_run_counts_then_full_rollback_exits() -> None:
+    client, _adapter = _failed_write_client()
+
+    dry = client.post("/api/rollback", json={"dry_run": True})
+    assert dry.status_code == 200
+    dbody = dry.json()
+    assert dbody["dry_run"] is True
+    assert dbody["rollbackable_event_count"] == len(PLAN_TASK_IDS)
+    assert dbody["state"] == "calendar_write_failed"
+
+    done = client.post("/api/rollback", json={})
+    assert done.status_code == 200
+    body = done.json()
+    assert body["fully_rolled_back"] is True
+    assert body["state"] == "error_requires_user"
+    assert len(body["deleted_event_ids"]) == len(PLAN_TASK_IDS)
+
+
+def test_retry_write_route_recovers_to_active_plan() -> None:
+    client, _adapter = _failed_write_client()
+
+    resp = client.post("/api/retry-write", json={})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["state"] == "active_plan"
+    assert sorted(body["verified_task_ids"]) == sorted(PLAN_TASK_IDS)
+
+
+def test_recovery_routes_outside_failure_state_map_to_409() -> None:
+    client, _clock = _client()
+    client.post("/api/propose", json={})
+    assert client.post("/api/rollback", json={}).status_code == 409
+    assert client.post("/api/retry-write", json={}).status_code == 409
+
+
+# Accountability loop routes (UX pass B3): weekly check-in + recommitment.
+
+
+def test_weekly_checkin_route_round_trips_through_accountability_view() -> None:
+    _service, env, clock = make_service(motivation_profile=_motivation_profile_payload())
+    client = TestClient(create_app(env=env, default_user_id=USER_ID))
+    proposed = client.post("/api/propose", json={}).json()
+    client.post("/api/approve", json={})
+    client.post("/api/write", json={})
+    _advance_past_draft(env, clock, proposed["draft_schedule_id"])
+
+    assert client.get("/api/accountability").json()["checkin_due"] is True
+
+    resp = client.post("/api/weekly-checkin", json={"blockers": "travel"})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["checkin_status"] == "completed"
+
+    view = client.get("/api/accountability").json()
+    assert view["checkin_due"] is False
+    assert view["checkin_status"] == "completed"
+
+
+def test_recommit_route_without_open_ask_maps_to_409() -> None:
+    _service, env, _clock = make_service(motivation_profile=_motivation_profile_payload())
+    client = TestClient(create_app(env=env, default_user_id=USER_ID))
+    client.post("/api/propose", json={})
+    resp = client.post("/api/recommit", json={"choice": "keep_plan"})
+    assert resp.status_code == 409

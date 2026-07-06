@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { ApiError, api, errorMessage } from '../api/client'
+import type { ProseSummary } from '../api/types'
 import { formatViolations } from '../lib/fit'
+import { setupDeepLink } from '../lib/review'
 
 // The generation surface. Triggers POST /api/propose and shows the deterministic
 // pipeline while it runs. The pipeline animation is cosmetic — propose is one
@@ -61,13 +63,45 @@ function describe(code: string | null): { title: string; what: string } {
 }
 
 type Phase = 'ready' | 'running' | 'failed'
-type Failure = { code: string | null; message: string; specifics: string[] }
+type Failure = {
+  code: string | null
+  message: string
+  specifics: string[]
+  prose: ProseSummary | null
+  resumed: boolean // failure found on mount (a previously parked run)
+}
 
 export function GenerationScreen() {
   const navigate = useNavigate()
   const [phase, setPhase] = useState<Phase>('ready')
   const [active, setActive] = useState(0)
   const [failure, setFailure] = useState<Failure | null>(null)
+
+  // Reason-aware resume (B5): a run parked in error_requires_user greets the
+  // returning user with WHY it stopped — the typed reason plus the persisted
+  // explanation prose — instead of a blank "Build my plan" that silently
+  // discards that context. "Try again" mints a fresh run, which is honest:
+  // that is exactly what propose does after a terminal failure.
+  useEffect(() => {
+    let alive = true
+    api
+      .status()
+      .then((s) => {
+        if (!alive || s.state !== 'error_requires_user') return
+        setFailure({
+          code: s.reason_code,
+          message: '',
+          specifics: [],
+          prose: s.explanation,
+          resumed: true,
+        })
+        setPhase('failed')
+      })
+      .catch(() => undefined) // best-effort; the ready card is a fine fallback
+    return () => {
+      alive = false
+    }
+  }, [])
 
   // Cosmetic stage advance while the single propose request is in flight.
   useEffect(() => {
@@ -87,6 +121,8 @@ export function GenerationScreen() {
           code: result.reason_code,
           message: '',
           specifics: formatViolations(result.violations ?? []),
+          prose: result.explanation,
+          resumed: false,
         })
         setPhase('failed')
         return
@@ -98,13 +134,17 @@ export function GenerationScreen() {
         navigate('/onboarding') // not set up yet
         return
       }
-      setFailure({ code: null, message: errorMessage(err), specifics: [] })
+      setFailure({ code: null, message: errorMessage(err), specifics: [], prose: null, resumed: false })
       setPhase('failed')
     }
   }
 
   if (phase === 'failed' && failure) {
     const { title, what } = describe(failure.code)
+    // The persisted/attached explanation prose speaks first when present —
+    // it names this user's specific situation; the static map is the fallback.
+    const body = failure.prose?.summary || failure.message || what
+    const detail = [...(failure.prose?.detail ?? []), ...failure.specifics]
     return (
       <div className="gen-wrap">
         <div className="gen-card err-card">
@@ -115,14 +155,14 @@ export function GenerationScreen() {
             </span>
           </div>
           <h2 className="t-h3" style={{ marginTop: 12 }}>
-            {title}
+            {failure.resumed ? `Your last plan run stopped — ${title.toLowerCase()}` : title}
           </h2>
           <p style={{ fontSize: 13.5, color: 'var(--ink-soft)', marginTop: 6, lineHeight: 1.5 }}>
-            {failure.message || what}
+            {body}
           </p>
-          {failure.specifics.length > 0 && (
+          {detail.length > 0 && (
             <ul className="fit-specifics">
-              {failure.specifics.map((line) => (
+              {detail.map((line) => (
                 <li key={line}>{line}</li>
               ))}
             </ul>
@@ -131,7 +171,11 @@ export function GenerationScreen() {
             <button className="btn btn-primary" type="button" onClick={() => void generate()}>
               Try again
             </button>
-            <button className="btn btn-soft" type="button" onClick={() => navigate('/onboarding')}>
+            <button
+              className="btn btn-soft"
+              type="button"
+              onClick={() => navigate(setupDeepLink(failure.code))}
+            >
               Adjust your setup
             </button>
           </div>

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { ApiError, api, errorMessage } from '../api/client'
 import type { TodayResult, TodayTask } from '../api/types'
 import { fmtClock, fmtWhen } from '../lib/datetime'
+import { attentionChip } from '../lib/review'
 
 // Today / check-in: the telemetry feedback loop. Renders the active plan's
 // scheduled tasks; a block becomes "due" once its time has passed, at which
@@ -19,13 +20,17 @@ export function TodayScreen() {
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState<string | null>(null)
   const [rowError, setRowError] = useState<{ taskId: string; text: string } | null>(null)
+  const [runState, setRunState] = useState<string | null>(null)
 
   function load(initial = false) {
     if (initial) setLoading(true)
-    api
-      .today()
-      .then((r) => {
+    // Status rides along so a parked run (replan required, failed write,
+    // stopped run) is visible where the user actually lives — not only on
+    // the Week screen they might not visit.
+    Promise.all([api.today(), api.status()])
+      .then(([r, s]) => {
         setResult(r)
+        setRunState(s.state)
         setLoading(false)
       })
       .catch((err: unknown) => {
@@ -61,23 +66,64 @@ export function TodayScreen() {
   if (error) return <div className="screen-center">Couldn’t load Today — {error}</div>
 
   const tasks = result?.tasks ?? []
+  const chip = attentionChip(runState)
   if (tasks.length === 0) {
+    // A parked run must stay visible even with no active plan (e.g. a failed
+    // calendar write) — otherwise "No active plan yet" hides the problem.
     return (
       <div className="screen-center col" style={{ gap: 12, textAlign: 'center', maxWidth: 460 }}>
-        <h2 className="t-h2">No active plan yet</h2>
-        <p className="muted">
-          Propose and approve a schedule, then your scheduled tasks show up here to check off. Your
-          check-ins feed drift and accountability.
-        </p>
-        <button className="btn btn-primary" type="button" onClick={() => navigate('/plan')}>
-          Build a plan →
-        </button>
+        {chip ? (
+          <>
+            <span className="tag danger" style={{ alignSelf: 'center' }}>
+              needs attention
+            </span>
+            <h2 className="t-h2">{chip.label}</h2>
+            <button className="btn btn-primary" type="button" onClick={() => navigate(chip.to)}>
+              Take a look →
+            </button>
+          </>
+        ) : (
+          <>
+            <h2 className="t-h2">No active plan yet</h2>
+            <p className="muted">
+              Propose and approve a schedule, then your scheduled tasks show up here to check off.
+              Your check-ins feed drift and accountability.
+            </p>
+            <button className="btn btn-primary" type="button" onClick={() => navigate('/plan')}>
+              Build a plan →
+            </button>
+          </>
+        )}
       </div>
     )
   }
 
   return (
     <section className="read-wrap">
+      {chip && (
+        <button
+          type="button"
+          className="card"
+          onClick={() => navigate(chip.to)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            width: '100%',
+            textAlign: 'left',
+            cursor: 'pointer',
+            padding: '12px 16px',
+            marginBottom: 16,
+            borderColor: 'var(--clay-deep)',
+          }}
+        >
+          <span className="tag danger">needs attention</span>
+          <span style={{ fontSize: 13.5, fontWeight: 500 }}>{chip.label}</span>
+          <span className="muted" style={{ marginLeft: 'auto', fontSize: 13 }}>
+            →
+          </span>
+        </button>
+      )}
       <span className="label">Your schedule</span>
       <h1 className="t-h1" style={{ marginTop: 8 }}>
         Today &amp; ahead

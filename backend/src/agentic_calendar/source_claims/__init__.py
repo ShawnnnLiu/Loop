@@ -13,6 +13,12 @@ it; nothing here reaches back into a region.
 """
 
 from .classification import classify_source
+from .curation import (
+    DEFAULT_CLAIM_CURATION_CONFIG,
+    ClaimCurationConfig,
+    ClaimCurationResult,
+    curate_claims,
+)
 from .expiration import compute_expires_at, is_expired
 from .ingestion import (
     ClaimIngestionOutcome,
@@ -27,7 +33,10 @@ from .priors import DEFAULT_CONFIDENCE_PRIORS, ConfidencePriors
 from .scoring import score_confidence
 
 __all__ = [
+    "DEFAULT_CLAIM_CURATION_CONFIG",
     "DEFAULT_CONFIDENCE_PRIORS",
+    "ClaimCurationConfig",
+    "ClaimCurationResult",
     "ClaimIngestionOutcome",
     "ClaimIngestionStatus",
     "ConfidencePriors",
@@ -38,6 +47,7 @@ __all__ = [
     "SourceClaimStoreError",
     "classify_source",
     "compute_expires_at",
+    "curate_claims",
     "is_expired",
     "score_confidence",
 ]

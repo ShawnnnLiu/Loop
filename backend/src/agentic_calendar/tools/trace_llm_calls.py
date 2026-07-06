@@ -4,11 +4,15 @@ Usage::
 
     uv run python -m agentic_calendar.tools.trace_llm_calls \
         --calls calls.json [--run-id run_smoke_001]
+    uv run python -m agentic_calendar.tools.trace_llm_calls \
+        --db /path/to/app.db [--run-id run_001]
 
 ``--calls`` is a JSON list of ``llm_call_log`` rows — e.g. the file written
-by ``llm_smoke --calls-out``. Without ``--run-id`` the tool lists the run ids
-present in the file. With it, the calls for that run render in order with
-prompt version, tokens, latency, and validation outcome per call (axiom 22).
+by ``llm_smoke --calls-out``. ``--db`` reads the same rows straight from the
+production SQLite store instead (UX pass C3 — rows the real cycle writes had
+no shipped reader). Without ``--run-id`` the tool lists the run ids present.
+With it, the calls for that run render in order with prompt version, tokens,
+latency, and validation outcome per call (axiom 22).
 
 Privacy: rows carry hashes and counts only (the contract forbids raw
 content), so the trace structurally cannot leak prompts, responses, or
@@ -87,11 +91,16 @@ def main(argv: Sequence[str] | None = None) -> int:
         prog="trace_llm_calls",
         description="Render the per-run LLM call trace from recorded llm_call_log rows.",
     )
-    parser.add_argument(
+    source = parser.add_mutually_exclusive_group(required=True)
+    source.add_argument(
         "--calls",
         type=Path,
-        required=True,
         help="JSON list of llm_call_log rows (e.g. from llm_smoke --calls-out).",
+    )
+    source.add_argument(
+        "--db",
+        type=Path,
+        help="Production SQLite database; reads the llm_call_logs store directly.",
     )
     parser.add_argument(
         "--run-id",
@@ -101,7 +110,15 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     try:
-        calls = _load_calls(args.calls)
+        if args.db is not None:
+            from agentic_calendar.common.sqlite import SqliteDatabase
+            from agentic_calendar.llm_nodes.sqlite_call_log import SqliteLlmCallLogStore
+
+            if not args.db.exists():
+                raise OSError(f"database not found: {args.db}")
+            calls = SqliteLlmCallLogStore(SqliteDatabase(args.db)).list_all()
+        else:
+            calls = _load_calls(args.calls)
     except (OSError, json.JSONDecodeError, ValidationError, ValueError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1

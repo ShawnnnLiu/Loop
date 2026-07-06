@@ -65,9 +65,17 @@ TRANSITIONS: Mapping[tuple[S, Sig], S] = {
     # at the write — the plan lives on as ACTIVE_PLAN and accrues telemetry.
     (S.CALENDAR_WRITE_VERIFIED, Sig.PLAN_ACTIVATED): S.ACTIVE_PLAN,
 
-    # Failed writes self-loop while rollback runs, then exit to user attention.
+    # Failed writes self-loop while rollback runs. A completed rollback exits to
+    # user attention; a *failed* rollback stays in the failure state so the user
+    # can retry either recovery path (a partial rollback must never read as
+    # resolved). A write retry re-enters CALENDAR_WRITE_IN_PROGRESS and reuses
+    # the existing success/failure edges — the retry path goes through
+    # ``reconcile_after_crash``, which re-runs the approved_payload_hash
+    # recheck, so the axiom-06 approval gate holds.
     (S.CALENDAR_WRITE_FAILED_STATE, Sig.CALENDAR_ROLLBACK_REQUESTED): S.CALENDAR_WRITE_FAILED_STATE,
     (S.CALENDAR_WRITE_FAILED_STATE, Sig.CALENDAR_ROLLBACK_COMPLETED): S.ERROR_REQUIRES_USER,
+    (S.CALENDAR_WRITE_FAILED_STATE, Sig.CALENDAR_ROLLBACK_FAILED): S.CALENDAR_WRITE_FAILED_STATE,
+    (S.CALENDAR_WRITE_FAILED_STATE, Sig.CALENDAR_WRITE_RETRY_REQUESTED): S.CALENDAR_WRITE_IN_PROGRESS,
 
     # ---- ACTIVE PLAN / DRIFT / REPLAN LOOP (Phase 4, axiom 07) ----
     # Deterministic drift classification drives these signals; an LLM never
@@ -79,6 +87,11 @@ TRANSITIONS: Mapping[tuple[S, Sig], S] = {
     (S.ACTIVE_PLAN, Sig.DRIFT_DETECTED): S.DRIFT_DETECTED,
     (S.ACTIVE_PLAN, Sig.NO_DRIFT): S.ACTIVE_PLAN,
     (S.ACTIVE_PLAN, Sig.PLAN_COMPLETED): S.TERMINAL_SUCCESS,
+    # A revise_* recommitment answer is typed user feedback that requires a
+    # replan (choice → recovery mode is a deterministic map). Same guarantees
+    # as the drift path: the replan re-enters PLANNER_RUNNING via
+    # REPLAN_STARTED and never touches the calendar without approval.
+    (S.ACTIVE_PLAN, Sig.RECOMMITMENT_ACCEPTED): S.REPLAN_REQUIRED,
 
     (S.DRIFT_DETECTED, Sig.REPLAN_REQUIRED): S.REPLAN_REQUIRED,
     (S.DRIFT_DETECTED, Sig.REPLAN_NOT_REQUIRED): S.ACTIVE_PLAN,

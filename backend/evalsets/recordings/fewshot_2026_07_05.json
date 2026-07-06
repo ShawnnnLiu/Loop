@@ -1,0 +1,783 @@
+{
+  "prompt_version": "fewshot-2026-07-05",
+  "model_name": "claude-opus-4-8+claude-sonnet-5",
+  "outputs": {
+    "strategist_backend_swe": [
+      {
+        "syllabus_version": "v1",
+        "goal_summary": "Close the candidate's declared weaknesses in dynamic programming and system design to prepare for Backend SWE interviews at Meta and Stripe within a 10-week timeline.",
+        "modules": [
+          {
+            "module_id": "mod_dynamic_programming",
+            "title": "Dynamic Programming Foundations",
+            "priority": "high",
+            "reason": "Dynamic programming is a listed weakness and a standard core topic for algorithmic backend interviews.",
+            "target_outcomes": [
+              "Recognize DP subproblem structure and optimal substructure",
+              "Implement top-down memoization and bottom-up tabulation",
+              "Solve classic DP problems (knapsack, LIS, edit distance)"
+            ],
+            "estimated_total_min": 900,
+            "difficulty": 4,
+            "source_claim_ids": [
+              "claim_topic_dp"
+            ],
+            "company_specific": false
+          },
+          {
+            "module_id": "mod_system_design",
+            "title": "System Design Fundamentals",
+            "priority": "high",
+            "reason": "System design is a listed weakness and is essential for backend SWE interviews at target companies.",
+            "target_outcomes": [
+              "Design scalable systems with load balancing and caching",
+              "Reason about databases, sharding, and consistency tradeoffs",
+              "Communicate a structured design under interview conditions"
+            ],
+            "estimated_total_min": 900,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false
+          },
+          {
+            "module_id": "mod_stripe_api_design",
+            "title": "Stripe-style Practical API Design Drills",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Practice designing clean, practical REST APIs",
+              "Handle idempotency, error handling, and pagination in API design",
+              "Adapt to Stripe's emphasis on practical over abstract design"
+            ],
+            "estimated_total_min": 600,
+            "difficulty": 3,
+            "source_claim_ids": [
+              "claim_stripe_api"
+            ],
+            "company_specific": true
+          },
+          {
+            "module_id": "mod_meta_coding",
+            "title": "Meta-style Coding Interview Practice",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Solve medium/hard algorithm problems under time pressure",
+              "Optimize solutions for time and space complexity"
+            ],
+            "estimated_total_min": 480,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false
+          },
+          {
+            "module_id": "mod_review_mock",
+            "title": "Mock Interviews and Weakness Review",
+            "priority": "low",
+            "reason": null,
+            "target_outcomes": [
+              "Complete timed mock interviews covering DP and system design",
+              "Identify and remediate remaining gaps"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 2,
+            "source_claim_ids": [],
+            "company_specific": false
+          }
+        ]
+      }
+    ],
+    "strategist_constraint_probe": [
+      {
+        "syllabus_version": "v1",
+        "goal_summary": "Address the candidate's declared weaknesses in dynamic programming and system design to prepare for a new-grad Backend SWE interview at Meta within 4 weeks.",
+        "modules": [
+          {
+            "module_id": "mod_dp",
+            "title": "Dynamic Programming Foundations",
+            "priority": "high",
+            "reason": "Dynamic programming is a declared weakness and is heavily tested in backend coding interviews.",
+            "target_outcomes": [
+              "Recognize DP problem patterns (1D and 2D)",
+              "Implement memoization and tabulation approaches",
+              "Solve classic DP problems like knapsack, LIS, and edit distance"
+            ],
+            "estimated_total_min": 540,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false
+          },
+          {
+            "module_id": "mod_system_design",
+            "title": "System Design Fundamentals for New Grads",
+            "priority": "high",
+            "reason": "System design is a declared weakness and appears in backend interviews even at the new-grad level.",
+            "target_outcomes": [
+              "Explain core building blocks: load balancers, caches, databases",
+              "Reason about scalability and consistency trade-offs",
+              "Sketch a basic scalable service design"
+            ],
+            "estimated_total_min": 480,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false
+          },
+          {
+            "module_id": "mod_interview_practice",
+            "title": "Timed Mock Interview Practice",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Complete timed coding sessions within 45-minute windows",
+              "Practice communicating problem-solving out loud"
+            ],
+            "estimated_total_min": 180,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false
+          }
+        ]
+      }
+    ],
+    "strategist_with_resume": [
+      {
+        "syllabus_version": "v1",
+        "goal_summary": "Prepare an advanced backend engineer for a senior Backend SWE interview at Stripe, closing the declared dynamic programming gap while leveraging distributed systems strength.",
+        "modules": [
+          {
+            "module_id": "mod_dp_foundations",
+            "title": "Dynamic Programming Foundations",
+            "priority": "high",
+            "reason": "Dynamic programming is the candidate's explicitly declared weakness and is a common interview blocker.",
+            "target_outcomes": [
+              "Identify overlapping subproblems and optimal substructure",
+              "Implement top-down memoization and bottom-up tabulation",
+              "Solve classic DP problems (knapsack, LIS, edit distance)"
+            ],
+            "estimated_total_min": 720,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false
+          },
+          {
+            "module_id": "mod_dp_advanced",
+            "title": "Advanced DP Patterns and Optimization",
+            "priority": "high",
+            "reason": "Reinforces the weakest area with harder variants likely at senior level.",
+            "target_outcomes": [
+              "Apply DP on grids, intervals, and trees",
+              "Optimize state space and transitions",
+              "Recognize DP under time pressure"
+            ],
+            "estimated_total_min": 600,
+            "difficulty": 5,
+            "source_claim_ids": [],
+            "company_specific": false
+          },
+          {
+            "module_id": "mod_coding_general",
+            "title": "Core Coding and Data Structures Review",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Refresh arrays, hashing, trees, graphs",
+              "Practice clean, testable implementations",
+              "Communicate approach while coding"
+            ],
+            "estimated_total_min": 600,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false
+          },
+          {
+            "module_id": "mod_system_design",
+            "title": "System Design Sharpening",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Structure senior-level design discussions",
+              "Discuss tradeoffs in scalability and consistency",
+              "Leverage distributed systems strength effectively"
+            ],
+            "estimated_total_min": 600,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false
+          },
+          {
+            "module_id": "mod_behavioral",
+            "title": "Behavioral and Leadership Interview Prep",
+            "priority": "low",
+            "reason": null,
+            "target_outcomes": [
+              "Structure STAR responses",
+              "Articulate senior-level impact and leadership",
+              "Prepare project deep-dive narratives"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 2,
+            "source_claim_ids": [],
+            "company_specific": false
+          },
+          {
+            "module_id": "mod_mock_interviews",
+            "title": "Timed Mock Interview Practice",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Simulate full interview loops under time pressure",
+              "Get feedback on communication and pacing",
+              "Reduce interview anxiety"
+            ],
+            "estimated_total_min": 480,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false
+          }
+        ]
+      }
+    ],
+    "planner_dp_chain": [
+      {
+        "plan_version": "v1",
+        "tasks": [
+          {
+            "task_id": "task_dp_01",
+            "module_id": "dp",
+            "title": "Review core DP state definitions and patterns",
+            "description": "Re-derive common DP state definitions (knapsack, LCS, interval DP) given this is a flagged weakness for Meta/Stripe interviews.",
+            "dependencies": [],
+            "estimated_duration_min": 60,
+            "cognitive_load": 3,
+            "category": "concept_review",
+            "required_focus_level": "medium",
+            "splittable": false
+          },
+          {
+            "task_id": "task_dp_02",
+            "module_id": "dp",
+            "title": "Practice DP problems: 1D and 2D state spaces",
+            "description": "Solve a set of 1D and 2D DP problems unaided to build fluency in state transition reasoning.",
+            "dependencies": [
+              "task_dp_01"
+            ],
+            "estimated_duration_min": 120,
+            "cognitive_load": 4,
+            "category": "practice",
+            "required_focus_level": "deep",
+            "splittable": true
+          },
+          {
+            "task_id": "task_dp_03",
+            "module_id": "dp",
+            "title": "Practice advanced DP: interval and tree DP",
+            "description": "Extend DP practice to interval and tree-based problems, targeting the weakness area with harder variants.",
+            "dependencies": [
+              "task_dp_02"
+            ],
+            "estimated_duration_min": 120,
+            "cognitive_load": 5,
+            "category": "practice",
+            "required_focus_level": "deep",
+            "splittable": true
+          },
+          {
+            "task_id": "task_dp_04",
+            "module_id": "dp",
+            "title": "Timed DP mock interview",
+            "description": "Simulate a timed interview focused on DP problem recognition and state definition speed.",
+            "dependencies": [
+              "task_dp_03"
+            ],
+            "estimated_duration_min": 60,
+            "cognitive_load": 4,
+            "category": "mock_interview",
+            "required_focus_level": "deep",
+            "splittable": false
+          },
+          {
+            "task_id": "task_dp_05",
+            "module_id": "dp",
+            "title": "Reflect on DP mock interview performance",
+            "description": "Review mistakes from the mock interview and note recurring state-definition errors to address before Meta/Stripe interviews.",
+            "dependencies": [
+              "task_dp_04"
+            ],
+            "estimated_duration_min": 60,
+            "cognitive_load": 2,
+            "category": "reflection",
+            "required_focus_level": "light",
+            "splittable": false
+          },
+          {
+            "task_id": "task_dp_06",
+            "module_id": "dp",
+            "title": "Spaced review of DP patterns",
+            "description": "Revisit earlier DP problems to reinforce retention of state definitions ahead of interview prep milestones.",
+            "dependencies": [
+              "task_dp_05"
+            ],
+            "estimated_duration_min": 60,
+            "cognitive_load": 2,
+            "category": "review",
+            "required_focus_level": "medium",
+            "splittable": false
+          },
+          {
+            "task_id": "task_dp_07",
+            "module_id": "dp",
+            "title": "Extended DP practice set",
+            "description": "Additional practice covering bitmask DP and probability DP to fully close the DP weakness gap.",
+            "dependencies": [
+              "task_dp_03"
+            ],
+            "estimated_duration_min": 120,
+            "cognitive_load": 4,
+            "category": "practice",
+            "required_focus_level": "deep",
+            "splittable": true
+          },
+          {
+            "task_id": "task_dp_08",
+            "module_id": "dp",
+            "title": "Final DP concept consolidation",
+            "description": "Consolidate all DP patterns studied into a personal reference for quick recall during interviews.",
+            "dependencies": [
+              "task_dp_07"
+            ],
+            "estimated_duration_min": 60,
+            "cognitive_load": 3,
+            "category": "concept_review",
+            "required_focus_level": "medium",
+            "splittable": false
+          },
+          {
+            "task_id": "task_dp_09",
+            "module_id": "dp",
+            "title": "DP mixed-topic timed drill",
+            "description": "Timed drill mixing multiple DP subtypes to simulate real interview pressure and coverage variety.",
+            "dependencies": [
+              "task_dp_08"
+            ],
+            "estimated_duration_min": 60,
+            "cognitive_load": 4,
+            "category": "practice",
+            "required_focus_level": "deep",
+            "splittable": false
+          },
+          {
+            "task_id": "task_api_01",
+            "module_id": "api_design",
+            "title": "Review API design principles for product-oriented backends",
+            "description": "Study REST/resource modeling and product-oriented API design principles relevant to Stripe-style backend interviews.",
+            "dependencies": [],
+            "estimated_duration_min": 60,
+            "cognitive_load": 3,
+            "category": "concept_review",
+            "required_focus_level": "medium",
+            "splittable": false
+          },
+          {
+            "task_id": "task_api_02",
+            "module_id": "api_design",
+            "title": "Practice designing clean API surfaces",
+            "description": "Draft API surfaces for sample product scenarios, emphasizing clarity and extensibility as Stripe interviews expect.",
+            "dependencies": [
+              "task_api_01"
+            ],
+            "estimated_duration_min": 90,
+            "cognitive_load": 4,
+            "category": "practice",
+            "required_focus_level": "deep",
+            "splittable": true
+          },
+          {
+            "task_id": "task_api_03",
+            "module_id": "api_design",
+            "title": "Mock system design interview: API-centric backend",
+            "description": "Run a timed mock interview focused on designing a product-oriented backend API, addressing the system design weakness.",
+            "dependencies": [
+              "task_api_02"
+            ],
+            "estimated_duration_min": 90,
+            "cognitive_load": 4,
+            "category": "mock_interview",
+            "required_focus_level": "deep",
+            "splittable": true
+          },
+          {
+            "task_id": "task_api_04",
+            "module_id": "api_design",
+            "title": "Reflect on API design mock interview",
+            "description": "Identify gaps in API design reasoning surfaced during the mock interview and plan targeted follow-up.",
+            "dependencies": [
+              "task_api_03"
+            ],
+            "estimated_duration_min": 60,
+            "cognitive_load": 2,
+            "category": "reflection",
+            "required_focus_level": "light",
+            "splittable": false
+          },
+          {
+            "task_id": "task_api_05",
+            "module_id": "api_design",
+            "title": "Review and refine API design decisions",
+            "description": "Revisit drafted API surfaces and refine based on mock interview feedback to reinforce product-oriented design skills.",
+            "dependencies": [
+              "task_api_04"
+            ],
+            "estimated_duration_min": 60,
+            "cognitive_load": 3,
+            "category": "review",
+            "required_focus_level": "medium",
+            "splittable": false
+          }
+        ]
+      }
+    ],
+    "planner_repair_probe": [
+      {
+        "plan_version": "v1",
+        "tasks": [
+          {
+            "task_id": "task_dp_01",
+            "module_id": "dp",
+            "title": "Review core DP patterns for backend interviews",
+            "description": "Re-derive the standard DP formulations: knapsack, LIS, interval, and grid problems, focusing on state definition and transitions.",
+            "dependencies": [],
+            "estimated_duration_min": 60,
+            "cognitive_load": 3,
+            "category": "concept_review",
+            "required_focus_level": "medium",
+            "splittable": false
+          },
+          {
+            "task_id": "task_dp_02",
+            "module_id": "dp",
+            "title": "Practice medium DP problems unaided",
+            "description": "Solve a set of medium-difficulty dynamic programming problems independently to build fluency for backend SWE interviews.",
+            "dependencies": [
+              "task_dp_01"
+            ],
+            "estimated_duration_min": 90,
+            "cognitive_load": 4,
+            "category": "practice",
+            "required_focus_level": "deep",
+            "splittable": true
+          },
+          {
+            "task_id": "task_dp_03",
+            "module_id": "dp",
+            "title": "Timed DP practice drill",
+            "description": "Simulate interview time pressure by solving DP problems within strict time limits, targeting your known weakness area.",
+            "dependencies": [
+              "task_dp_02"
+            ],
+            "estimated_duration_min": 90,
+            "cognitive_load": 4,
+            "category": "practice",
+            "required_focus_level": "deep",
+            "splittable": true
+          },
+          {
+            "task_id": "task_dp_04",
+            "module_id": "dp",
+            "title": "Reflect on DP problem-solving gaps",
+            "description": "Review mistakes from timed drills and note recurring failure patterns to target in remaining prep time.",
+            "dependencies": [
+              "task_dp_03"
+            ],
+            "estimated_duration_min": 45,
+            "cognitive_load": 2,
+            "category": "reflection",
+            "required_focus_level": "light",
+            "splittable": false
+          },
+          {
+            "task_id": "task_sd_01",
+            "module_id": "system_design",
+            "title": "Review system design fundamentals for backend roles",
+            "description": "Study core building blocks: load balancing, caching, database sharding, and message queues, framed around backend SWE scenarios.",
+            "dependencies": [],
+            "estimated_duration_min": 60,
+            "cognitive_load": 3,
+            "category": "concept_review",
+            "required_focus_level": "medium",
+            "splittable": false
+          },
+          {
+            "task_id": "task_sd_02",
+            "module_id": "system_design",
+            "title": "Practice sketching scalable designs",
+            "description": "Draft end-to-end designs for common backend systems, emphasizing scalability tradeoffs relevant to your target role.",
+            "dependencies": [
+              "task_sd_01"
+            ],
+            "estimated_duration_min": 90,
+            "cognitive_load": 4,
+            "category": "practice",
+            "required_focus_level": "deep",
+            "splittable": true
+          },
+          {
+            "task_id": "task_sd_03",
+            "module_id": "system_design",
+            "title": "Mock backend system design interview",
+            "description": "Run a timed, end-to-end mock interview covering a scalable backend system design to address your system design weakness.",
+            "dependencies": [
+              "task_sd_02"
+            ],
+            "estimated_duration_min": 60,
+            "cognitive_load": 5,
+            "category": "mock_interview",
+            "required_focus_level": "deep",
+            "splittable": false
+          },
+          {
+            "task_id": "task_sd_04",
+            "module_id": "system_design",
+            "title": "Review mock interview feedback",
+            "description": "Analyze the mock interview performance to identify gaps in design communication and technical depth.",
+            "dependencies": [
+              "task_sd_03"
+            ],
+            "estimated_duration_min": 45,
+            "cognitive_load": 2,
+            "category": "review",
+            "required_focus_level": "light",
+            "splittable": false
+          }
+        ]
+      }
+    ],
+    "planner_dependency_dag": [
+      {
+        "plan_version": "v1",
+        "tasks": [
+          {
+            "task_id": "task_foundations_01",
+            "module_id": "foundations",
+            "title": "Refresh array and hash map patterns",
+            "description": "Warm up on core array and hash map techniques to rebuild momentum before tackling harder topics.",
+            "dependencies": [],
+            "estimated_duration_min": 60,
+            "cognitive_load": 2,
+            "category": "concept_review",
+            "required_focus_level": "medium",
+            "splittable": false
+          },
+          {
+            "task_id": "task_foundations_02",
+            "module_id": "foundations",
+            "title": "Practice array and hash map problems",
+            "description": "Apply refreshed patterns to a set of practice problems to confirm fluency for backend SWE interviews.",
+            "dependencies": [
+              "task_foundations_01"
+            ],
+            "estimated_duration_min": 90,
+            "cognitive_load": 2,
+            "category": "practice",
+            "required_focus_level": "medium",
+            "splittable": false
+          },
+          {
+            "task_id": "task_foundations_03",
+            "module_id": "foundations",
+            "title": "Reflect on foundational strengths",
+            "description": "Note which foundational patterns feel solid to focus limited prep time on weaker DP and system design areas.",
+            "dependencies": [
+              "task_foundations_02"
+            ],
+            "estimated_duration_min": 30,
+            "cognitive_load": 1,
+            "category": "reflection",
+            "required_focus_level": "light",
+            "splittable": false
+          },
+          {
+            "task_id": "task_dp_01",
+            "module_id": "dp",
+            "title": "Learn DP state definition fundamentals",
+            "description": "Study how to define states and transitions for dynamic programming problems, targeting your key weakness area.",
+            "dependencies": [
+              "task_foundations_02"
+            ],
+            "estimated_duration_min": 90,
+            "cognitive_load": 4,
+            "category": "concept_review",
+            "required_focus_level": "deep",
+            "splittable": false
+          },
+          {
+            "task_id": "task_dp_02",
+            "module_id": "dp",
+            "title": "Practice 1D DP problems",
+            "description": "Solve a set of one-dimensional DP problems to reinforce state definition skills.",
+            "dependencies": [
+              "task_dp_01"
+            ],
+            "estimated_duration_min": 120,
+            "cognitive_load": 4,
+            "category": "practice",
+            "required_focus_level": "deep",
+            "splittable": true
+          },
+          {
+            "task_id": "task_dp_03",
+            "module_id": "dp",
+            "title": "Practice 2D DP and grid problems",
+            "description": "Extend DP skills to two-dimensional and grid-based problems common in backend SWE interviews.",
+            "dependencies": [
+              "task_dp_02"
+            ],
+            "estimated_duration_min": 120,
+            "cognitive_load": 5,
+            "category": "practice",
+            "required_focus_level": "deep",
+            "splittable": true
+          },
+          {
+            "task_id": "task_dp_04",
+            "module_id": "dp",
+            "title": "Practice DP on strings and sequences",
+            "description": "Work through string and sequence DP problems to broaden pattern recognition for weak-area interview questions.",
+            "dependencies": [
+              "task_dp_02"
+            ],
+            "estimated_duration_min": 120,
+            "cognitive_load": 5,
+            "category": "practice",
+            "required_focus_level": "deep",
+            "splittable": true
+          },
+          {
+            "task_id": "task_dp_05",
+            "module_id": "dp",
+            "title": "Timed DP problem drills",
+            "description": "Run timed drills mixing DP problem types to simulate interview pressure on your declared weakness.",
+            "dependencies": [
+              "task_dp_03",
+              "task_dp_04"
+            ],
+            "estimated_duration_min": 90,
+            "cognitive_load": 5,
+            "category": "practice",
+            "required_focus_level": "deep",
+            "splittable": false
+          },
+          {
+            "task_id": "task_dp_06",
+            "module_id": "dp",
+            "title": "Review DP mistakes and edge cases",
+            "description": "Consolidate lessons from DP practice sessions, focusing on recurring errors in state transitions.",
+            "dependencies": [
+              "task_dp_05"
+            ],
+            "estimated_duration_min": 60,
+            "cognitive_load": 3,
+            "category": "review",
+            "required_focus_level": "medium",
+            "splittable": false
+          },
+          {
+            "task_id": "task_mock_01",
+            "module_id": "mock_interviews",
+            "title": "Mock backend SWE coding interview with DP focus",
+            "description": "Simulate a timed coding interview emphasizing dynamic programming to address your primary weakness.",
+            "dependencies": [
+              "task_dp_06"
+            ],
+            "estimated_duration_min": 90,
+            "cognitive_load": 4,
+            "category": "mock_interview",
+            "required_focus_level": "deep",
+            "splittable": false
+          },
+          {
+            "task_id": "task_mock_02",
+            "module_id": "mock_interviews",
+            "title": "Mock backend system design interview",
+            "description": "Run a timed system design mock interview targeting your system design weakness for the backend SWE role.",
+            "dependencies": [
+              "task_foundations_03"
+            ],
+            "estimated_duration_min": 90,
+            "cognitive_load": 4,
+            "category": "mock_interview",
+            "required_focus_level": "deep",
+            "splittable": false
+          },
+          {
+            "task_id": "task_mock_03",
+            "module_id": "mock_interviews",
+            "title": "Debrief and action plan from mocks",
+            "description": "Review feedback from both mock interviews and build a targeted improvement plan for remaining prep time.",
+            "dependencies": [
+              "task_mock_01",
+              "task_mock_02"
+            ],
+            "estimated_duration_min": 60,
+            "cognitive_load": 2,
+            "category": "reflection",
+            "required_focus_level": "medium",
+            "splittable": false
+          }
+        ]
+      }
+    ],
+    "reflection_duration_drift": [
+      {
+        "summary": "Practice sessions are consistently taking longer than planned, and your overall completion rate is holding steady at 72%.",
+        "detail": [
+          "Across 6 recent practice sessions, actual time spent was about 1.48x the predicted duration, above the expected threshold of 1.3x.",
+          "This pattern was detected with high confidence (0.82) and points specifically to the 'practice' category.",
+          "Suggested next step: increase the planned duration estimates for practice sessions to better match real time spent.",
+          "Despite this timing gap, your recent completion rate of 72% shows solid follow-through on planned activities."
+        ]
+      }
+    ],
+    "reflection_multi_drift": [
+      {
+        "summary": "Your recent completion rate is 55%, and the data points to two clear, fixable causes rather than anything about effort or commitment.",
+        "detail": [
+          "Practice sessions are taking about 1.4x longer than planned (based on 5 recent sessions), suggesting the time estimates for this category are too optimistic.",
+          "6 recent sessions show a 67% miss rate tied to scheduling conflicts, indicating external events are frequently overlapping with planned time.",
+          "Suggested next steps: increase duration estimates for practice tasks, and reschedule sessions around known conflicts."
+        ]
+      }
+    ],
+    "explanation_validation_pass": [
+      {
+        "summary": "Your task plan passed validation with no issues found.",
+        "detail": [
+          "Artifact type: task_plan",
+          "Run ID: run_eval_001",
+          "No violations were detected, so no repair attempts were needed.",
+          "Next action: proceeding to the scheduler."
+        ]
+      }
+    ],
+    "explanation_capacity_failure": [
+      {
+        "summary": "Your task plan couldn't be validated because the total weekly workload is more than your available capacity for the week.",
+        "detail": [
+          "The plan requires at least 780 minutes of work this week, but your available capacity is only 480 minutes.",
+          "The system tried to automatically fix this 2 times, but it couldn't be resolved automatically.",
+          "Since this issue can't be repaired without your input, you'll need to either reduce the planned workload or increase available capacity before the plan can proceed."
+        ]
+      }
+    ],
+    "explanation_repair_exhausted": [
+      {
+        "summary": "The task plan couldn't be validated because it contains a circular dependency, and automatic repair attempts have run out.",
+        "detail": [
+          "A cycle was found in the plan: task dp_002 depends on dp_003, which in turn depends back on dp_002.",
+          "The system tried to fix this automatically 2 times (the maximum allowed), but the plan still couldn't be repaired.",
+          "Since the issue is no longer repairable automatically, it now needs your review to break the dependency cycle."
+        ]
+      }
+    ]
+  },
+  "judge_scores": {}
+}

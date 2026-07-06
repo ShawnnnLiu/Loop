@@ -26,7 +26,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import date, datetime, time, timedelta
 from typing import Any
 
 from agentic_calendar.accountability.checkin import CheckinStatus, evaluate_checkin
@@ -36,9 +36,13 @@ from agentic_calendar.accountability.policy_engine import (
     evaluate_accountability,
 )
 from agentic_calendar.accountability.projection import ProjectionInput
-from agentic_calendar.accountability.recommitment import request_recommitment
+from agentic_calendar.accountability.recommitment import (
+    RECOMMITMENT_CHOICE_TO_RECOVERY_MODE,
+    record_recommitment,
+    request_recommitment,
+)
 from agentic_calendar.calendar_writer.errors import CalendarWriterError
-from agentic_calendar.calendar_writer.manager import WriteStatus
+from agentic_calendar.calendar_writer.manager import WriteResult, WriteStatus
 from agentic_calendar.common.errors import AgenticCalendarError
 from agentic_calendar.common.logging import correlated, get_logger
 from agentic_calendar.contracts.accountability_intervention import (
@@ -62,7 +66,7 @@ from agentic_calendar.contracts.calendar_reconciliation import (
     ReconciliationDisposition,
     ReconciliationOutcome,
 )
-from agentic_calendar.contracts.checkin_event import RecoveryAction
+from agentic_calendar.contracts.checkin_event import CheckinEvent, RecoveryAction
 from agentic_calendar.contracts.data_access_audit import (
     DataAccessor,
     DataAccessPurpose,
@@ -71,8 +75,12 @@ from agentic_calendar.contracts.draft_schedule import DraftSchedule, DraftSchedu
 from agentic_calendar.contracts.drift_event import DriftEvent, RecommendedPolicyAction
 from agentic_calendar.contracts.hashing import canonical_payload_hash
 from agentic_calendar.contracts.motivation_profile import RecoveryPreference
+from agentic_calendar.contracts.notification_log import NotificationStatus
+from agentic_calendar.contracts.plan_diff import PlanDiff
 from agentic_calendar.contracts.reason_codes import ReasonCode
+from agentic_calendar.contracts.recommitment import RecommitmentChoice, RecommitmentRequest
 from agentic_calendar.contracts.scheduler_output import SchedulerOutput, ScheduleStatus
+from agentic_calendar.contracts.sponsor import SponsorStatus
 from agentic_calendar.contracts.syllabus_units import SyllabusUnits
 from agentic_calendar.contracts.task_disposition import (
     DispositionSource,
@@ -86,10 +94,24 @@ from agentic_calendar.contracts.validation_result import (
     NextAction,
     ValidationResult,
 )
-from agentic_calendar.drift.classifier import DriftInput
+from agentic_calendar.drift.classifier import (
+    DriftInput,
+    FragmentationSignal,
+    WeeklyCapacity,
+)
 from agentic_calendar.duration_estimation.pooled import resolve_effective_multipliers
 from agentic_calendar.llm_nodes.base import LLMNodeError
+from agentic_calendar.llm_nodes.prose_attachment import (
+    ProseAttachmentKind,
+    ProseAttachmentRecord,
+)
+from agentic_calendar.llm_nodes.reflection_summary import ReflectionSummary
 from agentic_calendar.llm_nodes.user_facing_explanation import UserExplanation
+from agentic_calendar.planning.diff import (
+    PlanContentDiff,
+    as_plan_diff,
+    diff_plan_content,
+)
 from agentic_calendar.planning.drop import DropError, propose_dropped_plan
 from agentic_calendar.planning.plan_version import (
     GenerationStep,
@@ -103,6 +125,7 @@ from agentic_calendar.scheduler import schedule
 from agentic_calendar.scheduler.adjustment import DraftAdjustment, validate_placements
 from agentic_calendar.scheduler.inputs import FreeBusyInterval, SchedulerInput
 from agentic_calendar.scheduler.policy import policy_from_user_profile
+from agentic_calendar.source_claims.curation import curate_claims
 from agentic_calendar.supervisor.routing import route
 from agentic_calendar.supervisor.state import SupervisorSignal as Sig
 from agentic_calendar.supervisor.state import SupervisorState as S
@@ -122,7 +145,11 @@ from .results import (
     IngestResult,
     MeResult,
     OnboardResult,
+    PlanDiffView,
     ProposeResult,
+    RecommitResult,
+    ReflectionHistoryEntry,
+    RollbackCycleResult,
     StatusResult,
     TelemetryItemOutcome,
     ThresholdFieldView,
@@ -130,6 +157,7 @@ from .results import (
     ThresholdsResult,
     TodayResult,
     TodayTask,
+    WeeklyCheckinResult,
     WriteCycleResult,
 )
 from .state import OnboardingRecord, ReplanKind, RunRecord
@@ -140,6 +168,11 @@ _log = get_logger(__name__)
 MAX_SCHEDULER_PLANNER_ITERATIONS = 2
 """Axiom 05 bound: at most two Scheduler→Planner iterations per run."""
 
+_REFLECTION_HISTORY_LIMIT = 10
+"""Newest-first cap on the accountability view's reflection history — a
+screenful for the SPA, not the user's full archive (which stays readable via
+the prose store and its delete-for-user control)."""
+
 DEFAULT_APPROVAL_TTL = timedelta(days=7)
 """Dogfood approvals must survive a human-paced approve→write gap, but still
 expire: a week-old unexecuted approval requires an explicit re-approve."""
@@ -148,6 +181,17 @@ DEFAULT_TARGET_CALENDAR_ID = "agentic-calendar-dogfood"
 """Writes go to a dedicated secondary calendar only (axiom 06; Phase 9c)."""
 
 HASH_CANONICALIZATION_VERSION = "v1"
+
+#: Heuristic priors until calibrated (axiom: thresholds are priors). Both feed
+#: the drift classifier's accountability/sponsor rules with caller-derived
+#: observable behavior — the classifier itself never reads stores or profiles.
+RECOMMITMENT_DECLINED_AFTER_DAYS = 7
+"""An unanswered recommitment request older than this counts as an explicit
+decline for the accountability-mismatch drift rule."""
+SPONSOR_PRESSURE_WINDOW_DAYS = 14
+"""Window for "recent" sponsor activity: a revocation inside it flags
+``sponsor_reporting_disabled``; sent reports inside it count toward the
+sponsor-pressure rule."""
 
 #: Drift recommendation → deterministic recovery mode, for drift that fires
 #: without an accountability recovery decision. ``None`` means the drift is
@@ -372,7 +416,25 @@ class CycleService:
         env.state.save_run(run)
         run = self._transition(run, Sig.USER_PROFILE_COLLECTED)
 
-        claims = list(env.claim_store.all())
+        # Deterministic pre-prompt curation (D1b, plan 03§5): expired, weak,
+        # and over-cap claims never reach the Strategist, instead of steering
+        # generation and then costing a repair round at validation. The
+        # registry is built from the KEPT set so a citation of a curated-out
+        # claim id is rejected as unknown, same as a hallucinated one.
+        curation = curate_claims(
+            list(env.claim_store.all()),
+            now=env.clock.now(),
+            config=env.tuning.claim_curation,
+        )
+        claims = list(curation.kept)
+        if curation.dropped_total:
+            correlated(_log, run_id=run.run_id).info(
+                f"claim curation dropped {curation.dropped_total} claim(s) "
+                f"before prompting: {len(curation.dropped_expired)} expired, "
+                f"{len(curation.dropped_below_floor)} below confidence floor, "
+                f"{len(curation.dropped_over_host_cap)} over per-host cap "
+                "(heuristic priors; tuning section claim_curation)"
+            )
         registry = {c.claim_id: c for c in claims}
 
         syllabus: SyllabusUnits | None = None
@@ -512,12 +574,30 @@ class CycleService:
             deterministic_plan = proposal.draft.plan
             return lambda run_id, repair: deterministic_plan
         excluded = sorted(self._completed_or_dropped_ids(onboarding.user_id))
+        # D2: the replan Planner sees the user's recent reflections as an
+        # advisory behavioral-hints block beside the exclusions — the drift
+        # prose that caused this replan informs sizing/emphasis. Frozen at
+        # decision time, like the exclusion list.
+        hints = self._recent_reflections(onboarding.user_id)
+        # D4 stage 1: anchor the replan on what the user already approved —
+        # the active plan's surviving tasks (not completed/dropped) plus the
+        # recovery mode go into the Planner context with a
+        # preserve-unless-affected instruction. Context-only anchoring:
+        # validation is unchanged, and validator-enforced preservation stays
+        # axiom-20 Phase 2/3 work.
+        excluded_set = set(excluded)
+        surviving = tuple(
+            t for t in active.plan.tasks if t.task_id not in excluded_set
+        )
         return lambda run_id, repair: env.nodes.planner.run(
             run_id=run_id,
             syllabus=syllabus,
             user_profile=onboarding.user_profile,
             repair=repair,
             excluded_tasks=excluded,
+            behavioral_hints=hints,
+            prior_plan_tasks=surviving,
+            replan_mode=mode,
         )
 
     def _recalibrated_plan(
@@ -813,6 +893,28 @@ class CycleService:
         )
         env.plan_store.save(plan_version)
 
+        # D4 stage 2: a continuation from an existing plan carries the
+        # deterministic old→new content diff, so review/approval can show the
+        # delta instead of a wall of blocks. Computed by code from the two
+        # persisted plans (axiom 15); recomputable any time, so not stored.
+        plan_diff: PlanDiff | None = None
+        if parent_plan_version is not None:
+            parent = env.plan_store.get(onboarding.user_id, parent_plan_version)
+            if parent is not None:
+                plan_diff = as_plan_diff(
+                    diff_plan_content(parent.plan, plan),
+                    diff_id=env.id_generator.new_id("diff"),
+                    now=now,
+                    field_change_reason=(
+                        # The replan's typed driver, applied uniformly — code
+                        # cannot attribute per-field causes in a regenerated
+                        # plan (see planning/diff.py).
+                        ReasonCode.USER_DURATION_CALIBRATION
+                        if run.replan_kind is ReplanKind.RECALIBRATION
+                        else ReasonCode.DRIFT_REMEDIATION
+                    ),
+                )
+
         draft = DraftSchedule.from_scheduler_output(
             output,
             draft_schedule_id=env.id_generator.new_id("draft"),
@@ -840,12 +942,59 @@ class CycleService:
             scheduled_task_count=len(output.scheduled_tasks),
             unscheduled_tasks=list(output.unscheduled_tasks),
             repair_options=list(output.repair_options),
+            plan_diff=plan_diff,
         )
 
     def _llm_failure(self, run: RunRecord, exc: LLMNodeError) -> RunRecord:
         """Typed panic: an LLM node failed beyond its bounded internal retries."""
         reason = getattr(exc, "reason_code", None) or ReasonCode.LLM_CALL_FAILED
         return self._transition(run, Sig.UNRECOVERABLE_ERROR, reason_code=reason)
+
+    def _persist_prose(
+        self,
+        run: RunRecord,
+        kind: ProseAttachmentKind,
+        *,
+        summary: str,
+        detail: Sequence[str],
+    ) -> None:
+        """Make user-facing prose durable (spec: prose-attachment).
+
+        Display + advisory-context data only — the run record's typed fields
+        stay the control plane; this copy exists so a user returning to a
+        parked run can read what the product already told them."""
+        env = self._env
+        env.prose_store.append(
+            ProseAttachmentRecord(
+                prose_attachment_id=env.id_generator.new_id("prose"),
+                user_id=run.user_id,
+                run_id=run.run_id,
+                plan_version=run.plan_version,
+                kind=kind,
+                summary=summary,
+                detail=tuple(detail),
+                reason_code=run.reason_code,
+                created_at=env.clock.now(),
+            )
+        )
+
+    def _recent_reflections(self, user_id: str, *, limit: int = 3) -> list[str]:
+        """The user's last few persisted reflection sentences, oldest first.
+
+        Advisory-context reader (D2): feeds the reflection node's continuity
+        block and the replan Planner's behavioral-hints block. Prose only —
+        the strings are rendered for a prompt and never parsed back; nothing
+        deterministic reads them. Summary lines only (not detail) to keep the
+        injected block small; the date prefix lets the model see spacing
+        between notes without any clock access."""
+        records = [
+            r
+            for r in self._env.prose_store.list_for_user(user_id)
+            if r.kind is ProseAttachmentKind.REFLECTION
+        ]
+        return [
+            f"{r.created_at.date().isoformat()}: {r.summary}" for r in records[-limit:]
+        ]
 
     def _propose_failure(
         self,
@@ -855,6 +1004,15 @@ class CycleService:
         explanation: UserExplanation | None = None,
         output: SchedulerOutput | None = None,
     ) -> ProposeResult:
+        if explanation is not None:
+            # By this point the terminal transition already stamped the run's
+            # typed reason_code — the persisted copy carries it for display.
+            self._persist_prose(
+                run,
+                ProseAttachmentKind.EXPLANATION,
+                summary=explanation.summary,
+                detail=explanation.detail,
+            )
         return ProposeResult(
             run_id=run.run_id,
             user_id=run.user_id,
@@ -1446,6 +1604,13 @@ class CycleService:
                 planned_event_count=len(preview.planned_events),
             )
 
+        # The planned side-effect count every outcome (success OR failure)
+        # reports, so the "N / M verified" surface never renders a planned
+        # total of 0 on a failed or concluded write: events to create for a
+        # normal write, events to delete for a delete-only drop write.
+        planned_event_count = (
+            len(run.drop_task_ids) if run.drop_task_ids else len(draft.entries)
+        )
         run = self._transition(run, Sig.CALENDAR_WRITE_STARTED)
         try:
             if run.drop_task_ids:
@@ -1477,6 +1642,7 @@ class CycleService:
                 dry_run=False,
                 write_status="failed",
                 reason_code=run.reason_code,
+                planned_event_count=planned_event_count,
                 written_task_ids=[],
                 verified_task_ids=[],
                 failed_task_ids=[],
@@ -1486,6 +1652,29 @@ class CycleService:
                 # is safe to surface alongside the reason_code.
                 error=str(exc),
             )
+        return self._conclude_write(
+            user_id, run, result, planned_event_count=planned_event_count
+        )
+
+    def _conclude_write(
+        self,
+        user_id: str,
+        run: RunRecord,
+        result: WriteResult,
+        *,
+        planned_event_count: int,
+    ) -> WriteCycleResult:
+        """Shared outcome sequencing for ``write`` and ``retry_write``.
+
+        Emits the success/verification-failed/failed transitions around the
+        manager's ``WriteResult``, records the manager's op id on the run
+        (``write_op_id``) so recovery can find the mappings later, and builds
+        the operator-facing summary. ``planned_event_count`` is the caller's
+        planned side-effect count (draft entries, or dropped ids on a drop
+        write) — it must be carried on every outcome so the verify surface
+        can render "N / M" truthfully after failures and retries.
+        """
+        env = self._env
         # A delete-only drop write has no created events to verify: its success
         # IS the verification (the dropped events are gone).
         verified = result.status is WriteStatus.SUCCESS and (
@@ -1493,7 +1682,14 @@ class CycleService:
             or (result.verification is not None and result.verification.all_verified)
         )
         if verified:
-            run = self._transition(run, Sig.CALENDAR_WRITE_SUCCEEDED)
+            # Clear any failure reason from a prior attempt: a run that
+            # recovered via retry_write must not read as still-failed.
+            run = self._transition(
+                run,
+                Sig.CALENDAR_WRITE_SUCCEEDED,
+                write_op_id=result.run_id,
+                reason_code=None,
+            )
             self._activate_plan(user_id, run)
             run = self._transition(run, Sig.PLAN_ACTIVATED)
         elif result.status is WriteStatus.SUCCESS:
@@ -1501,10 +1697,14 @@ class CycleService:
                 run,
                 Sig.CALENDAR_VERIFICATION_FAILED,
                 reason_code=ReasonCode.CALENDAR_VERIFICATION_FAILED,
+                write_op_id=result.run_id,
             )
         else:
             run = self._transition(
-                run, Sig.CALENDAR_WRITE_FAILED, reason_code=result.reason_code
+                run,
+                Sig.CALENDAR_WRITE_FAILED,
+                reason_code=result.reason_code,
+                write_op_id=result.run_id,
             )
 
         mappings = (
@@ -1528,6 +1728,7 @@ class CycleService:
             dry_run=False,
             write_status=result.status.value,
             reason_code=run.reason_code,
+            planned_event_count=planned_event_count,
             written_task_ids=[m.task_id for m in result.written_mappings],
             verified_task_ids=(
                 list(verification.verified_task_ids) if verification else []
@@ -1540,6 +1741,176 @@ class CycleService:
             # adapter's enriched "events.list failed ...: HTTP 403" prose);
             # None on success.
             error=result.error,
+        )
+
+    def rollback(
+        self,
+        user_id: str,
+        *,
+        run_id: str | None = None,
+        target_calendar_id: str = DEFAULT_TARGET_CALENDAR_ID,
+        dry_run: bool = False,
+    ) -> RollbackCycleResult:
+        """Roll back a failed calendar write: delete the events it created.
+
+        Only valid from ``CALENDAR_WRITE_FAILED_STATE``. ``dry_run`` reports
+        the would-delete count (for the confirmation dialog) without touching
+        the calendar. A complete rollback exits to ``ERROR_REQUIRES_USER``;
+        a partial one stays in the failure state so recovery can be retried —
+        a partial rollback must never read as resolved.
+        """
+        env = self._env
+        run = self._require_run(user_id, run_id, expected=S.CALENDAR_WRITE_FAILED_STATE)
+        if run.drop_task_ids:
+            raise CycleError(
+                "a failed drop write has no rollback path (delete-only writes "
+                "create no events); build a new plan or re-request the drop"
+            )
+        write_op_id = run.write_op_id
+        if write_op_id is None:
+            raise CycleError(
+                "run has no recorded calendar write operation to roll back "
+                "(the write failed before any event was created); build a new plan"
+            )
+        rollbackable = [
+            m
+            for m in env.mapping_store.list_for_run(write_op_id)
+            if m.calendar_write_status
+            in (
+                CalendarWriteStatus.WRITTEN,
+                CalendarWriteStatus.VERIFIED,
+                CalendarWriteStatus.VERIFICATION_FAILED,
+            )
+        ]
+        if dry_run:
+            return RollbackCycleResult(
+                run_id=run.run_id,
+                user_id=user_id,
+                state=run.state,
+                dry_run=True,
+                rollbackable_event_count=len(rollbackable),
+            )
+
+        run = self._transition(run, Sig.CALENDAR_ROLLBACK_REQUESTED)
+        try:
+            result = env.write_manager.rollback(
+                run_id=write_op_id, target_calendar_id=target_calendar_id
+            )
+        except AgenticCalendarError as exc:
+            run = self._transition(
+                run,
+                Sig.CALENDAR_ROLLBACK_FAILED,
+                reason_code=ReasonCode.CALENDAR_ROLLBACK_FAILED,
+            )
+            return RollbackCycleResult(
+                run_id=run.run_id,
+                user_id=user_id,
+                state=run.state,
+                dry_run=False,
+                rollbackable_event_count=len(rollbackable),
+                fully_rolled_back=False,
+                reason_code=run.reason_code,
+                error=str(exc),
+            )
+        if result.fully_rolled_back:
+            # Keep the original write-failure reason_code on the record: the
+            # ERROR_REQUIRES_USER surface explains WHY the run ended here.
+            run = self._transition(run, Sig.CALENDAR_ROLLBACK_COMPLETED)
+        else:
+            run = self._transition(
+                run,
+                Sig.CALENDAR_ROLLBACK_FAILED,
+                reason_code=result.reason_code,
+            )
+        return RollbackCycleResult(
+            run_id=run.run_id,
+            user_id=user_id,
+            state=run.state,
+            dry_run=False,
+            rollbackable_event_count=len(rollbackable),
+            deleted_event_ids=list(result.deleted_event_ids),
+            failed_event_ids=list(result.failed_event_ids),
+            fully_rolled_back=result.fully_rolled_back,
+            reason_code=run.reason_code,
+        )
+
+    def retry_write(
+        self,
+        user_id: str,
+        *,
+        run_id: str | None = None,
+        target_calendar_id: str = DEFAULT_TARGET_CALENDAR_ID,
+    ) -> WriteCycleResult:
+        """Retry a failed calendar write, creating only the missing events.
+
+        Only valid from ``CALENDAR_WRITE_FAILED_STATE``. When the failed write
+        left mappings behind (mid-write crash, verification failure), this runs
+        the manager's ``reconcile_after_crash`` — which re-runs the
+        ``approved_payload_hash`` recheck and creates only confirmed-missing
+        events. When the write failed before creating anything (pre-write
+        abort), it falls back to a full ``approve_and_write``; the hash recheck
+        gates that path too, so axiom 06 holds on every retry.
+        """
+        env = self._env
+        run = self._require_run(user_id, run_id, expected=S.CALENDAR_WRITE_FAILED_STATE)
+        if run.drop_task_ids:
+            raise CycleError(
+                "a failed drop write has no retry path (delete-only writes "
+                "create no events); build a new plan or re-request the drop"
+            )
+        approval_event_id = run.approval_event_id
+        if approval_event_id is None or run.draft_schedule_id is None:
+            raise CycleError("run is missing approval/draft identifiers")
+        draft = env.state.get_draft(run.draft_schedule_id)
+        if draft is None:
+            raise CycleError(f"draft {run.draft_schedule_id!r} not found")
+        # Drop writes were rejected above, so the planned count is always the
+        # approved draft's full entry set — what a completed retry must have
+        # on the calendar, regardless of how many events this pass creates.
+        planned_event_count = len(draft.entries)
+
+        write_op_id = run.write_op_id
+        if write_op_id is not None and not env.mapping_store.list_for_run(write_op_id):
+            write_op_id = None
+        run = self._transition(run, Sig.CALENDAR_WRITE_RETRY_REQUESTED)
+        try:
+            if write_op_id is not None:
+                result = env.write_manager.reconcile_after_crash(
+                    approval_event_id=approval_event_id,
+                    draft=draft,
+                    run_id=write_op_id,
+                    target_calendar_id=target_calendar_id,
+                )
+            else:
+                # Nothing was ever written: a fresh full write is the honest
+                # retry (a missing-events reconcile over zero mappings would
+                # no-op and falsely report success).
+                result = env.write_manager.approve_and_write(
+                    approval_event_id=approval_event_id,
+                    draft=draft,
+                    target_calendar_id=target_calendar_id,
+                )
+        except AgenticCalendarError as exc:
+            reason: ReasonCode = (
+                getattr(exc, "reason_code", None) or ReasonCode.CALENDAR_WRITE_FAILED
+            )
+            run = self._transition(run, Sig.CALENDAR_WRITE_FAILED, reason_code=reason)
+            return WriteCycleResult(
+                run_id=run.run_id,
+                user_id=user_id,
+                state=run.state,
+                dry_run=False,
+                write_status="failed",
+                reason_code=run.reason_code,
+                planned_event_count=planned_event_count,
+                written_task_ids=[],
+                verified_task_ids=[],
+                failed_task_ids=[],
+                mapping_status_by_task={},
+                error=str(exc),
+            )
+        return self._conclude_write(
+            user_id, run, result, planned_event_count=planned_event_count
         )
 
     def _activate_plan(self, user_id: str, run: RunRecord) -> None:
@@ -1621,13 +1992,17 @@ class CycleService:
             )
 
         drift_events = env.drift_classifier.classify(
-            DriftInput(plan=plan, events=events)
+            self._drift_input(onboarding, run, active, events)
         )
         reflection = (
             env.nodes.reflection.run(
                 run_id=run.run_id,
                 drift_events=drift_events,
                 completion_rate=completion_rate(events) if events else None,
+                # D2 continuity: the last few persisted reflections, read
+                # BEFORE this one is persisted below, so the note builds on
+                # what the product already told the user. Advisory prose only.
+                prior_reflections=self._recent_reflections(user_id),
             )
             if drift_events
             else None
@@ -1652,6 +2027,17 @@ class CycleService:
             else:
                 run = self._transition(run, Sig.REPLAN_NOT_REQUIRED)
 
+        if reflection is not None:
+            # Persist AFTER the transitions so the copy carries the run's
+            # final typed reason_code. Durable memory: the Week banner and the
+            # reflection history read this back; the sentence the product
+            # already wrote is no longer discarded with the response.
+            self._persist_prose(
+                run,
+                ProseAttachmentKind.REFLECTION,
+                summary=reflection.summary,
+                detail=reflection.detail,
+            )
         return IngestResult(
             **base_fields,
             run_id=run.run_id,
@@ -1669,6 +2055,178 @@ class CycleService:
             replan_kind=replan.kind,
             recovery_mode=replan.mode,
             recovery_mode_pending_user_choice=replan.pending_user_choice,
+        )
+
+    def _drift_input(
+        self,
+        onboarding: OnboardingRecord,
+        run: RunRecord,
+        active: PlanVersion,
+        events: Sequence[TelemetryEvent],
+    ) -> DriftInput:
+        """Assemble the FULL classifier input from stored facts (UX pass B4).
+
+        ingest used to pass ``plan`` + ``events`` only, so four of the nine
+        deterministic drift rules could never fire in production (their
+        optional inputs were only ever supplied by the debug CLI). Every input
+        below is caller-derived observable behavior; the classifier itself
+        stays untouched — axiom 07's determinism is upheld by feeding it, not
+        changing it.
+
+        * ``weekly_cycles`` — scheduled vs completed minutes per fully elapsed
+          local calendar week, from the draft entries + telemetry.
+        * ``fragmentation`` — free time over the next 7 days inside the user's
+          scheduling window (policy day bounds minus remaining draft entries).
+        * ``external_conflict_task_ids`` — tasks whose events the user deleted
+          on the external calendar (EVENT_DELETED dispositions). Surfacing +
+          replan proposal only; never a completion/drop (axiom 06 stance).
+          Reconcile-rejected adoptions are not persisted today, so deletions —
+          the loudest external signal — are the sole source.
+        * ``declined_interventions`` / sponsor fields — stale unanswered
+          recommitment asks and recent sponsor revocations / sent reports.
+        """
+        env = self._env
+        user_id = onboarding.user_id
+        plan = active.plan
+        now = env.clock.now()
+        tz = onboarding.tzinfo()
+        now_local = now.astimezone(tz)
+        durations = {t.task_id: t.estimated_duration_min for t in plan.tasks}
+
+        entries: tuple[DraftScheduleEntry, ...] = ()
+        if run.draft_schedule_id is not None:
+            draft = env.state.get_draft(run.draft_schedule_id)
+            if draft is not None:
+                entries = tuple(draft.entries)
+
+        # --- weekly capacity cycles (fully elapsed local weeks) -----------
+        completed_min_by_task: dict[str, int] = {}
+        for e in events:
+            if e.completed:
+                completed_min_by_task[e.task_id] = (
+                    e.actual_duration_min or e.scheduled_duration_min
+                )
+        week_tasks: dict[date, set[str]] = {}
+        for entry in entries:
+            local_end = entry.end.astimezone(tz).date()
+            monday = local_end - timedelta(days=local_end.weekday())
+            week_tasks.setdefault(monday, set()).add(entry.task_id)
+        cycles: list[WeeklyCapacity] = []
+        for monday in sorted(week_tasks):
+            week_over = datetime.combine(monday + timedelta(days=7), time(0), tzinfo=tz)
+            if week_over > now_local:
+                continue  # only fully elapsed weeks are assessable
+            task_ids = week_tasks[monday]
+            cycles.append(
+                WeeklyCapacity(
+                    scheduled_min=sum(durations.get(tid, 0) for tid in task_ids),
+                    completed_min=sum(
+                        completed_min_by_task.get(tid, 0) for tid in task_ids
+                    ),
+                )
+            )
+
+        # --- fragmentation: free time in the next 7 days' window ----------
+        fragmentation = self._fragmentation_signal(onboarding, entries, now_local)
+
+        # --- external conflicts (user deletions on the real calendar) -----
+        external = frozenset(self._event_deleted_ids(user_id, active.plan_version))
+
+        # --- declined interventions + sponsor pressure ---------------------
+        stale_cutoff = now - timedelta(days=RECOMMITMENT_DECLINED_AFTER_DAYS)
+        declined = 0
+        for request in env.recommitment_store.all_requests():
+            if request.user_id != user_id:
+                continue
+            if env.recommitment_store.event_for_request(
+                request.recommitment_request_id
+            ) is not None:
+                continue
+            if request.requested_at <= stale_cutoff:
+                declined += 1
+        window_start = now - timedelta(days=SPONSOR_PRESSURE_WINDOW_DAYS)
+        revoked_recent = [
+            s
+            for s in env.sponsor_store.list_for_user(user_id)
+            if s.status is SponsorStatus.REVOKED
+            and s.revoked_at is not None
+            and s.revoked_at >= window_start
+        ]
+        declined += len(revoked_recent)
+        reports_recent = sum(
+            1
+            for log in env.notification_log_store.list_for_user(user_id)
+            if log.status is NotificationStatus.SENT
+            and not log.dry_run
+            and log.created_at >= window_start
+        )
+
+        return DriftInput(
+            plan=plan,
+            events=events,
+            weekly_cycles=tuple(cycles),
+            fragmentation=fragmentation,
+            external_conflict_task_ids=external,
+            declined_interventions=declined,
+            sponsor_reports_sent_recent=reports_recent,
+            sponsor_reporting_disabled=bool(revoked_recent),
+        )
+
+    def _fragmentation_signal(
+        self,
+        onboarding: OnboardingRecord,
+        entries: Sequence[DraftScheduleEntry],
+        now_local: datetime,
+    ) -> FragmentationSignal:
+        """Free-time facts for the upcoming week, from the schedule itself.
+
+        Deterministic and calendar-free: the free window is the user's own
+        scheduling bounds (profile day window, weekend rule) minus the
+        remaining draft entries. External busy time already shaped the draft
+        at scheduling time, so the draft is the best stored proxy.
+        """
+        policy = policy_from_user_profile(onboarding.user_profile)
+        tz = now_local.tzinfo
+
+        def _hhmm(value: str) -> time:
+            hour, minute = (int(p) for p in value.split(":"))
+            return time(hour, minute)
+
+        window_open = _hhmm(policy.no_events_before)
+        window_close = _hhmm(policy.no_events_after)
+        total_free = 0
+        largest_free = 0
+        for offset in range(7):
+            day = now_local.date() + timedelta(days=offset)
+            if not policy.allow_weekends and day.weekday() >= 5:
+                continue
+            day_start = datetime.combine(day, window_open, tzinfo=tz)
+            day_end = datetime.combine(day, window_close, tzinfo=tz)
+            if offset == 0:
+                day_start = max(day_start, now_local)
+            if day_end <= day_start:
+                continue
+            busy = sorted(
+                (
+                    max(e.start.astimezone(tz), day_start),
+                    min(e.end.astimezone(tz), day_end),
+                )
+                for e in entries
+                if e.end.astimezone(tz) > day_start and e.start.astimezone(tz) < day_end
+            )
+            cursor = day_start
+            for busy_start, busy_end in busy:
+                if busy_start > cursor:
+                    gap = int((busy_start - cursor).total_seconds() // 60)
+                    total_free += gap
+                    largest_free = max(largest_free, gap)
+                cursor = max(cursor, busy_end)
+            if day_end > cursor:
+                gap = int((day_end - cursor).total_seconds() // 60)
+                total_free += gap
+                largest_free = max(largest_free, gap)
+        return FragmentationSignal(
+            total_free_min=total_free, largest_free_block_min=largest_free
         )
 
     def _evaluate_accountability(
@@ -1904,6 +2462,31 @@ class CycleService:
                     mapping_status[task.task_id] = (
                         task_mappings[-1].calendar_write_status.value
                     )
+        # Reason-aware resume (B5): a parked run surfaces the prose the
+        # product already generated for it, so returning users see WHY —
+        # not a bare reason code. Read-only; the prose store is never
+        # consulted for routing.
+        explanation: UserExplanation | None = None
+        reflection: ReflectionSummary | None = None
+        if run is not None and run.state in (
+            S.ERROR_REQUIRES_USER,
+            S.CALENDAR_WRITE_FAILED_STATE,
+        ):
+            record = env.prose_store.latest_for_run(
+                run.run_id, kind=ProseAttachmentKind.EXPLANATION
+            )
+            if record is not None:
+                explanation = UserExplanation(
+                    summary=record.summary, detail=list(record.detail)
+                )
+        if run is not None and run.state in (S.REPLAN_REQUIRED, S.DRIFT_DETECTED):
+            record = env.prose_store.latest_for_run(
+                run.run_id, kind=ProseAttachmentKind.REFLECTION
+            )
+            if record is not None:
+                reflection = ReflectionSummary(
+                    summary=record.summary, detail=list(record.detail)
+                )
         return StatusResult(
             user_id=user_id,
             onboarded=onboarding is not None,
@@ -1918,6 +2501,14 @@ class CycleService:
             approval_event_id=run.approval_event_id if run else None,
             replan_kind=run.replan_kind if run else None,
             recovery_mode=run.recovery_mode if run else None,
+            recovery_mode_pending_user_choice=(
+                run is not None
+                and run.state is S.REPLAN_REQUIRED
+                and run.replan_kind is ReplanKind.RECOVERY
+                and run.recovery_mode is None
+            ),
+            explanation=explanation,
+            reflection=reflection,
             mapping_status_by_task=mapping_status,
             telemetry_event_count=len(env.telemetry_store.all()),
             nudge_count=len(env.nudge_store.list_for_user(user_id)),
@@ -1959,6 +2550,7 @@ class CycleService:
         payload_hash: str | None = None
         task_titles: dict[str, str] = {}
         deleted_task_ids: list[str] = []
+        plan_diff: PlanDiffView | None = None
         if run is not None and run.draft_schedule_id is not None:
             draft = env.state.get_draft(run.draft_schedule_id)
             if draft is not None:
@@ -1966,6 +2558,7 @@ class CycleService:
                 plan = env.plan_store.get(user_id, draft.plan_version)
                 if plan is not None:
                     task_titles = {task.task_id: task.title for task in plan.plan.tasks}
+                    plan_diff = self._plan_diff_view(user_id, plan)
                 deleted_task_ids = sorted(
                     self._event_deleted_ids(user_id, draft.plan_version)
                 )
@@ -1976,6 +2569,34 @@ class CycleService:
             free_busy=[dict(interval) for interval in (free_busy or [])],
             task_titles=task_titles,
             deleted_task_ids=deleted_task_ids,
+            plan_diff=plan_diff,
+        )
+
+    def _plan_diff_view(
+        self, user_id: str, plan: PlanVersion
+    ) -> PlanDiffView | None:
+        """The compact content delta vs ``plan``'s parent, or ``None`` (D4).
+
+        Recomputed from the two persisted plan versions on every fetch — the
+        diff is a pure function of stored plans (``planning/diff.py``), so a
+        read projection derives it instead of persisting a copy. ``None`` for
+        a fresh propose (no parent) or when the parent version is unknown.
+        """
+        if plan.parent_plan_version is None:
+            return None
+        parent = self._env.plan_store.get(user_id, plan.parent_plan_version)
+        if parent is None:
+            return None
+        content: PlanContentDiff = diff_plan_content(parent.plan, plan.plan)
+        return PlanDiffView(
+            from_plan_version=content.from_plan_version,
+            to_plan_version=content.to_plan_version,
+            tasks_added=len(content.added_ids),
+            tasks_removed=len(content.removed_ids),
+            tasks_changed=len(content.changed_ids),
+            tasks_preserved=len(content.preserved_ids),
+            net_load_change_min=content.summary.net_weekly_load_change_min,
+            changes=list(content.change_lines),
         )
 
     def today(self, user_id: str) -> TodayResult:
@@ -2087,11 +2708,200 @@ class CycleService:
             onboarding is not None and onboarding.motivation_profile is not None
         )
         snapshot = self.accountability_snapshot(user_id)
+        open_request = self._open_recommitment_request(user_id)
+        # Reflection history (D2): the coaching notes, newest first, replayed
+        # for display. Read-only copy of the prose store; independent of the
+        # snapshot so it survives an empty accountability state. Capped so the
+        # payload stays a screenful, not the user's full archive.
+        history = [
+            ReflectionHistoryEntry(
+                created_at=r.created_at,
+                summary=r.summary,
+                detail=list(r.detail),
+                plan_version=r.plan_version,
+            )
+            for r in reversed(env.prose_store.list_for_user(user_id))
+            if r.kind is ProseAttachmentKind.REFLECTION
+        ][:_REFLECTION_HISTORY_LIMIT]
         return AccountabilityResult(
             has_motivation_profile=has_motivation_profile,
             checkin_status=snapshot.checkin_status.value if snapshot is not None else None,
             state=snapshot.state if snapshot is not None else None,
             decision=snapshot.decision if snapshot is not None else None,
+            checkin_due=(
+                snapshot is not None
+                and snapshot.checkin_status in (CheckinStatus.DUE, CheckinStatus.MISSED)
+            ),
+            open_recommitment_request_id=(
+                open_request.recommitment_request_id if open_request is not None else None
+            ),
+            reflection_history=history,
+        )
+
+    def _open_recommitment_request(self, user_id: str) -> RecommitmentRequest | None:
+        """The newest recommitment ask this user has not answered yet."""
+        env = self._env
+        for request in reversed(env.recommitment_store.all_requests()):
+            if request.user_id != user_id:
+                continue
+            if env.recommitment_store.event_for_request(request.recommitment_request_id) is None:
+                return request
+        return None
+
+    def recommit(
+        self,
+        user_id: str,
+        choice: RecommitmentChoice,
+        *,
+        recommitment_request_id: str | None = None,
+    ) -> RecommitResult:
+        """Answer the open recommitment ask (the loop-closing half of the
+        nudge → recommitment flow; the ask half has always run in ingest).
+
+        The typed choice maps deterministically onto the recovery path:
+        ``revise_timeline`` → extend-timeline replan, ``revise_intensity`` →
+        reduced-load replan (RECOMMITMENT_CHOICE_TO_RECOVERY_MODE). Both park
+        the active run in REPLAN_REQUIRED — the draft still flows through
+        review + approval; nothing changes silently. ``keep_plan`` records
+        explicit re-approval; ``revise_goal`` records the intent and leaves
+        profile changes to onboarding. Answer-once is store-enforced.
+        """
+        env = self._env
+        self._require_onboarding(user_id)
+        if recommitment_request_id is not None:
+            request = env.recommitment_store.get_request(recommitment_request_id)
+            if request is None or request.user_id != user_id:
+                raise CycleError("recommitment request not found for this user")
+            if env.recommitment_store.event_for_request(recommitment_request_id) is not None:
+                raise CycleError("recommitment request already answered")
+        else:
+            maybe_request = self._open_recommitment_request(user_id)
+            if maybe_request is None:
+                raise CycleError("no open recommitment request to answer")
+            request = maybe_request
+
+        event = record_recommitment(
+            request,
+            choice,
+            store=env.recommitment_store,
+            clock=env.clock,
+            id_generator=env.id_generator,
+        )
+
+        mapped = RECOMMITMENT_CHOICE_TO_RECOVERY_MODE.get(choice)
+        run = env.state.latest_run_for_user(user_id)
+        replan_required = False
+        if mapped is not None and run is not None:
+            if run.state is S.ACTIVE_PLAN:
+                run = self._transition(
+                    run,
+                    Sig.RECOMMITMENT_ACCEPTED,
+                    replan_kind=ReplanKind.RECOVERY,
+                    recovery_mode=mapped,
+                    reason_code=ReasonCode.USER_RECOMMITMENT_REQUIRED,
+                )
+                replan_required = True
+            elif (
+                run.state is S.REPLAN_REQUIRED
+                and run.replan_kind is ReplanKind.RECOVERY
+            ):
+                # The run is already parked on the recovery path — the answer
+                # resolves a pending ask-each-time choice, or OVERRIDES the
+                # drift-derived mode: the user's explicit, typed choice beats
+                # the heuristic mapping. Metadata only — the state doesn't
+                # change, so no transition.
+                run = self._save_run(run, recovery_mode=mapped)
+                replan_required = True
+        return RecommitResult(
+            user_id=user_id,
+            recommitment_request_id=request.recommitment_request_id,
+            recommitment_event_id=event.recommitment_event_id,
+            choice=choice,
+            recovery_mode=mapped,
+            replan_required=replan_required,
+            state=run.state if run is not None else None,
+        )
+
+    def weekly_checkin(
+        self,
+        user_id: str,
+        *,
+        blockers: str | None = None,
+        recovery_action: RecoveryAction | None = None,
+    ) -> WeeklyCheckinResult:
+        """Submit the weekly check-in ("How did this week go?").
+
+        First production producer of :class:`CheckinEvent` — until it existed,
+        ``evaluate_checkin`` saw an empty history and the policy engine emitted
+        CHECKIN_DUE/MISSED forever. Counts are computed server-side from the
+        active draft + telemetry over the trailing week in the user's timezone;
+        the client contributes only optional blockers prose (stored, never a
+        prompt input) and an optional recovery preference.
+        """
+        env = self._env
+        onboarding = self._require_onboarding(user_id)
+        if onboarding.motivation_profile is None:
+            raise CycleError(
+                "weekly check-in requires a motivation profile (accountability is opt-in)"
+            )
+        active = env.plan_store.get_active(user_id)
+        run = env.state.latest_run_for_user(user_id)
+        if active is None or run is None:
+            raise CycleError("no active plan to check in on")
+
+        now = env.clock.now()
+        tz = onboarding.tzinfo()
+        week_end = now.astimezone(tz).date()
+        week_start = week_end - timedelta(days=6)
+
+        entries: tuple[Any, ...] = ()
+        if run.draft_schedule_id is not None:
+            draft = env.state.get_draft(run.draft_schedule_id)
+            if draft is not None:
+                entries = draft.entries
+        durations = {t.task_id: t.estimated_duration_min for t in active.plan.tasks}
+        week_task_ids = {
+            e.task_id
+            for e in entries
+            if week_start <= e.end.astimezone(tz).date() <= week_end
+        }
+        completed_by_task: dict[str, TelemetryEvent] = {}
+        for ev in self._events_for_plan(active.plan):
+            if ev.completed and ev.task_id in week_task_ids:
+                completed_by_task[ev.task_id] = ev
+
+        event = CheckinEvent(
+            checkin_id=env.id_generator.new_id("weekly_checkin"),
+            user_id=user_id,
+            plan_id=active.plan_version,
+            week_start=week_start,
+            week_end=week_end,
+            completed_task_count=len(completed_by_task),
+            scheduled_task_count=len(week_task_ids),
+            completed_minutes=sum(
+                (ev.actual_duration_min or ev.scheduled_duration_min)
+                for ev in completed_by_task.values()
+            ),
+            scheduled_minutes=sum(durations.get(tid, 0) for tid in week_task_ids),
+            user_reported_blockers=blockers,
+            user_selected_recovery_action=recovery_action,
+            created_at=now,
+        )
+        env.checkin_store.append(event)
+
+        contract = derive_accountability_contract(
+            onboarding.motivation_profile, id_generator=env.id_generator, clock=env.clock
+        )
+        checkins = env.checkin_store.list_for_plan(user_id, active.plan_version)
+        assessment = evaluate_checkin(contract, checkins, now=now, tz=tz)
+        return WeeklyCheckinResult(
+            user_id=user_id,
+            checkin_id=event.checkin_id,
+            checkin_status=assessment.status.value,
+            week_start=week_start,
+            week_end=week_end,
+            scheduled_task_count=event.scheduled_task_count,
+            completed_task_count=event.completed_task_count,
         )
 
     def checkin(self, user_id: str, task_id: str, *, completed: bool) -> IngestResult:

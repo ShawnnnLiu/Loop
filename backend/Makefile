@@ -1,4 +1,4 @@
-.PHONY: help install sync test test-fast lint typecheck format boundaries schemas schema-check visualize check clean
+.PHONY: help install sync test test-fast lint typecheck format boundaries schemas schema-check eval-gate visualize check clean
 
 help:
 	@echo "Targets:"
@@ -12,6 +12,7 @@ help:
 	@echo "  boundaries  import-linter contracts (LLM SDK isolation, layering)"
 	@echo "  schemas     regenerate /schemas/*.schema.json from Pydantic contracts"
 	@echo "  schema-check verify committed /schemas match the contracts (no write)"
+	@echo "  eval-gate   strict-grade committed eval recordings (offline; amended axiom 22)"
 	@echo "  visualize   render the 'success' scheduler scenario to ../schedule.html"
 	@echo "  check       lint + typecheck + schema-check + test (boundaries run inside test)"
 	@echo "  clean       remove caches and build artifacts"
@@ -42,6 +43,35 @@ schemas:
 
 schema-check:
 	uv run python -m agentic_calendar.tools.export_schemas --out ../schemas --check
+
+# Grades COMMITTED recordings only — deterministic and offline, so it may
+# gate merges (amended axiom 22; live-call evals still never run in CI).
+# The fixture_baseline recording deliberately contains a failing case (it
+# proves the harness measures failures), so the strict pair here is
+# fixture_improved. The v2 pairs grade EVERY committed v2 recording —
+# baseline (2026-07-05, pre-D1 prompts), fewshot (post-D1), and voice
+# (post-D2, the SHIPPED prompts; newest = shipped) — all with the same
+# floors. Floors are the MEASURED values (schema validity 1.0000 on all
+# three); repair recovery was n/a (no case needed repair), so its floor is
+# vacuous on these recordings and arms on the first recording that
+# exercises repair. Grading a committed recording is deterministic —
+# floors equal to measured always pass until a new recording lands.
+eval-gate:
+	uv run python -m agentic_calendar.tools.run_llm_eval --strict \
+		--eval-set evalsets/eval_set_v1.json \
+		--recording evalsets/recordings/fixture_improved.json
+	uv run python -m agentic_calendar.tools.run_llm_eval --strict \
+		--eval-set evalsets/eval_set_v2.json \
+		--recording evalsets/recordings/baseline_2026_07_05.json \
+		--min-schema-validity-rate 1.0 --min-repair-recovery-rate 1.0
+	uv run python -m agentic_calendar.tools.run_llm_eval --strict \
+		--eval-set evalsets/eval_set_v2.json \
+		--recording evalsets/recordings/fewshot_2026_07_05.json \
+		--min-schema-validity-rate 1.0 --min-repair-recovery-rate 1.0
+	uv run python -m agentic_calendar.tools.run_llm_eval --strict \
+		--eval-set evalsets/eval_set_v2.json \
+		--recording evalsets/recordings/voice_2026_07_05.json \
+		--min-schema-validity-rate 1.0 --min-repair-recovery-rate 1.0
 
 visualize:
 	uv run agentic-calendar-visualize --scenario success --out ../schedule.html

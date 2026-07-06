@@ -43,6 +43,10 @@ def _make_log(log_id: str, run_id: str = "run_t") -> LlmCallLog:
             "attempt": 0,
             "input_tokens": 6000,
             "output_tokens": 7000,
+            # Non-zero cache tiers so every round-trip test below proves the
+            # counts survive persistence, not just default back to 0.
+            "cache_creation_tokens": 512,
+            "cache_read_tokens": 2048,
             "cost_estimate_usd": 0.005,
             "latency_ms": 9000,
             "validation_outcome": "pass",
@@ -60,6 +64,9 @@ def test_append_and_list_round_trip(store: LlmCallLogStore) -> None:
     store.append(log)
     assert store.list_all() == [log]
     assert store.list_for_run("run_t") == [log]
+    # Cache-tier counts round-trip explicitly (not just via model equality).
+    reread = store.list_all()[0]
+    assert (reread.cache_creation_tokens, reread.cache_read_tokens) == (512, 2048)
 
 
 def test_append_rejects_duplicate_id(store: LlmCallLogStore) -> None:

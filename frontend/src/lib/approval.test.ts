@@ -1,7 +1,17 @@
 import { describe, expect, it } from 'vitest'
 
-import type { DraftView, WriteCycleResult } from '../api/types'
-import { shortHash, toWriteBlocks, writeFailureMessage, writeOutcome } from './approval'
+import type { DraftView, RollbackResult, WriteCycleResult } from '../api/types'
+import {
+  failureInfoFromRecovery,
+  failureInfoFromResult,
+  hasRemovableEvents,
+  rollbackConfirmMessage,
+  rollbackOutcomeMessage,
+  shortHash,
+  toWriteBlocks,
+  writeFailureMessage,
+  writeOutcome,
+} from './approval'
 
 function draftView(over: Partial<DraftView> = {}): DraftView {
   return {
@@ -15,6 +25,7 @@ function draftView(over: Partial<DraftView> = {}): DraftView {
     free_busy: [],
     task_titles: {},
     deleted_task_ids: [],
+    plan_diff: null,
     ...over,
   }
 }
@@ -128,12 +139,94 @@ describe('writeFailureMessage', () => {
   })
 })
 
+function rollbackResult(over: Partial<RollbackResult> = {}): RollbackResult {
+  return {
+    run_id: 'r_1',
+    user_id: 'u_1',
+    state: 'error_requires_user',
+    dry_run: false,
+    rollbackable_event_count: 0,
+    deleted_event_ids: [],
+    failed_event_ids: [],
+    fully_rolled_back: true,
+    reason_code: null,
+    error: null,
+    ...over,
+  }
+}
+
+describe('write-failure recovery helpers', () => {
+  it('hasRemovableEvents: written or verification-flagged events are removable; a pre-write abort is not', () => {
+    expect(hasRemovableEvents(writeResult({ written_task_ids: ['a'] }))).toBe(true)
+    expect(hasRemovableEvents(writeResult({ failed_task_ids: ['a'] }))).toBe(true)
+    expect(hasRemovableEvents(writeResult())).toBe(false)
+  })
+
+  it('failureInfoFromResult carries the verified pill and the removable flag', () => {
+    const info = failureInfoFromResult(
+      writeResult({
+        reason_code: 'CALENDAR_VERIFICATION_FAILED',
+        planned_event_count: 6,
+        written_task_ids: ['a', 'b'],
+        verified_task_ids: ['a'],
+        failed_task_ids: ['b'],
+      }),
+    )
+    expect(info.reasonCode).toBe('CALENDAR_VERIFICATION_FAILED')
+    expect(info.pill).toBe('1 / 6 verified')
+    expect(info.removable).toBe(true)
+    expect(info.message.toLowerCase()).not.toContain('rolled back')
+  })
+
+  it('failureInfoFromRecovery (mount path) has no pill and names the leftover count', () => {
+    const info = failureInfoFromRecovery('EXTERNAL_SYNC_FAILED', 3)
+    expect(info.pill).toBeNull()
+    expect(info.removable).toBe(true)
+    expect(info.message).toContain('3 events it created are on your calendar')
+    expect(info.message).toContain('wasn’t activated')
+
+    const clean = failureInfoFromRecovery(null, 0)
+    expect(clean.removable).toBe(false)
+    expect(clean.message).toContain('No events from it remain')
+  })
+
+  it('rollbackConfirmMessage names the exact count and says it cannot be undone', () => {
+    const msg = rollbackConfirmMessage(14)
+    expect(msg).toContain('all 14 events')
+    expect(msg).toContain('can’t be undone')
+    expect(rollbackConfirmMessage(1)).toContain('the 1 event')
+    expect(rollbackConfirmMessage(0)).toContain('No events')
+  })
+
+  it('rollbackOutcomeMessage: a full rollback reads as closed, a partial one invites another attempt', () => {
+    const full = rollbackOutcomeMessage(
+      rollbackResult({ deleted_event_ids: ['e1', 'e2'], fully_rolled_back: true }),
+    )
+    expect(full).toContain('all 2 events')
+    expect(full).toContain('build a new plan')
+
+    const partial = rollbackOutcomeMessage(
+      rollbackResult({
+        deleted_event_ids: ['e1'],
+        failed_event_ids: ['e2'],
+        fully_rolled_back: false,
+        state: 'calendar_write_failed',
+      }),
+    )
+    expect(partial).toContain('1 event')
+    expect(partial).toContain('couldn’t be deleted')
+    expect(partial).toContain('try removing them again')
+    // A partial rollback must never read as resolved.
+    expect(partial.toLowerCase()).not.toContain('back to how it was')
+  })
+})
+
 describe('writeOutcome', () => {
   it('a null reason_code is a verified success', () => {
     expect(writeOutcome(writeResult({ reason_code: null, planned_event_count: 6, verified_task_ids: ['a', 'b', 'c', 'd', 'e', 'f'] }))).toBe('verified')
   })
 
-  it('any typed reason_code is a failure — even with some events verified (auto-rolled-back)', () => {
+  it('any typed reason_code is a failure — even with some events verified', () => {
     const partial = writeResult({
       reason_code: 'CALENDAR_VERIFICATION_FAILED',
       planned_event_count: 6,

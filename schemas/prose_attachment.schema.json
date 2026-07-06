@@ -1,0 +1,178 @@
+{
+  "$defs": {
+    "ProseAttachmentKind": {
+      "description": "Which prose node produced the attachment.",
+      "enum": [
+        "reflection",
+        "explanation"
+      ],
+      "title": "ProseAttachmentKind",
+      "type": "string"
+    },
+    "ReasonCode": {
+      "description": "All typed failure / outcome codes in the system.\n\nCodes are uppercase ``SCREAMING_SNAKE_CASE`` strings so they survive a\nJSON round-trip unchanged and so they read identically in logs, telemetry,\nand user-facing explanations.",
+      "enum": [
+        "VALIDATION_FAILED",
+        "SCHEMA_INVALID",
+        "TASK_GRAPH_INVALID",
+        "MODULE_COVERAGE_INSUFFICIENT",
+        "USER_FIT_VIOLATED",
+        "SCHEDULING_PRECONDITION_FAILED",
+        "REPAIR_LIMIT_EXCEEDED",
+        "FORBIDDEN_FIELD_PRESENT",
+        "NO_VALID_CONTIGUOUS_BLOCK",
+        "INSUFFICIENT_WEEKLY_CAPACITY",
+        "DEPENDENCY_BLOCKED",
+        "OUTSIDE_ALLOWED_HOURS",
+        "DAILY_LOAD_EXCEEDED",
+        "DEEP_WORK_REQUIRED_UNAVAILABLE",
+        "TASK_TOO_LONG_UNSPLITTABLE",
+        "TASK_TOO_LONG_SPLITTABLE",
+        "DEPENDENCY_ADVISORY",
+        "TASK_DROPPED_BY_USER",
+        "DEPENDENT_DROP_PRUNED",
+        "INVALID_STATE_TRANSITION",
+        "USER_APPROVAL_REQUIRED",
+        "ERROR_REQUIRES_USER",
+        "PROFILE_MAJOR_CHANGE",
+        "CAPACITY_CHANGE",
+        "APPROVAL_MISSING",
+        "APPROVAL_EXPIRED",
+        "APPROVAL_HASH_MISMATCH",
+        "APPROVAL_HASH_ALGORITHM_UNSUPPORTED",
+        "CALENDAR_WRITE_LOCK_BUSY",
+        "CALENDAR_WRITE_LOCK_EXPIRED",
+        "CALENDAR_WRITE_DUPLICATE_DETECTED",
+        "CALENDAR_WRITE_FAILED",
+        "CALENDAR_VERIFICATION_FAILED",
+        "CALENDAR_ROLLBACK_FAILED",
+        "EXTERNAL_SYNC_FAILED",
+        "EXTERNAL_EVENT_DELETED",
+        "DEEP_WORK_WINDOW_CONFLICT",
+        "USER_DURATION_CALIBRATION",
+        "DEPENDENCY_RESCHEDULED",
+        "WEEKLY_CAPACITY_REBALANCE",
+        "EXTERNAL_CALENDAR_CONFLICT",
+        "USER_PROFILE_CHANGE",
+        "DRIFT_REMEDIATION",
+        "SPONSOR_REPORT_PENDING",
+        "SPONSOR_PERMISSION_MISSING",
+        "SPONSOR_VISIBILITY_VIOLATION",
+        "ACCOUNTABILITY_CONTRACT_INACTIVE",
+        "CHECKIN_DUE",
+        "CHECKIN_MISSED",
+        "MISSED_TASK_THRESHOLD_REACHED",
+        "BEHIND_SCHEDULE_THRESHOLD_REACHED",
+        "LOW_COMPLETION_RATE",
+        "RECOVERY_PLAN_REQUIRED",
+        "ACCOUNTABILITY_MISMATCH",
+        "SPONSOR_PRESSURE_MISMATCH",
+        "USER_RECOMMITMENT_REQUIRED",
+        "DRIFT_CAPACITY_MISMATCH",
+        "DRIFT_DURATION_UNDERESTIMATE",
+        "DRIFT_DURATION_OVERESTIMATE",
+        "DRIFT_TOPIC_AVOIDANCE",
+        "DRIFT_EXTERNAL_CONFLICT",
+        "DRIFT_LOW_ENGAGEMENT",
+        "DRIFT_DEPENDENCY_BLOCKED",
+        "DRIFT_CALENDAR_FRAGMENTATION",
+        "SOURCE_CLAIM_VALIDATION_FAILED",
+        "SOURCE_CLAIM_EXPIRED",
+        "CONSENT_MISSING",
+        "CONSENT_REVOKED",
+        "DATA_EXPORTED",
+        "DATA_DELETED",
+        "POOLED_MODEL_UNAVAILABLE",
+        "POOLED_BUCKET_SPARSE",
+        "POWER_USER_TOTAL_COMPLETIONS_BELOW_THRESHOLD",
+        "POWER_USER_CATEGORY_COMPLETIONS_BELOW_THRESHOLD",
+        "POWER_USER_INSUFFICIENT_ASSESSABLE_WEEKS",
+        "POWER_USER_COMPLETION_RATE_UNSTABLE",
+        "PER_USER_REFINEMENT_UNAVAILABLE",
+        "LLM_CALL_FAILED",
+        "LLM_MALFORMED_OUTPUT",
+        "LLM_SCHEMA_REJECTED",
+        "LLM_REFUSAL",
+        "LLM_TRUNCATED",
+        "LLM_RETRY_LIMIT_EXCEEDED",
+        "LLM_AUTH_FAILED",
+        "LLM_RATE_LIMITED"
+      ],
+      "title": "ReasonCode",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "One persisted user-facing prose output (append-only).\n\n``reason_code`` is a display *copy* of the run's typed cause \u2014 the run\nrecord stays authoritative; this record can never smuggle prose into\nrouting decisions.",
+  "properties": {
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "detail": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Detail",
+      "type": "array"
+    },
+    "kind": {
+      "$ref": "#/$defs/ProseAttachmentKind"
+    },
+    "plan_version": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Plan Version"
+    },
+    "prose_attachment_id": {
+      "minLength": 1,
+      "title": "Prose Attachment Id",
+      "type": "string"
+    },
+    "reason_code": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ReasonCode"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "run_id": {
+      "minLength": 1,
+      "title": "Run Id",
+      "type": "string"
+    },
+    "summary": {
+      "minLength": 1,
+      "title": "Summary",
+      "type": "string"
+    },
+    "user_id": {
+      "minLength": 1,
+      "title": "User Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "prose_attachment_id",
+    "user_id",
+    "run_id",
+    "kind",
+    "summary",
+    "created_at"
+  ],
+  "title": "ProseAttachmentRecord",
+  "type": "object"
+}

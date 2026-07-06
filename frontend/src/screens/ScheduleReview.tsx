@@ -14,7 +14,7 @@ import {
   weekMondayMs,
 } from '../lib/datetime'
 import { flaggedReason, needsDraftRefetch, reconcileBanner } from '../lib/reconcile'
-import { reviewBanner, reviewMode } from '../lib/review'
+import { RECOVERY_OPTIONS, planDiffLine, reviewBanner, reviewMode } from '../lib/review'
 
 // The drag-to-adjust schedule review (the signature interaction). PROPOSED
 // blocks are draggable (snap 15 min, move across the week's days); imported
@@ -96,6 +96,8 @@ export function ScheduleReviewScreen() {
   const [drag, setDrag] = useState<DragState | null>(null)
   const [saving, setSaving] = useState(false)
   const [violation, setViolation] = useState<{ taskId: string; text: string } | null>(null)
+  const [replanning, setReplanning] = useState(false)
+  const [replanError, setReplanError] = useState<string | null>(null)
   const [syncEnabled, setSyncEnabled] = useState(false)
   const [reconcileResult, setReconcileResult] = useState<CalendarReconciliationResult | null>(null)
   const [reconcileError, setReconcileError] = useState<string | null>(null)
@@ -222,7 +224,8 @@ export function ScheduleReviewScreen() {
   // the same guard, so this is a UI mirror of its truth, not a new gate.
   const mode = reviewMode(status)
   const editable = mode === 'editable'
-  const banner = reviewBanner(mode)
+  const banner = reviewBanner(mode, status)
+  const pendingChoice = mode === 'replan' && (status?.recovery_mode_pending_user_choice ?? false)
   const recon = reconcileResult ? reconcileBanner(reconcileResult) : null
   const titleOf = (taskId: string): string => view?.task_titles[taskId] ?? taskId
   // Durable event_deleted memory (server truth, not the transient banner): these
@@ -306,6 +309,31 @@ export function ScheduleReviewScreen() {
     }
   }
 
+  async function runReplan(recoveryMode?: string) {
+    setReplanning(true)
+    setReplanError(null)
+    try {
+      // Continues the parked run: REPLAN_STARTED re-enters the planner →
+      // validation → scheduler → approval pipeline. On success the run is
+      // awaiting approval again, so re-fetching flips this screen editable
+      // with the new draft — the user reviews and approves as always.
+      const result = await api.propose(recoveryMode ? { recovery_mode: recoveryMode } : {})
+      if (result.reason_code) {
+        setReplanError(`the replan didn’t produce a schedulable draft (${result.reason_code})`)
+      } else {
+        const [s, v] = await Promise.all([api.status(), api.draft()])
+        setStatus(s)
+        setView(v)
+      }
+    } catch (err) {
+      if (!(err instanceof ApiError && err.status === 401)) {
+        setReplanError(errorMessage(err))
+      }
+    } finally {
+      setReplanning(false)
+    }
+  }
+
   return (
     <div className="sched">
       <div className="sched-banner">
@@ -317,6 +345,27 @@ export function ScheduleReviewScreen() {
               Drag any <b style={{ color: 'var(--clay-deep)' }}>proposed</b> block to a new time or
               day. Your existing calendar events are fixed. Every move is re-checked on the server.
             </div>
+            {view?.plan_diff &&
+              // The deterministic plan diff (D4): a replanned draft is
+              // reviewed as a delta against the plan the user already
+              // approved, not re-read from scratch. Server-computed counts;
+              // the disclosure lists the per-task change lines.
+              (view.plan_diff.changes.length > 0 ? (
+                <details style={{ marginTop: 6 }}>
+                  <summary className="muted" style={{ fontSize: 12.5, cursor: 'pointer' }}>
+                    {planDiffLine(view.plan_diff)}
+                  </summary>
+                  <ul className="fit-specifics" style={{ marginTop: 4 }}>
+                    {view.plan_diff.changes.map((line) => (
+                      <li key={line}>{line}</li>
+                    ))}
+                  </ul>
+                </details>
+              ) : (
+                <div className="muted" style={{ fontSize: 12.5, marginTop: 6 }}>
+                  {planDiffLine(view.plan_diff)}
+                </div>
+              ))}
           </div>
         ) : (
           <div style={{ flex: 1 }}>
@@ -324,6 +373,23 @@ export function ScheduleReviewScreen() {
             <div className="muted" style={{ fontSize: 13, marginTop: 2 }}>
               {banner.sub}
             </div>
+            {mode === 'replan' && status?.reflection && (
+              // The persisted reflection prose (advisory, never control-plane):
+              // one line + a quiet disclosure, per the "friendly but not noisy"
+              // banner recommendation.
+              <details style={{ marginTop: 6 }}>
+                <summary className="muted" style={{ fontSize: 12.5, cursor: 'pointer' }}>
+                  Why? {status.reflection.summary}
+                </summary>
+                {status.reflection.detail.length > 0 && (
+                  <ul className="fit-specifics" style={{ marginTop: 4 }}>
+                    {status.reflection.detail.map((line) => (
+                      <li key={line}>{line}</li>
+                    ))}
+                  </ul>
+                )}
+              </details>
+            )}
           </div>
         )}
         {weeks.length > 1 && (
@@ -354,6 +420,21 @@ export function ScheduleReviewScreen() {
             Continue to approval →
           </button>
         ) : mode === 'failed' ? (
+          <button className="btn btn-primary lg" type="button" onClick={() => navigate('/approve')}>
+            Recover this write →
+          </button>
+        ) : mode === 'replan' ? (
+          pendingChoice ? null : (
+            <button
+              className="btn btn-primary lg"
+              type="button"
+              disabled={replanning}
+              onClick={() => void runReplan()}
+            >
+              {replanning ? 'Updating your plan…' : 'Build the updated plan →'}
+            </button>
+          )
+        ) : mode === 'closed' ? (
           <button className="btn btn-primary lg" type="button" onClick={() => navigate('/plan')}>
             Build a new plan →
           </button>
@@ -363,6 +444,47 @@ export function ScheduleReviewScreen() {
           </button>
         )}
       </div>
+
+      {pendingChoice && (
+        <div className="card" style={{ margin: '12px clamp(16px,4vw,26px) 0', padding: '14px 16px' }}>
+          <div className="label" style={{ marginBottom: 4 }}>
+            How should Loop adjust?
+          </div>
+          <p className="muted" style={{ fontSize: 13, marginBottom: 10 }}>
+            You asked to be asked each time. Pick one — the updated plan still comes back as a
+            draft for your review and approval.
+          </p>
+          <div className="row" style={{ gap: 10, flexWrap: 'wrap', alignItems: 'stretch' }}>
+            {RECOVERY_OPTIONS.map((opt) => (
+              <button
+                key={opt.mode}
+                type="button"
+                className="card"
+                disabled={replanning}
+                style={{ flex: '1 1 180px', padding: '12px 14px', textAlign: 'left', cursor: 'pointer' }}
+                onClick={() => void runReplan(opt.mode)}
+              >
+                <div style={{ fontWeight: 600, fontSize: 14 }}>{opt.title}</div>
+                <div className="muted" style={{ fontSize: 12.5, marginTop: 4, lineHeight: 1.45 }}>
+                  {opt.description}
+                </div>
+              </button>
+            ))}
+          </div>
+          {replanning && (
+            <div className="muted" style={{ fontSize: 13, marginTop: 10 }}>
+              <span className="spin" style={{ width: 11, height: 11, marginRight: 6 }} />
+              Updating your plan…
+            </div>
+          )}
+        </div>
+      )}
+
+      {replanError && (
+        <div className="banner-error" style={{ margin: '12px clamp(16px,4vw,26px) 0' }}>
+          Couldn’t update the plan — {replanError}
+        </div>
+      )}
 
       {violation && (
         <div className="banner-error" style={{ margin: '12px clamp(16px,4vw,26px) 0' }}>

@@ -12,9 +12,11 @@ from pydantic import BaseModel
 
 from agentic_calendar.common.clock import FrozenClock
 from agentic_calendar.common.ids import DeterministicIdGenerator
+from agentic_calendar.contracts.checkin_event import RecoveryAction
 from agentic_calendar.contracts.reason_codes import ReasonCode
 from agentic_calendar.contracts.strategy_constraints import StrategyConstraints
 from agentic_calendar.contracts.syllabus_units import SyllabusUnits
+from agentic_calendar.contracts.task_plan import Task, TaskPlan
 from agentic_calendar.contracts.user_profile import UserProfile
 from agentic_calendar.contracts.validation_result import (
     ArtifactType,
@@ -23,6 +25,7 @@ from agentic_calendar.contracts.validation_result import (
     Violation,
 )
 from agentic_calendar.contracts.violation_types import ViolationType
+from agentic_calendar.llm_nodes import anthropic_adapter as adapter
 from agentic_calendar.llm_nodes.anthropic_adapter import (
     AnthropicMessagesTransport,
     AnthropicPlanner,
@@ -123,6 +126,8 @@ def _ok(payload: dict[str, Any] | None, *, stop_reason: str = "end_turn") -> Tra
 
 def _planner(
     script: list[TransportResult | Exception],
+    *,
+    sleeps: list[float] | None = None,
 ) -> tuple[AnthropicPlanner, InMemoryLlmCallLogStore, FakeTransport]:
     store = InMemoryLlmCallLogStore()
     transport = FakeTransport(script)
@@ -131,6 +136,9 @@ def _planner(
         store=store,
         clock=FrozenClock(_NOW),
         id_generator=DeterministicIdGenerator(),
+        # Never really sleep in tests; when given a list, record the backoff
+        # delays the engine asked for so pacing itself is assertable.
+        sleeper=sleeps.append if sleeps is not None else lambda _s: None,
     )
     return planner, store, transport
 
@@ -154,11 +162,11 @@ def test_happy_path_returns_validated_plan_and_logs_one_complete_row() -> None:
     assert row.run_id == "run_t"
     assert row.plan_version == "v1"
     assert row.node.value == "planner"
-    assert row.prompt_version == "planner-v2-2026-06-23"
-    assert row.model_name == "claude-haiku-4-5"
+    assert row.prompt_version == "planner-v5-2026-07-05"
+    assert row.model_name == "claude-sonnet-5"
     assert (row.attempt, row.sdk_retry) == (0, 0)
     assert (row.input_tokens, row.output_tokens) == (100, 50)
-    assert row.cost_estimate_usd == (100 * 1.00 + 50 * 5.00) / 1_000_000
+    assert row.cost_estimate_usd == (100 * 3.00 + 50 * 15.00) / 1_000_000
     assert row.prompt_hash is not None and row.response_hash is not None
     assert row.cache_hit is False
     # Schema-enforced generation was requested with the target contract.
@@ -224,7 +232,10 @@ def test_malformed_output_triggers_repair_attempt() -> None:
     rows = store.list_all()
     assert rows[0].reason_code is ReasonCode.LLM_MALFORMED_OUTPUT
     assert [(r.attempt, r.sdk_retry) for r in rows] == [(0, 0), (1, 0)]
-    assert "rejected by deterministic validation" in transport.requests[1]["user_prompt"]
+    assert "rejected by deterministic validation" in transport.requests[1]["repair_suffix"]
+    # The base prompt block stays byte-identical across attempts so the
+    # provider prompt cache can serve it on the repair round.
+    assert transport.requests[1]["user_prompt"] == transport.requests[0]["user_prompt"]
 
 
 def test_boundary_revalidation_rejects_enforced_output() -> None:
@@ -237,7 +248,7 @@ def test_boundary_revalidation_rejects_enforced_output() -> None:
     assert rows[0].reason_code is ReasonCode.LLM_SCHEMA_REJECTED
     assert rows[1].validation_outcome is ValidationOutcome.PASS
     # The repair re-prompt carries the deterministic rejection, not prose.
-    assert "rejected by deterministic validation" in transport.requests[1]["user_prompt"]
+    assert "rejected by deterministic validation" in transport.requests[1]["repair_suffix"]
 
 
 def test_repair_cap_exhaustion_routes_to_error() -> None:
@@ -262,6 +273,47 @@ def test_cache_hit_flag_follows_provider_cache_reads() -> None:
     planner, store, _ = _planner([result])
     _run_planner(planner)
     assert store.list_all()[0].cache_hit is True
+
+
+def test_estimate_cost_usd_prices_cache_tiers() -> None:
+    """Cache writes bill at 1.25x and cache reads at 0.10x the input rate
+    (5-minute-TTL ephemeral — the only TTL the transport uses); the provider
+    excludes both tiers from input_tokens, so pricing them is additive."""
+    config = adapter.PLANNER_CONFIG  # $3.00 / $15.00 per Mtok
+    cost = config.estimate_cost_usd(
+        input_tokens=1_000,
+        output_tokens=100,
+        cache_creation_tokens=2_000,
+        cache_read_tokens=4_000,
+    )
+    expected = ((1_000 + 2_000 * 1.25 + 4_000 * 0.10) * 3.00 + 100 * 15.00) / 1_000_000
+    assert cost == expected
+    # Without cache tokens the pre-caching formula is unchanged.
+    assert config.estimate_cost_usd(input_tokens=100, output_tokens=50) == (
+        (100 * 3.00 + 50 * 15.00) / 1_000_000
+    )
+
+
+def test_log_row_carries_cache_tier_counts_with_tier_priced_cost() -> None:
+    """The engine copies both provider cache counts onto the log row and the
+    row's cost estimate prices them at their tiers (A2 follow-up: without
+    this, cached calls systematically understated spend)."""
+    result = TransportResult(
+        payload=_VALID_PLAN,
+        raw_text=json.dumps(_VALID_PLAN),
+        stop_reason="end_turn",
+        input_tokens=100,
+        output_tokens=50,
+        cache_creation_tokens=2_000,
+        cache_read_tokens=4_000,
+    )
+    planner, store, _ = _planner([result])
+    _run_planner(planner)
+    row = store.list_all()[0]
+    assert (row.cache_creation_tokens, row.cache_read_tokens) == (2_000, 4_000)
+    assert row.cache_hit is True
+    expected = ((100 + 2_000 * 1.25 + 4_000 * 0.10) * 3.00 + 50 * 15.00) / 1_000_000
+    assert row.cost_estimate_usd == expected
 
 
 def test_no_raw_content_persisted_in_any_row() -> None:
@@ -326,6 +378,126 @@ def test_planner_prompt_has_no_constraints_block_without_profile() -> None:
     planner, _store, transport = _planner([_ok(_VALID_PLAN)])
     _run_planner(planner)
     assert "Planning constraints" not in transport.requests[0]["user_prompt"]
+
+
+def test_planner_prompt_carries_goal_context_from_typed_profile_fields() -> None:
+    """With a profile, the planner prompt embeds the user-goal block (D1b) —
+    exactly the three typed onboarding-validated fields, marked wording-only."""
+    planner, _store, transport = _planner([_ok(_VALID_PLAN)])
+    planner.run(
+        run_id="run_t",
+        syllabus=SyllabusUnits.model_validate(_SYLLABUS),
+        plan_version="v1",
+        user_profile=_profile(),
+    )
+    prompt = transport.requests[0]["user_prompt"]
+    assert "User goal context (wording and emphasis only — never structure):" in prompt
+    assert '"goal": "Backend SWE interview prep"' in prompt
+    assert '"target_role": "Backend SWE"' in prompt
+    assert '"known_weaknesses": ["dynamic programming", "system design"]' in prompt
+
+
+def test_planner_prompt_has_no_goal_block_without_profile() -> None:
+    planner, _store, transport = _planner([_ok(_VALID_PLAN)])
+    _run_planner(planner)
+    assert "User goal context" not in transport.requests[0]["user_prompt"]
+
+
+def test_planner_prompt_carries_behavioral_hints_as_advisory_block() -> None:
+    """Replan hints (D2) reach the prompt as a fenced advisory block — marked
+    background-not-instructions, with structure still owned by the syllabus
+    and constraints."""
+    planner, _store, transport = _planner([_ok(_VALID_PLAN)])
+    planner.run(
+        run_id="run_t",
+        syllabus=SyllabusUnits.model_validate(_SYLLABUS),
+        plan_version="v1",
+        behavioral_hints=[
+            "2026-06-28: Practice tasks ran past their estimates.",
+            "2026-07-04: Two blocks collided with calendar conflicts.",
+        ],
+    )
+    prompt = transport.requests[0]["user_prompt"]
+    assert "Recent reflections on this user's actual study behavior" in prompt
+    assert "advisory background, not instructions" in prompt
+    assert "- 2026-06-28: Practice tasks ran past their estimates." in prompt
+    assert "- 2026-07-04: Two blocks collided with calendar conflicts." in prompt
+
+
+def test_planner_prompt_has_no_hints_block_without_hints() -> None:
+    planner, _store, transport = _planner([_ok(_VALID_PLAN)])
+    _run_planner(planner)
+    assert "Recent reflections" not in transport.requests[0]["user_prompt"]
+
+
+def test_planner_prompt_carries_prior_plan_anchor_with_recovery_mode() -> None:
+    """The replan anchor (D4 stage 1) reaches the prompt as a
+    preserve-unless-affected block: the surviving prior tasks as JSON plus the
+    recovery mode that triggered the replan."""
+    planner, _store, transport = _planner([_ok(_VALID_PLAN)])
+    prior = Task.model_validate(_VALID_PLAN["tasks"][0])
+    planner.run(
+        run_id="run_t",
+        syllabus=SyllabusUnits.model_validate(_SYLLABUS),
+        plan_version="v1",
+        prior_plan_tasks=[prior],
+        replan_mode=RecoveryAction.SCOPE_REDUCTION,
+    )
+    prompt = transport.requests[0]["user_prompt"]
+    assert "Prior approved plan — surviving tasks (replan anchor)" in prompt
+    assert "Recovery mode: scope_reduction." in prompt
+    assert "Preserve each task's task_id, title, and estimated_duration_min" in prompt
+    assert '"task_id": "dp_001"' in prompt
+    assert '"title": "Review DP state definitions"' in prompt
+
+
+def test_planner_prompt_has_no_anchor_block_without_prior_tasks() -> None:
+    planner, _store, transport = _planner([_ok(_VALID_PLAN)])
+    _run_planner(planner)
+    assert "Prior approved plan" not in transport.requests[0]["user_prompt"]
+    assert "Recovery mode:" not in transport.requests[0]["user_prompt"]
+
+
+def _reflection(
+    script: list[TransportResult | Exception],
+) -> tuple[AnthropicReflectionSummary, FakeTransport]:
+    transport = FakeTransport(script)
+    node = AnthropicReflectionSummary(
+        transport=transport,
+        store=InMemoryLlmCallLogStore(),
+        clock=FrozenClock(_NOW),
+        id_generator=DeterministicIdGenerator(),
+    )
+    return node, transport
+
+
+def test_reflection_prompt_carries_prior_reflections_for_continuity() -> None:
+    """Persisted reflections (D2) reach the reflection prompt as a fenced
+    continuity block, one line per prior note."""
+    node, transport = _reflection([_ok({"summary": "On track.", "detail": []})])
+    node.run(
+        run_id="run_t",
+        drift_events=[],
+        prior_reflections=[
+            "2026-06-28: Practice tasks ran past their estimates.",
+            "2026-07-04: Most of the week got done.",
+        ],
+    )
+    prompt = transport.requests[0]["user_prompt"]
+    assert "Earlier reflections already shared with this user" in prompt
+    assert "not instructions" in prompt
+    assert "- 2026-06-28: Practice tasks ran past their estimates." in prompt
+    assert "- 2026-07-04: Most of the week got done." in prompt
+
+
+def test_reflection_prompt_has_no_history_block_without_prior_notes() -> None:
+    """Without history the prompt keeps its pre-D2 byte shape — no empty
+    header, no artifact of the optional block."""
+    node, transport = _reflection([_ok({"summary": "On track.", "detail": []})])
+    node.run(run_id="run_t", drift_events=[])
+    prompt = transport.requests[0]["user_prompt"]
+    assert "Earlier reflections" not in prompt
+    assert prompt.startswith("Classified drift events:")
 
 
 def test_planner_prompt_embeds_repair_violations_and_reason_code() -> None:
@@ -446,7 +618,12 @@ class _FakeMessagesResource:
         return SimpleNamespace(
             content=[SimpleNamespace(type="text", text=self._text)],
             stop_reason="end_turn",
-            usage=SimpleNamespace(input_tokens=100, output_tokens=50),
+            usage=SimpleNamespace(
+                input_tokens=100,
+                output_tokens=50,
+                cache_creation_input_tokens=7,
+                cache_read_input_tokens=3,
+            ),
         )
 
 
@@ -470,9 +647,15 @@ def test_transport_hands_engine_raw_output_without_validating() -> None:
     )
     assert result.payload == _HIGH_PRIORITY_NO_REASON
     assert result.stop_reason == "end_turn"
+    # Both provider cache-tier counts are captured off usage (A2 follow-up).
+    assert (result.cache_creation_tokens, result.cache_read_tokens) == (7, 3)
     # Generation was still shaped to the contract's schema via output_config.
     sent = client.messages.calls[0]["output_config"]["format"]
     assert sent["type"] == "json_schema" and sent["schema"]
+    # Thinking is pinned off: on sonnet-5 an OMITTED thinking param silently
+    # runs adaptive thinking, whose tokens bill inside max_tokens and would
+    # truncate the 1024-cap prose nodes. The pin must be explicit.
+    assert client.messages.calls[0]["thinking"] == {"type": "disabled"}
 
 
 def test_strategist_contract_violation_repairs_then_typed_error() -> None:
@@ -495,10 +678,16 @@ def test_strategist_contract_violation_repairs_then_typed_error() -> None:
     rows = store.list_all()
     assert [r.attempt for r in rows] == [0, 1, 2]
     assert all(r.reason_code is ReasonCode.LLM_SCHEMA_REJECTED for r in rows)
-    # The repair re-prompt carried the specific deterministic violation.
-    repair_prompt = client.messages.calls[1]["messages"][0]["content"]
-    assert "rejected by deterministic validation" in repair_prompt
-    assert "reason" in repair_prompt
+    # The repair re-prompt carried the specific deterministic violation, in a
+    # separate suffix block after the cache-stable base prompt block.
+    first_blocks = client.messages.calls[0]["messages"][0]["content"]
+    repair_blocks = client.messages.calls[1]["messages"][0]["content"]
+    assert len(first_blocks) == 1
+    assert first_blocks[0]["cache_control"] == {"type": "ephemeral"}
+    assert len(repair_blocks) == 2
+    assert repair_blocks[0]["text"] == first_blocks[0]["text"]
+    assert "rejected by deterministic validation" in repair_blocks[1]["text"]
+    assert "reason" in repair_blocks[1]["text"]
 
 
 def test_reflection_psych_label_is_rejected_and_repaired() -> None:
@@ -521,3 +710,210 @@ def test_reflection_psych_label_is_rejected_and_repaired() -> None:
     rows = store.list_all()
     assert rows[0].reason_code is ReasonCode.LLM_SCHEMA_REJECTED
     assert rows[1].validation_outcome is ValidationOutcome.PASS
+
+
+# --------------------------------------------------------------------------- #
+# Adapter resilience (UX pass C1): taxonomy, backoff pacing, timeout plumbing
+# --------------------------------------------------------------------------- #
+
+
+def test_non_retryable_transport_error_fails_immediately_with_typed_code() -> None:
+    """An auth rejection is permanent: exactly ONE call, one log row carrying
+    LLM_AUTH_FAILED, and a typed terminal error — never two wasted retries
+    against an expired key."""
+    sleeps: list[float] = []
+    planner, store, transport = _planner(
+        [
+            TransportError(
+                "provider rejected credentials: AuthenticationError",
+                retryable=False,
+                reason_code=ReasonCode.LLM_AUTH_FAILED,
+            )
+        ],
+        sleeps=sleeps,
+    )
+    with pytest.raises(LLMGenerationError) as exc_info:
+        _run_planner(planner)
+    assert exc_info.value.reason_code is ReasonCode.LLM_AUTH_FAILED
+    assert len(transport.requests) == 1
+    rows = store.list_all()
+    assert [r.reason_code for r in rows] == [ReasonCode.LLM_AUTH_FAILED]
+    assert sleeps == []  # no backoff for a permanent rejection
+
+
+def test_transient_retries_are_paced_with_exponential_backoff() -> None:
+    """Rate-limited attempts carry their typed code on the log rows and are
+    spaced 1s, 2s (base * 2**retry) — pacing changes, the 2-retry budget
+    does not."""
+    sleeps: list[float] = []
+    rate_limited = TransportError(
+        "provider rate limited: RateLimitError",
+        retryable=True,
+        reason_code=ReasonCode.LLM_RATE_LIMITED,
+    )
+    planner, store, _transport = _planner(
+        [rate_limited, rate_limited, _ok(_VALID_PLAN)], sleeps=sleeps
+    )
+    _run_planner(planner)
+    assert sleeps == [1.0, 2.0]
+    rows = store.list_all()
+    assert [r.reason_code for r in rows] == [
+        ReasonCode.LLM_RATE_LIMITED,
+        ReasonCode.LLM_RATE_LIMITED,
+        None,
+    ]
+
+
+def test_engine_passes_configured_timeout_to_the_transport() -> None:
+    planner, _store, transport = _planner([_ok(_VALID_PLAN)])
+    _run_planner(planner)
+    assert transport.requests[0]["timeout_seconds"] == 300.0
+
+
+def test_translate_api_error_maps_the_sdk_taxonomy() -> None:
+    """The SDK-exception → TransportError map: auth is permanent, rate limit
+    is transient with its own code, bad requests are permanent, everything
+    else (connection, overload) stays transient. Messages carry the exception
+    TYPE only — never a body that could quote request content."""
+    anthropic = pytest.importorskip("anthropic")
+    import httpx
+
+    from agentic_calendar.llm_nodes.anthropic_adapter import _translate_api_error
+
+    request = httpx.Request("POST", "https://api.anthropic.com/v1/messages")
+
+    def status_error(cls: type, status: int) -> Exception:
+        return cls(
+            "boom", response=httpx.Response(status, request=request), body=None
+        )
+
+    auth = _translate_api_error(status_error(anthropic.AuthenticationError, 401))
+    assert (auth.retryable, auth.reason_code) == (False, ReasonCode.LLM_AUTH_FAILED)
+
+    rate = _translate_api_error(status_error(anthropic.RateLimitError, 429))
+    assert (rate.retryable, rate.reason_code) == (True, ReasonCode.LLM_RATE_LIMITED)
+
+    bad = _translate_api_error(status_error(anthropic.BadRequestError, 400))
+    assert (bad.retryable, bad.reason_code) == (False, ReasonCode.LLM_CALL_FAILED)
+
+    conn = _translate_api_error(anthropic.APIConnectionError(request=request))
+    assert (conn.retryable, conn.reason_code) == (True, ReasonCode.LLM_CALL_FAILED)
+    assert "APIConnectionError" in str(conn)
+    assert "boom" not in str(auth)  # type name only, never the body
+
+
+# --------------------------------------------------------------------------- #
+# Few-shot exemplars + unified repair formatting (UX pass D1a)
+# --------------------------------------------------------------------------- #
+
+
+def test_prompt_exemplars_validate_against_their_contracts() -> None:
+    """The embedded few-shot exemplars must be contract-valid by construction —
+    an exemplar that drifts invalid would teach the model an invalid shape."""
+    SyllabusUnits.model_validate(adapter._STRATEGIST_EXEMPLAR)
+    TaskPlan.model_validate(adapter._PLANNER_EXEMPLAR)
+
+
+def test_system_prompts_embed_exemplars_marked_illustrative() -> None:
+    strategist_json = json.dumps(adapter._STRATEGIST_EXEMPLAR, sort_keys=True)
+    planner_json = json.dumps(adapter._PLANNER_EXEMPLAR, sort_keys=True)
+    assert strategist_json in adapter._STRATEGIST_SYSTEM
+    assert planner_json in adapter._PLANNER_SYSTEM
+    marker = "Illustrative example of a valid output SHAPE only"
+    assert marker in adapter._STRATEGIST_SYSTEM
+    assert marker in adapter._PLANNER_SYSTEM
+    # The planner exemplar must not model the forbidden field (axiom 11), and
+    # the strategist exemplar must model the claim-evidence rule.
+    assert "prerequisites_met" not in planner_json
+    assert "claim_acme_01" in strategist_json
+
+
+def test_schema_rejection_repair_suffix_lists_typed_violations() -> None:
+    """Engine channel: a contract rejection re-prompts with the parsed
+    violation list — field path, constraint, clipped offending value — not a
+    raw str(ValidationError) dump."""
+    planner, _store, transport = _planner([_ok(_INVALID_PLAN), _ok(_VALID_PLAN)])
+    _run_planner(planner)
+    suffix = transport.requests[1]["repair_suffix"]
+    assert "rejected by deterministic validation" in suffix
+    assert "- field: (root)" in suffix  # model-level validator: no field path
+    assert "| constraint: value_error" in suffix
+    assert "duplicate task_id" in suffix
+    # The offending value (the whole rejected plan) is clipped, so the repair
+    # re-prompt stays guidance rather than a second copy of the bad output.
+    assert "…(clipped)" in suffix
+
+
+def test_field_level_rejection_names_the_field_path_and_value() -> None:
+    bad_plan = {
+        **_VALID_PLAN,
+        "tasks": [{**_VALID_PLAN["tasks"][0], "estimated_duration_min": 0}],
+    }
+    planner, _store, transport = _planner([_ok(bad_plan), _ok(_VALID_PLAN)])
+    _run_planner(planner)
+    suffix = transport.requests[1]["repair_suffix"]
+    assert "- field: tasks.0.estimated_duration_min" in suffix
+    assert "greater_than" in suffix
+    assert "| offending value: 0" in suffix
+
+
+def test_unparseable_repair_suffix_reminds_required_top_level_keys() -> None:
+    planner, _store, transport = _planner([_ok(None), _ok(_VALID_PLAN)])
+    _run_planner(planner)
+    suffix = transport.requests[1]["repair_suffix"]
+    assert "could not be parsed into the target schema" in suffix
+    assert "plan_version" in suffix
+    assert "tasks" in suffix
+
+
+def test_rubric_rejection_formats_through_the_unified_formatter() -> None:
+    """Post-validation raises (psych-label scan) take the non-ValidationError
+    path: one line, '(output)' as the path, the diagnosis as the constraint."""
+    transport = FakeTransport(
+        [
+            _ok({"summary": "You have been lazy this week.", "detail": []}),
+            _ok({"summary": "Practice tasks are taking longer than planned.", "detail": []}),
+        ]
+    )
+    AnthropicReflectionSummary(
+        transport=transport,
+        store=InMemoryLlmCallLogStore(),
+        clock=FrozenClock(_NOW),
+        id_generator=DeterministicIdGenerator(),
+    ).run(run_id="run_t", drift_events=[])
+    suffix = transport.requests[1]["repair_suffix"]
+    assert "- field: (output)" in suffix
+    assert "'lazy'" in suffix  # the scan's diagnosis, verbatim
+
+
+def test_inbound_repair_uses_the_same_violation_shape_as_the_engine() -> None:
+    """Planner inbound channel: a failed ValidationResult renders through the
+    SAME line shape as the engine's rejection channel (D1 unification)."""
+    repair = ValidationResult(
+        run_id="run_t",
+        artifact_type=ArtifactType.TASK_PLAN,
+        valid=False,
+        repairable=True,
+        reason_code=ReasonCode.USER_FIT_VIOLATED,
+        violations=[
+            Violation(
+                type=ViolationType.DURATION_EXCEEDS_USER_MAX_SESSION,
+                task_id="dp_001",
+                details={"duration_min": 150, "max_session_length_min": 120},
+            )
+        ],
+        repair_attempt=1,
+        next_action=NextAction.PLANNER_REPAIR_RETRY,
+    )
+    planner, _store, transport = _planner([_ok(_VALID_PLAN)])
+    planner.run(
+        run_id="run_t",
+        syllabus=SyllabusUnits.model_validate(_SYLLABUS),
+        plan_version="v1",
+        repair=repair,
+    )
+    prompt = transport.requests[0]["user_prompt"]
+    assert "reason_code: USER_FIT_VIOLATED" in prompt
+    assert "- field: tasks[task_id='dp_001']" in prompt
+    assert "| constraint: duration_exceeds_user_max_session" in prompt
+    assert '"duration_min": 150' in prompt

@@ -1,0 +1,101 @@
+{
+  "call_aggregates": {},
+  "eval_set_version": "v2",
+  "judge_scores": {
+    "explanation_capacity_failure": {
+      "actionability": 4,
+      "specificity": 5,
+      "tone": 4
+    },
+    "explanation_repair_exhausted": {
+      "actionability": 3,
+      "specificity": 4,
+      "tone": 2
+    },
+    "explanation_validation_pass": {
+      "actionability": 3,
+      "specificity": 4,
+      "tone": 4
+    },
+    "reflection_duration_drift": {
+      "actionability": 4,
+      "specificity": 5,
+      "tone": 4
+    },
+    "reflection_multi_drift": {
+      "actionability": 4,
+      "specificity": 5,
+      "tone": 4
+    }
+  },
+  "model_name": "claude-opus-4-8+claude-sonnet-5",
+  "overall": {
+    "cases": 11,
+    "invalid_after_repair": 0,
+    "post_repair_invalid_rate": 0.0,
+    "recovered_by_repair": 0,
+    "repair_recovery_rate": null,
+    "rubric_graded": 7,
+    "rubric_pass_rate": 1.0,
+    "rubric_passed": 7,
+    "schema_valid_first_attempt": 11,
+    "schema_validity_rate": 1.0
+  },
+  "per_node": {
+    "planner": {
+      "cases": 3,
+      "invalid_after_repair": 0,
+      "post_repair_invalid_rate": 0.0,
+      "recovered_by_repair": 0,
+      "repair_recovery_rate": null,
+      "rubric_graded": 1,
+      "rubric_pass_rate": 1.0,
+      "rubric_passed": 1,
+      "schema_valid_first_attempt": 3,
+      "schema_validity_rate": 1.0
+    },
+    "reflection_summary": {
+      "cases": 2,
+      "invalid_after_repair": 0,
+      "post_repair_invalid_rate": 0.0,
+      "recovered_by_repair": 0,
+      "repair_recovery_rate": null,
+      "rubric_graded": 2,
+      "rubric_pass_rate": 1.0,
+      "rubric_passed": 2,
+      "schema_valid_first_attempt": 2,
+      "schema_validity_rate": 1.0
+    },
+    "strategist": {
+      "cases": 3,
+      "invalid_after_repair": 0,
+      "post_repair_invalid_rate": 0.0,
+      "recovered_by_repair": 0,
+      "repair_recovery_rate": null,
+      "rubric_graded": 1,
+      "rubric_pass_rate": 1.0,
+      "rubric_passed": 1,
+      "schema_valid_first_attempt": 3,
+      "schema_validity_rate": 1.0
+    },
+    "user_facing_explanation": {
+      "cases": 3,
+      "invalid_after_repair": 0,
+      "post_repair_invalid_rate": 0.0,
+      "recovered_by_repair": 0,
+      "repair_recovery_rate": null,
+      "rubric_graded": 3,
+      "rubric_pass_rate": 1.0,
+      "rubric_passed": 3,
+      "schema_valid_first_attempt": 3,
+      "schema_validity_rate": 1.0
+    }
+  },
+  "plan_quality": {
+    "mean_distinct_title_ratio": 1.0,
+    "mean_max_dependency_depth": 7.6667,
+    "mean_tasks_per_module": 4.6111,
+    "plans_graded": 3
+  },
+  "prompt_version": "baseline-2026-07-05"
+}

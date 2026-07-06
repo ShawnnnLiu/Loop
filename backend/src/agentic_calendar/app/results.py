@@ -9,7 +9,7 @@ deterministic fields are always sufficient to act on without reading them.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -18,7 +18,9 @@ from agentic_calendar.contracts.accountability_state import AccountabilityState
 from agentic_calendar.contracts.checkin_event import RecoveryAction
 from agentic_calendar.contracts.draft_schedule import DraftSchedule
 from agentic_calendar.contracts.drift_event import DriftEvent
+from agentic_calendar.contracts.plan_diff import PlanDiff
 from agentic_calendar.contracts.reason_codes import ReasonCode
+from agentic_calendar.contracts.recommitment import RecommitmentChoice
 from agentic_calendar.contracts.scheduler_output import RepairOption, UnscheduledTask
 from agentic_calendar.contracts.threshold_change_log import ThresholdChange
 from agentic_calendar.contracts.user_profile import UserProfile
@@ -64,6 +66,10 @@ class ProposeResult(BaseModel):
     specific recovery message; the typed ``reason_code`` stays the contract."""
     explanation: UserExplanation | None = None
     """LLM prose attachment (validation wording); never control-plane."""
+    plan_diff: PlanDiff | None = None
+    """Deterministic content diff vs the parent plan version (D4 stage 2) —
+    present only when this propose continued from an existing plan (replan).
+    Computed by code from the two persisted plans, never by an LLM."""
 
 
 class DropResult(BaseModel):
@@ -172,6 +178,34 @@ class WriteCycleResult(BaseModel):
     never embed raw calendar content or secrets. ``None`` on success."""
 
 
+class RollbackCycleResult(BaseModel):
+    """Outcome of a user-triggered rollback of a failed calendar write.
+
+    ``dry_run=True`` reports what a rollback WOULD delete (the confirm-dialog
+    count) without touching the calendar. A completed rollback parks the run in
+    ``ERROR_REQUIRES_USER`` (the events are gone; the honest next step is a new
+    plan); a partial rollback keeps the run in the failure state so the user
+    can retry either recovery path.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    run_id: str
+    user_id: str
+    state: SupervisorState
+    dry_run: bool
+    rollbackable_event_count: int
+    """Events a rollback would delete (written/verified/verification-failed)."""
+    deleted_event_ids: list[str] = Field(default_factory=list)
+    failed_event_ids: list[str] = Field(default_factory=list)
+    fully_rolled_back: bool | None = None
+    """``None`` on dry-run; otherwise whether every event deletion succeeded."""
+    reason_code: ReasonCode | None = None
+    error: str | None = None
+    """Failure detail passed through from the write manager. Typed error
+    prose only — never raw calendar content. ``None`` on success/dry-run."""
+
+
 class TelemetryItemOutcome(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -227,6 +261,17 @@ class StatusResult(BaseModel):
     approval_event_id: str | None = None
     replan_kind: ReplanKind | None = None
     recovery_mode: RecoveryAction | None = None
+    recovery_mode_pending_user_choice: bool = False
+    """The run is parked in REPLAN_REQUIRED on the recovery path with no
+    recovery mode resolved (motivation profile says ask_each_time): ``propose``
+    will 409 until the client supplies one. The SPA renders the mode picker
+    from this flag."""
+    explanation: UserExplanation | None = None
+    """Persisted prose for a run parked in a failure state — what the product
+    already told the user about WHY. Display attachment; never control-plane."""
+    reflection: ReflectionSummary | None = None
+    """Persisted drift reflection for a parked replan (the Week banner's
+    disclosure). Display attachment; never control-plane."""
     mapping_status_by_task: dict[str, str] = Field(default_factory=dict)
     telemetry_event_count: int = 0
     nudge_count: int = 0
@@ -240,6 +285,28 @@ class StatusResult(BaseModel):
 # structured. Times stay as tz-aware datetimes (``model_dump(mode="json")``
 # serializes them to ISO-8601); the client localizes them.
 # --------------------------------------------------------------------------- #
+
+
+class PlanDiffView(BaseModel):
+    """Compact deterministic delta between the pending draft's plan and its
+    parent plan version (D4 stage 2) — what the review/approval banners render
+    ("3 changed, 14 preserved"). Recomputed read-only from the two persisted
+    plan versions on every fetch (``planning/diff.py``), never stored and
+    never LLM-authored. The four counts partition the tasks: a task counts as
+    preserved only when its full content is identical."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    from_plan_version: str
+    to_plan_version: str
+    tasks_added: int = Field(ge=0)
+    tasks_removed: int = Field(ge=0)
+    tasks_changed: int = Field(ge=0)
+    tasks_preserved: int = Field(ge=0)
+    net_load_change_min: int
+    """Plan-wide net minutes delta; positive means more total work."""
+    changes: list[str] = Field(default_factory=list)
+    """One deterministic line per removed/changed/added task, in that order."""
 
 
 class DraftView(BaseModel):
@@ -262,6 +329,9 @@ class DraftView(BaseModel):
     (``event_deleted`` dispositions for the draft's plan version). The grid
     renders these as a distinct "deleted from calendar" state — never as the
     written checkmark, and never as completion (the task is still planned)."""
+    plan_diff: PlanDiffView | None = None
+    """Content delta vs the parent plan version — present for any draft with
+    a parent (replan, recalibration, drop); ``None`` on a fresh propose."""
 
 
 class TodayTask(BaseModel):
@@ -329,6 +399,22 @@ class MeResult(BaseModel):
     inbound_calendar_sync_enabled: bool = False
 
 
+class ReflectionHistoryEntry(BaseModel):
+    """One persisted reflection, replayed for display (D2).
+
+    A read copy of a ``ProseAttachmentRecord`` — display only; nothing routes
+    on it. The history exists so the coaching notes read as a continuing
+    conversation on the Accountability screen, the same continuity the
+    reflection prompt now gets."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    created_at: datetime
+    summary: str
+    detail: list[str] = Field(default_factory=list)
+    plan_version: str | None = None
+
+
 class AccountabilityResult(BaseModel):
     """The read-only accountability projection. Empty-state until a motivation
     profile exists (axiom 21): ``has_motivation_profile`` is False and the
@@ -340,3 +426,46 @@ class AccountabilityResult(BaseModel):
     checkin_status: str | None = None
     state: AccountabilityState | None = None
     decision: InterventionDecision | None = None
+    checkin_due: bool = False
+    """The weekly check-in is due or missed — the SPA renders the "How did
+    this week go?" card from this flag."""
+    open_recommitment_request_id: str | None = None
+    """The latest unanswered recommitment ask for this user, if any — the SPA
+    renders the interactive recommitment card from it. A system that asks and
+    cannot receive the answer reads as broken (UX pass B3)."""
+    reflection_history: list[ReflectionHistoryEntry] = Field(default_factory=list)
+    """The user's persisted reflections, newest first (D2) — independent of
+    the snapshot fields, so history survives an empty accountability state."""
+
+
+class RecommitResult(BaseModel):
+    """Outcome of answering a recommitment ask. ``replan_required`` is True
+    when the typed choice mapped to a recovery mode and parked (or resolved)
+    a replan — the draft still flows through review + approval."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    user_id: str
+    recommitment_request_id: str
+    recommitment_event_id: str
+    choice: RecommitmentChoice
+    recovery_mode: RecoveryAction | None = None
+    replan_required: bool = False
+    state: SupervisorState | None = None
+
+
+class WeeklyCheckinResult(BaseModel):
+    """Outcome of submitting the weekly check-in ("How did this week go?").
+    Counts are computed server-side from the active draft + telemetry — the
+    client supplies only optional blockers prose and an optional recovery
+    preference, never the numbers."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    user_id: str
+    checkin_id: str
+    checkin_status: str
+    week_start: date
+    week_end: date
+    scheduled_task_count: int
+    completed_task_count: int

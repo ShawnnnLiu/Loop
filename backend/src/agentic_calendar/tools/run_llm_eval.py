@@ -9,9 +9,10 @@ Operator CLI (module-only, like ``show_accountability``)::
 
 The CLI is deterministic and fully offline: it grades *recorded* outputs
 against the deterministic contracts and reports aggregate rates against
-thresholds (axiom 22). It never calls a model. Threshold breaches are printed,
-not turned into a failing exit code — eval runs inform prompt changes; they do
-not gate builds.
+thresholds (axiom 22). It never calls a model. By default breaches are
+printed and the exit stays 0; with ``--strict`` a breach exits 3 — the
+amended axiom 22 lets deterministic RECORDED-output grading gate merges
+(live-call evals still never run in CI).
 """
 
 from __future__ import annotations
@@ -144,6 +145,23 @@ def main(argv: Sequence[str] | None = None) -> int:
         default=0.05,
         help="Alert threshold; axiom 09 target is 0.05.",
     )
+    parser.add_argument(
+        "--min-schema-validity-rate",
+        type=float,
+        default=None,
+        help="Floor on first-attempt validity (off unless set; seed from a baseline).",
+    )
+    parser.add_argument(
+        "--min-repair-recovery-rate",
+        type=float,
+        default=None,
+        help="Floor on repair recovery (off unless set; seed from a baseline).",
+    )
+    parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Exit 3 on any threshold breach (the recorded-output CI gate).",
+    )
     args = parser.parse_args(argv)
 
     try:
@@ -156,7 +174,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
         report = grade_recording(eval_set, recording, calls)
         thresholds = EvalThresholds(
-            max_post_repair_invalid_rate=args.max_post_repair_invalid_rate
+            max_post_repair_invalid_rate=args.max_post_repair_invalid_rate,
+            min_schema_validity_rate=args.min_schema_validity_rate,
+            min_repair_recovery_rate=args.min_repair_recovery_rate,
         )
     except (OSError, json.JSONDecodeError, ValidationError, EvalError) as exc:
         print(f"error: {exc}", file=sys.stderr)
@@ -177,6 +197,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         text = json.dumps(report.model_dump(mode="json"), indent=2, sort_keys=True) + "\n"
         args.out.write_text(text, encoding="utf-8")
         print(f"wrote {args.out}")
+
+    if args.strict and threshold_breaches(report, thresholds):
+        return 3
 
     return 0
 

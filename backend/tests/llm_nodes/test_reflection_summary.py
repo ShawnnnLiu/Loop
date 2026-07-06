@@ -108,3 +108,29 @@ def test_psychological_label_guard_rejects_identity_language() -> None:
         _ensure_no_psychological_labels("You have been lazy this week.")
     # ordinary words near the denylist are unaffected (word-boundary match)
     _ensure_no_psychological_labels("Completion was low; tasks were rescheduled.")
+
+
+@pytest.mark.parametrize(
+    "sentence",
+    [
+        # D2 denylist extension: trait judgments and multi-word variants
+        "Your week looks disorganized.",
+        "This pattern suggests you are self-sabotaging.",
+        # clinical/diagnostic language telemetry can never justify
+        "You may be experiencing burnout.",
+        "You seem burned out after this stretch.",
+        "These misses look like depression.",
+    ],
+)
+def test_psychological_label_guard_rejects_extended_terms(sentence: str) -> None:
+    with pytest.raises(LLMNodeError):
+        _ensure_no_psychological_labels(sentence)
+
+
+def test_psychological_label_guard_allows_system_failure_language() -> None:
+    """The scan gates person-labels, not system talk: explanation prose must
+    stay free to say the WRITE failed or the connection was unreliable."""
+    _ensure_no_psychological_labels(
+        "The calendar write failed; the connection was unreliable, so the "
+        "plan was not scheduled. Retrying is safe."
+    )

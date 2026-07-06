@@ -70,11 +70,12 @@ from agentic_calendar.consent.gate import ConsentGate
 from agentic_calendar.consent.sqlite_audit_store import SqliteDataAccessAuditStore
 from agentic_calendar.consent.sqlite_store import SqliteConsentStore
 from agentic_calendar.consent.store import ConsentStore, InMemoryConsentStore
+from agentic_calendar.contracts.checkin_event import RecoveryAction
 from agentic_calendar.contracts.drift_event import DriftEvent
 from agentic_calendar.contracts.source_claim import SourceClaim
 from agentic_calendar.contracts.strategy_constraints import StrategyConstraints
 from agentic_calendar.contracts.syllabus_units import SyllabusUnits
-from agentic_calendar.contracts.task_plan import TaskPlan
+from agentic_calendar.contracts.task_plan import Task, TaskPlan
 from agentic_calendar.contracts.user_profile import UserProfile
 from agentic_calendar.contracts.validation_result import ValidationResult
 from agentic_calendar.disposition.disposition_store import (
@@ -91,8 +92,13 @@ from agentic_calendar.identity.store import (
     InMemoryGoogleCredentialStore,
 )
 from agentic_calendar.llm_nodes.call_log import InMemoryLlmCallLogStore, LlmCallLogStore
+from agentic_calendar.llm_nodes.prose_attachment import (
+    InMemoryProseAttachmentStore,
+    ProseAttachmentStore,
+)
 from agentic_calendar.llm_nodes.reflection_summary import ReflectionSummary
 from agentic_calendar.llm_nodes.sqlite_call_log import SqliteLlmCallLogStore
+from agentic_calendar.llm_nodes.sqlite_prose_store import SqliteProseAttachmentStore
 from agentic_calendar.llm_nodes.user_facing_explanation import UserExplanation
 from agentic_calendar.planning.sqlite_store import SqlitePlanVersionStore
 from agentic_calendar.planning.store import InMemoryPlanVersionStore, PlanVersionStore
@@ -138,8 +144,13 @@ class PlannerNode(Protocol):
     ``user_profile`` carries the scheduling limits the deterministic user-fit
     checks enforce; ``repair`` is the failed ``ValidationResult`` from the
     previous pass of the bounded repair loop (axiom 04) so retries are not
-    re-invoked blind. Both are optional: deterministic plan sources ignore
-    them.
+    re-invoked blind. ``behavioral_hints`` are the user's recent persisted
+    reflection sentences (D2) — advisory prose the replan path threads in for
+    sizing/emphasis; never parsed, never control-plane.
+    ``prior_plan_tasks`` + ``replan_mode`` (D4 stage 1) are the replan path's
+    anchor: the active plan's surviving tasks plus the recovery mode, so the
+    prompt can instruct preserve-unless-affected instead of regenerating
+    blind. All are optional: deterministic plan sources ignore them.
     """
 
     def run(
@@ -150,12 +161,19 @@ class PlannerNode(Protocol):
         user_profile: UserProfile | None = None,
         repair: ValidationResult | None = None,
         excluded_tasks: Collection[str] = (),
+        behavioral_hints: Sequence[str] = (),
+        prior_plan_tasks: Sequence[Task] = (),
+        replan_mode: RecoveryAction | None = None,
     ) -> TaskPlan: ...
 
 
 @runtime_checkable
 class ReflectionNode(Protocol):
-    """Structural surface shared by the deterministic and Anthropic reflection nodes."""
+    """Structural surface shared by the deterministic and Anthropic reflection nodes.
+
+    ``prior_reflections`` are the user's last few persisted reflection
+    sentences (D2) — advisory continuity context so successive notes read as
+    one coaching conversation; never parsed, never control-plane."""
 
     def run(
         self,
@@ -163,6 +181,7 @@ class ReflectionNode(Protocol):
         run_id: str,
         drift_events: Sequence[DriftEvent],
         completion_rate: float | None = None,
+        prior_reflections: Sequence[str] = (),
     ) -> ReflectionSummary: ...
 
 
@@ -218,6 +237,7 @@ class AppEnvironment:
     recommitment_store: RecommitmentStore
     sponsor_store: SponsorStore
     call_log_store: LlmCallLogStore
+    prose_store: ProseAttachmentStore
     claim_store: SourceClaimStore
     credential_store: GoogleCredentialStore
     threshold_log_store: ThresholdChangeLogStore
@@ -274,6 +294,7 @@ def build_environment(
         recommitment_store: RecommitmentStore = InMemoryRecommitmentStore()
         sponsor_store: SponsorStore = InMemorySponsorStore(clock)
         call_log_store: LlmCallLogStore = InMemoryLlmCallLogStore()
+        prose_store: ProseAttachmentStore = InMemoryProseAttachmentStore()
         claim_store: SourceClaimStore = InMemorySourceClaimStore()
         credential_store: GoogleCredentialStore = InMemoryGoogleCredentialStore()
         threshold_log_store: ThresholdChangeLogStore = (
@@ -295,6 +316,7 @@ def build_environment(
         recommitment_store = SqliteRecommitmentStore(db)
         sponsor_store = SqliteSponsorStore(db, clock)
         call_log_store = SqliteLlmCallLogStore(db)
+        prose_store = SqliteProseAttachmentStore(db)
         claim_store = SqliteSourceClaimStore(db)
         credential_store = SqliteGoogleCredentialStore(db)
         threshold_log_store = SqliteThresholdChangeLogStore(db)
@@ -341,6 +363,7 @@ def build_environment(
         recommitment_store=recommitment_store,
         sponsor_store=sponsor_store,
         call_log_store=call_log_store,
+        prose_store=prose_store,
         claim_store=claim_store,
         credential_store=credential_store,
         threshold_log_store=threshold_log_store,

@@ -94,3 +94,11 @@ export function fmtWhen(iso: string): string {
 export function fmtClock(iso: string): string {
   return fmtMinutes(minutesOfDay(parseWall(iso)))
 }
+
+/** "Jun 23" — the date of an ISO datetime as written (no tz conversion; same
+ *  as-written convention as the grid, and deterministic across browsers). */
+export function fmtDate(iso: string): string {
+  const w = parseWall(iso)
+  const dayMs = dayUtcMs(w)
+  return dayHeader(weekMondayMs(dayMs), mondayIndex(dayMs)).label
+}

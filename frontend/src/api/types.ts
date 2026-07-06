@@ -97,6 +97,13 @@ export interface Violation {
   details: Record<string, unknown>
 }
 
+/** LLM prose attachment (reflection / explanation): display copy, never
+ *  control-plane — the typed reason_code stays the contract. */
+export interface ProseSummary {
+  summary: string
+  detail: string[]
+}
+
 /** Subset of ProposeResult the generation screen reads. A *workflow* failure
  *  arrives here as a 200 with `reason_code` set (not an ApiError). */
 export interface ProposeResult {
@@ -107,7 +114,7 @@ export interface ProposeResult {
   draft_payload_hash: string | null
   scheduled_task_count: number
   violations: Violation[]
-  explanation: Record<string, unknown> | null
+  explanation: ProseSummary | null
 }
 
 /** Subset of StatusResult the UI reads; the endpoint returns more fields. */
@@ -121,6 +128,17 @@ export interface StatusResult {
   active_plan_version: string | null
   draft_schedule_id: string | null
   approval_event_id: string | null
+  replan_kind: 'recovery' | 'recalibration' | null
+  recovery_mode: string | null
+  /** REPLAN_REQUIRED on the recovery path with no mode resolved (the profile
+   *  says ask_each_time): propose 409s until the client supplies a mode, so
+   *  the Week screen renders the picker instead of a bare CTA. */
+  recovery_mode_pending_user_choice: boolean
+  /** Persisted prose for a run parked in a failure state — what the product
+   *  already told the user about WHY (B5 reason-aware resume). */
+  explanation: ProseSummary | null
+  /** Persisted drift reflection for a parked replan (Week banner disclosure). */
+  reflection: ProseSummary | null
 }
 
 export interface DraftScheduleEntry {
@@ -141,6 +159,23 @@ export interface FreeBusyInterval {
   end: string
 }
 
+/** Compact deterministic delta between the pending draft's plan and its parent
+ *  plan version (D4) — computed server-side from the two persisted plans, never
+ *  by an LLM and never client-side. A task counts as preserved only when its
+ *  full content is identical. */
+export interface PlanDiffView {
+  from_plan_version: string
+  to_plan_version: string
+  tasks_added: number
+  tasks_removed: number
+  tasks_changed: number
+  tasks_preserved: number
+  /** Plan-wide net minutes delta; positive means more total work. */
+  net_load_change_min: number
+  /** One deterministic line per removed/changed/added task, in that order. */
+  changes: string[]
+}
+
 export interface DraftView {
   draft: DraftSchedule | null
   payload_hash: string | null
@@ -152,6 +187,9 @@ export interface DraftView {
    *  distinct "deleted from calendar" state — never the written checkmark; the
    *  task itself is still planned. */
   deleted_task_ids: string[]
+  /** Content delta vs the parent plan version — present for any draft with a
+   *  parent (replan, recalibration, drop); null on a fresh propose. */
+  plan_diff: PlanDiffView | null
 }
 
 /** A single move sent to /api/adjust; the server derives `end` from the
@@ -289,11 +327,52 @@ export interface InterventionDecision {
   sponsor_action: string | null
 }
 
+/** One persisted coaching note, replayed for display (D2). */
+export interface ReflectionHistoryEntry {
+  created_at: string
+  summary: string
+  detail: string[]
+  plan_version: string | null
+}
+
 export interface AccountabilityResult {
   has_motivation_profile: boolean
   checkin_status: string | null
   state: AccountabilityState | null
   decision: InterventionDecision | null
+  /** The weekly check-in is due or missed — render the check-in card. */
+  checkin_due: boolean
+  /** The latest unanswered recommitment ask — render the recommit card. */
+  open_recommitment_request_id: string | null
+  /** Persisted reflections, newest first — independent of the snapshot,
+   *  so history renders even from the empty accountability state. */
+  reflection_history: ReflectionHistoryEntry[]
+}
+
+export type RecommitChoice = 'keep_plan' | 'revise_timeline' | 'revise_intensity' | 'revise_goal'
+
+/** Mirror of RecommitResult: the typed answer to a recommitment ask.
+ *  `replan_required` means the choice parked (or re-aimed) a recovery replan —
+ *  the draft still goes through review + approval. */
+export interface RecommitResult {
+  user_id: string
+  recommitment_request_id: string
+  recommitment_event_id: string
+  choice: RecommitChoice
+  recovery_mode: string | null
+  replan_required: boolean
+  state: string | null
+}
+
+/** Mirror of WeeklyCheckinResult. Counts are server-computed. */
+export interface WeeklyCheckinResult {
+  user_id: string
+  checkin_id: string
+  checkin_status: string
+  week_start: string // ISO date
+  week_end: string
+  scheduled_task_count: number
+  completed_task_count: number
 }
 
 /** Mirror of ApproveResult. `approval_event_id` + `approved_payload_hash` are
@@ -310,10 +389,12 @@ export interface ApproveResult {
 }
 
 /** Mirror of WriteCycleResult. A failed write (e.g. verification) arrives here
- *  as a 200 with `reason_code` set. The MVP does not auto-roll-back: unverified
- *  events are flagged VERIFICATION_FAILED and left on the calendar, and the plan
- *  is not activated. The client only reports the typed outcome — it never writes
- *  or rolls back itself. */
+ *  as a 200 with `reason_code` set. The engine does not auto-roll-back:
+ *  unverified events are flagged VERIFICATION_FAILED and left on the calendar,
+ *  and the plan is not activated. Recovery is explicit and user-triggered —
+ *  `/rollback` removes the written events, `/retry-write` re-creates the
+ *  missing ones (both re-gated server-side). The client only reports typed
+ *  outcomes and triggers those routes; it never touches the calendar itself. */
 export interface WriteCycleResult {
   run_id: string
   user_id: string
@@ -326,6 +407,24 @@ export interface WriteCycleResult {
   verified_task_ids: string[]
   failed_task_ids: string[]
   mapping_status_by_task: Record<string, string>
+  error: string | null
+}
+
+/** Mirror of RollbackCycleResult: the outcome of a user-triggered rollback of
+ *  a failed write. `dry_run` responses carry only the would-delete count (for
+ *  the confirmation dialog). A completed rollback moves the run to
+ *  `error_requires_user`; a partial one stays in `calendar_write_failed` so
+ *  recovery can be retried. */
+export interface RollbackResult {
+  run_id: string
+  user_id: string
+  state: string
+  dry_run: boolean
+  rollbackable_event_count: number
+  deleted_event_ids: string[]
+  failed_event_ids: string[]
+  fully_rolled_back: boolean | null
+  reason_code: ReasonCode | null
   error: string | null
 }
 

@@ -70,6 +70,14 @@ class SupervisorSignal(StrEnum):
     CALENDAR_VERIFICATION_FAILED = "calendar_verification_failed"
     CALENDAR_ROLLBACK_REQUESTED = "calendar_rollback_requested"
     CALENDAR_ROLLBACK_COMPLETED = "calendar_rollback_completed"
+    CALENDAR_ROLLBACK_FAILED = "calendar_rollback_failed"
+    """Rollback ran but could not delete every written event. The run stays in
+    the failure state so the user can retry rollback or the missing-events
+    path — a partial rollback must never read as resolved."""
+    CALENDAR_WRITE_RETRY_REQUESTED = "calendar_write_retry_requested"
+    """User chose to retry the missing events after a failed/unverified write.
+    Re-enters the write pipeline via ``reconcile_after_crash``, which re-runs
+    the ``approved_payload_hash`` recheck — the axiom-06 gate holds."""
 
     # --- Active-plan / drift / replan loop (Phase 4, axiom 07) ---
     # The drift classifier is deterministic; the caller emits DRIFT_DETECTED
@@ -84,5 +92,11 @@ class SupervisorSignal(StrEnum):
     REPLAN_REQUIRED = "replan_required"
     REPLAN_NOT_REQUIRED = "replan_not_required"
     REPLAN_STARTED = "replan_started"
+    RECOMMITMENT_ACCEPTED = "recommitment_accepted"
+    """The user answered a recommitment ask with a revise_* choice whose
+    deterministic mapping requires a replan (recommitment.py's
+    RECOMMITMENT_CHOICE_TO_RECOVERY_MODE). Typed user input, never prose —
+    parks the active plan in REPLAN_REQUIRED; the replan still flows through
+    planner → validation → scheduler → approval."""
 
     UNRECOVERABLE_ERROR = "unrecoverable_error"

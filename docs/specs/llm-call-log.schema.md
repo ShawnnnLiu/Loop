@@ -45,11 +45,13 @@ retention-limited debug flag on the adapter and is never persisted to this log
   "sdk_retry": 0,
   "input_tokens": 6100,
   "output_tokens": 7800,
+  "cache_creation_tokens": 1024,
+  "cache_read_tokens": 4096,
   "cost_estimate_usd": 0.0056,
   "latency_ms": 9400,
   "validation_outcome": "pass",
   "reason_code": null,
-  "cache_hit": false,
+  "cache_hit": true,
   "truncated": false,
   "refusal": false,
   "prompt_hash": "a3f1c2d4e5b697881920a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8091a2b3c",
@@ -70,9 +72,11 @@ retention-limited debug flag on the adapter and is never persisted to this log
 | `model_name` | string | Provider model id (e.g. `claude-haiku-4-5-20251001`). |
 | `attempt` | int ≥ 0 | Validation-repair attempt this call serves: `0` = first generation, `1`–`2` = bounded repair re-prompts (axiom 04 cap). |
 | `sdk_retry` | int ≥ 0 | Transport retry index within `attempt`: `0` = first try. Each retry is its own API call and its own log row. |
-| `input_tokens` | int ≥ 0 | Provider-reported input token count. |
+| `input_tokens` | int ≥ 0 | Provider-reported input token count. With prompt caching enabled this **excludes** cache tokens (the provider reports the tiers separately). |
 | `output_tokens` | int ≥ 0 | Provider-reported output token count. |
-| `cost_estimate_usd` | float ≥ 0 | Deterministic estimate from the axiom 09 pricing table. An **estimate**, not a billing fact. |
+| `cache_creation_tokens` | int ≥ 0 | The provider's `cache_creation_input_tokens`: input tokens written to the provider prompt cache on this call. Default `0`. |
+| `cache_read_tokens` | int ≥ 0 | The provider's `cache_read_input_tokens`: input tokens served from the provider prompt cache on this call. Default `0`. |
+| `cost_estimate_usd` | float ≥ 0 | Deterministic estimate from the axiom 09 pricing table, including cache tiers (see below). An **estimate**, not a billing fact. |
 | `latency_ms` | int ≥ 0 | Wall-clock call latency. |
 | `validation_outcome` | enum: `pass`, `fail` | `pass` iff the call returned output that passed boundary contract re-validation. |
 | `reason_code` | enum `ReasonCode` or null | Typed failure code; required when `validation_outcome` is `fail`, null on `pass`. |
@@ -82,6 +86,16 @@ retention-limited debug flag on the adapter and is never persisted to this log
 | `prompt_hash` | string (64 hex chars) or null | SHA-256 of the rendered prompt; supports dedup/cache analysis without storing content. |
 | `response_hash` | string (64 hex chars) or null | SHA-256 of the raw response text; null when the call produced no response body. |
 | `created_at` | datetime | When the call resolved. Timezone-aware. |
+
+Cache-tier accounting (2026-07-05): the adapter uses `cache_control` `ephemeral`
+with the 5-minute TTL only. Under that scheme the provider excludes cache
+tokens from `usage.input_tokens` and bills `cache_creation_input_tokens` at
+**1.25x** and `cache_read_input_tokens` at **0.10x** the base input price —
+so `cost_estimate_usd` prices the three input tiers as
+`input_tokens * 1.0 + cache_creation_tokens * 1.25 + cache_read_tokens * 0.10`,
+all at the input rate, plus output at the output rate. The multipliers are
+heuristic pricing constants recorded in `../axioms/09-cost-and-metrics.md`,
+not a billing fact.
 
 ## Expected Reason Codes On `fail`
 
@@ -105,8 +119,9 @@ what happened; the list above is what well-behaved adapters emit.
 ## Required Fields
 
 All fields except `plan_version`, `reason_code`, `prompt_hash`, and
-`response_hash` are required. `sdk_retry`, `cache_hit`, `truncated`, and
-`refusal` default to `0` / `false`.
+`response_hash` are required. `sdk_retry`, `cache_creation_tokens`,
+`cache_read_tokens`, `cache_hit`, `truncated`, and `refusal` default to
+`0` / `false`.
 
 ## Validation Rules
 

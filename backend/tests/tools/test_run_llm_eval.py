@@ -111,3 +111,33 @@ def test_recording_case_mismatch_is_error(
     captured = capsys.readouterr()
     assert rc == 1
     assert "no outputs for cases" in captured.err
+
+
+def test_strict_gate_exits_nonzero_on_breach_and_zero_when_clean() -> None:
+    """The recorded-output CI gate (amended axiom 22): fixture_baseline has a
+    deliberately failing case, fixture_improved does not."""
+    base = ["--eval-set", EVAL_SET, "--strict"]
+    assert main([*base, "--recording", IMPROVED]) == 0
+    assert main([*base, "--recording", BASELINE]) == 3
+
+
+def test_strict_floors_gate_schema_validity_independently() -> None:
+    """Isolate the validity floor: with the post-repair ceiling disabled, the
+    baseline recording (which has first-attempt invalids) trips ONLY on the
+    seeded floor."""
+    assert (
+        main(
+            [
+                "--eval-set",
+                EVAL_SET,
+                "--recording",
+                BASELINE,
+                "--strict",
+                "--max-post-repair-invalid-rate",
+                "1.0",
+                "--min-schema-validity-rate",
+                "0.99",
+            ]
+        )
+        == 3
+    )

@@ -6,6 +6,15 @@ Partial syllabus updates are **not part of the MVP**. The MVP path for any profi
 
 This axiom defines the Phase 2/3 design so that current code does not preclude it.
 
+## Interim Step Shipped (2026-07-05, UX pass D4)
+
+An interim, context-only step now precedes this axiom's Phase 2/3 design:
+
+- **Stage 1 — prior-plan anchoring.** The recovery-replan Planner call embeds the active plan's surviving tasks (completed/dropped filtered out deterministically) plus the recovery mode, with a preserve-ids/titles/durations-unless-affected instruction. This is prompt context only: the model is anchored, not constrained. Deterministic validation is unchanged, and nothing enforces preservation — a replan that ignores the anchor still validates on its own merits.
+- **Stage 2 — deterministic diff surfacing.** The old→new plan-content diff (`planning/diff.py`, producing the `plan-diff.schema.md` contract) is computed by code and surfaced at review/approval, so the user evaluates the delta instead of a wall of blocks.
+
+Validator-enforced preservation (`PATCH_SCOPE_VIOLATION`, the patch classifier, delta-regeneration prompts) remains Phase 2/3 work as specified below; the interim step neither implements nor precludes it.
+
 ## Why a Phase 2/3 Feature
 
 A small profile change (one new weakness, a 10% timeline adjustment, a new deep-work window) should not invalidate an entire syllabus. Full regeneration is wasteful, costly, and disruptive to users mid-plan. Partial regeneration preserves user investment in the existing plan while still respecting validation and approval invariants.

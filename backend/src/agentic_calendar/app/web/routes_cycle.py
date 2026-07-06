@@ -27,6 +27,7 @@ from pydantic import BaseModel, ConfigDict
 
 from agentic_calendar.app.cycle import DEFAULT_TARGET_CALENDAR_ID, CycleService
 from agentic_calendar.contracts.checkin_event import RecoveryAction
+from agentic_calendar.contracts.recommitment import RecommitmentChoice
 from agentic_calendar.scheduler.adjustment import DraftAdjustment
 
 from .calendar_service import best_effort_free_busy, build_user_calendar_service
@@ -63,6 +64,21 @@ class WriteRequest(BaseModel):
     dry_run: bool = False
 
 
+class RollbackRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    run_id: str | None = None
+    target_calendar_id: str = DEFAULT_TARGET_CALENDAR_ID
+    dry_run: bool = False
+
+
+class RetryWriteRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    run_id: str | None = None
+    target_calendar_id: str = DEFAULT_TARGET_CALENDAR_ID
+
+
 class AdjustRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -88,6 +104,20 @@ class CalendarSyncRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     enabled: bool
+
+
+class RecommitRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    choice: RecommitmentChoice
+    recommitment_request_id: str | None = None
+
+
+class WeeklyCheckinRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    blockers: str | None = None
+    recovery_action: RecoveryAction | None = None
 
 
 def _json(result: BaseModel) -> JSONResponse:
@@ -225,6 +255,78 @@ def write(
     )
 
 
+@router.post("/rollback")
+def rollback(
+    request: Request,
+    service: Service,
+    user_id: ActingUser,
+    body: RollbackRequest | None = None,
+) -> JSONResponse:
+    """Roll back a failed calendar write: delete the events it created.
+
+    ``dry_run`` returns the would-delete count for the SPA's confirmation
+    dialog without touching the calendar. Only valid while the run sits in
+    the write-failure state; a completed rollback exits the run to
+    ``ERROR_REQUIRES_USER``. Hosted mode targets *this* user's dedicated
+    calendar via a per-user adapter — the same trust boundary as ``write``.
+    """
+    body = body or RollbackRequest()
+    if request.app.state.auth_enabled:
+        user_service, calendar_id = build_user_calendar_service(
+            request.app.state.env,
+            user_id=user_id,
+            token_cipher=request.app.state.token_cipher,
+        )
+        return _json(
+            user_service.rollback(
+                user_id,
+                run_id=body.run_id,
+                target_calendar_id=calendar_id,
+                dry_run=body.dry_run,
+            )
+        )
+    return _json(
+        service.rollback(
+            user_id,
+            run_id=body.run_id,
+            target_calendar_id=body.target_calendar_id,
+            dry_run=body.dry_run,
+        )
+    )
+
+
+@router.post("/retry-write")
+def retry_write(
+    request: Request,
+    service: Service,
+    user_id: ActingUser,
+    body: RetryWriteRequest | None = None,
+) -> JSONResponse:
+    """Retry a failed calendar write, creating only confirmed-missing events
+    (the manager's crash-reconcile path; the approved_payload_hash recheck
+    runs again, so the approval gate holds). Only valid from the
+    write-failure state."""
+    body = body or RetryWriteRequest()
+    if request.app.state.auth_enabled:
+        user_service, calendar_id = build_user_calendar_service(
+            request.app.state.env,
+            user_id=user_id,
+            token_cipher=request.app.state.token_cipher,
+        )
+        return _json(
+            user_service.retry_write(
+                user_id, run_id=body.run_id, target_calendar_id=calendar_id
+            )
+        )
+    return _json(
+        service.retry_write(
+            user_id,
+            run_id=body.run_id,
+            target_calendar_id=body.target_calendar_id,
+        )
+    )
+
+
 @router.post("/calendar-sync")
 def calendar_sync(
     service: Service,
@@ -266,6 +368,42 @@ def reconcile(request: Request, service: Service, user_id: ActingUser) -> JSONRe
             target_calendar_id=DEFAULT_TARGET_CALENDAR_ID,
             free_busy=free_busy,
             enabled=enabled,
+        )
+    )
+
+
+@router.post("/recommit")
+def recommit(
+    service: Service,
+    user_id: ActingUser,
+    body: RecommitRequest,
+) -> JSONResponse:
+    """Answer the open recommitment ask with a typed choice. A revise_* choice
+    deterministically parks (or resolves) a recovery replan; the resulting
+    draft still flows through review + approval."""
+    return _json(
+        service.recommit(
+            user_id,
+            body.choice,
+            recommitment_request_id=body.recommitment_request_id,
+        )
+    )
+
+
+@router.post("/weekly-checkin")
+def weekly_checkin(
+    service: Service,
+    user_id: ActingUser,
+    body: WeeklyCheckinRequest | None = None,
+) -> JSONResponse:
+    """Submit the weekly check-in. Counts are computed server-side; the client
+    contributes only optional blockers prose and a recovery preference."""
+    body = body or WeeklyCheckinRequest()
+    return _json(
+        service.weekly_checkin(
+            user_id,
+            blockers=body.blockers,
+            recovery_action=body.recovery_action,
         )
     )
 

@@ -5,7 +5,13 @@ import type {
   CalendarReconciliationResult,
   ReconciliationOutcome,
 } from '../api/types'
-import { advisoryNote, flaggedReason, needsDraftRefetch, reconcileBanner } from './reconcile'
+import {
+  advisoryNote,
+  flaggedReason,
+  needsDraftRefetch,
+  reconcileBanner,
+  syncedAtMs,
+} from './reconcile'
 
 function delta(over: Partial<CalendarEventDelta>): CalendarEventDelta {
   return {
@@ -178,5 +184,21 @@ describe('advisoryNote', () => {
     expect(advisoryNote(deletedDelta)).toBeNull()
     // An unknown advisory code says nothing rather than inventing a note.
     expect(advisoryNote(delta({ disposition: 'adopted', reason_code: 'SOME_NEW_CODE' }))).toBeNull()
+  })
+})
+
+describe('syncedAtMs', () => {
+  const atMs = Date.parse('2026-06-23T09:05:00-07:00')
+
+  it('returns the server-stamped instant whenever a comparison actually ran', () => {
+    expect(syncedAtMs(result('no_change', []))).toBe(atMs)
+    expect(syncedAtMs(result('adopted', [adoptedDelta]))).toBe(atMs)
+    expect(syncedAtMs(result('flagged', [rejectedDelta]))).toBe(atMs)
+    expect(syncedAtMs(result('mixed', [adoptedDelta, rejectedDelta]))).toBe(atMs)
+  })
+
+  it('is null when no comparison ran — those pulls must not claim "synced"', () => {
+    expect(syncedAtMs(result('sync_disabled', []))).toBeNull()
+    expect(syncedAtMs(result('deferred', []))).toBeNull()
   })
 })

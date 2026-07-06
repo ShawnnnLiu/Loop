@@ -1,0 +1,40 @@
+{
+  "additionalProperties": false,
+  "description": "One immutable, content-addressed pin of a corpus membership.",
+  "properties": {
+    "content_hashes": {
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Content Hashes",
+      "type": "array"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "doc_ids": {
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Doc Ids",
+      "type": "array"
+    },
+    "snapshot_id": {
+      "pattern": "^snap_[0-9a-f]{16}$",
+      "title": "Snapshot Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "snapshot_id",
+    "created_at",
+    "doc_ids",
+    "content_hashes"
+  ],
+  "title": "CorpusSnapshot",
+  "type": "object"
+}

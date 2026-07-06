@@ -205,10 +205,39 @@ through to `unclassified` rather than being guessed. In particular, no
 platform host (Medium, Substack, etc.) is hardcoded as a personal blog, because
 those same platforms also host official company engineering blogs.
 
+## Corpus Registry (Grounding Layer)
+
+The retrieval corpus that feeds claim assembly is **versioned evidence, not a
+scrape pile**. It lives in the `CorpusRegistry` (`retrieval/`), the only
+writer of corpus documents and snapshots.
+
+- Every registered document carries a required `license_note` — the ToS basis
+  for holding a snapshot of that page. No license basis, no registration.
+- `source_type` for corpus documents comes from the **same** deterministic
+  URL-classification rules above (`source_claims/classification.py`, with the
+  same operator-declared `known_company_domains` / `engineering_blog_hosts` /
+  `personal_blog_hosts` context). One classifier; corpus ingestion never grows
+  a second set of rules.
+- The registry is **snapshot-versioned** for eval reproducibility: retrieval
+  metrics and grounded-generation evals pin a `snapshot_id` (a derived hash
+  over member content hashes), never "the corpus as of whenever the eval ran".
+  Snapshots are immutable; a corpus change is a new snapshot.
+- Corpus text is **public-web content only. User data never enters the
+  corpus** — no résumé text, no calendar data, nothing user-derived. This
+  keeps the corpus shareable and axiom 06's privacy posture trivially
+  satisfied on the retrieval side.
+- Curation lives in the checked-in source manifest, in review — not in
+  crawler heuristics. The ingestion tool fetches exactly the manifest's URLs.
+
+Schemas: `../specs/corpus-document.schema.md`,
+`../specs/corpus-snapshot.schema.md`.
+
 ## Related Docs
 
 - `01-system-boundaries.md`
 - `03-data-contracts.md`
 - `18-caching-strategy.md`
 - `../specs/source-claim.schema.md`
+- `../specs/corpus-document.schema.md`
+- `../specs/corpus-snapshot.schema.md`
 - `../decisions/ADR-0005-structured-syllabus-not-prose.md`

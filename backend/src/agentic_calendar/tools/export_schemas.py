@@ -35,6 +35,8 @@ from agentic_calendar.contracts.calendar_reconciliation import (
 from agentic_calendar.contracts.checkin_event import CheckinEvent
 from agentic_calendar.contracts.company_target import CompanyTarget
 from agentic_calendar.contracts.consent_record import ConsentRecord
+from agentic_calendar.contracts.corpus_document import CorpusDocument
+from agentic_calendar.contracts.corpus_snapshot import CorpusSnapshot
 from agentic_calendar.contracts.data_access_audit import DataAccessAuditEntry
 from agentic_calendar.contracts.draft_schedule import DraftSchedule
 from agentic_calendar.contracts.drift_event import DriftEvent
@@ -78,6 +80,8 @@ CONTRACTS: dict[str, type[BaseModel]] = {
     "motivation_profile": MotivationProfile,
     "syllabus_units": SyllabusUnits,
     "source_claim": SourceClaim,
+    "corpus_document": CorpusDocument,
+    "corpus_snapshot": CorpusSnapshot,
     "strategy_constraints": StrategyConstraints,
     "strategist_input": StrategistInput,
     "company_target": CompanyTarget,

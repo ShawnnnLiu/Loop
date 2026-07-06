@@ -46,6 +46,7 @@ def _set_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     # behavior is covered in test_spa.py with temp files.
     monkeypatch.setenv("SPA_DIST_DIR", str(tmp_path / "no-spa-build"))
     monkeypatch.setenv("LANDING_INDEX", str(tmp_path / "no-landing.html"))
+    monkeypatch.setenv("HOW_ITS_BUILT_INDEX", str(tmp_path / "no-built.html"))
     # No canonical-host redirect unless a test opts in (and never inherit one
     # from the invoking shell).
     monkeypatch.delenv("CANONICAL_HOST", raising=False)
@@ -74,6 +75,19 @@ def test_create_hosted_app_accepts_inline_client_json(
     monkeypatch.setenv("GOOGLE_OAUTH_CLIENT_SECRET_JSON", json.dumps(_CLIENT_JSON))
     client = TestClient(create_hosted_app())
     assert client.get("/api/status").status_code == 401
+
+
+def test_create_hosted_app_serves_how_its_built_from_env(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    _set_env(monkeypatch, tmp_path)
+    page = tmp_path / "built.html"
+    page.write_text("<!doctype html><h1>BUILT_MARKER</h1>")
+    monkeypatch.setenv("HOW_ITS_BUILT_INDEX", str(page))
+    client = TestClient(create_hosted_app())
+    resp = client.get("/how-its-built")
+    assert resp.status_code == 200
+    assert "BUILT_MARKER" in resp.text
 
 
 def test_create_hosted_app_reads_canonical_host(

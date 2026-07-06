@@ -25,7 +25,8 @@ ENV PYTHONUNBUFFERED=1 \
     UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
     SPA_DIST_DIR=/app/frontend/dist \
-    LANDING_INDEX=/app/landing/index.html
+    LANDING_INDEX=/app/landing/index.html \
+    HOW_ITS_BUILT_INDEX=/app/landing/how-its-built.html
 
 RUN pip install --no-cache-dir uv
 
@@ -34,9 +35,10 @@ COPY backend/ /app
 # Runtime deps only (no dev/test extras). Bundles fastapi/uvicorn/etc.
 RUN uv sync --no-dev --frozen
 
-# The static surfaces the hosted server serves: the landing page at "/" and the
-# built SPA (index.html fallback for app routes, hashed bundles under /assets).
-# SPA_DIST_DIR / LANDING_INDEX (above) point the server at these paths.
+# The static surfaces the hosted server serves: the landing page at "/", the
+# engineering-story page at /how-its-built, and the built SPA (index.html
+# fallback for app routes, hashed bundles under /assets). SPA_DIST_DIR /
+# LANDING_INDEX / HOW_ITS_BUILT_INDEX (above) point the server at these paths.
 COPY landing/ /app/landing
 COPY --from=frontend /fe/dist /app/frontend/dist
 

@@ -16,6 +16,9 @@ All configuration comes from environment variables (never the repo):
 * ``ANTHROPIC_API_KEY``         — required: real testers' plans use the live
   Anthropic nodes (the fixture nodes only handle the sample profile).
 * ``TUNING_PATH``               — optional tuning.toml (journaled overrides).
+* ``SPA_DIST_DIR`` / ``LANDING_INDEX`` / ``HOW_ITS_BUILT_INDEX`` — optional
+  overrides for the built SPA, the static landing, and the static
+  engineering-story page (defaults are the in-repo copies).
 * ``CANONICAL_HOST``            — optional bare hostname; requests under any
   other host (e.g. the old ``<app>.fly.dev`` name after a custom-domain
   cutover) are 301-redirected to it. Unset means no redirect.
@@ -34,7 +37,7 @@ from agentic_calendar.app.environment import build_environment
 from agentic_calendar.common.secrets import TokenCipher
 from agentic_calendar.tools.run_cycle import _live_bundle
 
-from .app import create_app, default_landing_index, default_spa_dist
+from .app import create_app, default_how_its_built, default_landing_index, default_spa_dist
 from .config import WebAuthConfig, WebConfigError
 
 
@@ -59,11 +62,14 @@ def create_hosted_app() -> FastAPI:
     spa_dist = Path(spa_override) if spa_override else default_spa_dist()
     landing_override = os.environ.get("LANDING_INDEX")
     landing_index = Path(landing_override) if landing_override else default_landing_index()
+    built_override = os.environ.get("HOW_ITS_BUILT_INDEX")
+    how_its_built = Path(built_override) if built_override else default_how_its_built()
     return create_app(
         env=env,
         auth_config=WebAuthConfig.from_env(),
         token_cipher=TokenCipher.from_env(),
         spa_dist=spa_dist,
         landing_index=landing_index,
+        how_its_built=how_its_built,
         canonical_host=os.environ.get("CANONICAL_HOST") or None,
     )

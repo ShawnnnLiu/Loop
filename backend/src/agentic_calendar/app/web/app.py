@@ -60,6 +60,15 @@ def default_landing_index() -> Path:
     return Path(__file__).resolve().parents[5] / "landing" / "index.html"
 
 
+def default_how_its_built() -> Path:
+    """The repo's static engineering-story page (``landing/how-its-built.html``).
+
+    Served at ``/how-its-built`` next to the landing — the no-sign-in
+    architecture page recruiters land on. Hosted deploys may override it with
+    ``HOW_ITS_BUILT_INDEX``."""
+    return Path(__file__).resolve().parents[5] / "landing" / "how-its-built.html"
+
+
 def _mount_spa(app: FastAPI, dist_dir: Path) -> None:
     """Serve the built SPA: hashed bundles under ``/assets`` and ``index.html``
     as the fallback for every other GET, so the client router owns app routes
@@ -92,6 +101,7 @@ def create_app(
     default_user_id: str | None = None,
     spa_dist: Path | None = None,
     landing_index: Path | None = None,
+    how_its_built: Path | None = None,
     canonical_host: str | None = None,
 ) -> FastAPI:
     """Build the app over a wired :class:`AppEnvironment`.
@@ -185,6 +195,15 @@ def create_app(
         @app.get("/", include_in_schema=False)
         def landing() -> FileResponse:
             return FileResponse(landing_index)
+
+    # The static engineering-story page, a sibling of the landing. Like the
+    # landing it must be registered before the SPA catch-all or the catch-all
+    # would swallow the route.
+    if how_its_built is not None and how_its_built.is_file():
+
+        @app.get("/how-its-built", include_in_schema=False)
+        def how_its_built_page() -> FileResponse:
+            return FileResponse(how_its_built)
 
     # The SPA fallback is registered LAST so its catch-all never shadows the API,
     # auth, health, or landing routes above. Only mounted when a real build is

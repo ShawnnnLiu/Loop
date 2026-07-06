@@ -21,6 +21,12 @@ from .errors import (
     EmptySnapshotError,
     UnknownCorpusDocumentError,
 )
+from .normalize import (
+    html_to_text,
+    looks_like_html,
+    normalize_fetched_text,
+    normalize_text,
+)
 from .registry import CorpusRegistry, InMemoryCorpusRegistry
 from .sqlite_registry import SqliteCorpusRegistry
 
@@ -33,4 +39,8 @@ __all__ = [
     "InMemoryCorpusRegistry",
     "SqliteCorpusRegistry",
     "UnknownCorpusDocumentError",
+    "html_to_text",
+    "looks_like_html",
+    "normalize_fetched_text",
+    "normalize_text",
 ]

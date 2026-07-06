@@ -1,0 +1,391 @@
+{
+  "manifest_version": "corpus-manifest-v1",
+  "comment": "Starter manifest (G-B): high-confidence stable URLs only. Expand toward 30-60 docs per track at the first live-fetch checkpoint (operator review; every live run is ask-first). known_company_domains stays empty until specific job postings are curated at fetch time - they expire fastest (axiom-08 45-day prior).",
+  "known_company_domains": [],
+  "engineering_blog_hosts": [
+    "anthropic.com",
+    "blog.cloudflare.com",
+    "dropbox.tech",
+    "eng.uber.com",
+    "engineering.atlassian.com",
+    "engineering.fb.com",
+    "github.blog",
+    "huggingface.co",
+    "netflixtechblog.com",
+    "pytorch.org",
+    "shopify.engineering",
+    "slack.engineering",
+    "stackoverflow.blog",
+    "stripe.com"
+  ],
+  "personal_blog_hosts": [
+    "blog.pragmaticengineer.com",
+    "colah.github.io",
+    "eugeneyan.com",
+    "huyenchip.com",
+    "karpathy.github.io",
+    "latent.space",
+    "lilianweng.github.io",
+    "martinfowler.com",
+    "sebastianraschka.com",
+    "simonwillison.net"
+  ],
+  "sources": [
+    {
+      "url": "https://github.blog/engineering/",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "swe"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "The GitHub Blog: Engineering",
+      "comment": "index page - replace/augment with specific article URLs during the fetch-checkpoint expansion"
+    },
+    {
+      "url": "https://stackoverflow.blog/engineering/",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "swe"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Stack Overflow Blog: Engineering",
+      "comment": "index page - replace/augment with specific article URLs during the fetch-checkpoint expansion"
+    },
+    {
+      "url": "https://engineering.fb.com/",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "swe"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Engineering at Meta",
+      "comment": "index page - replace/augment with specific article URLs during the fetch-checkpoint expansion"
+    },
+    {
+      "url": "https://netflixtechblog.com/",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "swe"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Netflix TechBlog",
+      "comment": "index page - replace/augment with specific article URLs during the fetch-checkpoint expansion"
+    },
+    {
+      "url": "https://dropbox.tech/",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "swe"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Dropbox Tech Blog",
+      "comment": "index page - replace/augment with specific article URLs during the fetch-checkpoint expansion"
+    },
+    {
+      "url": "https://blog.cloudflare.com/",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "swe"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "The Cloudflare Blog",
+      "comment": "index page - replace/augment with specific article URLs during the fetch-checkpoint expansion"
+    },
+    {
+      "url": "https://slack.engineering/",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "swe"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Slack Engineering",
+      "comment": "index page - replace/augment with specific article URLs during the fetch-checkpoint expansion"
+    },
+    {
+      "url": "https://shopify.engineering/",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "swe"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Shopify Engineering",
+      "comment": "index page - replace/augment with specific article URLs during the fetch-checkpoint expansion"
+    },
+    {
+      "url": "https://stripe.com/blog/engineering",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "swe"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Stripe Engineering Blog",
+      "comment": "index page - replace/augment with specific article URLs during the fetch-checkpoint expansion"
+    },
+    {
+      "url": "https://engineering.atlassian.com/",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "swe"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Atlassian Engineering",
+      "comment": "index page - replace/augment with specific article URLs during the fetch-checkpoint expansion"
+    },
+    {
+      "url": "https://eng.uber.com/",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "swe",
+        "mle"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Uber Engineering Blog",
+      "comment": "index page - replace/augment with specific article URLs during the fetch-checkpoint expansion"
+    },
+    {
+      "url": "https://martinfowler.com/articles/microservices.html",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "swe"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Microservices (James Lewis and Martin Fowler)",
+      "published_date": "2014-03-25"
+    },
+    {
+      "url": "https://blog.pragmaticengineer.com/",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "swe"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "The Pragmatic Engineer Blog",
+      "comment": "index page - replace/augment with specific article URLs during the fetch-checkpoint expansion"
+    },
+    {
+      "url": "https://www.levels.fyi/t/software-engineer",
+      "expected_type": "role_taxonomy",
+      "track_tags": [
+        "swe"
+      ],
+      "license_note": "Public levels.fyi taxonomy page; snapshot held for research reference; volatile data, refresh per axiom-08 expiry.",
+      "title": "levels.fyi: Software Engineer levels"
+    },
+    {
+      "url": "https://interviewing.io/blog",
+      "expected_type": "interview_postmortem",
+      "track_tags": [
+        "swe"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "interviewing.io blog",
+      "comment": "index page - replace/augment with specific article URLs during the fetch-checkpoint expansion"
+    },
+    {
+      "url": "https://interviewing.io/guides/system-design-interview",
+      "expected_type": "interview_postmortem",
+      "track_tags": [
+        "swe"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "interviewing.io: System design interview guide"
+    },
+    {
+      "url": "https://github.com/donnemartin/system-design-primer",
+      "expected_type": "unclassified",
+      "track_tags": [
+        "swe"
+      ],
+      "license_note": "Open-source repository page; snapshot held with attribution per the repository's license.",
+      "title": "The System Design Primer"
+    },
+    {
+      "url": "https://huggingface.co/blog",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "mle",
+        "ai_engineer"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Hugging Face Blog",
+      "comment": "index page - replace/augment with specific article URLs during the fetch-checkpoint expansion"
+    },
+    {
+      "url": "https://pytorch.org/blog/",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "mle"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "PyTorch Blog",
+      "comment": "index page - replace/augment with specific article URLs during the fetch-checkpoint expansion"
+    },
+    {
+      "url": "https://lilianweng.github.io/",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "mle",
+        "ai_engineer"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Lil'Log (Lilian Weng)",
+      "comment": "index page - replace/augment with specific article URLs during the fetch-checkpoint expansion"
+    },
+    {
+      "url": "https://karpathy.github.io/2019/04/25/recipe/",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "mle"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "A Recipe for Training Neural Networks (Andrej Karpathy)",
+      "published_date": "2019-04-25"
+    },
+    {
+      "url": "https://colah.github.io/posts/2015-08-Understanding-LSTMs/",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "mle"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Understanding LSTM Networks (Christopher Olah)"
+    },
+    {
+      "url": "https://eugeneyan.com/writing/",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "mle",
+        "ai_engineer"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Eugene Yan: Writing",
+      "comment": "index page - replace/augment with specific article URLs during the fetch-checkpoint expansion"
+    },
+    {
+      "url": "https://huyenchip.com/blog/",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "mle",
+        "ai_engineer"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Chip Huyen: Blog",
+      "comment": "index page - replace/augment with specific article URLs during the fetch-checkpoint expansion"
+    },
+    {
+      "url": "https://sebastianraschka.com/blog/",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "mle"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Sebastian Raschka: Blog",
+      "comment": "index page - replace/augment with specific article URLs during the fetch-checkpoint expansion"
+    },
+    {
+      "url": "https://developers.google.com/machine-learning/guides/rules-of-ml",
+      "expected_type": "unclassified",
+      "track_tags": [
+        "mle"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Rules of Machine Learning (Google)"
+    },
+    {
+      "url": "https://distill.pub/",
+      "expected_type": "unclassified",
+      "track_tags": [
+        "mle"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Distill (archived journal)",
+      "comment": "index page - replace/augment with specific article URLs during the fetch-checkpoint expansion"
+    },
+    {
+      "url": "https://lilianweng.github.io/posts/2023-06-23-agent/",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "LLM Powered Autonomous Agents (Lilian Weng)",
+      "published_date": "2023-06-23"
+    },
+    {
+      "url": "https://www.anthropic.com/engineering/building-effective-agents",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Building Effective Agents (Anthropic)"
+    },
+    {
+      "url": "https://huggingface.co/blog/rlhf",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "mle",
+        "ai_engineer"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Illustrating RLHF (Hugging Face)"
+    },
+    {
+      "url": "https://www.promptingguide.ai/",
+      "expected_type": "unclassified",
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Prompt Engineering Guide (DAIR.AI)"
+    },
+    {
+      "url": "https://eugeneyan.com/writing/llm-patterns/",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Patterns for Building LLM-based Systems (Eugene Yan)"
+    },
+    {
+      "url": "https://applied-llms.org/",
+      "expected_type": "unclassified",
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "What We've Learned From A Year of Building with LLMs"
+    },
+    {
+      "url": "https://huyenchip.com/2023/04/11/llm-engineering.html",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Building LLM Applications for Production (Chip Huyen)",
+      "published_date": "2023-04-11"
+    },
+    {
+      "url": "https://simonwillison.net/",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Simon Willison's Weblog",
+      "comment": "index page - replace/augment with specific article URLs during the fetch-checkpoint expansion"
+    },
+    {
+      "url": "https://www.latent.space/",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Latent Space",
+      "comment": "index page - replace/augment with specific article URLs during the fetch-checkpoint expansion"
+    }
+  ]
+}

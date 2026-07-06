@@ -76,6 +76,7 @@ from agentic_calendar.contracts.drift_event import DriftEvent, RecommendedPolicy
 from agentic_calendar.contracts.hashing import canonical_payload_hash
 from agentic_calendar.contracts.motivation_profile import RecoveryPreference
 from agentic_calendar.contracts.notification_log import NotificationStatus
+from agentic_calendar.contracts.plan_diff import PlanDiff
 from agentic_calendar.contracts.reason_codes import ReasonCode
 from agentic_calendar.contracts.recommitment import RecommitmentChoice, RecommitmentRequest
 from agentic_calendar.contracts.scheduler_output import SchedulerOutput, ScheduleStatus
@@ -106,6 +107,11 @@ from agentic_calendar.llm_nodes.prose_attachment import (
 )
 from agentic_calendar.llm_nodes.reflection_summary import ReflectionSummary
 from agentic_calendar.llm_nodes.user_facing_explanation import UserExplanation
+from agentic_calendar.planning.diff import (
+    PlanContentDiff,
+    as_plan_diff,
+    diff_plan_content,
+)
 from agentic_calendar.planning.drop import DropError, propose_dropped_plan
 from agentic_calendar.planning.plan_version import (
     GenerationStep,
@@ -139,6 +145,7 @@ from .results import (
     IngestResult,
     MeResult,
     OnboardResult,
+    PlanDiffView,
     ProposeResult,
     RecommitResult,
     ReflectionHistoryEntry,
@@ -886,6 +893,28 @@ class CycleService:
         )
         env.plan_store.save(plan_version)
 
+        # D4 stage 2: a continuation from an existing plan carries the
+        # deterministic old→new content diff, so review/approval can show the
+        # delta instead of a wall of blocks. Computed by code from the two
+        # persisted plans (axiom 15); recomputable any time, so not stored.
+        plan_diff: PlanDiff | None = None
+        if parent_plan_version is not None:
+            parent = env.plan_store.get(onboarding.user_id, parent_plan_version)
+            if parent is not None:
+                plan_diff = as_plan_diff(
+                    diff_plan_content(parent.plan, plan),
+                    diff_id=env.id_generator.new_id("diff"),
+                    now=now,
+                    field_change_reason=(
+                        # The replan's typed driver, applied uniformly — code
+                        # cannot attribute per-field causes in a regenerated
+                        # plan (see planning/diff.py).
+                        ReasonCode.USER_DURATION_CALIBRATION
+                        if run.replan_kind is ReplanKind.RECALIBRATION
+                        else ReasonCode.DRIFT_REMEDIATION
+                    ),
+                )
+
         draft = DraftSchedule.from_scheduler_output(
             output,
             draft_schedule_id=env.id_generator.new_id("draft"),
@@ -913,6 +942,7 @@ class CycleService:
             scheduled_task_count=len(output.scheduled_tasks),
             unscheduled_tasks=list(output.unscheduled_tasks),
             repair_options=list(output.repair_options),
+            plan_diff=plan_diff,
         )
 
     def _llm_failure(self, run: RunRecord, exc: LLMNodeError) -> RunRecord:
@@ -2494,6 +2524,7 @@ class CycleService:
         payload_hash: str | None = None
         task_titles: dict[str, str] = {}
         deleted_task_ids: list[str] = []
+        plan_diff: PlanDiffView | None = None
         if run is not None and run.draft_schedule_id is not None:
             draft = env.state.get_draft(run.draft_schedule_id)
             if draft is not None:
@@ -2501,6 +2532,7 @@ class CycleService:
                 plan = env.plan_store.get(user_id, draft.plan_version)
                 if plan is not None:
                     task_titles = {task.task_id: task.title for task in plan.plan.tasks}
+                    plan_diff = self._plan_diff_view(user_id, plan)
                 deleted_task_ids = sorted(
                     self._event_deleted_ids(user_id, draft.plan_version)
                 )
@@ -2511,6 +2543,34 @@ class CycleService:
             free_busy=[dict(interval) for interval in (free_busy or [])],
             task_titles=task_titles,
             deleted_task_ids=deleted_task_ids,
+            plan_diff=plan_diff,
+        )
+
+    def _plan_diff_view(
+        self, user_id: str, plan: PlanVersion
+    ) -> PlanDiffView | None:
+        """The compact content delta vs ``plan``'s parent, or ``None`` (D4).
+
+        Recomputed from the two persisted plan versions on every fetch — the
+        diff is a pure function of stored plans (``planning/diff.py``), so a
+        read projection derives it instead of persisting a copy. ``None`` for
+        a fresh propose (no parent) or when the parent version is unknown.
+        """
+        if plan.parent_plan_version is None:
+            return None
+        parent = self._env.plan_store.get(user_id, plan.parent_plan_version)
+        if parent is None:
+            return None
+        content: PlanContentDiff = diff_plan_content(parent.plan, plan.plan)
+        return PlanDiffView(
+            from_plan_version=content.from_plan_version,
+            to_plan_version=content.to_plan_version,
+            tasks_added=len(content.added_ids),
+            tasks_removed=len(content.removed_ids),
+            tasks_changed=len(content.changed_ids),
+            tasks_preserved=len(content.preserved_ids),
+            net_load_change_min=content.summary.net_weekly_load_change_min,
+            changes=list(content.change_lines),
         )
 
     def today(self, user_id: str) -> TodayResult:

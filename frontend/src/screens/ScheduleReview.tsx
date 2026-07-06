@@ -14,7 +14,7 @@ import {
   weekMondayMs,
 } from '../lib/datetime'
 import { flaggedReason, needsDraftRefetch, reconcileBanner } from '../lib/reconcile'
-import { RECOVERY_OPTIONS, reviewBanner, reviewMode } from '../lib/review'
+import { RECOVERY_OPTIONS, planDiffLine, reviewBanner, reviewMode } from '../lib/review'
 
 // The drag-to-adjust schedule review (the signature interaction). PROPOSED
 // blocks are draggable (snap 15 min, move across the week's days); imported
@@ -345,6 +345,27 @@ export function ScheduleReviewScreen() {
               Drag any <b style={{ color: 'var(--clay-deep)' }}>proposed</b> block to a new time or
               day. Your existing calendar events are fixed. Every move is re-checked on the server.
             </div>
+            {view?.plan_diff &&
+              // The deterministic plan diff (D4): a replanned draft is
+              // reviewed as a delta against the plan the user already
+              // approved, not re-read from scratch. Server-computed counts;
+              // the disclosure lists the per-task change lines.
+              (view.plan_diff.changes.length > 0 ? (
+                <details style={{ marginTop: 6 }}>
+                  <summary className="muted" style={{ fontSize: 12.5, cursor: 'pointer' }}>
+                    {planDiffLine(view.plan_diff)}
+                  </summary>
+                  <ul className="fit-specifics" style={{ marginTop: 4 }}>
+                    {view.plan_diff.changes.map((line) => (
+                      <li key={line}>{line}</li>
+                    ))}
+                  </ul>
+                </details>
+              ) : (
+                <div className="muted" style={{ fontSize: 12.5, marginTop: 6 }}>
+                  {planDiffLine(view.plan_diff)}
+                </div>
+              ))}
           </div>
         ) : (
           <div style={{ flex: 1 }}>

@@ -5,6 +5,7 @@ The active plan is never mutated in place; new work creates a new
 plan version itself.
 """
 
+from .diff import PlanContentDiff, as_plan_diff, diff_plan_content
 from .plan_version import (
     GenerationStep,
     GenerationStepRecord,
@@ -28,6 +29,7 @@ __all__ = [
     "InMemoryPlanVersionStore",
     "LifecycleState",
     "MultipleActivePlansError",
+    "PlanContentDiff",
     "PlanVersion",
     "PlanVersionAlreadyExistsError",
     "PlanVersionNotFoundError",
@@ -36,6 +38,8 @@ __all__ = [
     "RecalibrationProposal",
     "RecoveryProposal",
     "RecoveryRoute",
+    "as_plan_diff",
+    "diff_plan_content",
     "propose_recalibrated_plan",
     "propose_recovery_plan",
 ]

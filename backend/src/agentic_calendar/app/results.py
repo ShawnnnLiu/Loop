@@ -18,6 +18,7 @@ from agentic_calendar.contracts.accountability_state import AccountabilityState
 from agentic_calendar.contracts.checkin_event import RecoveryAction
 from agentic_calendar.contracts.draft_schedule import DraftSchedule
 from agentic_calendar.contracts.drift_event import DriftEvent
+from agentic_calendar.contracts.plan_diff import PlanDiff
 from agentic_calendar.contracts.reason_codes import ReasonCode
 from agentic_calendar.contracts.recommitment import RecommitmentChoice
 from agentic_calendar.contracts.scheduler_output import RepairOption, UnscheduledTask
@@ -65,6 +66,10 @@ class ProposeResult(BaseModel):
     specific recovery message; the typed ``reason_code`` stays the contract."""
     explanation: UserExplanation | None = None
     """LLM prose attachment (validation wording); never control-plane."""
+    plan_diff: PlanDiff | None = None
+    """Deterministic content diff vs the parent plan version (D4 stage 2) —
+    present only when this propose continued from an existing plan (replan).
+    Computed by code from the two persisted plans, never by an LLM."""
 
 
 class DropResult(BaseModel):
@@ -282,6 +287,28 @@ class StatusResult(BaseModel):
 # --------------------------------------------------------------------------- #
 
 
+class PlanDiffView(BaseModel):
+    """Compact deterministic delta between the pending draft's plan and its
+    parent plan version (D4 stage 2) — what the review/approval banners render
+    ("3 changed, 14 preserved"). Recomputed read-only from the two persisted
+    plan versions on every fetch (``planning/diff.py``), never stored and
+    never LLM-authored. The four counts partition the tasks: a task counts as
+    preserved only when its full content is identical."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    from_plan_version: str
+    to_plan_version: str
+    tasks_added: int = Field(ge=0)
+    tasks_removed: int = Field(ge=0)
+    tasks_changed: int = Field(ge=0)
+    tasks_preserved: int = Field(ge=0)
+    net_load_change_min: int
+    """Plan-wide net minutes delta; positive means more total work."""
+    changes: list[str] = Field(default_factory=list)
+    """One deterministic line per removed/changed/added task, in that order."""
+
+
 class DraftView(BaseModel):
     """The pending draft the review/approval screens render, with the canonical
     hash the user approves and the imported busy windows the grid draws as
@@ -302,6 +329,9 @@ class DraftView(BaseModel):
     (``event_deleted`` dispositions for the draft's plan version). The grid
     renders these as a distinct "deleted from calendar" state — never as the
     written checkmark, and never as completion (the task is still planned)."""
+    plan_diff: PlanDiffView | None = None
+    """Content delta vs the parent plan version — present for any draft with
+    a parent (replan, recalibration, drop); ``None`` on a fresh propose."""
 
 
 class TodayTask(BaseModel):

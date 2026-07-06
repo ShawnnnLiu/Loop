@@ -25,6 +25,7 @@ function draftView(over: Partial<DraftView> = {}): DraftView {
     free_busy: [],
     task_titles: {},
     deleted_task_ids: [],
+    plan_diff: null,
     ...over,
   }
 }

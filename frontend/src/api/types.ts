@@ -159,6 +159,23 @@ export interface FreeBusyInterval {
   end: string
 }
 
+/** Compact deterministic delta between the pending draft's plan and its parent
+ *  plan version (D4) — computed server-side from the two persisted plans, never
+ *  by an LLM and never client-side. A task counts as preserved only when its
+ *  full content is identical. */
+export interface PlanDiffView {
+  from_plan_version: string
+  to_plan_version: string
+  tasks_added: number
+  tasks_removed: number
+  tasks_changed: number
+  tasks_preserved: number
+  /** Plan-wide net minutes delta; positive means more total work. */
+  net_load_change_min: number
+  /** One deterministic line per removed/changed/added task, in that order. */
+  changes: string[]
+}
+
 export interface DraftView {
   draft: DraftSchedule | null
   payload_hash: string | null
@@ -170,6 +187,9 @@ export interface DraftView {
    *  distinct "deleted from calendar" state — never the written checkmark; the
    *  task itself is still planned. */
   deleted_task_ids: string[]
+  /** Content delta vs the parent plan version — present for any draft with a
+   *  parent (replan, recalibration, drop); null on a fresh propose. */
+  plan_diff: PlanDiffView | null
 }
 
 /** A single move sent to /api/adjust; the server derives `end` from the

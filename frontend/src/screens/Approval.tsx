@@ -13,6 +13,7 @@ import {
   toWriteBlocks,
   writeOutcome,
 } from '../lib/approval'
+import { planDiffLine } from '../lib/review'
 
 // The approval gate — the ONLY place the product writes to a calendar. The
 // backend gate (approval event, payload-hash recheck, write, per-event
@@ -174,6 +175,13 @@ export function ApprovalScreen({ email }: { email: string | null }) {
           <p className="muted" style={{ fontSize: 13.5, marginTop: 3 }}>
             You’ve arranged these. The next step is the only place Loop writes to your calendar.
           </p>
+          {view?.plan_diff && (
+            // Replan/drop drafts approve as a delta (D4): the deterministic
+            // server-computed diff vs the plan the user already approved.
+            <p style={{ fontSize: 13, marginTop: 6, color: 'var(--clay-deep)' }}>
+              {planDiffLine(view.plan_diff)}
+            </p>
+          )}
         </div>
         <div className="card" style={{ padding: '8px 10px' }}>
           {blocks.map((b, i) => (

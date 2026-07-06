@@ -5,7 +5,7 @@
 // same split as lib/approval.ts, so the screen stays a thin view over server
 // truth (the server, not the client, owns which transitions are legal).
 
-import type { StatusResult } from '../api/types'
+import type { PlanDiffView, StatusResult } from '../api/types'
 
 export type ReviewMode = 'editable' | 'written' | 'writing' | 'failed' | 'replan'
 
@@ -121,6 +121,29 @@ export function attentionChip(
     default:
       return null
   }
+}
+
+/** One sentence for the plan-diff banner (D4): how much of the user's current
+ *  plan this draft preserves. The counts come from the server's deterministic
+ *  diff of the two persisted plan versions — never recomputed client-side.
+ *  Null when there is no diff to describe (fresh propose). */
+export function planDiffLine(diff: PlanDiffView | null | undefined): string | null {
+  if (!diff) return null
+  // Every task of the parent plan is preserved, changed, or removed.
+  const priorTotal = diff.tasks_preserved + diff.tasks_changed + diff.tasks_removed
+  const tasks = priorTotal === 1 ? 'task' : 'tasks'
+  const kept =
+    diff.tasks_preserved === priorTotal
+      ? `keeps all ${priorTotal} ${tasks}`
+      : `keeps ${diff.tasks_preserved} of ${priorTotal} ${tasks}`
+  const deltas = [
+    diff.tasks_changed > 0 ? `${diff.tasks_changed} changed` : null,
+    diff.tasks_added > 0 ? `${diff.tasks_added} added` : null,
+    diff.tasks_removed > 0 ? `${diff.tasks_removed} removed` : null,
+  ].filter((part): part is string => part !== null)
+  return deltas.length === 0
+    ? `This update ${kept} from your current plan unchanged.`
+    : `This update ${kept} from your current plan — ${deltas.join(', ')}.`
 }
 
 export interface ReviewBanner {

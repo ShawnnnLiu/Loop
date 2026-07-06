@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import type { StatusResult } from '../api/types'
+import type { PlanDiffView, StatusResult } from '../api/types'
 import {
   RECOVERY_OPTIONS,
   attentionChip,
+  planDiffLine,
   replanReason,
   reviewBanner,
   reviewMode,
@@ -139,6 +140,48 @@ describe('setupDeepLink', () => {
   it('everything else starts at the top of the form', () => {
     expect(setupDeepLink('LLM_REFUSAL')).toBe('/onboarding')
     expect(setupDeepLink(null)).toBe('/onboarding')
+  })
+})
+
+function diff(over: Partial<PlanDiffView> = {}): PlanDiffView {
+  return {
+    from_plan_version: 'plan_001',
+    to_plan_version: 'plan_002',
+    tasks_added: 0,
+    tasks_removed: 0,
+    tasks_changed: 0,
+    tasks_preserved: 0,
+    net_load_change_min: 0,
+    changes: [],
+    ...over,
+  }
+}
+
+describe('planDiffLine', () => {
+  it('is null when there is no diff (fresh propose)', () => {
+    expect(planDiffLine(null)).toBeNull()
+    expect(planDiffLine(undefined)).toBeNull()
+  })
+
+  it('names only the nonzero deltas against the prior-plan total', () => {
+    expect(
+      planDiffLine(diff({ tasks_preserved: 14, tasks_changed: 3, tasks_added: 1 })),
+    ).toBe('This update keeps 14 of 17 tasks from your current plan — 3 changed, 1 added.')
+    expect(planDiffLine(diff({ tasks_preserved: 5, tasks_removed: 2 }))).toBe(
+      'This update keeps 5 of 7 tasks from your current plan — 2 removed.',
+    )
+  })
+
+  it('says so plainly when everything is preserved', () => {
+    expect(planDiffLine(diff({ tasks_preserved: 2 }))).toBe(
+      'This update keeps all 2 tasks from your current plan unchanged.',
+    )
+  })
+
+  it('uses the singular for a one-task prior plan', () => {
+    expect(planDiffLine(diff({ tasks_changed: 1, tasks_added: 2 }))).toBe(
+      'This update keeps 0 of 1 task from your current plan — 1 changed, 2 added.',
+    )
   })
 })
 

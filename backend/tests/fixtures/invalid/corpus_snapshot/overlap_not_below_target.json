@@ -1,17 +1,15 @@
 {
-  "snapshot_id": "snap_991fe07b393f3d80",
+  "snapshot_id": "snap_f2a106414154f145",
   "created_at": "2026-07-06T18:00:00Z",
   "doc_ids": [
-    "doc_f702858150120ae6",
     "doc_ac4afb694bc44d95"
   ],
   "content_hashes": [
-    "1514ecd5c78e9ec5f4dc84a3c01208b002cf834db202b1c8dda3e03d7fff5f4e",
     "1cc4db79381ad4643b9ab7959b974f4157fbe51a5b9cea05e4e65ffc7669dea7"
   ],
   "chunking_params": {
     "algorithm": "structure_v1",
-    "target_chars": 1600,
+    "target_chars": 200,
     "overlap_chars": 200
   }
 }

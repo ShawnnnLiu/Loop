@@ -4,7 +4,8 @@ Usage::
 
     uv run python -m agentic_calendar.tools.ingest_corpus \\
         --manifest corpus/manifest_v1.json --db dogfood.db [--dry-run] \\
-        [--max-fetches 100] [--timeout 20] [--snapshot]
+        [--max-fetches 100] [--timeout 20] [--snapshot] \\
+        [--chunk-target-chars 1600] [--chunk-overlap-chars 200]
 
 Curation lives in the manifest, in review — not in crawler heuristics. The
 tool fetches **exactly** the manifest's URLs (no crawling, no link
@@ -50,8 +51,10 @@ from agentic_calendar.contracts.corpus_document import (
     content_hash_for,
     derive_doc_id,
 )
+from agentic_calendar.contracts.corpus_snapshot import ChunkingParams
 from agentic_calendar.contracts.source_claim import SourceType
 from agentic_calendar.retrieval import (
+    DEFAULT_CHUNKING_PARAMS,
     CorpusDocumentConflictError,
     CorpusRegistry,
     SqliteCorpusRegistry,
@@ -444,6 +447,25 @@ def main(
         action="store_true",
         help="After a live run, pin a snapshot over every registered document.",
     )
+    parser.add_argument(
+        "--chunk-target-chars",
+        type=int,
+        default=DEFAULT_CHUNKING_PARAMS.target_chars,
+        help=(
+            "Snapshot chunking target size in chars "
+            f"(default {DEFAULT_CHUNKING_PARAMS.target_chars}; part of the "
+            "snapshot identity — new params pin a new snapshot)."
+        ),
+    )
+    parser.add_argument(
+        "--chunk-overlap-chars",
+        type=int,
+        default=DEFAULT_CHUNKING_PARAMS.overlap_chars,
+        help=(
+            "Snapshot chunking overlap upper bound in chars "
+            f"(default {DEFAULT_CHUNKING_PARAMS.overlap_chars})."
+        ),
+    )
     args = parser.parse_args(argv)
 
     try:
@@ -480,13 +502,25 @@ def main(
         if not documents:
             print("snapshot: skipped — registry is empty", file=sys.stderr)
         else:
+            try:
+                chunking_params = ChunkingParams(
+                    algorithm=DEFAULT_CHUNKING_PARAMS.algorithm,
+                    target_chars=args.chunk_target_chars,
+                    overlap_chars=args.chunk_overlap_chars,
+                )
+            except ValidationError as exc:
+                print(f"error: invalid chunking params: {exc}", file=sys.stderr)
+                return 1
             snapshot = registry.create_snapshot(
                 [document.doc_id for document in documents],
                 created_at=now if now is not None else datetime.now(UTC),
+                chunking_params=chunking_params,
             )
             print(
                 f"snapshot: {snapshot.snapshot_id} "
-                f"({len(snapshot.doc_ids)} documents)"
+                f"({len(snapshot.doc_ids)} documents; chunking "
+                f"{chunking_params.algorithm} target={chunking_params.target_chars} "
+                f"overlap={chunking_params.overlap_chars})"
             )
 
     return 1 if report.failed else 0

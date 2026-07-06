@@ -11,8 +11,13 @@ import pytest
 from agentic_calendar.common.sqlite import SqliteDatabase
 from agentic_calendar.contracts.career_track import CareerTrack
 from agentic_calendar.contracts.corpus_document import derive_doc_id
+from agentic_calendar.contracts.corpus_snapshot import ChunkingParams
 from agentic_calendar.contracts.source_claim import SourceType
-from agentic_calendar.retrieval import InMemoryCorpusRegistry, SqliteCorpusRegistry
+from agentic_calendar.retrieval import (
+    DEFAULT_CHUNKING_PARAMS,
+    InMemoryCorpusRegistry,
+    SqliteCorpusRegistry,
+)
 from agentic_calendar.tools.ingest_corpus import (
     CorpusManifest,
     FetchOutcome,
@@ -285,6 +290,60 @@ def test_cli_live_run_registers_and_snapshots(
     (snapshot,) = registry.list_snapshots()
     assert snapshot.created_at == now
     assert len(snapshot.doc_ids) == 2
+    assert snapshot.chunking_params == DEFAULT_CHUNKING_PARAMS
+
+
+def test_cli_snapshot_chunk_flags_pin_the_params(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    manifest_path = _write_manifest(tmp_path)
+    db_path = tmp_path / "corpus.db"
+    rc = main(
+        [
+            "--manifest",
+            str(manifest_path),
+            "--db",
+            str(db_path),
+            "--snapshot",
+            "--chunk-target-chars",
+            "800",
+            "--chunk-overlap-chars",
+            "100",
+        ],
+        fetcher=FakeFetcher(dict(_PAGES)),
+        today=_TODAY,
+        now=datetime(2026, 7, 6, 18, 0, tzinfo=UTC),
+    )
+    assert rc == 0
+    assert "target=800 overlap=100" in capsys.readouterr().out
+    registry = SqliteCorpusRegistry(SqliteDatabase(db_path))
+    (snapshot,) = registry.list_snapshots()
+    assert snapshot.chunking_params == ChunkingParams(
+        algorithm="structure_v1", target_chars=800, overlap_chars=100
+    )
+
+
+def test_cli_rejects_invalid_chunk_flags(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    manifest_path = _write_manifest(tmp_path)
+    rc = main(
+        [
+            "--manifest",
+            str(manifest_path),
+            "--db",
+            str(tmp_path / "corpus.db"),
+            "--snapshot",
+            "--chunk-target-chars",
+            "100",
+            "--chunk-overlap-chars",
+            "100",
+        ],
+        fetcher=FakeFetcher(dict(_PAGES)),
+        today=_TODAY,
+    )
+    assert rc == 1
+    assert "invalid chunking params" in capsys.readouterr().err
 
 
 def test_cli_exits_nonzero_on_failures(tmp_path: Path) -> None:

@@ -6,5 +6,10 @@
   ],
   "content_hashes": [
     "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"
-  ]
+  ],
+  "chunking_params": {
+    "algorithm": "structure_v1",
+    "target_chars": 1600,
+    "overlap_chars": 200
+  }
 }

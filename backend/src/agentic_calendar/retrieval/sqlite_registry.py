@@ -22,7 +22,7 @@ from datetime import datetime
 from agentic_calendar.common.sqlite import SqliteDatabase
 from agentic_calendar.contracts.career_track import CareerTrack
 from agentic_calendar.contracts.corpus_document import CorpusDocument
-from agentic_calendar.contracts.corpus_snapshot import CorpusSnapshot
+from agentic_calendar.contracts.corpus_snapshot import ChunkingParams, CorpusSnapshot
 
 from .errors import (
     CorpusDocumentConflictError,
@@ -113,7 +113,11 @@ class SqliteCorpusRegistry:
         return [d for d in documents if track in d.track_tags]
 
     def create_snapshot(
-        self, doc_ids: Sequence[str], *, created_at: datetime
+        self,
+        doc_ids: Sequence[str],
+        *,
+        created_at: datetime,
+        chunking_params: ChunkingParams,
     ) -> CorpusSnapshot:
         if not doc_ids:
             raise EmptySnapshotError()
@@ -121,7 +125,12 @@ class SqliteCorpusRegistry:
         # concurrent register/create cannot interleave between them.
         with self._db.transaction() as cur:
             resolve = self._resolve_documents(cur, doc_ids)
-            snapshot = _build_snapshot(doc_ids, created_at=created_at, resolve=resolve)
+            snapshot = _build_snapshot(
+                doc_ids,
+                created_at=created_at,
+                chunking_params=chunking_params,
+                resolve=resolve,
+            )
             row = cur.execute(
                 "SELECT payload FROM corpus_snapshots WHERE snapshot_id = ?",
                 (snapshot.snapshot_id,),

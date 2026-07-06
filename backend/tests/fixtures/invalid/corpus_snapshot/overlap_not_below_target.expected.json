@@ -1,0 +1,6 @@
+{
+  "error_substrings": [
+    "overlap_chars",
+    "must be strictly less"
+  ]
+}

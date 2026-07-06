@@ -32,6 +32,7 @@ from typing import Protocol, runtime_checkable
 from agentic_calendar.contracts.career_track import CareerTrack
 from agentic_calendar.contracts.corpus_document import CorpusDocument, content_hash_for
 from agentic_calendar.contracts.corpus_snapshot import (
+    ChunkingParams,
     CorpusSnapshot,
     derive_snapshot_id,
 )
@@ -66,7 +67,11 @@ class CorpusRegistry(Protocol):
     ) -> list[CorpusDocument]: ...
 
     def create_snapshot(
-        self, doc_ids: Sequence[str], *, created_at: datetime
+        self,
+        doc_ids: Sequence[str],
+        *,
+        created_at: datetime,
+        chunking_params: ChunkingParams,
     ) -> CorpusSnapshot: ...
 
     def get_snapshot(self, snapshot_id: str) -> CorpusSnapshot | None: ...
@@ -88,6 +93,7 @@ def _build_snapshot(
     doc_ids: Sequence[str],
     *,
     created_at: datetime,
+    chunking_params: ChunkingParams,
     resolve: dict[str, CorpusDocument],
 ) -> CorpusSnapshot:
     """Canonicalize membership and derive the snapshot from resolved documents.
@@ -98,10 +104,11 @@ def _build_snapshot(
     canonical_ids = sorted(set(doc_ids))
     hashes = [resolve[doc_id].content_hash for doc_id in canonical_ids]
     return CorpusSnapshot(
-        snapshot_id=derive_snapshot_id(hashes),
+        snapshot_id=derive_snapshot_id(hashes, chunking_params),
         created_at=created_at,
         doc_ids=canonical_ids,
         content_hashes=hashes,
+        chunking_params=chunking_params,
     )
 
 
@@ -150,7 +157,11 @@ class InMemoryCorpusRegistry:
         return [d for d in documents if track in d.track_tags]
 
     def create_snapshot(
-        self, doc_ids: Sequence[str], *, created_at: datetime
+        self,
+        doc_ids: Sequence[str],
+        *,
+        created_at: datetime,
+        chunking_params: ChunkingParams,
     ) -> CorpusSnapshot:
         if not doc_ids:
             raise EmptySnapshotError()
@@ -159,7 +170,10 @@ class InMemoryCorpusRegistry:
             if missing:
                 raise UnknownCorpusDocumentError(missing)
             snapshot = _build_snapshot(
-                doc_ids, created_at=created_at, resolve=self._documents
+                doc_ids,
+                created_at=created_at,
+                chunking_params=chunking_params,
+                resolve=self._documents,
             )
             existing = self._snapshots.get(snapshot.snapshot_id)
             if existing is not None:

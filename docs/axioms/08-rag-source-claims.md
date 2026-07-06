@@ -220,8 +220,10 @@ writer of corpus documents and snapshots.
   a second set of rules.
 - The registry is **snapshot-versioned** for eval reproducibility: retrieval
   metrics and grounded-generation evals pin a `snapshot_id` (a derived hash
-  over member content hashes), never "the corpus as of whenever the eval ran".
-  Snapshots are immutable; a corpus change is a new snapshot.
+  over member content hashes plus the chunking parameters), never "the corpus
+  as of whenever the eval ran". Snapshots are immutable; a corpus change or a
+  chunking-parameter change is a new snapshot — an eval can never silently run
+  against re-chunked data.
 - Corpus text is **public-web content only. User data never enters the
   corpus** — no résumé text, no calendar data, nothing user-derived. This
   keeps the corpus shareable and axiom 06's privacy posture trivially

@@ -203,18 +203,32 @@ Implemented as specified (plan 02§6, user-approved). What shipped:
   baseline capture doubles as the Sonnet measurement — see the re-capture
   choreography note above.
 
-### D4 — Prior-plan-aware replans (plan 03§3; no capture needed)
+### D4 — Prior-plan-aware replans (plan 03§3; no capture needed) — ✅ DONE 2026-07-05
 
-- Stage 1: in the REPLAN path only (`_propose_replan` → planner call), include
-  the prior TaskPlan's surviving subset in the Planner context with a
-  preserve-ids/titles/durations-unless-affected instruction. Planner system
-  prompt note + version bump + hash.
-- Stage 2: deterministic old→new plan diff surfaced at approval/review
-  ("3 changed, 14 preserved"). **Reuse `contracts/plan_diff.py`** (contract +
-  spec + schema exist; no compute helper in `planning/` yet — add one).
-  SPA: diff line on Approval and/or the Week banner for replan drafts.
-- Axiom 20 note: stage-1 context anchoring precedes validator-enforced
-  preservation (the axiom's Phase 2/3 design stays future work).
+Implemented as specified (commits `b198179` stage 1, `88edd57` stage 2).
+Deviations/decisions to know:
+
+- **Stage 1 also passes `replan_mode`** (typed `RecoveryAction`) beside
+  `prior_plan_tasks` — "preserve unless affected by the replan reason" is
+  under-determined if the prompt never learns the reason; the mode is the
+  typed driver (scope_reduction / extend_timeline are the only LLM-routed
+  modes). Planner at `planner-v5-2026-07-05`.
+- **The diff is recomputed on read, not persisted** — `DraftView.plan_diff`
+  (compact `PlanDiffView`) derives from the two persisted plan versions on
+  every `/api/draft` fetch; the spec's `plan_diff_log` persistence stays
+  future work. `ProposeResult.plan_diff` carries the full `PlanDiff`
+  contract on replan continuations (reason maps RECALIBRATION →
+  USER_DURATION_CALIBRATION, else DRIFT_REMEDIATION, uniformly — code
+  cannot attribute per-field causes in a regenerated plan).
+- **Title-only rewording counts as "changed", never "preserved"**, but the
+  plan-diff contract has no change type for it — it appears in the change
+  lines and counts only (vocabulary gap documented in `planning/diff.py`;
+  extending the contract enum is a future spec-first change if wanted).
+- **`DraftView.plan_diff` covers any parented draft** (replan,
+  recalibration, drop), not just replans — the Approval line shows for
+  drops too, consistently.
+- Axiom 20 carries the interim-step note (context anchoring + diff
+  surfacing precede validator-enforced preservation).
 
 ### E — Wrap-up
 

@@ -174,5 +174,5 @@ Full HANDOFF §E:
 | 1 | baseline capture + D1a | **DONE 2026-07-05** — baseline `f869fef` (11 cases, 16 calls, ~$0.16; validity 1.0, gate seeded), D1a `42edd48` (v3 prompts) |
 | 2 | D1b + fewshot capture | **DONE 2026-07-05** — D1b `476a361` (goal block, planner-v4; claim curation + `claim_curation` tuning section; per-host-cap deviation in HANDOFF), fewshot capture (11 calls, ~$0.157, no judge per choreography; validity/rubric flat at 1.0, depth −1.33, tasks/module +0.39) |
 | 3 | D2 + voice capture | **DONE 2026-07-05** — D2 `c576864` (voice specs reflection-v3/explanation-v3, denylist 12→27, reflection feedback into reflection node + replan planner, SPA history + `reflection_history` projection), voice capture (16 calls, ~$0.141, all first-try; validity/rubric flat 1.0; judge means tone 3.60→5.00, actionability 3.60→4.60, specificity flat 4.60; target case explanation_repair_exhausted tone 2→5) |
-| 4 | D4 replans | pending |
+| 4 | D4 replans | **DONE 2026-07-05** — stage 1 `b198179` (prior-plan anchor + replan_mode into Planner context, planner-v5, axiom-20 interim note), stage 2 `88edd57` (`planning/diff.py` + `ProposeResult.plan_diff` + `DraftView.plan_diff` recomputed on read + SPA diff line on Week/Approval); no capture per plan |
 | 5 | E wrap-up | pending |

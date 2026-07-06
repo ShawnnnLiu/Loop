@@ -4,6 +4,7 @@ import {
   DAY_MS,
   dayHeader,
   dayUtcMs,
+  fmtAgo,
   fmtDate,
   fmtMinutes,
   isoAt,
@@ -156,5 +157,26 @@ describe('fmtDate', () => {
     expect(fmtDate('2026-06-21T09:00:00Z')).toBe('Jun 21')
     expect(fmtDate('2026-05-04T23:30:00-07:00')).toBe('May 4')
     expect(fmtDate('2026-12-31T00:00:00+00:00')).toBe('Dec 31')
+  })
+})
+
+describe('fmtAgo', () => {
+  const T0 = Date.UTC(2026, 6, 6, 12, 0, 0)
+
+  it('reads "just now" under a minute, including a stamp slightly ahead of now (clock skew)', () => {
+    expect(fmtAgo(T0, T0)).toBe('just now')
+    expect(fmtAgo(T0 - 59_000, T0)).toBe('just now')
+    expect(fmtAgo(T0 + 5_000, T0)).toBe('just now')
+  })
+
+  it('switches to minutes, hours, then days at the natural boundaries', () => {
+    expect(fmtAgo(T0 - 60_000, T0)).toBe('1m ago')
+    expect(fmtAgo(T0 - 2 * 60_000, T0)).toBe('2m ago')
+    expect(fmtAgo(T0 - 59 * 60_000, T0)).toBe('59m ago')
+    expect(fmtAgo(T0 - 60 * 60_000, T0)).toBe('1h ago')
+    expect(fmtAgo(T0 - 3 * 3_600_000, T0)).toBe('3h ago')
+    expect(fmtAgo(T0 - 23 * 3_600_000, T0)).toBe('23h ago')
+    expect(fmtAgo(T0 - 24 * 3_600_000, T0)).toBe('1d ago')
+    expect(fmtAgo(T0 - 9 * DAY_MS, T0)).toBe('9d ago')
   })
 })

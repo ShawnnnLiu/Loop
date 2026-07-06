@@ -127,3 +127,16 @@ export function fmtClock(iso: string): string {
 export function fmtDate(iso: string): string {
   return dayHeader(dayUtcMs(parseWall(iso)), 0).label
 }
+
+/** Compact age of a past instant: "just now" (<1 min), then "5m ago",
+ *  "3h ago", "2d ago". Instant-vs-instant, so no wall-clock/offset concerns;
+ *  a `thenMs` slightly in the future (server/client clock skew) clamps to
+ *  "just now" rather than going negative. */
+export function fmtAgo(thenMs: number, nowMs: number): string {
+  const mins = Math.max(0, Math.floor((nowMs - thenMs) / 60_000))
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours}h ago`
+  return `${Math.floor(hours / 24)}d ago`
+}

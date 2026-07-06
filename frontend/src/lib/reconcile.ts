@@ -76,6 +76,16 @@ export function reconcileBanner(result: CalendarReconciliationResult): Reconcile
   }
 }
 
+/** The server-stamped instant this pull actually compared the plan against the
+ *  user's Google Calendar (ms since epoch) — the honest "synced X ago" time for
+ *  the Week indicator. Null when no comparison ran (`sync_disabled` /
+ *  `deferred`): claiming "synced" then would be false. */
+export function syncedAtMs(result: CalendarReconciliationResult): number | null {
+  if (result.outcome === 'sync_disabled' || result.outcome === 'deferred') return null
+  const ms = Date.parse(result.reconciled_at)
+  return Number.isFinite(ms) ? ms : null
+}
+
 /** True when the pull changed server-side truth an already-fetched DraftView
  *  cannot reflect: an adopted draft (new times) or a deletion (the pull just
  *  recorded the durable `event_deleted` memory that feeds

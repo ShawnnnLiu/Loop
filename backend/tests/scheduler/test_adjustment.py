@@ -85,6 +85,7 @@ def _review(
     tz: tzinfo = UTC,
     completed_or_dropped: Collection[str] = (),
     overlap_advisory: bool = False,
+    daily_load_advisory: bool = False,
 ) -> PlacementReview:
     return validate_placements(
         entries,
@@ -94,6 +95,7 @@ def _review(
         tz=tz,
         completed_or_dropped_task_ids=completed_or_dropped,
         overlap_advisory=overlap_advisory,
+        daily_load_advisory=daily_load_advisory,
     )
 
 
@@ -311,6 +313,79 @@ def test_default_mode_still_hard_on_overlap() -> None:
     assert [c.reason_code for c in review.conflicts] == [
         ReasonCode.NO_VALID_CONTIGUOUS_BLOCK
     ]
+    assert review.warnings == []
+
+
+# --------------------------------------------------------------------------- #
+# daily_load_advisory mode (reconciliation, ADR-0010): over-cap warns, never blocks
+# --------------------------------------------------------------------------- #
+
+
+def test_daily_load_is_advisory_for_external_moves_and_warns_every_task_that_day() -> None:
+    # 120 + 120 = 240 > 180 cap; non-overlapping so the cap is the only fault.
+    # Only moved tasks produce reconciliation deltas, so EVERY task on the
+    # over-cap day warns: the heads-up has to exist on whichever one the user
+    # moved (the same both-sides pattern as block-vs-block overlap, ADR-0009).
+    entries = [
+        _entry("a", _at(MON, 9), 120),
+        _entry("b", _at(MON, 13), 120),
+    ]
+    review = _review(entries, daily_load_advisory=True)
+    assert review.conflicts == []
+    assert {(w.task_id, w.reason_code) for w in review.warnings} == {
+        ("a", ReasonCode.DAILY_LOAD_ADVISORY),
+        ("b", ReasonCode.DAILY_LOAD_ADVISORY),
+    }
+
+
+def test_daily_load_advisory_only_warns_the_over_cap_day() -> None:
+    entries = [
+        _entry("a", _at(MON, 9), 120),
+        _entry("b", _at(MON, 13), 120),  # Monday: 240 > 180
+        _entry("c", _at(MON + timedelta(days=1), 9), 60),  # Tuesday: fine
+    ]
+    review = _review(entries, daily_load_advisory=True)
+    assert review.conflicts == []
+    assert {w.task_id for w in review.warnings} == {"a", "b"}
+
+
+def test_daily_load_advisory_mode_keeps_allowed_hours_hard() -> None:
+    # Over the cap AND before allowed hours: the allowed-hours bound still
+    # refuses even in advisory-daily-load mode — only the cap is demoted.
+    entries = [
+        _entry("a", _at(MON, 7), 120),  # 07:00 < 08:00
+        _entry("b", _at(MON, 13), 120),
+    ]
+    review = _review(entries, daily_load_advisory=True)
+    assert {c.reason_code for c in review.conflicts} == {ReasonCode.OUTSIDE_ALLOWED_HOURS}
+    assert {w.reason_code for w in review.warnings} == {ReasonCode.DAILY_LOAD_ADVISORY}
+
+
+def test_reconciliation_mode_demotes_overlap_and_daily_load_together() -> None:
+    # The reconcile caller sets both flags: a stacked, over-cap day yields only
+    # warnings — nothing blocks adoption.
+    entries = [
+        _entry("a", _at(MON, 9), 120),
+        _entry("b", _at(MON, 10), 120),  # overlaps a; 240 > 180 that day
+    ]
+    review = _review(entries, overlap_advisory=True, daily_load_advisory=True)
+    assert review.conflicts == []
+    assert {(w.task_id, w.reason_code) for w in review.warnings} == {
+        ("a", ReasonCode.OVERLAP_ADVISORY),
+        ("b", ReasonCode.OVERLAP_ADVISORY),
+        ("a", ReasonCode.DAILY_LOAD_ADVISORY),
+        ("b", ReasonCode.DAILY_LOAD_ADVISORY),
+    }
+
+
+def test_default_mode_still_hard_on_daily_load() -> None:
+    # The in-app drag path (no flag) is unchanged: an over-cap day refuses.
+    entries = [
+        _entry("a", _at(MON, 9), 120),
+        _entry("b", _at(MON, 13), 120),
+    ]
+    review = _review(entries)
+    assert [c.reason_code for c in review.conflicts] == [ReasonCode.DAILY_LOAD_EXCEEDED]
     assert review.warnings == []
 
 

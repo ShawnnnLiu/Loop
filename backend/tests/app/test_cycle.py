@@ -2014,6 +2014,96 @@ def test_reconcile_dependency_advisory_wins_over_overlap_advisory() -> None:
     assert delta.reason_code is ReasonCode.DEPENDENCY_ADVISORY
 
 
+def test_reconcile_adopts_an_over_cap_day_with_daily_load_advisory() -> None:
+    """ADR-0010: the user stacking a day past max_daily_study_min on their own
+    calendar is adopted with a heads-up, never rejected — the old
+    DAILY_LOAD_EXCEEDED dead-end is gone."""
+    service, env, adapter = _reconcilable()
+    events = _events_by_task(adapter)
+    rec = events["dp_001"]  # Mon 18:00-19:00; alone on its day, cap 180m
+    # External edge-drag: 60m -> 200m in place (ends 21:20, inside 08:00-22:30).
+    new_end = rec.scheduled_start + timedelta(minutes=200)
+
+    adapter.simulate_external_move(
+        rec.calendar_event_id, scheduled_start=rec.scheduled_start, scheduled_end=new_end
+    )
+    result = service.reconcile(
+        USER_ID, target_calendar_id=DEFAULT_TARGET_CALENDAR_ID, enabled=True
+    )
+
+    assert result.outcome is ReconciliationOutcome.ADOPTED
+    assert result.adopted_draft_schedule_id is not None
+    delta = {d.task_id: d for d in result.deltas}["dp_001"]
+    assert delta.change_type is CalendarEditType.RESIZED
+    assert delta.disposition is ReconciliationDisposition.ADOPTED
+    assert delta.reason_code is ReasonCode.DAILY_LOAD_ADVISORY
+    # The mapping and the active draft both adopt the over-cap duration.
+    mapping = env.mapping_store.list_for_task("dp_001")[-1]
+    assert mapping.user_modified_bool is True
+    assert mapping.scheduled_end == new_end
+    entries = {e.task_id: e for e in _active_draft_entries(env)}
+    assert entries["dp_001"].end == new_end
+
+
+def test_reconcile_daily_load_advisory_wins_over_other_advisories() -> None:
+    """Precedence on an adopted delta: DAILY_LOAD_ADVISORY > DEPENDENCY_ADVISORY
+    > OVERLAP_ADVISORY. dp_002 dragged onto its unfinished prerequisite dp_001
+    AND resized past the day cap earns all three; the cap heads-up rides the
+    delta (a user-configured bound, invisible on the grid)."""
+    service, _env, adapter = _reconcilable()
+    events = _events_by_task(adapter)
+    dp1 = events["dp_001"]
+    # dp_002 moved onto dp_001's slot and stretched to 200m: Monday totals
+    # 60 + 200 = 260 > 180, overlaps dp_001, and precedes its unfinished prereq.
+    adapter.simulate_external_move(
+        events["dp_002"].calendar_event_id,
+        scheduled_start=dp1.scheduled_start,
+        scheduled_end=dp1.scheduled_start + timedelta(minutes=200),
+    )
+
+    result = service.reconcile(
+        USER_ID, target_calendar_id=DEFAULT_TARGET_CALENDAR_ID, enabled=True
+    )
+
+    assert result.outcome is ReconciliationOutcome.ADOPTED
+    delta = {d.task_id: d for d in result.deltas}["dp_002"]
+    assert delta.disposition is ReconciliationDisposition.ADOPTED
+    assert delta.reason_code is ReasonCode.DAILY_LOAD_ADVISORY
+
+
+def test_reconcile_over_cap_day_no_longer_blocks_other_valid_moves() -> None:
+    """Adoption is all-or-nothing across a pull, so before ADR-0010 one over-cap
+    day rejected EVERY move in the pull. Now the whole set adopts."""
+    service, env, adapter = _reconcilable()
+    events = _events_by_task(adapter)
+    dp1 = events["dp_001"]
+    dp2 = events["dp_002"]
+    # A perfectly valid move (+7 days, same hour) ...
+    adapter.simulate_external_move(
+        dp1.calendar_event_id,
+        scheduled_start=dp1.scheduled_start + timedelta(days=7),
+        scheduled_end=dp1.scheduled_end + timedelta(days=7),
+    )
+    # ... plus an over-cap in-place resize (90m -> 200m) in the same pull.
+    adapter.simulate_external_move(
+        dp2.calendar_event_id,
+        scheduled_start=dp2.scheduled_start,
+        scheduled_end=dp2.scheduled_start + timedelta(minutes=200),
+    )
+
+    result = service.reconcile(
+        USER_ID, target_calendar_id=DEFAULT_TARGET_CALENDAR_ID, enabled=True
+    )
+
+    assert result.outcome is ReconciliationOutcome.ADOPTED
+    deltas = {d.task_id: d for d in result.deltas}
+    assert deltas["dp_002"].reason_code is ReasonCode.DAILY_LOAD_ADVISORY
+    # The valid move is not held hostage by the over-cap one.
+    assert deltas["dp_001"].disposition is ReconciliationDisposition.ADOPTED
+    mapping = env.mapping_store.list_for_task("dp_001")[-1]
+    assert mapping.scheduled_start == dp1.scheduled_start + timedelta(days=7)
+
+
 # --------------------------------------------------------------------------- #
 # Deterministic drop (Phase E2): draft -> approve -> delete-only write
 # --------------------------------------------------------------------------- #

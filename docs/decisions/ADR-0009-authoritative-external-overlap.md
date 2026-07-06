@@ -2,7 +2,9 @@
 
 ## Status
 
-Accepted
+Accepted. Amended by `ADR-0010-external-daily-load-advisory.md`: daily load —
+kept here as a rejection — was subsequently demoted to advisory for external
+moves too, leaving `OUTSIDE_ALLOWED_HOURS` as the only reconcile rejection.
 
 ## Context
 

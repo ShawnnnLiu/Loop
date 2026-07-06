@@ -13,14 +13,15 @@ adapter and reuse the scheduler's placement validator, both sibling regions).
 Framing invariants enforced here (the spec's "Invariants" section):
 
 * An ``adopted`` delta carries a ``null`` ``reason_code``, or one advisory
-  heads-up: ``DEPENDENCY_ADVISORY`` when the adopted move now precedes an
+  heads-up: ``DAILY_LOAD_ADVISORY`` when the adopted move pushed its day over
+  the daily cap (ADR-0010), ``DEPENDENCY_ADVISORY`` when it now precedes an
   unfinished prerequisite (ADR-0008), or ``OVERLAP_ADVISORY`` when it now
   overlaps another block or a busy interval (ADR-0009) — and is only a
   ``moved`` or ``resized`` change.
 * A ``rejected`` delta carries one of the drag-to-adjust **hard** placement
   codes (the same vocabulary a UI move is refused with), never an unrelated
-  code; prerequisite ordering and overlap are advisory for an external move
-  and never reject.
+  code; prerequisite ordering, overlap, and daily load are advisory for an
+  external move and never reject.
 * A ``deleted`` change is always ``flagged_deleted`` with the
   ``EXTERNAL_EVENT_DELETED`` code and ``null`` observed times (the event is
   gone); the MVP never silently re-creates or cancels it.
@@ -85,10 +86,12 @@ class ReconciliationOutcome(StrEnum):
 #: placement codes (``scheduler/adjustment.py``) — a calendar move is refused for
 #: the same reasons a UI move is, so the vocabulary is shared. Prerequisite
 #: ordering is no longer here: it is advisory (``DEPENDENCY_ADVISORY``) and never
-#: rejects an external move (ADR-0008). ``NO_VALID_CONTIGUOUS_BLOCK`` stays in
-#: the vocabulary — it is still the in-app drag refusal, and historical results
-#: carry it — but the reconcile producer no longer emits it: overlap on an
-#: external move is advisory too (``OVERLAP_ADVISORY``, ADR-0009).
+#: rejects an external move (ADR-0008). ``NO_VALID_CONTIGUOUS_BLOCK`` and
+#: ``DAILY_LOAD_EXCEEDED`` stay in the vocabulary — they are still the in-app
+#: drag refusals, and historical results carry them — but the reconcile
+#: producer no longer emits either: overlap and daily load on an external move
+#: are advisory too (``OVERLAP_ADVISORY`` ADR-0009, ``DAILY_LOAD_ADVISORY``
+#: ADR-0010), leaving ``OUTSIDE_ALLOWED_HOURS`` as the only emitted rejection.
 ADJUSTMENT_REASON_CODES: frozenset[ReasonCode] = frozenset(
     {
         ReasonCode.NO_VALID_CONTIGUOUS_BLOCK,
@@ -167,11 +170,13 @@ class CalendarEventDelta(BaseModel):
                     None,
                     ReasonCode.DEPENDENCY_ADVISORY,
                     ReasonCode.OVERLAP_ADVISORY,
+                    ReasonCode.DAILY_LOAD_ADVISORY,
                 ):
                     raise ValueError(
                         "an adopted reconciliation delta may carry only a null "
-                        "reason_code, DEPENDENCY_ADVISORY (ADR-0008), or "
-                        "OVERLAP_ADVISORY (ADR-0009)"
+                        "reason_code, DEPENDENCY_ADVISORY (ADR-0008), "
+                        "OVERLAP_ADVISORY (ADR-0009), or DAILY_LOAD_ADVISORY "
+                        "(ADR-0010)"
                     )
                 if self.change_type not in (
                     CalendarEditType.MOVED,

@@ -165,6 +165,13 @@ describe('advisoryNote', () => {
     )
   })
 
+  it('phrases an adopted over-cap day as kept, never as an error (ADR-0010)', () => {
+    const note = advisoryNote(delta({ disposition: 'adopted', reason_code: 'DAILY_LOAD_ADVISORY' }))
+    expect(note).toBe('that day now goes over your daily study limit — kept where you put it')
+    expect(note?.toLowerCase()).not.toContain('rejected')
+    expect(note?.toLowerCase()).not.toContain('couldn’t')
+  })
+
   it('is null for a plain adopted edit and for non-adopted dispositions', () => {
     expect(advisoryNote(adoptedDelta)).toBeNull()
     expect(advisoryNote(rejectedDelta)).toBeNull()

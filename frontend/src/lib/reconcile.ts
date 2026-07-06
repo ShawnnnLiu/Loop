@@ -90,9 +90,10 @@ export function needsDraftRefetch(result: CalendarReconciliationResult): boolean
 /** A short, honest reason a single flagged edit could not be applied. Deletions
  *  and the drag-to-adjust placement codes (the shared refusal vocabulary) get
  *  human phrasing; any other code falls back to the raw value rather than
- *  inventing an explanation. `NO_VALID_CONTIGUOUS_BLOCK` is no longer produced
- *  by reconciliation (overlap adopts with an advisory, ADR-0009) but stays
- *  mapped for historical results. */
+ *  inventing an explanation. `NO_VALID_CONTIGUOUS_BLOCK` and
+ *  `DAILY_LOAD_EXCEEDED` are no longer produced by reconciliation (overlap and
+ *  daily load adopt with an advisory, ADR-0009/ADR-0010) but stay mapped for
+ *  historical results. */
 export function flaggedReason(delta: CalendarEventDelta): string {
   if (delta.disposition === 'flagged_deleted' || delta.change_type === 'deleted') {
     return 'you deleted this event from your calendar'
@@ -112,13 +113,16 @@ export function flaggedReason(delta: CalendarEventDelta): string {
 }
 
 /** A non-blocking heads-up on an ADOPTED edit (the move was applied — this is
- *  information, never failure): `OVERLAP_ADVISORY` (ADR-0009, the new time
- *  overlaps another block or a busy slot) or `DEPENDENCY_ADVISORY` (ADR-0008,
- *  it now starts before an unfinished prerequisite). Null when there is
- *  nothing to note — most adopted edits. */
+ *  information, never failure): `DAILY_LOAD_ADVISORY` (ADR-0010, its day now
+ *  totals more than the user's daily study limit), `OVERLAP_ADVISORY`
+ *  (ADR-0009, the new time overlaps another block or a busy slot), or
+ *  `DEPENDENCY_ADVISORY` (ADR-0008, it now starts before an unfinished
+ *  prerequisite). Null when there is nothing to note — most adopted edits. */
 export function advisoryNote(delta: CalendarEventDelta): string | null {
   if (delta.disposition !== 'adopted') return null
   switch (delta.reason_code) {
+    case 'DAILY_LOAD_ADVISORY':
+      return 'that day now goes over your daily study limit — kept where you put it'
     case 'OVERLAP_ADVISORY':
       return 'now overlaps another event — kept where you put it'
     case 'DEPENDENCY_ADVISORY':

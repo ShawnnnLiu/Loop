@@ -96,7 +96,15 @@ class TransportResult(BaseModel):
     stop_reason: str | None
     input_tokens: int = Field(ge=0)
     output_tokens: int = Field(ge=0)
+    cache_creation_tokens: int = Field(default=0, ge=0)
+    """Provider ``cache_creation_input_tokens``: prompt tokens written to the
+    provider cache on this call. Excluded from ``input_tokens`` and billed at
+    1.25x the base input rate (5-minute-TTL ``ephemeral`` — the only TTL this
+    adapter uses)."""
     cache_read_tokens: int = Field(default=0, ge=0)
+    """Provider ``cache_read_input_tokens``: prompt tokens served from the
+    provider cache. Excluded from ``input_tokens``; billed at 0.10x the base
+    input rate."""
 
 
 @runtime_checkable
@@ -239,8 +247,12 @@ class AnthropicMessagesTransport:
                 # call log's p99 once real latency data accumulates.
                 timeout=timeout_seconds,
             )
-        # APIConnectionError is a SIBLING of APIError in the Python SDK — the
-        # old `except APIError` let pre-response network failures escape raw.
+        # In the pinned SDK (anthropic 0.109.1) APIConnectionError SUBCLASSES
+        # APIError, so `except anthropic.APIError` alone would already catch
+        # pre-response connection/timeout failures. The explicit union is
+        # documentation, not a bug fix: it names the two error families this
+        # handler routes into the retryable/permanent taxonomy — HTTP-status
+        # rejections and pre-response network failures.
         except (anthropic.APIError, anthropic.APIConnectionError) as exc:
             raise _translate_api_error(exc) from exc
 
@@ -270,6 +282,7 @@ class AnthropicMessagesTransport:
             stop_reason=response.stop_reason,
             input_tokens=usage.input_tokens,
             output_tokens=usage.output_tokens,
+            cache_creation_tokens=getattr(usage, "cache_creation_input_tokens", 0) or 0,
             cache_read_tokens=getattr(usage, "cache_read_input_tokens", 0) or 0,
         )
 
@@ -298,12 +311,28 @@ class AdapterConfig(BaseModel):
     budget itself stays capped at 2. The SDK also backs off internally on
     429/5xx within each call; this spaces OUR retries after those exhaust."""
 
-    def estimate_cost_usd(self, *, input_tokens: int, output_tokens: int) -> float:
-        """Deterministic estimate from the configured pricing — not a billing fact."""
-        return (
-            input_tokens * self.input_price_per_mtok
-            + output_tokens * self.output_price_per_mtok
-        ) / 1_000_000
+    def estimate_cost_usd(
+        self,
+        *,
+        input_tokens: int,
+        output_tokens: int,
+        cache_creation_tokens: int = 0,
+        cache_read_tokens: int = 0,
+    ) -> float:
+        """Deterministic estimate from the configured pricing — not a billing fact.
+
+        Cache tiers: with 5-minute-TTL ``ephemeral`` caching (the only TTL
+        this adapter uses) the provider EXCLUDES cache tokens from
+        ``input_tokens``; cache writes bill at 1.25x and cache reads at 0.10x
+        the base input rate. The multipliers are deliberately encoded here as
+        heuristic pricing constants (recorded in axiom 09), not a billing fact.
+        """
+        input_cost = (
+            input_tokens
+            + cache_creation_tokens * 1.25
+            + cache_read_tokens * 0.10
+        ) * self.input_price_per_mtok
+        return (input_cost + output_tokens * self.output_price_per_mtok) / 1_000_000
 
 
 # Defaults follow axiom 09 model tiering (frontier Strategist; Sonnet-tier
@@ -727,6 +756,7 @@ class _GenerationEngine:
         input_tokens = result.input_tokens if result is not None else 0
         output_tokens = result.output_tokens if result is not None else 0
         raw_text = result.raw_text if result is not None else None
+        cache_creation = result.cache_creation_tokens if result is not None else 0
         cache_read = result.cache_read_tokens if result is not None else 0
         self._store.append(
             LlmCallLog(
@@ -740,8 +770,13 @@ class _GenerationEngine:
                 sdk_retry=sdk_retry,
                 input_tokens=input_tokens,
                 output_tokens=output_tokens,
+                cache_creation_tokens=cache_creation,
+                cache_read_tokens=cache_read,
                 cost_estimate_usd=self._config.estimate_cost_usd(
-                    input_tokens=input_tokens, output_tokens=output_tokens
+                    input_tokens=input_tokens,
+                    output_tokens=output_tokens,
+                    cache_creation_tokens=cache_creation,
+                    cache_read_tokens=cache_read,
                 ),
                 latency_ms=latency_ms,
                 validation_outcome=(

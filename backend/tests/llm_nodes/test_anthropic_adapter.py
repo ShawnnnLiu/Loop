@@ -275,6 +275,47 @@ def test_cache_hit_flag_follows_provider_cache_reads() -> None:
     assert store.list_all()[0].cache_hit is True
 
 
+def test_estimate_cost_usd_prices_cache_tiers() -> None:
+    """Cache writes bill at 1.25x and cache reads at 0.10x the input rate
+    (5-minute-TTL ephemeral — the only TTL the transport uses); the provider
+    excludes both tiers from input_tokens, so pricing them is additive."""
+    config = adapter.PLANNER_CONFIG  # $3.00 / $15.00 per Mtok
+    cost = config.estimate_cost_usd(
+        input_tokens=1_000,
+        output_tokens=100,
+        cache_creation_tokens=2_000,
+        cache_read_tokens=4_000,
+    )
+    expected = ((1_000 + 2_000 * 1.25 + 4_000 * 0.10) * 3.00 + 100 * 15.00) / 1_000_000
+    assert cost == expected
+    # Without cache tokens the pre-caching formula is unchanged.
+    assert config.estimate_cost_usd(input_tokens=100, output_tokens=50) == (
+        (100 * 3.00 + 50 * 15.00) / 1_000_000
+    )
+
+
+def test_log_row_carries_cache_tier_counts_with_tier_priced_cost() -> None:
+    """The engine copies both provider cache counts onto the log row and the
+    row's cost estimate prices them at their tiers (A2 follow-up: without
+    this, cached calls systematically understated spend)."""
+    result = TransportResult(
+        payload=_VALID_PLAN,
+        raw_text=json.dumps(_VALID_PLAN),
+        stop_reason="end_turn",
+        input_tokens=100,
+        output_tokens=50,
+        cache_creation_tokens=2_000,
+        cache_read_tokens=4_000,
+    )
+    planner, store, _ = _planner([result])
+    _run_planner(planner)
+    row = store.list_all()[0]
+    assert (row.cache_creation_tokens, row.cache_read_tokens) == (2_000, 4_000)
+    assert row.cache_hit is True
+    expected = ((100 + 2_000 * 1.25 + 4_000 * 0.10) * 3.00 + 50 * 15.00) / 1_000_000
+    assert row.cost_estimate_usd == expected
+
+
 def test_no_raw_content_persisted_in_any_row() -> None:
     planner, store, transport = _planner([_ok(_INVALID_PLAN), _ok(_VALID_PLAN)])
     _run_planner(planner)
@@ -577,7 +618,12 @@ class _FakeMessagesResource:
         return SimpleNamespace(
             content=[SimpleNamespace(type="text", text=self._text)],
             stop_reason="end_turn",
-            usage=SimpleNamespace(input_tokens=100, output_tokens=50),
+            usage=SimpleNamespace(
+                input_tokens=100,
+                output_tokens=50,
+                cache_creation_input_tokens=7,
+                cache_read_input_tokens=3,
+            ),
         )
 
 
@@ -601,6 +647,8 @@ def test_transport_hands_engine_raw_output_without_validating() -> None:
     )
     assert result.payload == _HIGH_PRIORITY_NO_REASON
     assert result.stop_reason == "end_turn"
+    # Both provider cache-tier counts are captured off usage (A2 follow-up).
+    assert (result.cache_creation_tokens, result.cache_read_tokens) == (7, 3)
     # Generation was still shaped to the contract's schema via output_config.
     sent = client.messages.calls[0]["output_config"]["format"]
     assert sent["type"] == "json_schema" and sent["schema"]

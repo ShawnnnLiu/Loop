@@ -434,6 +434,10 @@ export function ScheduleReviewScreen() {
               {replanning ? 'Updating your plan…' : 'Build the updated plan →'}
             </button>
           )
+        ) : mode === 'closed' ? (
+          <button className="btn btn-primary lg" type="button" onClick={() => navigate('/plan')}>
+            Build a new plan →
+          </button>
         ) : (
           <button className="btn btn-primary lg" type="button" onClick={() => navigate('/today')}>
             Go to Today →

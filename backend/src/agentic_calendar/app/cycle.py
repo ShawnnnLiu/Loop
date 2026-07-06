@@ -1604,6 +1604,13 @@ class CycleService:
                 planned_event_count=len(preview.planned_events),
             )
 
+        # The planned side-effect count every outcome (success OR failure)
+        # reports, so the "N / M verified" surface never renders a planned
+        # total of 0 on a failed or concluded write: events to create for a
+        # normal write, events to delete for a delete-only drop write.
+        planned_event_count = (
+            len(run.drop_task_ids) if run.drop_task_ids else len(draft.entries)
+        )
         run = self._transition(run, Sig.CALENDAR_WRITE_STARTED)
         try:
             if run.drop_task_ids:
@@ -1635,6 +1642,7 @@ class CycleService:
                 dry_run=False,
                 write_status="failed",
                 reason_code=run.reason_code,
+                planned_event_count=planned_event_count,
                 written_task_ids=[],
                 verified_task_ids=[],
                 failed_task_ids=[],
@@ -1644,17 +1652,27 @@ class CycleService:
                 # is safe to surface alongside the reason_code.
                 error=str(exc),
             )
-        return self._conclude_write(user_id, run, result)
+        return self._conclude_write(
+            user_id, run, result, planned_event_count=planned_event_count
+        )
 
     def _conclude_write(
-        self, user_id: str, run: RunRecord, result: WriteResult
+        self,
+        user_id: str,
+        run: RunRecord,
+        result: WriteResult,
+        *,
+        planned_event_count: int,
     ) -> WriteCycleResult:
         """Shared outcome sequencing for ``write`` and ``retry_write``.
 
         Emits the success/verification-failed/failed transitions around the
         manager's ``WriteResult``, records the manager's op id on the run
         (``write_op_id``) so recovery can find the mappings later, and builds
-        the operator-facing summary.
+        the operator-facing summary. ``planned_event_count`` is the caller's
+        planned side-effect count (draft entries, or dropped ids on a drop
+        write) — it must be carried on every outcome so the verify surface
+        can render "N / M" truthfully after failures and retries.
         """
         env = self._env
         # A delete-only drop write has no created events to verify: its success
@@ -1710,6 +1728,7 @@ class CycleService:
             dry_run=False,
             write_status=result.status.value,
             reason_code=run.reason_code,
+            planned_event_count=planned_event_count,
             written_task_ids=[m.task_id for m in result.written_mappings],
             verified_task_ids=(
                 list(verification.verified_task_ids) if verification else []
@@ -1845,6 +1864,10 @@ class CycleService:
         draft = env.state.get_draft(run.draft_schedule_id)
         if draft is None:
             raise CycleError(f"draft {run.draft_schedule_id!r} not found")
+        # Drop writes were rejected above, so the planned count is always the
+        # approved draft's full entry set — what a completed retry must have
+        # on the calendar, regardless of how many events this pass creates.
+        planned_event_count = len(draft.entries)
 
         write_op_id = run.write_op_id
         if write_op_id is not None and not env.mapping_store.list_for_run(write_op_id):
@@ -1879,13 +1902,16 @@ class CycleService:
                 dry_run=False,
                 write_status="failed",
                 reason_code=run.reason_code,
+                planned_event_count=planned_event_count,
                 written_task_ids=[],
                 verified_task_ids=[],
                 failed_task_ids=[],
                 mapping_status_by_task={},
                 error=str(exc),
             )
-        return self._conclude_write(user_id, run, result)
+        return self._conclude_write(
+            user_id, run, result, planned_event_count=planned_event_count
+        )
 
     def _activate_plan(self, user_id: str, run: RunRecord) -> None:
         """APPROVED → ACTIVE, discarding any previously active plan first.

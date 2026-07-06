@@ -125,6 +125,13 @@ edit.
   deterministic knob. The floor sits deliberately below the 0.35
   personal-anecdote base: axiom 08 admits anecdotes "labeled low
   confidence", so the default floor must not silently ban them.
+- **C1 commit message correction (audit finding, 2026-07-05):** the claim
+  "(APIConnectionError was escaping raw!)" was wrong — in the pinned SDK
+  (anthropic 0.109.1) `APIConnectionError` SUBCLASSES `APIError` (not a
+  sibling), so `except APIError` already caught pre-response network
+  failures and nothing ever escaped. The C1 taxonomy/timeout/backoff work
+  stands; the false in-code comment above the except clause has been
+  corrected to say the union is explicit documentation, not a bug fix.
 
 ## Remaining increments (D + E)
 

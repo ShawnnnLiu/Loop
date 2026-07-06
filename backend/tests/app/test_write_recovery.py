@@ -147,6 +147,9 @@ def test_retry_after_verification_failure_recreates_missing_and_activates() -> N
 
     assert result.state is S.ACTIVE_PLAN
     assert result.reason_code is None
+    # The retry reports the FULL planned draft, not just the events this pass
+    # created — the live smoke rendered "2 / 0 verified" when planned stayed 0.
+    assert result.planned_event_count == len(PLAN_TASK_IDS)
     assert sorted(result.verified_task_ids) == sorted(PLAN_TASK_IDS)
     assert env.plan_store.get_active(USER_ID) is not None
 

@@ -39,6 +39,10 @@ type Phase =
   | { kind: 'rollbackConfirm'; info: WriteFailureInfo; count: number }
   | { kind: 'rollingBack' }
   | { kind: 'rolledBack'; result: RollbackResult }
+  // A parked failure the server refuses to retry OR roll back (409 from the
+  // recovery dry-run): a failed delete-only drop write, or a run with no
+  // recorded write operation. The only honest next step is a new plan.
+  | { kind: 'unrecoverable'; reasonCode: string | null; message: string }
   | { kind: 'error'; message: string }
 
 export function ApprovalScreen({ email }: { email: string | null }) {
@@ -60,15 +64,28 @@ export function ApprovalScreen({ email }: { email: string | null }) {
         // open straight onto the recovery card. The dry-run supplies the
         // removable-event count the card and confirm dialog name.
         if (status.state === 'calendar_write_failed') {
-          const preview = await api.rollback(true)
-          if (!active) return
-          setPhase({
-            kind: 'failed',
-            info: failureInfoFromRecovery(
-              status.reason_code,
-              preview.rollbackable_event_count,
-            ),
-          })
+          try {
+            const preview = await api.rollback(true)
+            if (!active) return
+            setPhase({
+              kind: 'failed',
+              info: failureInfoFromRecovery(
+                status.reason_code,
+                preview.rollbackable_event_count,
+              ),
+            })
+          } catch (err) {
+            // A 409 means the server refuses recovery for this run class
+            // (failed drop write; no recorded write op) — render the honest
+            // no-path card instead of dead-ending the whole screen.
+            if (!(err instanceof ApiError) || err.status !== 409) throw err
+            if (!active) return
+            setPhase({
+              kind: 'unrecoverable',
+              reasonCode: status.reason_code,
+              message: errorMessage(err),
+            })
+          }
         }
         setLoading(false)
       } catch (err) {
@@ -277,6 +294,23 @@ export function ApprovalScreen({ email }: { email: string | null }) {
                 </>
               )
             })()}
+          </div>
+        )}
+
+        {phase.kind === 'unrecoverable' && (
+          <div className="err-card">
+            <span className="err-code">{phase.reasonCode ?? 'CALENDAR_WRITE_FAILED'}</span>
+            <div style={{ fontSize: 13.5, color: 'var(--ink-2)', marginTop: 10, lineHeight: 1.5 }}>
+              This write can’t be retried or rolled back — {phase.message}
+            </div>
+            <button
+              className="btn btn-primary sm"
+              type="button"
+              style={{ marginTop: 12 }}
+              onClick={() => navigate('/plan')}
+            >
+              Build a new plan →
+            </button>
           </div>
         )}
 

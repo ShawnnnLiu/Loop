@@ -791,6 +791,9 @@ def test_dry_run_previews_without_side_effects_then_write_activates() -> None:
     assert written.dry_run is False
     assert written.state is S.ACTIVE_PLAN
     assert written.write_status == "success"
+    # The real write reports the same planned total the dry-run previewed —
+    # the "N / M verified" surface needs M on every outcome, not just dry-run.
+    assert written.planned_event_count == len(draft.entries)
     assert set(written.mapping_status_by_task) == set(PLAN_TASK_IDS)
     assert all(v == "verified" for v in written.mapping_status_by_task.values())
 
@@ -872,6 +875,9 @@ def test_adapter_create_failure_preserves_reason_and_blocks_activation() -> None
 
     assert written.state is S.CALENDAR_WRITE_FAILED_STATE
     assert written.reason_code is ReasonCode.CALENDAR_WRITE_FAILED
+    # A failed write still reports how many events were PLANNED — the verify
+    # pill must never render "0 / 0" on a failure (live smoke regression).
+    assert written.planned_event_count == len(PLAN_TASK_IDS)
     # The manager's failure text reaches the operator surface, not just the
     # bare reason_code (typed prose only, never raw content/secrets).
     assert written.error is not None
@@ -1959,6 +1965,9 @@ def test_drop_approve_write_removes_only_dropped_event() -> None:
     service.approve(USER_ID)
     written = service.write(USER_ID)
     assert written.state is S.ACTIVE_PLAN
+    # A drop write plans DELETIONS: the planned count is the dropped task
+    # set, not the survivor draft's entries.
+    assert written.planned_event_count == 1
     # The result surfaces the dropped task's rolled-back mapping status (built
     # from the write result, since the dropped mapping stays under its old run).
     assert (
@@ -2029,6 +2038,7 @@ def test_drop_write_partial_failure_when_delete_raises() -> None:
 
     # The drop write is a partial failure; the run does NOT activate a new plan.
     assert written.write_status == "partial_failure"
+    assert written.planned_event_count == 1  # planned deletions, even on failure
     assert written.reason_code is ReasonCode.CALENDAR_ROLLBACK_FAILED
     assert written.state is not S.ACTIVE_PLAN
     assert (

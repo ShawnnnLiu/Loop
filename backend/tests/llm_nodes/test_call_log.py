@@ -69,6 +69,8 @@ def test_defaults_applied() -> None:
     assert log.plan_version is None
     assert log.reason_code is None
     assert log.sdk_retry == 0
+    assert log.cache_creation_tokens == 0
+    assert log.cache_read_tokens == 0
     assert log.cache_hit is False
     assert log.truncated is False
     assert log.refusal is False

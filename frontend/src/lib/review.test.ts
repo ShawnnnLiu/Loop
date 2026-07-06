@@ -63,6 +63,13 @@ describe('reviewMode', () => {
     expect(reviewMode(status('calendar_write_failed'))).toBe('failed')
   })
 
+  it('ended-without-a-plan states are "closed" — a rolled-back draft must never read as written', () => {
+    // error_requires_user is user-reachable via a completed rollback (B1):
+    // the user just deleted every event this draft wrote.
+    expect(reviewMode(status('error_requires_user'))).toBe('closed')
+    expect(reviewMode(status('terminal_discarded'))).toBe('closed')
+  })
+
   it('a missing run (no status, or a blank pre-draft state) is not editable', () => {
     expect(reviewMode(null)).toBe('written')
     expect(reviewMode(status(null))).toBe('written')
@@ -81,6 +88,17 @@ describe('reviewBanner', () => {
     expect(sub).toContain('wasn’t activated')
     expect(sub.toLowerCase()).not.toContain('rolled back')
     expect(sub.toLowerCase()).not.toContain('roll back')
+    // A failed drop write has neither retry nor remove — the banner must not
+    // promise specific actions the approval screen may refuse.
+    expect(sub.toLowerCase()).not.toContain('retry')
+    expect(sub.toLowerCase()).not.toContain('remove')
+  })
+
+  it('the closed banner never claims the blocks are on the calendar', () => {
+    const { title, sub } = reviewBanner('closed')
+    expect(title).toBe('This plan attempt is closed')
+    expect(sub).toContain('Nothing from it is on your calendar')
+    expect(sub.toLowerCase()).not.toContain('scheduled')
   })
 
   it('the replan banner names the typed drift cause and promises the approval gate', () => {

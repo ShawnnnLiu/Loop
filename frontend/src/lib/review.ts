@@ -7,7 +7,7 @@
 
 import type { PlanDiffView, StatusResult } from '../api/types'
 
-export type ReviewMode = 'editable' | 'written' | 'writing' | 'failed' | 'replan'
+export type ReviewMode = 'editable' | 'written' | 'writing' | 'failed' | 'replan' | 'closed'
 
 /** Drag-to-adjust and approval are valid ONLY while the run awaits approval —
  *  the server enforces the same guard (adjust/approve both require
@@ -16,8 +16,12 @@ export type ReviewMode = 'editable' | 'written' | 'writing' | 'failed' | 'replan
  *  downstream drift / terminal states); the two calendar_write_* progress
  *  states are transient mid-write; a failed write leaves the plan unactivated.
  *  A run parked in replan_required is the flagship feedback loop surfacing —
- *  it must NEVER collapse into "your week is scheduled". A missing/blank state
- *  (no run yet) has no editable draft. */
+ *  it must NEVER collapse into "your week is scheduled". 'closed' covers the
+ *  ended-without-an-active-plan states — error_requires_user (B1 made it the
+ *  end state of a completed rollback: the user just DELETED every event this
+ *  draft wrote) and terminal_discarded (draft rejected) — whose draft blocks
+ *  must never render as written-and-confirmed. A missing/blank state (no run
+ *  yet) has no editable draft. */
 export function reviewMode(status: StatusResult | null): ReviewMode {
   switch (status?.state) {
     case 'awaiting_user_approval':
@@ -29,6 +33,9 @@ export function reviewMode(status: StatusResult | null): ReviewMode {
       return 'failed'
     case 'replan_required':
       return 'replan'
+    case 'error_requires_user':
+    case 'terminal_discarded':
+      return 'closed'
     default:
       return 'written'
   }
@@ -173,7 +180,15 @@ export function reviewBanner(mode: ReviewMode, status?: StatusResult | null): Re
     case 'failed':
       return {
         title: 'The last write didn’t fully verify',
-        sub: 'These blocks aren’t confirmed on your calendar and your plan wasn’t activated. Open the approval screen to retry the missing events or remove what was written.',
+        // "recovery options", not "retry or remove": a failed delete-only
+        // drop write has neither path (the approval screen explains and
+        // offers building a new plan), so the banner must not promise them.
+        sub: 'These blocks aren’t confirmed on your calendar and your plan wasn’t activated. Open the approval screen to see your recovery options.',
+      }
+    case 'closed':
+      return {
+        title: 'This plan attempt is closed',
+        sub: 'Nothing from it is on your calendar — the run ended without an active plan. Build a new plan from the Plan screen whenever you’re ready.',
       }
     case 'replan':
       return {

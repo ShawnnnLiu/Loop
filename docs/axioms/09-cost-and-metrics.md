@@ -8,12 +8,27 @@ All estimates assume current pricing as of July 2026 and must be revalidated qua
 - **Sonnet-tier model** (Planner, Reflection, user-facing explanations; `claude-sonnet-5`): $3.00 per 1M input tokens, $15.00 per 1M output tokens. Sticker price is encoded, not the introductory $2.00/$10.00 that runs through 2026-08-31 — encoding the promo would silently understate costs after it lapses.
 - **Embedding**: ~$0.02 per 1M tokens (assumption unchanged; not yet exercised).
 
+Prompt-cache tiers (2026-07-05): with the adapter's 5-minute-TTL `ephemeral`
+caching, the provider excludes cache tokens from `input_tokens` and bills cache
+**writes at 1.25x** and cache **reads at 0.10x** the base input price. Per-call
+`cost_estimate_usd` on `llm_call_log` rows now includes both tiers (2026-07-05
+audit fix); the multipliers are heuristic pricing constants pending production
+measurement, like every figure here. The budget tables below predate caching
+and are deliberately not rewritten — they remain cache-free upper-bound-style
+estimates.
+
 Token-count caveat: `claude-sonnet-5` uses a newer tokenizer that counts roughly 30% more tokens for the same text than the Haiku-era counts the budgets below were originally written against. The budgets are heuristic priors either way; recalibrate them from live call-log measurements, not by applying a blanket multiplier.
 
 If pricing changes by more than 25%, the cost tables below must be regenerated and the change recorded with effective date.
 
 Change log:
 
+- **2026-07-05**: cache-tier pricing added to per-call cost estimation
+  (`AdapterConfig.estimate_cost_usd` / `llm_call_log.cost_estimate_usd`):
+  cache writes at 1.25x and cache reads at 0.10x the input rate (5-minute
+  TTL). The previous input-only formula systematically understated spend on
+  cached calls after the A2 prompt-caching change. Cost tables unchanged
+  (bs-detector audit fix).
 - **2026-07-04**: Planner, Reflection, and Explanation upgraded from `claude-haiku-4-5` ($1.00/$5.00) to `claude-sonnet-5` ($3.00/$15.00) for user-facing quality (UX quality pass D3; Strategist stays frontier). Mid-tier prices tripled, so all tables regenerated. Monthly cap raised $4.00 → $8.00 to preserve the ~5× headroom intent.
 - **2026-06-11**: tables regenerated from the April 2026 assumptions ($3.00/$15.00 frontier, $0.15/$0.60 mid-tier) after >25% drift. First live measurement the same day (Phase 8 smoke test, one call per node, small sample inputs): 3,878 input / 2,382 output tokens, $0.0528 estimated — dominated by Strategist output tokens.
 
@@ -125,7 +140,7 @@ this section whenever the cost tables are regenerated.
 - **Per-user monthly cap:** $8.00 LLM spend (~5× the expected ~$1.70; alert at 80%). Raised from $4.00 in the 2026-07-04 regeneration (and from $2.00 in the 2026-06-11 one) to preserve the 5× headroom intent.
 - **Per-user retry caps:** 2 validation repair attempts; 2 Scheduler-Planner iterations.
 - **Model tiering:** frontier model only for `StrategistNode`; Sonnet-tier for `PlannerNode`, `ReflectionSummaryNode`, and `UserFacingExplanationNode` (upgraded from small-tier 2026-07-04 — these nodes write every task title and user-facing sentence, so perceived quality lives here).
-- **Aggressive caching:** identical `user_profile` inputs hit cache for 7 days; see `18-caching-strategy.md`.
+- **Aggressive caching:** identical `user_profile` inputs hit cache for 7 days; see `18-caching-strategy.md`. (Status: realized but unwired — no production composition root constructs the object cache; see 18's wiring-status note. Not an active enforcement mechanism.)
 
 ## Scheduling Quality Metrics
 

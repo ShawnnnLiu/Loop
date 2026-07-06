@@ -1,9 +1,55 @@
 # UX Quality Pass — Four-Level Improvement Plan
 
-Status: **idea backlog, not started.** These files record the improvement pass
-proposed on 2026-07-03 from a four-dimension audit of the codebase (branch
-`deleted-event-memory`). They are meant to be refined by the product owner
-before any implementation. **No code has been changed.**
+Status: **IMPLEMENTED** (branch `ux-quality-pass`, 2026-07-04 → 2026-07-05).
+These files record the improvement pass proposed on 2026-07-03 from a
+four-dimension audit of the codebase. All four tracks shipped; per-increment
+specs, the load-bearing deviations, and the capture choreography live in
+`HANDOFF.md`, and the session-by-session record in `SESSION-SPLIT.md`.
+
+## Outcome (what shipped, per file)
+
+- **`01-loop-engineering.md` — shipped in full (B1–B5, commits `ada4658`…`f75cf09`).**
+  Failed writes now recover end to end (rollback/retry signals + `/api/rollback`
+  + `/api/retry-write` + the 3-option Approval card), a required replan is
+  surfaced (Week banner, ask-each-time recovery picker, Today "needs attention"
+  chip), recommitment and the weekly check-in are answerable (B3), the drift
+  classifier is fed its full input (B4), and reflections/explanations persist
+  and replay (B5). All three recovery flows were verified in a real browser
+  (headless Chrome over CDP against the keyless dev server, 2026-07-05).
+  Post-audit hardening: a failed delete-only *drop* write — which has no
+  retry/rollback path — now renders an honest "build a new plan" card instead
+  of dead-ending the Approval screen, and a rolled-back run renders as a
+  *closed* plan attempt, never as "written and confirmed".
+- **`02-prompt-engineering.md` — shipped except §3 (A2, D1a, D2, D3).**
+  Prompt caching with byte-pinned prompt↔version tests (extended post-audit to
+  pin the full rendered prompts, not just system prompts), few-shot exemplars +
+  unified typed repair formatting, prose voice specs (measured: judge tone
+  3.60→5.00, actionability 3.60→4.60 vs baseline; the target
+  `explanation_repair_exhausted` case went tone 2→5), and the Sonnet-tier swap
+  for Planner/Reflection/Explanation under the amended axiom 09.
+  **Deviation:** §3 temperature pinning is deliberately NOT implemented —
+  sampling is API-pinned on every target tier; comparability rests on
+  prompt-byte pinning instead.
+- **`03-context-engineering.md` — shipped in full (A2, D1b, D2, D4).**
+  Planner goal block (typed profile fields only), claim curation behind a
+  `claim_curation` tuning section (per-source-host cap — company identity is
+  not a contract field), reflection-memory feedback into the reflection node
+  and the replan Planner, prior-plan anchoring on recovery replans
+  (planner-v5) and the deterministic old→new plan diff surfaced on Week and
+  Approval. **Deviation:** the cache breakpoint sits on the base user block,
+  not the system prompt (provider minimum).
+- **`04-harness-engineering.md` — shipped in full (C1–C3).**
+  Adapter timeout/backoff/typed provider-error taxonomy, real-recording
+  capture + eval set v2 + Tier-1/Tier-2 graders, `make eval-gate` in CI over
+  every committed v2 recording (axiom 22 amendment), call-log readers, and —
+  post-audit — cache-tier-aware cost accounting (5m-TTL write 1.25×, read
+  0.1×) so `cost_estimate_usd` no longer understates cached calls.
+  Measured captures: baseline / fewshot / voice, ≈$0.14–0.16 per capture run
+  over the 11-case eval set, schema validity and rubric rates 1.0 throughout.
+
+A whole-branch bs-detector audit (2026-07-05) closed the pass: 7 findings
+(2 HIGH), all fixed on-branch — see the audit-fix commits and the corrected
+C1 narrative note in `HANDOFF.md`'s deviations list.
 
 ## The goal of this version
 

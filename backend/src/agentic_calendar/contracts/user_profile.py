@@ -11,10 +11,26 @@ to change.
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
 from .common_types import HHMM, Day, ExperienceLevel
+
+
+class ExperienceItem(BaseModel):
+    """One confirmed work-experience entry.
+
+    Profile vocabulary: lives here because the profile owns the confirmed
+    values; ``resume_extraction`` (the ResumeIntakeNode proposal) imports it
+    rather than redeclaring.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    title: str = Field(min_length=1, max_length=120)
+    organization: str | None = Field(default=None, min_length=1, max_length=120)
+    summary: str | None = Field(default=None, min_length=1, max_length=280)
 
 
 class DeepWorkWindow(BaseModel):
@@ -86,6 +102,21 @@ class UserProfile(BaseModel):
     experience_level: ExperienceLevel
     known_strengths: list[str] = Field(default_factory=list)
     known_weaknesses: list[str] = Field(default_factory=list)
+    experience: list[ExperienceItem] = Field(default_factory=list, max_length=20)
+    """Confirmed work-experience entries; user-editable profile data.
+
+    Not consumed by Strategist/Planner prompts — see the spec's normative
+    Prompt Exposure table.
+    """
+    skills: list[Annotated[str, StringConstraints(min_length=1, max_length=60)]] = Field(
+        default_factory=list, max_length=40
+    )
+    """Tools/stack tokens, distinct from ``known_strengths`` (broader capabilities).
+
+    Display strings: extraction-matched skills are stored under their canonical
+    taxonomy ``display_name``, but the user may hand-type anything — the
+    vocabulary constrains the LLM, not the person.
+    """
     preferred_session_length_min: int = Field(gt=0, le=12 * 60)
     max_session_length_min: int = Field(gt=0, le=12 * 60)
     deep_work_windows: list[DeepWorkWindow] = Field(default_factory=list)
@@ -95,13 +126,22 @@ class UserProfile(BaseModel):
     resume_text: str | None = None
     """Optional raw résumé text the user pastes during onboarding.
 
-    Unparsed context for the Strategist only (see the spec); never a structured
-    field, never an oracle for routing or validation. ``None`` when the user
+    Raw context with exactly two consumers: the Strategist (appended as a
+    labeled raw block) and the ResumeIntakeNode (extract→review→confirm
+    input). Never an oracle for routing or validation. ``None`` when the user
     skips the step. PII: stored on the user's own profile, not persisted in the
     LLM call log, never used for training.
     """
     created_at: datetime
     updated_at: datetime
+
+    @model_validator(mode="after")
+    def _skills_unique(self) -> UserProfile:
+        lowered = [s.lower() for s in self.skills]
+        if len(set(lowered)) != len(lowered):
+            dupes = sorted({s for s in lowered if lowered.count(s) > 1})
+            raise ValueError(f"skills must be case-insensitively unique; duplicates: {dupes}")
+        return self
 
     @model_validator(mode="after")
     def _max_geq_preferred(self) -> UserProfile:

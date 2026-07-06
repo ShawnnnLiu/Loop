@@ -76,7 +76,7 @@ _PINNED: list[tuple[str, object, str, str]] = [
     (
         "_STRATEGIST_SYSTEM",
         adapter.STRATEGIST_CONFIG,
-        "strategist-v3-2026-07-05",
+        "strategist-v3-2026-07-06",
         "60fa04c32e9f33929f921fdc3c576ed72097b55a9c303d4309d9893175d4c093",
     ),
     (
@@ -307,8 +307,8 @@ _FULL_PROMPT_PINS: list[
     (
         "strategist",
         _strategist_full,
-        "strategist-v3-2026-07-05",
-        "20ab0748875d86bf35bcf718c868f710331c9fd2eca314b87628db5650bed2c8",
+        "strategist-v3-2026-07-06",
+        "200ff829877db7e8e4248efcdb5ad73f27c71be023c57c0d5bc91a60dba8c6b1",
     ),
     (
         "planner",

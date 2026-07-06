@@ -1,0 +1,16 @@
+{
+  "experience": [
+    {
+      "title": "Senior Backend Engineer",
+      "organization": "Acme Corp",
+      "summary": "Led the billing platform rebuild; Python and Go services."
+    },
+    {
+      "title": "Software Engineering Intern"
+    }
+  ],
+  "skills": ["Python", "Go", "PostgreSQL", "Kubernetes"],
+  "known_strengths": ["distributed systems", "API design"],
+  "inferred_weak_spots": ["System design", "Dynamic programming"],
+  "target_company_categories": ["fintech", "developer-tools companies"]
+}

@@ -1,0 +1,103 @@
+{
+  "$defs": {
+    "ExperienceItem": {
+      "additionalProperties": false,
+      "description": "One confirmed work-experience entry.\n\nProfile vocabulary: lives here because the profile owns the confirmed\nvalues; ``resume_extraction`` (the ResumeIntakeNode proposal) imports it\nrather than redeclaring.",
+      "properties": {
+        "organization": {
+          "anyOf": [
+            {
+              "maxLength": 120,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Organization"
+        },
+        "summary": {
+          "anyOf": [
+            {
+              "maxLength": 280,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Summary"
+        },
+        "title": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "title"
+      ],
+      "title": "ExperienceItem",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Proposed profile-field candidates from one r\u00e9sum\u00e9 extraction.",
+  "properties": {
+    "experience": {
+      "items": {
+        "$ref": "#/$defs/ExperienceItem"
+      },
+      "maxItems": 20,
+      "title": "Experience",
+      "type": "array"
+    },
+    "inferred_weak_spots": {
+      "items": {
+        "maxLength": 60,
+        "minLength": 1,
+        "type": "string"
+      },
+      "maxItems": 15,
+      "title": "Inferred Weak Spots",
+      "type": "array"
+    },
+    "known_strengths": {
+      "items": {
+        "maxLength": 60,
+        "minLength": 1,
+        "type": "string"
+      },
+      "maxItems": 15,
+      "title": "Known Strengths",
+      "type": "array"
+    },
+    "skills": {
+      "items": {
+        "maxLength": 60,
+        "minLength": 1,
+        "type": "string"
+      },
+      "maxItems": 40,
+      "title": "Skills",
+      "type": "array"
+    },
+    "target_company_categories": {
+      "items": {
+        "maxLength": 60,
+        "minLength": 1,
+        "type": "string"
+      },
+      "maxItems": 8,
+      "title": "Target Company Categories",
+      "type": "array"
+    }
+  },
+  "title": "ResumeExtraction",
+  "type": "object"
+}

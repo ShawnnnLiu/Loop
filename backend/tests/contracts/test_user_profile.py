@@ -57,3 +57,27 @@ def test_unknown_field_rejected() -> None:
     with pytest.raises(ValidationError) as exc_info:
         UserProfile.model_validate(payload)
     assert "snowflake_field" in str(exc_info.value)
+
+
+def test_experience_and_skills_default_empty() -> None:
+    payload = {
+        k: v
+        for k, v in next(iter_valid(CONTRACT)).payload.items()
+        if k not in ("experience", "skills")
+    }
+    profile = UserProfile.model_validate(payload)
+    assert profile.experience == []
+    assert profile.skills == []
+
+
+# TODO(RI-B): activate once the adapter constant exists. The spec's normative
+# Prompt Exposure table (docs/specs/user-profile.schema.md) fixes the
+# Strategist bundle exclusion set as {"resume_text", "experience"}; RI-B must
+# assert the constant in llm_nodes/anthropic_adapter.py equals it.
+@pytest.mark.skip(
+    reason="activated in RI-B: asserts the Strategist bundle exclusion-set "
+    "constant matches the spec's Prompt Exposure table "
+    "({'resume_text', 'experience'})"
+)
+def test_strategist_bundle_exclusion_matches_spec() -> None:
+    raise NotImplementedError("RI-B wires this to the adapter constant")

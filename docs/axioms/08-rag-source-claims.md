@@ -205,10 +205,39 @@ through to `unclassified` rather than being guessed. In particular, no
 platform host (Medium, Substack, etc.) is hardcoded as a personal blog, because
 those same platforms also host official company engineering blogs.
 
+## Controlled Vocabularies
+
+Axiom 08 owns what counts as evidence and who scores it. Controlled
+vocabularies are the same idea applied to vocabulary: when LLM output must
+name members of a domain (skills, tracks), the vocabulary those members
+resolve against is **canonical, versioned data — never LLM output**.
+
+The first instance is the skill taxonomy
+(`../specs/skill-taxonomy.schema.md`, stored as checked-in versioned JSON
+under `backend/taxonomy/`). The rules generalize to any future vocabulary:
+
+- The vocabulary is curated by humans, in review. LLMs do not add, rename,
+  or remove entries — extraction nodes emit surface strings only, and a
+  deterministic normalizer maps surfaces onto entries via an alias table.
+- Normalization is deterministic and total: a surface either resolves to
+  exactly one entry (aliases are globally unique) or is returned visibly
+  **unmatched** — never silently promoted to a canonical member. No
+  fuzzy/similarity matching in v1: match thresholds are guesswork until
+  calibrated, so the restraint is the behavior.
+- Versions are append-only, like eval sets: a vocabulary change is a new
+  file version, referenced explicitly. Every output produced against a
+  vocabulary stamps the version it ran against.
+- Corpus evidence (occurrence counts, supporting docs from a pinned
+  snapshot) may **annotate** entries to inform human curation; it never
+  auto-creates, auto-deletes, or auto-ranks them.
+- User data (résumé text, profile fields) never enters a vocabulary or its
+  evidence.
+
 ## Related Docs
 
 - `01-system-boundaries.md`
 - `03-data-contracts.md`
 - `18-caching-strategy.md`
 - `../specs/source-claim.schema.md`
+- `../specs/skill-taxonomy.schema.md`
 - `../decisions/ADR-0005-structured-syllabus-not-prose.md`

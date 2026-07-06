@@ -357,7 +357,9 @@ class AdapterConfig(BaseModel):
 # test ties prompt_version to the prompt bytes), not on a temperature knob.
 STRATEGIST_CONFIG = AdapterConfig(
     model_name="claude-opus-4-8",
-    prompt_version="strategist-v3-2026-07-05",
+    # 2026-07-06 bump: UserProfile gained experience/skills (résumé intake
+    # RI-A), which serialize into the bundle JSON — rendered bytes changed.
+    prompt_version="strategist-v3-2026-07-06",
     max_tokens=16384,
     input_price_per_mtok=5.00,
     output_price_per_mtok=25.00,

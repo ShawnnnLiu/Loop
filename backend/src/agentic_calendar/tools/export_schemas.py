@@ -52,7 +52,10 @@ from agentic_calendar.contracts.recommitment import (
     RecommitmentEvent,
     RecommitmentRequest,
 )
+from agentic_calendar.contracts.resume_extraction import ResumeExtraction
+from agentic_calendar.contracts.resume_intake_input import ResumeIntakeInput
 from agentic_calendar.contracts.scheduler_output import SchedulerOutput
+from agentic_calendar.contracts.skill_taxonomy import SkillTaxonomy
 from agentic_calendar.contracts.source_claim import SourceClaim
 from agentic_calendar.contracts.sponsor import Sponsor
 from agentic_calendar.contracts.sponsor_report import (
@@ -75,6 +78,9 @@ from agentic_calendar.llm_nodes.prose_attachment import ProseAttachmentRecord
 
 CONTRACTS: dict[str, type[BaseModel]] = {
     "user_profile": UserProfile,
+    "resume_extraction": ResumeExtraction,
+    "resume_intake_input": ResumeIntakeInput,
+    "skill_taxonomy": SkillTaxonomy,
     "motivation_profile": MotivationProfile,
     "syllabus_units": SyllabusUnits,
     "source_claim": SourceClaim,

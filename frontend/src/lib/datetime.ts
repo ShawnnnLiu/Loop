@@ -3,8 +3,13 @@
 // by the WALL-CLOCK time as written — never the browser-local conversion — and
 // reconstruct adjusted starts with the SAME offset so the server reads the time
 // the user intended. Week/day math runs in UTC to stay browser-tz-independent.
+//
+// The week grid is a rolling 7-day window anchored on TODAY (the user's
+// wall-clock date): today is always the leftmost column, and paging moves in
+// whole 7-day steps from that anchor — not Monday-to-Sunday calendar weeks.
 
-const DAY_MS = 86_400_000
+export const DAY_MS = 86_400_000
+const WEEK_MS = 7 * DAY_MS
 
 export interface Wall {
   y: number
@@ -38,24 +43,42 @@ export function dayUtcMs(w: Wall): number {
   return Date.UTC(w.y, w.mo - 1, w.d)
 }
 
-/** Monday=0 … Sunday=6 for a UTC-midnight ms. */
+/** Monday=0 … Sunday=6 for a UTC-midnight ms (weekday labels only — the grid
+ *  itself anchors on today, not Monday). */
 export function mondayIndex(dayMs: number): number {
   return (new Date(dayMs).getUTCDay() + 6) % 7
 }
 
-/** UTC-midnight ms of the Monday that starts this date's week. */
-export function weekMondayMs(dayMs: number): number {
-  return dayMs - mondayIndex(dayMs) * DAY_MS
+/** Minutes east of UTC for an ISO offset string ('Z', '+HH:MM' or '-HH:MM'). */
+export function offsetMinutes(offset: string): number {
+  const m = /^([+-])(\d{2}):(\d{2})$/.exec(offset)
+  if (!m) return 0 // 'Z'
+  const sign = m[1] === '-' ? -1 : 1
+  return sign * (Number(m[2]) * 60 + Number(m[3]))
+}
+
+/** UTC-midnight ms of the wall-clock date at `nowMs` in `offset` — "today" as
+ *  the user's own calendar shows it, not the browser's. */
+export function todayDayMs(nowMs: number, offset: string): number {
+  return Math.floor((nowMs + offsetMinutes(offset) * 60_000) / DAY_MS) * DAY_MS
+}
+
+/** UTC-midnight ms of the first day of the rolling 7-day window that contains
+ *  `dayMs`, for windows anchored at `anchorMs` (today). The anchor's own window
+ *  starts AT the anchor, so today is column 0; past days fall into earlier
+ *  windows (Math.floor is correct for negative offsets too). */
+export function windowStartMs(dayMs: number, anchorMs: number): number {
+  return anchorMs + Math.floor((dayMs - anchorMs) / WEEK_MS) * WEEK_MS
 }
 
 export function minutesOfDay(w: Wall): number {
   return w.hh * 60 + w.mm
 }
 
-/** Build an ISO datetime at (week Monday + dayIdx, minutes-of-day), carrying
+/** Build an ISO datetime at (window start + dayIdx, minutes-of-day), carrying
  *  `offset` so the server reads it in the user's timezone. */
-export function isoAt(mondayMs: number, dayIdx: number, minutes: number, offset: string): string {
-  const date = new Date(mondayMs + dayIdx * DAY_MS)
+export function isoAt(baseMs: number, dayIdx: number, minutes: number, offset: string): string {
+  const date = new Date(baseMs + dayIdx * DAY_MS)
   const hh = Math.floor(minutes / 60)
   const mm = minutes % 60
   return (
@@ -75,18 +98,22 @@ export function fmtMinutes(minutes: number): string {
 
 export const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const
 
-/** "Mon Apr 27" for a week-Monday + day index, for the week header. */
-export function dayHeader(mondayMs: number, dayIdx: number): { dow: string; label: string } {
-  const date = new Date(mondayMs + dayIdx * DAY_MS)
+/** "Mon Apr 27" for a window start + day index, for the week header. The
+ *  weekday comes from the actual date (windows anchor on today, not Monday). */
+export function dayHeader(baseMs: number, dayIdx: number): { dow: string; label: string } {
+  const ms = baseMs + dayIdx * DAY_MS
+  const date = new Date(ms)
   const month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-  return { dow: DAY_LABELS[dayIdx], label: `${month[date.getUTCMonth()]} ${date.getUTCDate()}` }
+  return {
+    dow: DAY_LABELS[mondayIndex(ms)],
+    label: `${month[date.getUTCMonth()]} ${date.getUTCDate()}`,
+  }
 }
 
 /** "Tue Jun 23 · 10:30a" for one tz-aware ISO start, by its wall-clock time. */
 export function fmtWhen(iso: string): string {
   const w = parseWall(iso)
-  const dayMs = dayUtcMs(w)
-  const head = dayHeader(weekMondayMs(dayMs), mondayIndex(dayMs))
+  const head = dayHeader(dayUtcMs(w), 0)
   return `${head.dow} ${head.label} · ${fmtMinutes(minutesOfDay(w))}`
 }
 
@@ -98,7 +125,5 @@ export function fmtClock(iso: string): string {
 /** "Jun 23" — the date of an ISO datetime as written (no tz conversion; same
  *  as-written convention as the grid, and deterministic across browsers). */
 export function fmtDate(iso: string): string {
-  const w = parseWall(iso)
-  const dayMs = dayUtcMs(w)
-  return dayHeader(weekMondayMs(dayMs), mondayIndex(dayMs)).label
+  return dayHeader(dayUtcMs(parseWall(iso)), 0).label
 }

@@ -1924,6 +1924,96 @@ def test_reconcile_adopts_move_before_unfinished_prereq_with_advisory() -> None:
     assert delta.reason_code is ReasonCode.DEPENDENCY_ADVISORY
 
 
+def test_reconcile_adopts_a_move_onto_another_block_with_overlap_advisory() -> None:
+    """ADR-0009: the user dragging a Loop event onto another block on their own
+    calendar is adopted (they can see both events there), never rejected —
+    the old NO_VALID_CONTIGUOUS_BLOCK dead-end is gone."""
+    service, env, adapter = _reconcilable()
+    events = _events_by_task(adapter)
+    dp1 = events["dp_001"]
+    dp2 = events["dp_002"]
+    # Move dp_001 (nothing depends on it starting later; it IS dp_002's
+    # prerequisite, but moving it later never warns dp_001 itself) exactly onto
+    # dp_002's slot.
+    adapter.simulate_external_move(
+        dp1.calendar_event_id,
+        scheduled_start=dp2.scheduled_start,
+        scheduled_end=dp2.scheduled_start + (dp1.scheduled_end - dp1.scheduled_start),
+    )
+
+    result = service.reconcile(
+        USER_ID, target_calendar_id=DEFAULT_TARGET_CALENDAR_ID, enabled=True
+    )
+
+    assert result.outcome is ReconciliationOutcome.ADOPTED
+    assert result.adopted_draft_schedule_id is not None
+    delta = {d.task_id: d for d in result.deltas}["dp_001"]
+    assert delta.disposition is ReconciliationDisposition.ADOPTED
+    assert delta.reason_code is ReasonCode.OVERLAP_ADVISORY
+    # The mapping and the active draft both adopt the overlapping time.
+    mapping = env.mapping_store.list_for_task("dp_001")[-1]
+    assert mapping.user_modified_bool is True
+    assert mapping.scheduled_start == dp2.scheduled_start
+    entries = {e.task_id: e for e in _active_draft_entries(env)}
+    assert entries["dp_001"].start == entries["dp_002"].start
+
+
+def test_reconcile_adopts_a_move_onto_a_busy_interval_with_overlap_advisory() -> None:
+    service, env, adapter = _reconcilable()
+    events = _events_by_task(adapter)
+    leaf = _a_scheduled_leaf(env, set(events))
+    rec = events[leaf]
+    duration = rec.scheduled_end - rec.scheduled_start
+    new_start = rec.scheduled_start + timedelta(days=7)  # same weekday + hour
+
+    adapter.simulate_external_move(
+        rec.calendar_event_id,
+        scheduled_start=new_start,
+        scheduled_end=new_start + duration,
+    )
+    result = service.reconcile(
+        USER_ID,
+        target_calendar_id=DEFAULT_TARGET_CALENDAR_ID,
+        free_busy=[
+            {
+                "start": (new_start + timedelta(minutes=15)).isoformat(),
+                "end": (new_start + timedelta(minutes=45)).isoformat(),
+            }
+        ],
+        enabled=True,
+    )
+
+    assert result.outcome is ReconciliationOutcome.ADOPTED
+    delta = {d.task_id: d for d in result.deltas}[leaf]
+    assert delta.disposition is ReconciliationDisposition.ADOPTED
+    assert delta.reason_code is ReasonCode.OVERLAP_ADVISORY
+    assert env.mapping_store.list_for_task(leaf)[-1].scheduled_start == new_start
+
+
+def test_reconcile_dependency_advisory_wins_over_overlap_advisory() -> None:
+    """A move that both overlaps AND precedes an unfinished prerequisite carries
+    DEPENDENCY_ADVISORY — the overlap is visible on the grid, ordering is not."""
+    service, _env, adapter = _reconcilable()
+    events = _events_by_task(adapter)
+    dp1 = events["dp_001"]
+    dp2 = events["dp_002"]
+    # dp_002 dragged exactly onto its (unfinished) prerequisite dp_001.
+    adapter.simulate_external_move(
+        dp2.calendar_event_id,
+        scheduled_start=dp1.scheduled_start,
+        scheduled_end=dp1.scheduled_start + (dp2.scheduled_end - dp2.scheduled_start),
+    )
+
+    result = service.reconcile(
+        USER_ID, target_calendar_id=DEFAULT_TARGET_CALENDAR_ID, enabled=True
+    )
+
+    assert result.outcome is ReconciliationOutcome.ADOPTED
+    delta = {d.task_id: d for d in result.deltas}["dp_002"]
+    assert delta.disposition is ReconciliationDisposition.ADOPTED
+    assert delta.reason_code is ReasonCode.DEPENDENCY_ADVISORY
+
+
 # --------------------------------------------------------------------------- #
 # Deterministic drop (Phase E2): draft -> approve -> delete-only write
 # --------------------------------------------------------------------------- #

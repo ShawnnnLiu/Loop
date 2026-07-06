@@ -4,17 +4,19 @@ import { useNavigate } from 'react-router-dom'
 import { ApiError, api, errorMessage } from '../api/client'
 import type { CalendarReconciliationResult, DraftView, StatusResult } from '../api/types'
 import {
+  DAY_MS,
   dayHeader,
   dayUtcMs,
   fmtMinutes,
   isoAt,
   minutesOfDay,
-  mondayIndex,
   parseWall,
-  weekMondayMs,
+  todayDayMs,
+  windowStartMs,
 } from '../lib/datetime'
-import { flaggedReason, needsDraftRefetch, reconcileBanner } from '../lib/reconcile'
+import { advisoryNote, flaggedReason, needsDraftRefetch, reconcileBanner } from '../lib/reconcile'
 import { RECOVERY_OPTIONS, planDiffLine, reviewBanner, reviewMode } from '../lib/review'
+import { stackByDay } from '../lib/stack'
 
 // The drag-to-adjust schedule review (the signature interaction). PROPOSED
 // blocks are draggable (snap 15 min, move across the week's days); imported
@@ -24,6 +26,11 @@ import { RECOVERY_OPTIONS, planDiffLine, reviewBanner, reviewMode } from '../lib
 // typed reason_code and the block snaps back to the server's truth. There is no
 // 60s undo; per-block control here is what makes the single plan-level approval
 // (next screen) safe.
+//
+// The grid is a rolling 7-day window anchored on TODAY (leftmost column), not a
+// Monday-to-Sunday calendar week; paging moves in whole 7-day steps. Blocks
+// that overlap — including adopted external moves onto another event
+// (ADR-0009) — stack side-by-side like Google Calendar, never as a collision.
 
 const START_HOUR = 8
 const END_HOUR = 23
@@ -36,16 +43,14 @@ const GRID_BOT = END_HOUR * 60
 interface Block {
   taskId: string
   title: string
-  mondayMs: number
-  dayIdx: number
+  dayMs: number
   startMin: number
   durMin: number
   offset: string
 }
 
 interface BusyBlock {
-  mondayMs: number
-  dayIdx: number
+  dayMs: number
   startMin: number
   durMin: number
 }
@@ -56,12 +61,10 @@ function toBlocks(view: DraftView): Block[] {
   const titles = view.task_titles
   return (view.draft?.entries ?? []).map((entry) => {
     const start = parseWall(entry.start)
-    const dayMs = dayUtcMs(start)
     return {
       taskId: entry.task_id,
       title: titles[entry.task_id] ?? entry.task_id,
-      mondayMs: weekMondayMs(dayMs),
-      dayIdx: mondayIndex(dayMs),
+      dayMs: dayUtcMs(start),
       startMin: minutesOfDay(start),
       durMin: Math.round((Date.parse(entry.end) - Date.parse(entry.start)) / 60000),
       offset: start.offset,
@@ -72,10 +75,8 @@ function toBlocks(view: DraftView): Block[] {
 function toBusy(view: DraftView): BusyBlock[] {
   return view.free_busy.map((interval) => {
     const start = parseWall(interval.start)
-    const dayMs = dayUtcMs(start)
     return {
-      mondayMs: weekMondayMs(dayMs),
-      dayIdx: mondayIndex(dayMs),
+      dayMs: dayUtcMs(start),
       startMin: minutesOfDay(start),
       durMin: Math.round((Date.parse(interval.end) - Date.parse(interval.start)) / 60000),
     }
@@ -92,7 +93,7 @@ export function ScheduleReviewScreen() {
   const [status, setStatus] = useState<StatusResult | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [weekIdx, setWeekIdx] = useState(0)
+  const [weekIdx, setWeekIdx] = useState<number | null>(null)
   const [drag, setDrag] = useState<DragState | null>(null)
   const [saving, setSaving] = useState(false)
   const [violation, setViolation] = useState<{ taskId: string; text: string } | null>(null)
@@ -212,11 +213,26 @@ export function ScheduleReviewScreen() {
     )
   }
 
-  const weeks = [...new Set(blocks.map((b) => b.mondayMs))].sort((a, b) => a - b)
-  const safeWeek = clamp(weekIdx, 0, weeks.length - 1)
-  const mondayMs = weeks[safeWeek]
-  const weekBlocks = blocks.filter((b) => b.mondayMs === mondayMs)
-  const weekBusy = busy.filter((b) => b.mondayMs === mondayMs)
+  // Rolling 7-day windows anchored on TODAY (the user's wall-clock date, read
+  // from the draft's own offset): the leftmost column of the current window is
+  // always today. Past blocks fall into earlier windows, reachable with ←.
+  const anchorMs = todayDayMs(Date.now(), blocks[0]?.offset ?? 'Z')
+  const weeks = [...new Set(blocks.map((b) => windowStartMs(b.dayMs, anchorMs)))].sort(
+    (a, b) => a - b,
+  )
+  // Default to the window containing today, else the next upcoming one, else
+  // the most recent past one — not blindly the earliest.
+  const upcoming = weeks.findIndex((w) => w >= anchorMs)
+  const defaultWeek = upcoming === -1 ? weeks.length - 1 : upcoming
+  const safeWeek = clamp(weekIdx ?? defaultWeek, 0, weeks.length - 1)
+  const windowMs = weeks[safeWeek]
+  const dayIdxOf = (dayMs: number) => (dayMs - windowMs) / DAY_MS
+  const weekBlocks = blocks
+    .filter((b) => windowStartMs(b.dayMs, anchorMs) === windowMs)
+    .map((b) => ({ ...b, dayIdx: dayIdxOf(b.dayMs) }))
+  const weekBusy = busy
+    .filter((b) => windowStartMs(b.dayMs, anchorMs) === windowMs)
+    .map((b) => ({ ...b, dayIdx: dayIdxOf(b.dayMs) }))
 
   // Drag + approval are valid only while the run awaits approval; once it's been
   // written/active the same draft comes back from /draft, so we render it
@@ -233,10 +249,41 @@ export function ScheduleReviewScreen() {
   // calendar, but the task is still planned.
   const deletedIds = new Set(view?.deleted_task_ids ?? [])
 
-  const posOf = (b: Block): { dayIdx: number; startMin: number } =>
+  type WeekBlock = Block & { dayIdx: number }
+  const posOf = (b: WeekBlock): { dayIdx: number; startMin: number } =>
     drag && drag.taskId === b.taskId ? { dayIdx: drag.dayIdx, startMin: drag.startMin } : b
 
-  function onDown(event: React.PointerEvent, b: Block) {
+  // GCal-style stacking: blocks that overlap in a day column — busy intervals,
+  // proposed blocks, adopted external moves onto another event (ADR-0009) —
+  // split the column side-by-side instead of drawing on top of each other.
+  // Recomputed with the live drag position so a dragged block restacks as it
+  // crosses other blocks.
+  const slotOf = stackByDay([
+    ...weekBusy.map((b, i) => ({
+      key: `busy${i}`,
+      dayIdx: b.dayIdx,
+      startMin: b.startMin,
+      endMin: b.startMin + b.durMin,
+    })),
+    ...weekBlocks.map((b) => {
+      const pos = posOf(b)
+      return {
+        key: b.taskId,
+        dayIdx: pos.dayIdx,
+        startMin: pos.startMin,
+        endMin: pos.startMin + b.durMin,
+      }
+    }),
+  ])
+  const stackGeom = (key: string, dayIdx: number): { left: string; width: string } => {
+    const slot = slotOf.get(key) ?? { col: 0, cols: 1 }
+    return {
+      left: `${((dayIdx + slot.col / slot.cols) / 7) * 100}%`,
+      width: `${100 / (7 * slot.cols)}%`,
+    }
+  }
+
+  function onDown(event: React.PointerEvent, b: WeekBlock) {
     if (saving) return
     event.preventDefault()
     const rect = colsRef.current?.getBoundingClientRect()
@@ -285,7 +332,7 @@ export function ScheduleReviewScreen() {
       return
     }
     setSaving(true)
-    const iso = isoAt(mondayMs, g.day, g.start, g.offset)
+    const iso = isoAt(windowMs, g.day, g.start, g.offset)
     try {
       const result = await api.adjust([{ task_id: g.taskId, start: iso }])
       if (!result.applied) {
@@ -500,6 +547,21 @@ export function ScheduleReviewScreen() {
         >
           <div style={{ fontWeight: 600, fontSize: 14 }}>{recon.title}</div>
           <div style={{ fontSize: 13, marginTop: 2, opacity: 0.85 }}>{recon.sub}</div>
+          {recon.adopted.some((d) => advisoryNote(d) != null) && (
+            // Non-blocking heads-ups on ADOPTED edits (ADR-0008/0009): the move
+            // was applied — e.g. it now overlaps another event and stacks on
+            // the grid — so this is information, never an error.
+            <ul className="recon-list">
+              {recon.adopted.map((d) => {
+                const note = advisoryNote(d)
+                return note == null ? null : (
+                  <li key={d.task_id}>
+                    <b>{titleOf(d.task_id)}</b> — {note}
+                  </li>
+                )
+              })}
+            </ul>
+          )}
           {recon.flagged.length > 0 && (
             <ul className="recon-list">
               {recon.flagged.map((d) => (
@@ -532,11 +594,12 @@ export function ScheduleReviewScreen() {
         <div className="sched-head">
           <div className="gutter" />
           {Array.from({ length: 7 }).map((_, i) => {
-            const h = dayHeader(mondayMs, i)
+            const h = dayHeader(windowMs, i)
+            const isToday = windowMs + i * DAY_MS === anchorMs
             return (
-              <div key={i} className="dcol">
+              <div key={i} className={isToday ? 'dcol dcol-today' : 'dcol'}>
                 <div className="label" style={{ fontSize: 11 }}>
-                  {h.dow}
+                  {isToday ? 'Today' : h.dow}
                 </div>
                 <div style={{ fontFamily: 'var(--serif)', fontSize: 17 }}>{h.label}</div>
               </div>
@@ -567,8 +630,7 @@ export function ScheduleReviewScreen() {
                 className="blk blk-busy"
                 title="From Google Calendar · fixed"
                 style={{
-                  left: `${(b.dayIdx / 7) * 100}%`,
-                  width: `${100 / 7}%`,
+                  ...stackGeom(`busy${i}`, b.dayIdx),
                   top: topPx(b.startMin),
                   height: heightPx(b.durMin),
                 }}
@@ -604,8 +666,7 @@ export function ScheduleReviewScreen() {
                   onPointerMove={editable ? onMove : undefined}
                   onPointerUp={editable ? (e) => void onUp(e) : undefined}
                   style={{
-                    left: `${(pos.dayIdx / 7) * 100}%`,
-                    width: `${100 / 7}%`,
+                    ...stackGeom(b.taskId, pos.dayIdx),
                     top: topPx(pos.startMin),
                     height: heightPx(b.durMin),
                   }}

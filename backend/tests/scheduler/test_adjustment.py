@@ -84,6 +84,7 @@ def _review(
     free_busy: list[FreeBusyInterval] | None = None,
     tz: tzinfo = UTC,
     completed_or_dropped: Collection[str] = (),
+    overlap_advisory: bool = False,
 ) -> PlacementReview:
     return validate_placements(
         entries,
@@ -92,6 +93,7 @@ def _review(
         free_busy=free_busy or [],
         tz=tz,
         completed_or_dropped_task_ids=completed_or_dropped,
+        overlap_advisory=overlap_advisory,
     )
 
 
@@ -237,6 +239,79 @@ def test_hard_conflict_and_advisory_coexist() -> None:
         ReasonCode.NO_VALID_CONTIGUOUS_BLOCK
     ]
     assert [w.reason_code for w in review.warnings] == [ReasonCode.DEPENDENCY_ADVISORY]
+
+
+# --------------------------------------------------------------------------- #
+# overlap_advisory mode (reconciliation, ADR-0009): overlap warns, never blocks
+# --------------------------------------------------------------------------- #
+
+
+def test_overlap_with_fixed_event_is_advisory_for_external_moves() -> None:
+    entries = [_entry("a", _at(MON, 9), 60)]
+    busy = [FreeBusyInterval(start=_at(MON, 9, 30), end=_at(MON, 10, 30))]
+    review = _review(entries, free_busy=busy, overlap_advisory=True)
+    assert review.conflicts == []
+    assert [(w.task_id, w.reason_code) for w in review.warnings] == [
+        ("a", ReasonCode.OVERLAP_ADVISORY)
+    ]
+
+
+def test_overlap_between_blocks_is_advisory_and_warns_both_sides() -> None:
+    # Only moved tasks produce reconciliation deltas, so the pairwise gate must
+    # warn BOTH sides: the heads-up has to exist on whichever side the user moved.
+    entries = [
+        _entry("a", _at(MON, 9), 60),
+        _entry("b", _at(MON, 9, 30), 60),
+    ]
+    review = _review(entries, overlap_advisory=True)
+    assert review.conflicts == []
+    assert {(w.task_id, w.reason_code) for w in review.warnings} == {
+        ("a", ReasonCode.OVERLAP_ADVISORY),
+        ("b", ReasonCode.OVERLAP_ADVISORY),
+    }
+
+
+def test_overlap_advisory_mode_keeps_policy_bounds_hard() -> None:
+    # Overlapping AND before allowed hours: the policy bound still refuses even
+    # in advisory-overlap mode — only overlap is demoted (ADR-0009).
+    entries = [
+        _entry("a", _at(MON, 7), 60),  # 07:00 < 08:00
+        _entry("b", _at(MON, 7, 30), 60),
+    ]
+    review = _review(entries, overlap_advisory=True)
+    assert {c.reason_code for c in review.conflicts} == {ReasonCode.OUTSIDE_ALLOWED_HOURS}
+    assert {w.reason_code for w in review.warnings} == {ReasonCode.OVERLAP_ADVISORY}
+
+
+def test_overlap_advisory_and_dependency_advisory_coexist() -> None:
+    # dp_002 dragged onto dp_001 (its unfinished prerequisite): both advisories
+    # surface; neither blocks. The reconcile layer picks which one rides the
+    # delta (DEPENDENCY_ADVISORY wins — spec, "Adopt-If-Valid Rules").
+    plan = _plan({"dp_001": [], "dp_002": ["dp_001"]})
+    entries = [
+        _entry("dp_001", _at(MON, 18), 60),
+        _entry("dp_002", _at(MON, 18), 60),
+    ]
+    review = _review(entries, plan=plan, overlap_advisory=True)
+    assert review.conflicts == []
+    assert {(w.task_id, w.reason_code) for w in review.warnings} == {
+        ("dp_001", ReasonCode.OVERLAP_ADVISORY),
+        ("dp_002", ReasonCode.OVERLAP_ADVISORY),
+        ("dp_002", ReasonCode.DEPENDENCY_ADVISORY),
+    }
+
+
+def test_default_mode_still_hard_on_overlap() -> None:
+    # The in-app drag path (no flag) is unchanged: overlap refuses.
+    entries = [
+        _entry("a", _at(MON, 9), 60),
+        _entry("b", _at(MON, 9, 30), 60),
+    ]
+    review = _review(entries)
+    assert [c.reason_code for c in review.conflicts] == [
+        ReasonCode.NO_VALID_CONTIGUOUS_BLOCK
+    ]
+    assert review.warnings == []
 
 
 # --------------------------------------------------------------------------- #

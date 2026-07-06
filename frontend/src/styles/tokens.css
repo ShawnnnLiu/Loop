@@ -82,6 +82,11 @@ h4 {
   font-size: 20px;
   line-height: 1.15;
 }
+.t-h4 {
+  font-family: var(--serif);
+  font-size: 17px;
+  line-height: 1.2;
+}
 .mono {
   font-family: var(--mono);
 }
@@ -900,4 +905,431 @@ select.input {
   border-radius: var(--r);
   box-shadow: var(--shadow);
   overflow: hidden;
+}
+
+/* ——— Week plan (board + day rail) ——— */
+/* The design-reference "week plan": 7 stacked-block day columns (no time
+   axis) beside a selected-day agenda rail. Ported from
+   docs/design-reference/design/app.css onto the shared tokens; wp- namespaced
+   so nothing collides with the hour grid's .blk/.sw. Deleted/unconfirmed
+   reuse the grid's honest palettes (.blk-deleted / .blk-readonly). */
+.wp-ms-bar {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 14px clamp(16px, 4vw, 26px);
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--paper) 60%, #fff);
+}
+.wp-ms-track {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+.wp-ms {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 14px 7px 9px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  border: 1px solid var(--line-2);
+  background: var(--card);
+  color: var(--ink-soft);
+}
+.wp-ms .tick {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  flex: none;
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+  font-weight: 800;
+}
+.wp-ms.done {
+  background: var(--sage-soft);
+  border-color: #cfe0cf;
+  color: var(--sage-deep);
+}
+.wp-ms.done .tick {
+  background: var(--sage);
+  color: #fff;
+}
+.wp-ms.active {
+  background: var(--clay-tint);
+  border-color: var(--clay-soft);
+  color: var(--clay-deep);
+}
+.wp-ms.active .tick {
+  background: var(--clay);
+  color: #fff;
+}
+.wp-ms.todo .tick {
+  border: 1.5px dashed var(--line-3);
+}
+.wp-ms-link {
+  width: 16px;
+  height: 1.5px;
+  background: var(--line-2);
+  flex: none;
+}
+.wp-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: grid;
+  grid-template-columns: 1.62fr 1fr;
+  gap: 24px;
+  padding: 18px clamp(16px, 4vw, 26px);
+  align-items: start;
+}
+.wp-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.wp-nav-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  border: 1px solid var(--line-2);
+  background: var(--card);
+  display: grid;
+  place-items: center;
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-family: var(--mono);
+  cursor: pointer;
+}
+.wp-nav-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.wp-board {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+.wp-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 10px;
+}
+.wp-day {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  padding: 11px 11px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  min-width: 0;
+  cursor: pointer;
+}
+.wp-day:focus-visible {
+  outline: 2px solid var(--clay);
+  outline-offset: 2px;
+}
+.wp-day.today {
+  background: #fff;
+  border-color: var(--clay-soft);
+  box-shadow: 0 0 0 1px var(--clay-soft);
+}
+.wp-day.sel {
+  border-color: var(--clay);
+  box-shadow: 0 0 0 1.5px var(--clay), var(--shadow);
+}
+.wp-day.rest {
+  background: var(--paper-2);
+  border-style: dashed;
+}
+.wp-day-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.wp-dow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.wp-day.today .wp-dow,
+.wp-day.sel .wp-dow {
+  color: var(--clay-deep);
+}
+.wp-num {
+  font-family: var(--serif);
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1;
+}
+.wp-day.sel .wp-num {
+  color: var(--clay-deep);
+}
+.wp-day-meta {
+  font-size: 11px;
+  color: var(--muted-2);
+  font-weight: 600;
+}
+.wp-day-div {
+  border-top: 1px solid var(--line);
+}
+.wp-col {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.wp-rest-note {
+  font-size: 12px;
+  font-style: italic;
+  color: var(--muted-2);
+}
+.wp-blk {
+  border-radius: 9px;
+  padding: 7px 9px;
+  border: 1px solid var(--line-2);
+  background: var(--card);
+  line-height: 1.2;
+}
+.wp-bt {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+.wp-bn {
+  font-size: 12.5px;
+  font-weight: 600;
+  margin-top: 2px;
+  color: var(--ink);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.wp-blk.proposed {
+  border-style: dashed;
+  border-color: var(--clay);
+  background: var(--clay-tint);
+}
+.wp-blk.proposed .wp-bn {
+  color: var(--clay-deep);
+}
+.wp-blk.locked {
+  background: var(--paper-2);
+  border-color: var(--line-2);
+}
+.wp-blk.locked .wp-bn {
+  color: var(--ink-soft);
+}
+.wp-blk.done {
+  background: var(--ink);
+  border-color: var(--ink);
+}
+.wp-blk.done .wp-bt {
+  color: rgba(251, 248, 242, 0.55);
+}
+.wp-blk.done .wp-bn {
+  color: var(--paper);
+  text-decoration: line-through;
+  text-decoration-color: rgba(251, 248, 242, 0.5);
+}
+.wp-blk.deleted {
+  border: 1px dashed #c0492f;
+  background: rgba(192, 73, 47, 0.07);
+}
+.wp-blk.deleted .wp-bn {
+  color: #c0492f;
+}
+.wp-blk.unconfirmed {
+  border: 1px solid rgba(108, 120, 134, 0.4);
+  background: rgba(108, 120, 134, 0.12);
+}
+.wp-blk.unconfirmed .wp-bn {
+  color: var(--ink-soft);
+}
+.wp-board-div {
+  border-top: 1px solid var(--line);
+}
+.wp-legend {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+}
+.wp-legend .lg {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+.wp-sw {
+  width: 15px;
+  height: 15px;
+  border-radius: 5px;
+  flex: none;
+  border: 1px solid var(--line-2);
+}
+.wp-sw.proposed {
+  border-style: dashed;
+  border-color: var(--clay);
+  background: var(--clay-tint);
+}
+.wp-sw.accepted {
+  background: var(--card);
+  border-color: var(--line-3);
+}
+.wp-sw.done {
+  background: var(--ink);
+  border-color: var(--ink);
+}
+.wp-sw.locked {
+  border-color: rgba(108, 120, 134, 0.4);
+  background: repeating-linear-gradient(
+    135deg,
+    rgba(108, 120, 134, 0.2) 0 4px,
+    rgba(108, 120, 134, 0.07) 4px 8px
+  );
+}
+.wp-sw.deleted {
+  border: 1px dashed #c0492f;
+  background: rgba(192, 73, 47, 0.08);
+}
+.wp-sw.unconfirmed {
+  border-color: rgba(108, 120, 134, 0.4);
+  background: rgba(108, 120, 134, 0.12);
+}
+.wp-rail {
+  border-left: 1px solid var(--line);
+  padding-left: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.wp-rail-top {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+.wp-status {
+  font-weight: 600;
+}
+.wp-status.sage {
+  color: var(--sage-deep);
+}
+.wp-status.clay {
+  color: var(--clay-deep);
+}
+.wp-status.muted {
+  color: var(--muted);
+}
+.wp-rail-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.wp-rail-item {
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--card);
+  padding: 13px 15px;
+  box-shadow: var(--shadow-sm);
+}
+.wp-rail-item.proposed {
+  border-style: dashed;
+  border-color: var(--clay);
+  background: var(--clay-tint);
+  box-shadow: none;
+}
+.wp-rail-item.done {
+  background: var(--ink);
+  border-color: var(--ink);
+  box-shadow: none;
+}
+.wp-rail-item.locked {
+  background: var(--paper-2);
+  border-color: var(--line-2);
+  box-shadow: none;
+}
+.wp-rail-item.deleted {
+  border: 1px dashed #c0492f;
+  background: rgba(192, 73, 47, 0.05);
+  box-shadow: none;
+}
+.wp-rail-item.unconfirmed {
+  border-color: rgba(108, 120, 134, 0.3);
+  background: rgba(108, 120, 134, 0.08);
+  box-shadow: none;
+}
+.wp-rail-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.wp-rail-main {
+  flex: 1;
+  min-width: 0;
+}
+.wp-rail-time {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.wp-rail-item.done .wp-rail-time {
+  color: rgba(251, 248, 242, 0.55);
+}
+.wp-rail-title {
+  font-family: var(--serif);
+  font-size: 18px;
+  font-weight: 600;
+  margin-top: 3px;
+}
+.wp-rail-item.done .wp-rail-title {
+  color: var(--paper);
+  text-decoration: line-through;
+  text-decoration-color: rgba(251, 248, 242, 0.45);
+}
+.wp-rail-item.deleted .wp-rail-title {
+  color: #c0492f;
+}
+.wp-rail-meta {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.wp-rail-item.done .wp-rail-meta {
+  color: rgba(251, 248, 242, 0.55);
+}
+@media (max-width: 900px) {
+  .wp-body {
+    grid-template-columns: 1fr;
+  }
+  .wp-board {
+    overflow-x: auto;
+  }
+  .wp-grid {
+    min-width: 640px;
+  }
+  .wp-rail {
+    border-left: 0;
+    padding-left: 0;
+    border-top: 1px solid var(--line);
+    padding-top: 16px;
+  }
 }

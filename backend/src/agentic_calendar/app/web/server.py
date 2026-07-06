@@ -16,6 +16,9 @@ All configuration comes from environment variables (never the repo):
 * ``ANTHROPIC_API_KEY``         — required: real testers' plans use the live
   Anthropic nodes (the fixture nodes only handle the sample profile).
 * ``TUNING_PATH``               — optional tuning.toml (journaled overrides).
+* ``CANONICAL_HOST``            — optional bare hostname; requests under any
+  other host (e.g. the old ``<app>.fly.dev`` name after a custom-domain
+  cutover) are 301-redirected to it. Unset means no redirect.
 
 See ``docs/deploy.md`` for the full deploy + Google Cloud Console runbook.
 """
@@ -62,4 +65,5 @@ def create_hosted_app() -> FastAPI:
         token_cipher=TokenCipher.from_env(),
         spa_dist=spa_dist,
         landing_index=landing_index,
+        canonical_host=os.environ.get("CANONICAL_HOST") or None,
     )

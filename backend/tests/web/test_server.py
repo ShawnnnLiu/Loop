@@ -46,6 +46,9 @@ def _set_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     # behavior is covered in test_spa.py with temp files.
     monkeypatch.setenv("SPA_DIST_DIR", str(tmp_path / "no-spa-build"))
     monkeypatch.setenv("LANDING_INDEX", str(tmp_path / "no-landing.html"))
+    # No canonical-host redirect unless a test opts in (and never inherit one
+    # from the invoking shell).
+    monkeypatch.delenv("CANONICAL_HOST", raising=False)
 
 
 def test_create_hosted_app_wires_from_env(
@@ -71,6 +74,19 @@ def test_create_hosted_app_accepts_inline_client_json(
     monkeypatch.setenv("GOOGLE_OAUTH_CLIENT_SECRET_JSON", json.dumps(_CLIENT_JSON))
     client = TestClient(create_hosted_app())
     assert client.get("/api/status").status_code == 401
+
+
+def test_create_hosted_app_reads_canonical_host(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    _set_env(monkeypatch, tmp_path)
+    monkeypatch.setenv("CANONICAL_HOST", "loop.example.dev")
+    client = TestClient(create_hosted_app(), base_url="http://acme-agentic-cal.fly.dev")
+    resp = client.get("/api/status", follow_redirects=False)
+    assert resp.status_code == 301
+    assert resp.headers["location"] == "https://loop.example.dev/api/status"
+    # Health probes stay exempt on the old host.
+    assert client.get("/healthz", follow_redirects=False).json() == {"status": "ok"}
 
 
 def test_create_hosted_app_requires_db_path(

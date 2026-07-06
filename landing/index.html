@@ -484,6 +484,7 @@
       </div>
       <span class="spacer"></span>
       <a class="btn btn-quiet" href="#how">How it works</a>
+      <a class="btn btn-quiet" href="/how-its-built">How it’s built</a>
       <a class="btn btn-ghost" href="/auth/login">Sign in</a>
     </header>
 
@@ -582,7 +583,7 @@
             <div class="step">
               <div class="num">05</div>
               <h3>Write &amp; verify</h3>
-              <p>Loop writes to one calendar, re-reads every event to confirm it, and rolls back anything it can’t.</p>
+              <p>Loop writes to one calendar and re-reads every event to confirm it landed. If anything can’t be verified, the plan is not activated — you see exactly what did and didn’t land.</p>
             </div>
             <div class="step">
               <div class="num">06</div>
@@ -609,7 +610,7 @@
             </div>
             <div class="trust-item">
               <h3>Verified after writing</h3>
-              <p>Each event is re-read to confirm it landed; anything unverified is automatically rolled back.</p>
+              <p>Each event is re-read after writing. Anything unverified blocks the plan from activating — nothing is silently treated as done.</p>
             </div>
             <div class="trust-item">
               <h3>Your data stays yours</h3>
@@ -674,7 +675,9 @@
           <span class="word">Loop</span>
         </div>
         <span class="muted">Interview prep, scheduled around your real life.</span>
+        <span class="muted">Built by <a class="muted" href="https://github.com/ShawnnnLiu">Shawn Liu</a></span>
         <span class="spacer"></span>
+        <a class="muted" href="/how-its-built">How it’s built</a>
         <a class="muted" href="/auth/login">Get started →</a>
       </div>
     </footer>

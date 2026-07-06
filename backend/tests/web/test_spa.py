@@ -19,6 +19,7 @@ from tests.app.test_cycle import USER_ID, make_service
 _INDEX_HTML = "<!doctype html><title>Loop</title><div id=root></div>"
 _ASSET_JS = "console.log('loop')"
 _LANDING_HTML = "<!doctype html><title>Loop — landing</title><h1>LANDING_MARKER</h1>"
+_BUILT_HTML = "<!doctype html><title>Loop — how its built</title><h1>BUILT_MARKER</h1>"
 
 
 def _dist(tmp_path: Path) -> Path:
@@ -35,6 +36,13 @@ def _landing(tmp_path: Path) -> Path:
     index.parent.mkdir(parents=True)
     index.write_text(_LANDING_HTML)
     return index
+
+
+def _how_its_built(tmp_path: Path) -> Path:
+    page = tmp_path / "landing" / "how-its-built.html"
+    page.parent.mkdir(parents=True, exist_ok=True)
+    page.write_text(_BUILT_HTML)
+    return page
 
 
 def _client(tmp_path: Path) -> TestClient:
@@ -128,3 +136,49 @@ def test_landing_served_without_a_spa_build(tmp_path: Path) -> None:
     )
     assert "LANDING_MARKER" in client.get("/").text
     assert client.get("/today", follow_redirects=False).status_code == 404
+
+
+# --------------------------------------------------------------------------- #
+# How it's built (recruiter-readiness 03): a second static page at
+# /how-its-built, registered before the SPA catch-all so it isn't swallowed.
+# --------------------------------------------------------------------------- #
+
+
+def test_how_its_built_wins_over_the_spa_catch_all(tmp_path: Path) -> None:
+    _service, env, _clock = make_service()
+    client = TestClient(
+        create_app(
+            env=env,
+            default_user_id=USER_ID,
+            spa_dist=_dist(tmp_path),
+            landing_index=_landing(tmp_path),
+            how_its_built=_how_its_built(tmp_path),
+        )
+    )
+    built = client.get("/how-its-built")
+    assert built.status_code == 200
+    assert "BUILT_MARKER" in built.text
+    assert _INDEX_HTML not in built.text
+    # The landing and the SPA are unaffected by the extra static route.
+    assert "LANDING_MARKER" in client.get("/").text
+    for route in ("/app", "/today"):
+        resp = client.get(route)
+        assert resp.status_code == 200, route
+        assert _INDEX_HTML in resp.text
+
+
+def test_missing_how_its_built_file_leaves_route_to_the_spa(tmp_path: Path) -> None:
+    # Point at a nonexistent file: the route must not be registered, so the
+    # SPA catch-all serves /how-its-built like any other unknown path.
+    _service, env, _clock = make_service()
+    client = TestClient(
+        create_app(
+            env=env,
+            default_user_id=USER_ID,
+            spa_dist=_dist(tmp_path),
+            how_its_built=tmp_path / "landing" / "missing.html",
+        )
+    )
+    resp = client.get("/how-its-built")
+    assert resp.status_code == 200
+    assert _INDEX_HTML in resp.text

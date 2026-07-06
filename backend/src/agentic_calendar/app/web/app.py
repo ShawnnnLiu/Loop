@@ -24,10 +24,11 @@ an axiom-06 invariant.
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from pathlib import Path
 
-from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi import FastAPI, Request, Response
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import ValidationError
 from starlette.middleware.sessions import SessionMiddleware
@@ -57,6 +58,15 @@ def default_landing_index() -> Path:
     The unauthenticated marketing entry served at ``/``; hosted deploys may
     override it with ``LANDING_INDEX``."""
     return Path(__file__).resolve().parents[5] / "landing" / "index.html"
+
+
+def default_how_its_built() -> Path:
+    """The repo's static engineering-story page (``landing/how-its-built.html``).
+
+    Served at ``/how-its-built`` next to the landing — the no-sign-in
+    architecture page recruiters land on. Hosted deploys may override it with
+    ``HOW_ITS_BUILT_INDEX``."""
+    return Path(__file__).resolve().parents[5] / "landing" / "how-its-built.html"
 
 
 def _mount_spa(app: FastAPI, dist_dir: Path) -> None:
@@ -91,6 +101,8 @@ def create_app(
     default_user_id: str | None = None,
     spa_dist: Path | None = None,
     landing_index: Path | None = None,
+    how_its_built: Path | None = None,
+    canonical_host: str | None = None,
 ) -> FastAPI:
     """Build the app over a wired :class:`AppEnvironment`.
 
@@ -100,6 +112,9 @@ def create_app(
     ``landing_index`` (a static ``landing/index.html``) is served at ``/`` when
     present — the SPA then owns the app routes (the OAuth callback lands users on
     ``/app``), so the marketing root and the app don't fight over ``/``.
+    ``canonical_host`` (a bare hostname) 301-redirects requests arriving under
+    any other host — e.g. the old ``<app>.fly.dev`` name after a custom-domain
+    cutover — to the same path on the canonical domain; unset means no redirect.
     """
     if auth_config is not None and token_cipher is None:
         raise ValueError("hosted mode (auth_config) requires a token_cipher")
@@ -122,6 +137,24 @@ def create_app(
             https_only=auth_config.https_only,
         )
         app.include_router(auth_router)
+
+    # Canonical-host redirect (custom-domain cutover): requests that arrive
+    # under any other host — e.g. the retired <app>.fly.dev name — get a
+    # path-and-query-preserving 301 to the canonical domain. Added after
+    # SessionMiddleware so it runs outermost (redirect before any session
+    # work). ``/healthz`` is exempt so machine probes never chase a redirect.
+    normalized_canonical = (canonical_host or "").strip().lower()
+    if normalized_canonical:
+
+        @app.middleware("http")
+        async def _canonical_host_redirect(
+            request: Request, call_next: Callable[[Request], Awaitable[Response]]
+        ) -> Response:
+            host = (request.url.hostname or "").lower()
+            if host and host != normalized_canonical and request.url.path != "/healthz":
+                target = request.url.replace(scheme="https", netloc=normalized_canonical)
+                return RedirectResponse(str(target), status_code=301)
+            return await call_next(request)
 
     @app.get("/healthz")
     def healthz() -> dict[str, str]:
@@ -162,6 +195,15 @@ def create_app(
         @app.get("/", include_in_schema=False)
         def landing() -> FileResponse:
             return FileResponse(landing_index)
+
+    # The static engineering-story page, a sibling of the landing. Like the
+    # landing it must be registered before the SPA catch-all or the catch-all
+    # would swallow the route.
+    if how_its_built is not None and how_its_built.is_file():
+
+        @app.get("/how-its-built", include_in_schema=False)
+        def how_its_built_page() -> FileResponse:
+            return FileResponse(how_its_built)
 
     # The SPA fallback is registered LAST so its catch-all never shadows the API,
     # auth, health, or landing routes above. Only mounted when a real build is

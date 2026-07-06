@@ -2,7 +2,14 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { ApiError, api, errorMessage } from '../api/client'
-import type { CalendarReconciliationResult, DraftView, StatusResult } from '../api/types'
+import type {
+  CalendarReconciliationResult,
+  DraftView,
+  StatusResult,
+  TodayResult,
+  UserProfile,
+} from '../api/types'
+import { WeekPlanView } from '../components/WeekPlanView'
 import {
   DAY_MS,
   dayHeader,
@@ -17,6 +24,7 @@ import {
 import { advisoryNote, flaggedReason, needsDraftRefetch, reconcileBanner } from '../lib/reconcile'
 import { RECOVERY_OPTIONS, planDiffLine, reviewBanner, reviewMode } from '../lib/review'
 import { stackByDay } from '../lib/stack'
+import { buildWeekPlan, milestoneGroups, todayFacts, weekRangeLabel } from '../lib/weekplan'
 
 // The drag-to-adjust schedule review (the signature interaction). PROPOSED
 // blocks are draggable (snap 15 min, move across the week's days); imported
@@ -57,6 +65,12 @@ interface BusyBlock {
 
 type DragState = { taskId: string; dayIdx: number; startMin: number }
 
+// The Week screen renders the same server truth two ways: the hour grid
+// (drag-to-adjust) and the design-reference week-plan board + day rail. The
+// choice is cosmetic, so it lives client-side only.
+type ReviewViewKind = 'grid' | 'plan'
+const VIEW_PREF_KEY = 'loop.review.view'
+
 function toBlocks(view: DraftView): Block[] {
   const titles = view.task_titles
   return (view.draft?.entries ?? []).map((entry) => {
@@ -91,6 +105,15 @@ export function ScheduleReviewScreen() {
   const navigate = useNavigate()
   const [view, setView] = useState<DraftView | null>(null)
   const [status, setStatus] = useState<StatusResult | null>(null)
+  const [today, setToday] = useState<TodayResult | null>(null)
+  const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [viewKind, setViewKind] = useState<ReviewViewKind>(() => {
+    try {
+      return localStorage.getItem(VIEW_PREF_KEY) === 'plan' ? 'plan' : 'grid'
+    } catch {
+      return 'grid'
+    }
+  })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [weekIdx, setWeekIdx] = useState<number | null>(null)
@@ -128,12 +151,17 @@ export function ScheduleReviewScreen() {
     // decides whether it is still an editable draft (awaiting approval) or an
     // already-written schedule we must show read-only. `me` carries the
     // inbound-calendar-sync opt-in that gates the reconcile pull below.
-    Promise.all([api.status(), api.draft(), api.me()])
-      .then(([s, v, m]) => {
+    // `today` supplies the plan view's reported/due facts (it covers the whole
+    // active draft, not just today); it is auxiliary, so a failure degrades the
+    // plan view to accepted-only instead of breaking the screen.
+    Promise.all([api.status(), api.draft(), api.me(), api.today().catch(() => null)])
+      .then(([s, v, m, t]) => {
         if (!active) return
         setStatus(s)
         setView(v)
         setSyncEnabled(m.inbound_calendar_sync_enabled)
+        setProfile(m.profile)
+        setToday(t)
         setLoading(false)
       })
       .catch((err: unknown) => {
@@ -202,7 +230,7 @@ export function ScheduleReviewScreen() {
 
   const blocks = view ? toBlocks(view) : []
   const busy = view ? toBusy(view) : []
-  if (blocks.length === 0) {
+  if (!view || blocks.length === 0) {
     return (
       <div className="screen-center col" style={{ gap: 12 }}>
         <h2 className="t-h2">No draft to review yet</h2>
@@ -356,6 +384,15 @@ export function ScheduleReviewScreen() {
     }
   }
 
+  const pickView = (kind: ReviewViewKind) => {
+    setViewKind(kind)
+    try {
+      localStorage.setItem(VIEW_PREF_KEY, kind)
+    } catch {
+      /* private mode — the toggle still works, just doesn't persist */
+    }
+  }
+
   async function runReplan(recoveryMode?: string) {
     setReplanning(true)
     setReplanError(null)
@@ -368,9 +405,16 @@ export function ScheduleReviewScreen() {
       if (result.reason_code) {
         setReplanError(`the replan didn’t produce a schedulable draft (${result.reason_code})`)
       } else {
-        const [s, v] = await Promise.all([api.status(), api.draft()])
+        // Refetch today-facts too: the run is editable again, so /today goes
+        // empty and stale reported/due sets from the old plan can't leak.
+        const [s, v, t] = await Promise.all([
+          api.status(),
+          api.draft(),
+          api.today().catch(() => null),
+        ])
         setStatus(s)
         setView(v)
+        setToday(t)
       }
     } catch (err) {
       if (!(err instanceof ApiError && err.status === 401)) {
@@ -389,8 +433,15 @@ export function ScheduleReviewScreen() {
           <div style={{ flex: 1 }}>
             <div className="t-h3">Review your proposed week</div>
             <div className="muted" style={{ fontSize: 13, marginTop: 2 }}>
-              Drag any <b style={{ color: 'var(--clay-deep)' }}>proposed</b> block to a new time or
-              day. Your existing calendar events are fixed. Every move is re-checked on the server.
+              {viewKind === 'grid' ? (
+                <>
+                  Drag any <b style={{ color: 'var(--clay-deep)' }}>proposed</b> block to a new time
+                  or day. Your existing calendar events are fixed. Every move is re-checked on the
+                  server.
+                </>
+              ) : (
+                <>Click a day to see its detail. Switch to Grid to drag blocks to new times.</>
+              )}
             </div>
             {view?.plan_diff &&
               // The deterministic plan diff (D4): a replanned draft is
@@ -439,7 +490,23 @@ export function ScheduleReviewScreen() {
             )}
           </div>
         )}
-        {weeks.length > 1 && (
+        <div className="row" style={{ gap: 6 }}>
+          <button
+            className={viewKind === 'grid' ? 'chip on' : 'chip'}
+            type="button"
+            onClick={() => pickView('grid')}
+          >
+            Grid
+          </button>
+          <button
+            className={viewKind === 'plan' ? 'chip on' : 'chip'}
+            type="button"
+            onClick={() => pickView('plan')}
+          >
+            Plan
+          </button>
+        </div>
+        {viewKind === 'grid' && weeks.length > 1 && (
           <div className="row" style={{ gap: 6 }}>
             <button
               className="btn btn-soft sm"
@@ -590,147 +657,169 @@ export function ScheduleReviewScreen() {
         </div>
       )}
 
-      <div className="sched-scroll">
-        <div className="sched-head">
-          <div className="gutter" />
-          {Array.from({ length: 7 }).map((_, i) => {
-            const h = dayHeader(windowMs, i)
-            const isToday = windowMs + i * DAY_MS === anchorMs
-            return (
-              <div key={i} className={isToday ? 'dcol dcol-today' : 'dcol'}>
-                <div className="label" style={{ fontSize: 11 }}>
-                  {isToday ? 'Today' : h.dow}
-                </div>
-                <div style={{ fontFamily: 'var(--serif)', fontSize: 17 }}>{h.label}</div>
-              </div>
-            )
-          })}
-        </div>
+      {viewKind === 'plan' ? (
+        <WeekPlanView
+          key={windowMs}
+          days={buildWeekPlan(view, mode, todayFacts(today), windowMs, anchorMs)}
+          mode={mode}
+          profile={profile}
+          milestones={milestoneGroups(today)}
+          range={{
+            label: weekRangeLabel(windowMs),
+            canPrev: safeWeek > 0,
+            canNext: safeWeek < weeks.length - 1,
+            atToday: safeWeek === defaultWeek,
+          }}
+          onPrev={() => setWeekIdx(safeWeek - 1)}
+          onNext={() => setWeekIdx(safeWeek + 1)}
+          onToday={() => setWeekIdx(defaultWeek)}
+          onSwitchToGrid={() => pickView('grid')}
+        />
+      ) : (
+        <>
+          <div className="sched-scroll">
+            <div className="sched-head">
+              <div className="gutter" />
+              {Array.from({ length: 7 }).map((_, i) => {
+                const h = dayHeader(windowMs, i)
+                const isToday = windowMs + i * DAY_MS === anchorMs
+                return (
+                  <div key={i} className={isToday ? 'dcol dcol-today' : 'dcol'}>
+                    <div className="label" style={{ fontSize: 11 }}>
+                      {isToday ? 'Today' : h.dow}
+                    </div>
+                    <div style={{ fontFamily: 'var(--serif)', fontSize: 17 }}>{h.label}</div>
+                  </div>
+                )
+              })}
+            </div>
 
-        <div className="sched-body">
-          <div className="sched-gutter">
-            {Array.from({ length: HOURS }).map((_, i) => (
-              <div key={i} className="hr">
-                <span>{fmtMinutes((START_HOUR + i) * 60)}</span>
+            <div className="sched-body">
+              <div className="sched-gutter">
+                {Array.from({ length: HOURS }).map((_, i) => (
+                  <div key={i} className="hr">
+                    <span>{fmtMinutes((START_HOUR + i) * 60)}</span>
+                  </div>
+                ))}
               </div>
-            ))}
+
+              <div ref={colsRef} className="sched-cols" style={{ height: HOURS * HOUR_PX }}>
+                {Array.from({ length: HOURS + 1 }).map((_, i) => (
+                  <div key={`h${i}`} className="sched-hline" style={{ top: i * HOUR_PX }} />
+                ))}
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={`v${i}`} className="sched-vline" style={{ left: `${((i + 1) / 7) * 100}%` }} />
+                ))}
+
+                {weekBusy.map((b, i) => (
+                  <div
+                    key={`busy${i}`}
+                    className="blk blk-busy"
+                    title="From Google Calendar · fixed"
+                    style={{
+                      ...stackGeom(`busy${i}`, b.dayIdx),
+                      top: topPx(b.startMin),
+                      height: heightPx(b.durMin),
+                    }}
+                  >
+                    <div className="bt">🔒 Busy</div>
+                    <div className="bm">
+                      {fmtMinutes(b.startMin)}–{fmtMinutes(b.startMin + b.durMin)}
+                    </div>
+                  </div>
+                ))}
+
+                {weekBlocks.map((b) => {
+                  const pos = posOf(b)
+                  const dragging = drag?.taskId === b.taskId
+                  const bad = violation?.taskId === b.taskId
+                  const gone = !editable && deletedIds.has(b.taskId)
+                  return (
+                    <div
+                      key={b.taskId}
+                      className={
+                        editable
+                          ? `blk blk-proposed${dragging ? ' dragging' : ''}${bad ? ' bad' : ''}`
+                          : `blk ${gone ? 'blk-deleted' : mode === 'written' ? 'blk-confirmed' : 'blk-readonly'}`
+                      }
+                      title={
+                        gone
+                          ? 'You deleted this event from your Google Calendar — the task is still in your plan'
+                          : mode === 'written'
+                            ? 'On your Google Calendar · fixed'
+                            : undefined
+                      }
+                      onPointerDown={editable ? (e) => onDown(e, b) : undefined}
+                      onPointerMove={editable ? onMove : undefined}
+                      onPointerUp={editable ? (e) => void onUp(e) : undefined}
+                      style={{
+                        ...stackGeom(b.taskId, pos.dayIdx),
+                        top: topPx(pos.startMin),
+                        height: heightPx(b.durMin),
+                      }}
+                    >
+                      <div className="bt">
+                        {editable ? '⠿ ' : gone ? '✕ ' : mode === 'written' ? '✓ ' : ''}
+                        {b.title}
+                      </div>
+                      <div className="bm">
+                        {fmtMinutes(pos.startMin)}–{fmtMinutes(pos.startMin + b.durMin)}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
           </div>
 
-          <div ref={colsRef} className="sched-cols" style={{ height: HOURS * HOUR_PX }}>
-            {Array.from({ length: HOURS + 1 }).map((_, i) => (
-              <div key={`h${i}`} className="sched-hline" style={{ top: i * HOUR_PX }} />
-            ))}
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={`v${i}`} className="sched-vline" style={{ left: `${((i + 1) / 7) * 100}%` }} />
-            ))}
-
-            {weekBusy.map((b, i) => (
-              <div
-                key={`busy${i}`}
-                className="blk blk-busy"
-                title="From Google Calendar · fixed"
+          <div className="sched-legend">
+            {editable ? (
+              <span>
+                <span className="sw" style={{ border: '1.5px dashed var(--clay)', background: 'var(--clay-tint)' }} />
+                proposed · drag to adjust
+              </span>
+            ) : (
+              <span>
+                <span
+                  className="sw"
+                  style={
+                    mode === 'written'
+                      ? { border: '1px solid var(--sage)', background: 'var(--sage-soft)' }
+                      : { border: '1px solid rgba(108,120,134,0.4)', background: 'rgba(108,120,134,0.12)' }
+                  }
+                />
+                {mode === 'written'
+                  ? 'confirmed · on your Google Calendar'
+                  : mode === 'writing'
+                    ? 'writing…'
+                    : 'not confirmed'}
+              </span>
+            )}
+            <span>
+              <span
+                className="sw"
                 style={{
-                  ...stackGeom(`busy${i}`, b.dayIdx),
-                  top: topPx(b.startMin),
-                  height: heightPx(b.durMin),
+                  border: '1px solid rgba(108,120,134,0.4)',
+                  background:
+                    'repeating-linear-gradient(135deg, rgba(108,120,134,0.2) 0 4px, rgba(108,120,134,0.07) 4px 8px)',
                 }}
-              >
-                <div className="bt">🔒 Busy</div>
-                <div className="bm">
-                  {fmtMinutes(b.startMin)}–{fmtMinutes(b.startMin + b.durMin)}
-                </div>
-              </div>
-            ))}
-
-            {weekBlocks.map((b) => {
-              const pos = posOf(b)
-              const dragging = drag?.taskId === b.taskId
-              const bad = violation?.taskId === b.taskId
-              const gone = !editable && deletedIds.has(b.taskId)
-              return (
-                <div
-                  key={b.taskId}
-                  className={
-                    editable
-                      ? `blk blk-proposed${dragging ? ' dragging' : ''}${bad ? ' bad' : ''}`
-                      : `blk ${gone ? 'blk-deleted' : mode === 'written' ? 'blk-confirmed' : 'blk-readonly'}`
-                  }
-                  title={
-                    gone
-                      ? 'You deleted this event from your Google Calendar — the task is still in your plan'
-                      : mode === 'written'
-                        ? 'On your Google Calendar · fixed'
-                        : undefined
-                  }
-                  onPointerDown={editable ? (e) => onDown(e, b) : undefined}
-                  onPointerMove={editable ? onMove : undefined}
-                  onPointerUp={editable ? (e) => void onUp(e) : undefined}
-                  style={{
-                    ...stackGeom(b.taskId, pos.dayIdx),
-                    top: topPx(pos.startMin),
-                    height: heightPx(b.durMin),
-                  }}
-                >
-                  <div className="bt">
-                    {editable ? '⠿ ' : gone ? '✕ ' : mode === 'written' ? '✓ ' : ''}
-                    {b.title}
-                  </div>
-                  <div className="bm">
-                    {fmtMinutes(pos.startMin)}–{fmtMinutes(pos.startMin + b.durMin)}
-                  </div>
-                </div>
-              )
-            })}
+              />
+              imported · fixed
+            </span>
+            {!editable && weekBlocks.some((b) => deletedIds.has(b.taskId)) && (
+              <span>
+                <span
+                  className="sw"
+                  style={{ border: '1px dashed #c0492f', background: 'rgba(192,73,47,0.08)' }}
+                />
+                ✕ deleted from your calendar · still planned
+              </span>
+            )}
+            <span className="spacer" />
+            <span>{editable ? (saving ? 'saving…' : 'snaps to 15 min · drag across days') : 'read-only'}</span>
           </div>
-        </div>
-      </div>
-
-      <div className="sched-legend">
-        {editable ? (
-          <span>
-            <span className="sw" style={{ border: '1.5px dashed var(--clay)', background: 'var(--clay-tint)' }} />
-            proposed · drag to adjust
-          </span>
-        ) : (
-          <span>
-            <span
-              className="sw"
-              style={
-                mode === 'written'
-                  ? { border: '1px solid var(--sage)', background: 'var(--sage-soft)' }
-                  : { border: '1px solid rgba(108,120,134,0.4)', background: 'rgba(108,120,134,0.12)' }
-              }
-            />
-            {mode === 'written'
-              ? 'confirmed · on your Google Calendar'
-              : mode === 'writing'
-                ? 'writing…'
-                : 'not confirmed'}
-          </span>
-        )}
-        <span>
-          <span
-            className="sw"
-            style={{
-              border: '1px solid rgba(108,120,134,0.4)',
-              background:
-                'repeating-linear-gradient(135deg, rgba(108,120,134,0.2) 0 4px, rgba(108,120,134,0.07) 4px 8px)',
-            }}
-          />
-          imported · fixed
-        </span>
-        {!editable && weekBlocks.some((b) => deletedIds.has(b.taskId)) && (
-          <span>
-            <span
-              className="sw"
-              style={{ border: '1px dashed #c0492f', background: 'rgba(192,73,47,0.08)' }}
-            />
-            ✕ deleted from your calendar · still planned
-          </span>
-        )}
-        <span className="spacer" />
-        <span>{editable ? (saving ? 'saving…' : 'snaps to 15 min · drag across days') : 'read-only'}</span>
-      </div>
+        </>
+      )}
     </div>
   )
 }

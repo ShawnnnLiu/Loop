@@ -1,0 +1,46 @@
+{
+  "$defs": {
+    "CareerTrack": {
+      "description": "Closed set of supported career-preparation tracks.",
+      "enum": [
+        "swe",
+        "mle",
+        "ai_engineer"
+      ],
+      "title": "CareerTrack",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "One deterministic retrieval request against a pinned snapshot.",
+  "properties": {
+    "k": {
+      "maximum": 100,
+      "minimum": 1,
+      "title": "K",
+      "type": "integer"
+    },
+    "query_text": {
+      "minLength": 1,
+      "title": "Query Text",
+      "type": "string"
+    },
+    "track": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CareerTrack"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "query_text",
+    "k"
+  ],
+  "title": "RetrievalQuery",
+  "type": "object"
+}

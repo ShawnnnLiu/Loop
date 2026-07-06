@@ -84,6 +84,9 @@ def test_every_contract_registered() -> None:
         # Loop: grounding layer (corpus registry, G-A)
         "corpus_document",
         "corpus_snapshot",
+        # Loop: grounding layer (retrieval pipeline, G-D)
+        "retrieval_query",
+        "retrieval_result",
     }
     assert set(CONTRACTS.keys()) == expected
 

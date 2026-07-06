@@ -54,6 +54,8 @@ from agentic_calendar.contracts.recommitment import (
     RecommitmentEvent,
     RecommitmentRequest,
 )
+from agentic_calendar.contracts.retrieval_query import RetrievalQuery
+from agentic_calendar.contracts.retrieval_result import RetrievalResult
 from agentic_calendar.contracts.scheduler_output import SchedulerOutput
 from agentic_calendar.contracts.source_claim import SourceClaim
 from agentic_calendar.contracts.sponsor import Sponsor
@@ -82,6 +84,8 @@ CONTRACTS: dict[str, type[BaseModel]] = {
     "source_claim": SourceClaim,
     "corpus_document": CorpusDocument,
     "corpus_snapshot": CorpusSnapshot,
+    "retrieval_query": RetrievalQuery,
+    "retrieval_result": RetrievalResult,
     "strategy_constraints": StrategyConstraints,
     "strategist_input": StrategistInput,
     "company_target": CompanyTarget,

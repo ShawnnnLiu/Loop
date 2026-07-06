@@ -33,18 +33,25 @@ from agentic_calendar.contracts.corpus_snapshot import (
     CorpusSnapshot,
     chunking_fingerprint,
 )
+from agentic_calendar.contracts.retrieval_result import CHUNK_ID_PATTERN
 
 from .errors import UnknownCorpusDocumentError
 from .registry import CorpusRegistry
+
+__all__ = [
+    "CHUNK_ID_PATTERN",  # canonical definition: contracts/retrieval_result.py
+    "DEFAULT_CHUNKING_PARAMS",
+    "Chunk",
+    "chunk_snapshot",
+    "chunk_text",
+    "derive_chunk_id",
+]
 
 #: Heuristic priors (axiom 08): chunk size is an eval ablation, not a tuned
 #: constant. ~1600 chars is roughly 400 tokens of English prose.
 DEFAULT_CHUNKING_PARAMS = ChunkingParams(
     algorithm="structure_v1", target_chars=1600, overlap_chars=200
 )
-
-#: ``chunk_`` + first 16 hex chars of the derivation hash.
-CHUNK_ID_PATTERN = re.compile(r"^chunk_[0-9a-f]{16}$")
 
 _HEADING = re.compile(r"^(#{1,6})\s+(.*\S)")
 

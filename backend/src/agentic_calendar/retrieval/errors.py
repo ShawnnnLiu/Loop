@@ -55,3 +55,35 @@ class EmptySnapshotError(CorpusRegistryError):
 
     def __init__(self) -> None:
         super().__init__("a corpus snapshot must pin at least one document")
+
+
+class RetrievalIndexError(AgenticCalendarError):
+    """Base for chunk-index errors that callers may catch."""
+
+
+class Fts5UnavailableError(RetrievalIndexError):
+    """The linked SQLite build has no FTS5 extension.
+
+    A typed setup error, never a silent fallback: retrieval quality metrics
+    are meaningless if some environment quietly served a different ranking.
+    Almost every stdlib build ships FTS5; CI verifies it once.
+    """
+
+    def __init__(self) -> None:
+        super().__init__(
+            "this SQLite build lacks the FTS5 extension required by the "
+            "retrieval index (verify with: python -c \"import sqlite3; "
+            "sqlite3.connect(':memory:').execute('CREATE VIRTUAL TABLE t "
+            "USING fts5(x)')\")"
+        )
+
+
+class SnapshotNotIndexedError(RetrievalIndexError):
+    """A search targeted a snapshot whose index was never built."""
+
+    def __init__(self, snapshot_id: str) -> None:
+        self.snapshot_id = snapshot_id
+        super().__init__(
+            f"snapshot {snapshot_id!r} has no built chunk index; run "
+            "SqliteChunkIndex.build(...) for it first"
+        )

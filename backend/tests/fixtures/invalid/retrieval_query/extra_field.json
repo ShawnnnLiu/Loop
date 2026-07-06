@@ -1,0 +1,6 @@
+{
+  "query_text": "system design",
+  "track": "swe",
+  "k": 5,
+  "rerank": true
+}

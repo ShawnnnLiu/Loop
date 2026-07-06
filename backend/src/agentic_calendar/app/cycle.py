@@ -1223,9 +1223,12 @@ class CycleService:
         249-253: the in-app schedule is the system of record, so treating an
         external edit as authoritative is opt-in). A valid move/resize is adopted
         into a fresh draft of the same plan version with no calendar write and no
-        re-approval; an invalid move, or a deletion, is flagged
-        (``user_modified_bool``) and left for the drift loop — never silently
-        rewritten, and a deletion is never silently cancelled.
+        re-approval — overlap and prerequisite ordering are advisory for an
+        external move (ADR-0009 / ADR-0008), so only the hard policy bounds
+        (allowed hours/weekend, daily load) reject. A rejected move, or a
+        deletion, is flagged (``user_modified_bool``) and left for the drift
+        loop — never silently rewritten, and a deletion is never silently
+        cancelled.
         """
         env = self._env
         onboarding = self._require_onboarding(user_id)
@@ -1372,13 +1375,26 @@ class CycleService:
             free_busy=[FreeBusyInterval.model_validate(dict(fb)) for fb in free_busy],
             tz=user_tz,
             completed_or_dropped_task_ids=self._completed_or_dropped_ids(user_id),
+            # An external move already happened on the user's own calendar:
+            # overlap warns (OVERLAP_ADVISORY) instead of rejecting (ADR-0009).
+            overlap_advisory=True,
         )
-        # Advisory ordering (DEPENDENCY_ADVISORY) does NOT block adoption (ADR-0008);
-        # only a hard conflict rejects an external move.
+        # Advisory ordering (DEPENDENCY_ADVISORY, ADR-0008) and advisory overlap
+        # (OVERLAP_ADVISORY, ADR-0009) do NOT block adoption; only a hard policy
+        # bound (allowed hours/weekend, daily load) rejects an external move.
         adopt = bool(moved) and not review.conflicts
         conflict_code = {c.task_id: c.reason_code for c in review.conflicts}
         fallback_code = review.conflicts[0].reason_code if review.conflicts else None
-        advisory_code = {w.task_id: w.reason_code for w in review.warnings}
+        # One advisory heads-up per adopted delta: DEPENDENCY_ADVISORY wins over
+        # OVERLAP_ADVISORY when both apply — the overlap is visible on the grid
+        # itself, prerequisite ordering is not (spec, "Adopt-If-Valid Rules").
+        advisory_code: dict[str, ReasonCode] = {}
+        for w in review.warnings:
+            if (
+                w.reason_code is ReasonCode.DEPENDENCY_ADVISORY
+                or w.task_id not in advisory_code
+            ):
+                advisory_code[w.task_id] = w.reason_code
 
         deltas: list[CalendarEventDelta] = []
         for task_id, (kind, seen_start, seen_end) in sorted(change_by_task.items()):
@@ -1402,8 +1418,9 @@ class CycleService:
                         new_end=seen_end,
                     )
                     disposition = ReconciliationDisposition.ADOPTED
-                    # An adopted move past an unfinished prerequisite carries a
-                    # DEPENDENCY_ADVISORY heads-up (ADR-0008); otherwise null.
+                    # An adopted move carries at most one advisory heads-up:
+                    # DEPENDENCY_ADVISORY (ADR-0008) or OVERLAP_ADVISORY
+                    # (ADR-0009); otherwise null.
                     code = advisory_code.get(task_id)
                 else:
                     env.mapping_store.record_external_edit(mapping.run_id, task_id, now=now)

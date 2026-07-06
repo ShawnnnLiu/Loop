@@ -13,6 +13,13 @@ manual override — completion-relative and non-blocking (``DEPENDENCY_ADVISORY`
 ADR-0008), never a refusal — because a manual move is an explicit override of
 placement. Field semantics follow ``docs/specs/draft-schedule.schema.md`` and
 axiom 05.
+
+Inbound calendar reconciliation reuses this validator with
+``overlap_advisory=True`` (ADR-0009): a move the user already made on their own
+external calendar demotes both overlap gates to non-blocking
+``OVERLAP_ADVISORY`` warnings — refusing an edit that already exists on the
+calendar would only leave the plan out of sync. The in-app drag path never
+sets the flag; overlap stays a hard refusal there.
 """
 
 from __future__ import annotations
@@ -63,11 +70,12 @@ class PlacementConflict:
 
 @dataclass(frozen=True, slots=True)
 class PlacementWarning:
-    """One non-blocking advisory on a hand-adjusted placement (ADR-0008).
+    """One non-blocking advisory on a hand-adjusted placement (ADR-0008/0009).
 
-    The move is applied; the warning is surfaced. Today the only warning is
-    ``DEPENDENCY_ADVISORY`` — a manual move that starts before an *unfinished*
-    prerequisite ends.
+    The move is applied; the warning is surfaced. ``DEPENDENCY_ADVISORY`` — a
+    manual move that starts before an *unfinished* prerequisite ends — can occur
+    on both paths; ``OVERLAP_ADVISORY`` only in the reconciliation-mode call
+    (``overlap_advisory=True``).
     """
 
     task_id: str
@@ -101,8 +109,9 @@ def validate_placements(
     free_busy: Sequence[FreeBusyInterval],
     tz: tzinfo,
     completed_or_dropped_task_ids: Collection[str] = (),
+    overlap_advisory: bool = False,
 ) -> PlacementReview:
-    """Re-validate a hand-adjusted set of placements (ADR-0008).
+    """Re-validate a hand-adjusted set of placements (ADR-0008, ADR-0009).
 
     Returns a :class:`PlacementReview` splitting **hard conflicts** (which refuse
     the move) from **non-blocking warnings** (surfaced, never blocking).
@@ -110,7 +119,7 @@ def validate_placements(
     Hard rules — each a typed ``reason_code`` conflict:
 
     * no overlap with a fixed external event or another proposed block
-      (``NO_VALID_CONTIGUOUS_BLOCK``);
+      (``NO_VALID_CONTIGUOUS_BLOCK``) — unless ``overlap_advisory`` (below);
     * within ``[no_events_before, no_events_after]`` and not on a disabled
       weekend (``OUTSIDE_ALLOWED_HOURS``);
     * a calendar day's total stays under ``max_daily_study_min``
@@ -122,6 +131,13 @@ def validate_placements(
       ``DEPENDENCY_ADVISORY``; a prerequisite in ``completed_or_dropped_task_ids``
       never warns. The deterministic auto-placement scheduler keeps the hard
       ``DEPENDENCY_BLOCKED`` rule — a manual override does not.
+
+    With ``overlap_advisory=True`` — the inbound-reconciliation mode (ADR-0009)
+    for an edit the user already made on their own calendar — both overlap
+    gates warn with ``OVERLAP_ADVISORY`` instead of conflicting, and a
+    block-vs-block overlap warns **both** tasks in the pair so the heads-up
+    lands on whichever side the user actually moved. The in-app drag path
+    leaves the flag off.
 
     Overlap and prerequisite checks are instant-based (timezone-independent);
     the hour, weekday, and daily-load checks read each entry in the user's local
@@ -171,12 +187,22 @@ def validate_placements(
                 f"{policy.no_events_before}-{policy.no_events_after} window",
             )
 
+    # Overlap is hard for an in-app drag, advisory for an external
+    # reconciliation move (ADR-0009): the edit already exists on the user's own
+    # calendar, so it is surfaced, never refused.
+    overlap_found = warn if overlap_advisory else add
+    overlap_code = (
+        ReasonCode.OVERLAP_ADVISORY
+        if overlap_advisory
+        else ReasonCode.NO_VALID_CONTIGUOUS_BLOCK
+    )
+
     # 2. overlap with a fixed external event
     for entry in entries:
         if any(entry.start < busy.end and busy.start < entry.end for busy in free_busy):
-            add(
+            overlap_found(
                 entry.task_id,
-                ReasonCode.NO_VALID_CONTIGUOUS_BLOCK,
+                overlap_code,
                 f"{entry.task_id} overlaps a fixed calendar event",
             )
 
@@ -186,11 +212,19 @@ def validate_placements(
         for later in ordered[index + 1 :]:
             if later.start >= earlier.end:
                 break
-            add(
+            overlap_found(
                 later.task_id,
-                ReasonCode.NO_VALID_CONTIGUOUS_BLOCK,
+                overlap_code,
                 f"{later.task_id} overlaps {earlier.task_id}",
             )
+            if overlap_advisory:
+                # Warn both sides of the pair: only moved tasks get a delta, so
+                # the heads-up must exist on whichever side the user moved.
+                overlap_found(
+                    earlier.task_id,
+                    overlap_code,
+                    f"{earlier.task_id} overlaps {later.task_id}",
+                )
 
     # 4. daily-load cap (local calendar day)
     minutes_by_day: dict[date, int] = {}

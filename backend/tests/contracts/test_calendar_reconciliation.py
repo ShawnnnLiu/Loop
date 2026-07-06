@@ -35,8 +35,11 @@ def test_invalid_fixture_rejected(fixture: object) -> None:
 
 def test_adjustment_reason_codes_are_the_three_hard_placement_codes() -> None:
     """A rejected reconciliation delta reuses exactly the drag-to-adjust HARD
-    rules. Prerequisite ordering is advisory (``DEPENDENCY_ADVISORY``) and never
-    rejects an external move (ADR-0008), so it is not in this set."""
+    rules. Prerequisite ordering is advisory (``DEPENDENCY_ADVISORY``, ADR-0008)
+    and overlap is advisory for an external move (``OVERLAP_ADVISORY``,
+    ADR-0009), so neither advisory is in this set. ``NO_VALID_CONTIGUOUS_BLOCK``
+    stays: it is still the in-app drag refusal and historical results carry it,
+    even though the reconcile producer no longer emits it."""
     expected = {
         ReasonCode.NO_VALID_CONTIGUOUS_BLOCK,
         ReasonCode.OUTSIDE_ALLOWED_HOURS,
@@ -45,3 +48,4 @@ def test_adjustment_reason_codes_are_the_three_hard_placement_codes() -> None:
     assert expected == ADJUSTMENT_REASON_CODES
     assert ReasonCode.DEPENDENCY_BLOCKED not in ADJUSTMENT_REASON_CODES
     assert ReasonCode.DEPENDENCY_ADVISORY not in ADJUSTMENT_REASON_CODES
+    assert ReasonCode.OVERLAP_ADVISORY not in ADJUSTMENT_REASON_CODES

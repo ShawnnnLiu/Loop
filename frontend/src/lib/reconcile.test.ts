@@ -5,7 +5,7 @@ import type {
   CalendarReconciliationResult,
   ReconciliationOutcome,
 } from '../api/types'
-import { flaggedReason, needsDraftRefetch, reconcileBanner } from './reconcile'
+import { advisoryNote, flaggedReason, needsDraftRefetch, reconcileBanner } from './reconcile'
 
 function delta(over: Partial<CalendarEventDelta>): CalendarEventDelta {
   return {
@@ -148,5 +148,28 @@ describe('flaggedReason', () => {
 
   it('falls back to the raw code rather than inventing an explanation', () => {
     expect(flaggedReason(delta({ disposition: 'rejected', reason_code: 'SOME_NEW_CODE' }))).toBe('SOME_NEW_CODE')
+  })
+})
+
+describe('advisoryNote', () => {
+  it('phrases an adopted overlap as kept, never as an error (ADR-0009)', () => {
+    const note = advisoryNote(delta({ disposition: 'adopted', reason_code: 'OVERLAP_ADVISORY' }))
+    expect(note).toBe('now overlaps another event — kept where you put it')
+    expect(note?.toLowerCase()).not.toContain('rejected')
+    expect(note?.toLowerCase()).not.toContain('couldn’t')
+  })
+
+  it('phrases an adopted before-prerequisite move as kept (ADR-0008)', () => {
+    expect(advisoryNote(delta({ disposition: 'adopted', reason_code: 'DEPENDENCY_ADVISORY' }))).toBe(
+      'now starts before a task it depends on — kept where you put it',
+    )
+  })
+
+  it('is null for a plain adopted edit and for non-adopted dispositions', () => {
+    expect(advisoryNote(adoptedDelta)).toBeNull()
+    expect(advisoryNote(rejectedDelta)).toBeNull()
+    expect(advisoryNote(deletedDelta)).toBeNull()
+    // An unknown advisory code says nothing rather than inventing a note.
+    expect(advisoryNote(delta({ disposition: 'adopted', reason_code: 'SOME_NEW_CODE' }))).toBeNull()
   })
 })

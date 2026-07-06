@@ -233,9 +233,11 @@ export type ReconciliationOutcome =
   | 'mixed'
 
 /** One mapped task's recorded-vs-observed difference and what the deterministic
- *  service did with it. `reason_code` is null for adopted/unchanged, one of the
- *  drag-to-adjust placement codes for `rejected`, and `EXTERNAL_EVENT_DELETED`
- *  for `flagged_deleted` (observed_* are null when the event was deleted). */
+ *  service did with it. `reason_code` is null for unchanged; null or a
+ *  non-blocking advisory (`DEPENDENCY_ADVISORY` / `OVERLAP_ADVISORY`,
+ *  ADR-0008/0009) for `adopted`; a hard policy-bound placement code for
+ *  `rejected`; and `EXTERNAL_EVENT_DELETED` for `flagged_deleted` (observed_*
+ *  are null when the event was deleted). */
 export interface CalendarEventDelta {
   task_id: string
   calendar_event_id: string | null

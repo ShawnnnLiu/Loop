@@ -166,6 +166,14 @@ day/time/load bounds and no-overlap rule above are not relaxed. Prerequisite
 ordering, by contrast, is relaxed for a manual move to the advisory
 `DEPENDENCY_ADVISORY` heads-up described above (it remains hard only for
 deterministic auto-placement).
+
+The no-overlap rule is hard **for the in-app drag only**. An **external** move —
+the user repositioning an already-written event on their own Google Calendar,
+picked up by inbound reconciliation — treats overlap as advisory
+(`OVERLAP_ADVISORY`, `../decisions/ADR-0009-authoritative-external-overlap.md`):
+the edit already exists on the user's calendar, so the reconciliation service
+adopts it and surfaces the overlap rather than refusing an accomplished fact.
+Allowed hours/weekend and daily load remain hard on both paths.
 Re-validation lives in `backend/src/agentic_calendar/scheduler/adjustment.py`; the
 revised draft is a new immutable `DraftSchedule` whose approval hash is recomputed
 from it, so axiom 06's write-time recheck still validates exactly what was

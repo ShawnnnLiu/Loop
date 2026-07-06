@@ -108,10 +108,22 @@ class ReasonCode(StrEnum):
     reconciliation move) starts before an *unfinished* prerequisite ends. Unlike
     the scheduler's hard ``DEPENDENCY_BLOCKED``, this is a **non-blocking**
     warning: the move is applied and the heads-up rides in the adjust result's
-    ``warnings`` — or, for an adopted reconciliation delta, as the only non-null
+    ``warnings`` — or, for an adopted reconciliation delta, as its
     ``reason_code`` on an ``adopted`` disposition. Completion-relative: a
     completed/dropped prerequisite produces no warning (ADR-0008;
     task-disposition spec)."""
+
+    OVERLAP_ADVISORY = "OVERLAP_ADVISORY"
+    """An adopted external reconciliation move/resize now overlaps another
+    proposed block or a fixed busy interval (ADR-0009). Unlike the in-app drag
+    path's hard ``NO_VALID_CONTIGUOUS_BLOCK``, this is a **non-blocking**
+    heads-up: the user made the edit on their own calendar — where both events
+    are visible — so the move is adopted and the overlap is surfaced (the week
+    grid stacks the blocks side-by-side), never refused. Emitted only by
+    ``validate_placements(..., overlap_advisory=True)``, the reconciliation
+    path; an in-app drag keeps the hard rule. When a move earns both this and
+    ``DEPENDENCY_ADVISORY``, the dependency heads-up wins on the delta (the
+    overlap is visible on the grid itself; ordering is not)."""
 
     TASK_DROPPED_BY_USER = "TASK_DROPPED_BY_USER"
     """The user explicitly dropped an unfinished task. Recorded as a ``dropped``

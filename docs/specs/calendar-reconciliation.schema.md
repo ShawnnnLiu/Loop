@@ -88,14 +88,20 @@ The MVP uses on-demand pulls only — **no** webhooks, **no** polling daemon, **
 5. **Re-validate the whole placement.** Substitute every adopted candidate time
    into the active draft and re-validate the **entire** resulting placement
    against the user's scheduling policy and a freshly fetched free/busy snapshot,
-   using the same **hard** rules as drag-to-adjust (`draft-schedule.schema.md`,
-   "Server-side re-validation"). Prerequisite ordering is advisory and never
-   rejects (ADR-0008).
+   using the drag-to-adjust rules (`draft-schedule.schema.md`, "Server-side
+   re-validation") with **two advisory demotions for an external move**:
+   prerequisite ordering never rejects (ADR-0008), and **overlap never rejects**
+   (ADR-0009) — the validator runs in `overlap_advisory` mode, so a move that
+   overlaps another proposed block or a fixed busy interval warns
+   (`OVERLAP_ADVISORY`) instead of failing. The remaining hard rules are the
+   user's policy bounds: allowed hours/weekend and daily load.
 6. **Adopt-if-valid.** If the placement passes the hard rules, assemble a new
    immutable draft schedule with the adopted times, update each affected mapping,
    and record telemetry. An adopted move that now precedes an *unfinished*
-   prerequisite is still adopted and carries a `DEPENDENCY_ADVISORY` heads-up. No
-   write, no re-approval (no write occurs). State stays `ACTIVE_PLAN`.
+   prerequisite carries a `DEPENDENCY_ADVISORY` heads-up; one that now overlaps
+   another block or a busy interval carries `OVERLAP_ADVISORY` (when both apply,
+   `DEPENDENCY_ADVISORY` wins — the overlap is visible on the grid, ordering is
+   not). No write, no re-approval (no write occurs). State stays `ACTIVE_PLAN`.
 7. **Flag otherwise.** A move/resize that fails validation, or any deletion, is
    not adopted: the prior internal time remains the system of record, the mapping
    is flagged `user_modified_bool: true`, and a `DRIFT_EXTERNAL_CONFLICT` event is
@@ -174,7 +180,7 @@ The MVP uses on-demand pulls only — **no** webhooks, **no** polling daemon, **
 | `adopted_draft_schedule_id` | New immutable draft holding the adopted times, or `null` |
 | `deltas[*].change_type` | `unchanged \| moved \| resized \| deleted` |
 | `deltas[*].disposition` | `unchanged \| adopted \| rejected \| flagged_deleted` |
-| `deltas[*].reason_code` | Why a delta was rejected (a hard-rule code) or deleted (`EXTERNAL_EVENT_DELETED`); `null` for `unchanged`/`adopted`, except an adopted move that now precedes an unfinished prerequisite carries `DEPENDENCY_ADVISORY` (ADR-0008) |
+| `deltas[*].reason_code` | Why a delta was rejected (a hard-rule code) or deleted (`EXTERNAL_EVENT_DELETED`); `null` for `unchanged`/`adopted`, except an adopted move may carry one advisory heads-up: `DEPENDENCY_ADVISORY` when it now precedes an unfinished prerequisite (ADR-0008), or `OVERLAP_ADVISORY` when it now overlaps another block or a busy interval (ADR-0009); when both apply, `DEPENDENCY_ADVISORY` wins |
 
 ## Allowed `change_type` Values
 
@@ -196,25 +202,31 @@ The MVP uses on-demand pulls only — **no** webhooks, **no** polling daemon, **
 A delta's `reason_code` is a member of the system-wide `ReasonCode` enum
 (`backend/src/agentic_calendar/contracts/reason_codes.py`).
 
-- Rejected moves/resizes reuse the existing drag-to-adjust **hard**-rule codes, so
-  a rejection means the same thing whether the move came from the UI or the
-  calendar:
-  - `NO_VALID_CONTIGUOUS_BLOCK` (overlaps a fixed external event or another block)
+- Rejected moves/resizes reuse the drag-to-adjust **hard**-rule vocabulary
+  (`ADJUSTMENT_REASON_CODES`):
+  - `NO_VALID_CONTIGUOUS_BLOCK` — still the in-app drag refusal for overlap and
+    present on historical reconciliation results, but **no longer produced by
+    reconciliation** (ADR-0009: overlap is advisory for an external move)
   - `OUTSIDE_ALLOWED_HOURS`
   - `DAILY_LOAD_EXCEEDED`
 
-  Prerequisite ordering is **no longer a rejection reason** (ADR-0008): an
-  external move that lands before an unfinished prerequisite is *adopted* with a
-  `DEPENDENCY_ADVISORY` warning, not rejected — exactly as a UI drag is.
-- An **adopted** move/resize carries a `null` `reason_code` normally, or
-  `DEPENDENCY_ADVISORY` (its only allowed non-null code) when the adopted
-  placement now precedes an unfinished prerequisite.
+  Prerequisite ordering is **not a rejection reason** (ADR-0008): an external
+  move that lands before an unfinished prerequisite is *adopted* with a
+  `DEPENDENCY_ADVISORY` warning. Overlap is **not a rejection reason either**
+  (ADR-0009): an external move that lands on another proposed block or a fixed
+  busy interval is *adopted* with an `OVERLAP_ADVISORY` warning — the edit
+  already exists on the user's own calendar, where they can see both events.
+- An **adopted** move/resize carries a `null` `reason_code` normally, or one
+  advisory code: `DEPENDENCY_ADVISORY` when the adopted placement now precedes
+  an unfinished prerequisite, or `OVERLAP_ADVISORY` when it now overlaps
+  another block or a busy interval. When both apply, `DEPENDENCY_ADVISORY`
+  takes precedence (the overlap is visible on the grid itself).
 - Deletions use the typed code **`EXTERNAL_EVENT_DELETED`**.
 - Every rejected and deleted delta additionally produces a `DriftEvent` of
   `drift_type: external_conflict` / `DRIFT_EXTERNAL_CONFLICT`
   (`drift-event.schema.md`); adopted moves do **not** (no conflict occurred),
-  including an adopted move carrying `DEPENDENCY_ADVISORY` — that is the user's own
-  reordering, not an external conflict.
+  including an adopted move carrying `DEPENDENCY_ADVISORY` or `OVERLAP_ADVISORY`
+  — that is the user's own placement, not an external conflict.
 
 ## Adopt-If-Valid Rules
 
@@ -224,8 +236,14 @@ A delta's `reason_code` is a member of the system-wide `ReasonCode` enum
 - **Ordering is advisory, not a gate (ADR-0008).** Prerequisite ordering does not
   reject an external move. A move whose only issue is that it now precedes an
   *unfinished* prerequisite is adopted and carries `DEPENDENCY_ADVISORY`; a move
-  before a completed/dropped prerequisite carries no code. Adoption is still gated
-  on the **hard** rules (overlap, allowed hours/weekend, daily load).
+  before a completed/dropped prerequisite carries no code.
+- **Overlap is advisory, not a gate (ADR-0009).** An external move that lands on
+  another proposed block or a fixed busy interval is adopted and carries
+  `OVERLAP_ADVISORY` — the user made the edit on the one surface where both
+  events are visible, and reconciliation rejecting it would undo nothing.
+  Adoption is still gated on the remaining **hard** rules (allowed
+  hours/weekend, daily load), which are user-stated policy bounds. The UI
+  renders adopted overlaps stacked side-by-side, not as a collision.
 - **Valid → adopt with no write.** Because the user's edit is already on the
   calendar, adoption is a record update, not a write:
   - Assemble a new **immutable** draft schedule (fresh `draft_schedule_id`, same
@@ -279,8 +297,8 @@ A delta's `reason_code` is a member of the system-wide `ReasonCode` enum
   mappings is serialized against the write path.
 - Adopted moves are user-initiated and are **not** external conflicts: only
   rejected/deleted deltas feed the drift classifier's `external_conflict_task_ids`
-  input — an adopted move carrying `DEPENDENCY_ADVISORY` is likewise excluded (it
-  is the user's own reordering). Whether adopted moves also increment a reschedule
+  input — an adopted move carrying `DEPENDENCY_ADVISORY` or `OVERLAP_ADVISORY` is
+  likewise excluded (it is the user's own placement). Whether adopted moves also increment a reschedule
   counter for the
   external-conflict correlation rule is a calibration decision, deferred to
   thresholds tuning.
@@ -302,8 +320,10 @@ A delta's `reason_code` is a member of the system-wide `ReasonCode` enum
 - Never writes to an external calendar; never requires or mints an
   `approval_event` (no write occurs).
 - The only producer of `user_modified_bool: true`.
-- Adopts only when the **entire** resulting placement passes the same hard rules
-  as drag-to-adjust; partial/optimistic adoption is forbidden.
+- Adopts only when the **entire** resulting placement passes the hard policy
+  bounds (allowed hours/weekend, daily load); partial/optimistic adoption is
+  forbidden. Overlap and prerequisite ordering are advisory for an external
+  move (ADR-0009, ADR-0008) — they warn on the adopted delta, never gate it.
 - Adoption mints a new immutable `draft_schedule_id` under the unchanged
   `plan_version`; the active plan is never mutated in place (axiom 15).
 - Every rejected/deleted delta carries a typed `reason_code` and produces a
@@ -326,9 +346,10 @@ A delta's `reason_code` is a member of the system-wide `ReasonCode` enum
 }
 ```
 
-Reason: an `adopted` delta may carry only a `null` `reason_code` or
-`DEPENDENCY_ADVISORY` (ADR-0008). A **hard** placement code such as
-`OUTSIDE_ALLOWED_HOURS` means the move did not validate, so it cannot be adopted.
+Reason: an `adopted` delta may carry only a `null` `reason_code`,
+`DEPENDENCY_ADVISORY` (ADR-0008), or `OVERLAP_ADVISORY` (ADR-0009). A **hard**
+placement code such as `OUTSIDE_ALLOWED_HOURS` means the move did not validate,
+so it cannot be adopted.
 
 ```json
 {
@@ -363,7 +384,9 @@ Reason: `outcome: "adopted"` requires a non-null `adopted_draft_schedule_id`.
 Reason: a rejected reconciliation delta must use a hard-rule placement code
 (`NO_VALID_CONTIGUOUS_BLOCK`, `OUTSIDE_ALLOWED_HOURS`, `DAILY_LOAD_EXCEEDED`), not
 an unrelated `ReasonCode`. Prerequisite ordering is no longer a rejection reason
-(ADR-0008).
+(ADR-0008), and overlap is no longer produced as one by reconciliation
+(ADR-0009 — the code stays in the allowed vocabulary for the in-app drag path
+and historical results).
 
 ## Related Docs
 
@@ -381,3 +404,5 @@ an unrelated `ReasonCode`. Prerequisite ordering is no longer a rejection reason
 - `validation-result.schema.md`
 - `../decisions/ADR-0002-preview-only-calendar-writes.md`
 - `../decisions/ADR-0006-llm-never-touches-the-calendar.md`
+- `../decisions/ADR-0008-advisory-manual-ordering.md`
+- `../decisions/ADR-0009-authoritative-external-overlap.md`

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  DAY_MS,
   dayHeader,
   dayUtcMs,
   fmtDate,
@@ -8,8 +9,10 @@ import {
   isoAt,
   minutesOfDay,
   mondayIndex,
+  offsetMinutes,
   parseWall,
-  weekMondayMs,
+  todayDayMs,
+  windowStartMs,
 } from './datetime'
 
 describe('parseWall', () => {
@@ -53,19 +56,46 @@ describe('week + day math (UTC, browser-tz independent)', () => {
     expect(mondayIndex(dayUtcMs(parseWall('2026-05-06T00:00:00Z')))).toBe(2) // Wed
     expect(mondayIndex(dayUtcMs(parseWall('2026-05-10T00:00:00Z')))).toBe(6) // Sun
   })
+})
 
-  it('snaps every day of a week to the same Monday', () => {
-    const monday = weekMondayMs(dayUtcMs(parseWall('2026-05-04T18:00:00-07:00')))
-    for (const iso of ['2026-05-04T08:00:00Z', '2026-05-06T19:00:00Z', '2026-05-10T23:00:00Z']) {
-      expect(weekMondayMs(dayUtcMs(parseWall(iso)))).toBe(monday)
+describe('offsetMinutes', () => {
+  it('reads Z, positive, and negative offsets', () => {
+    expect(offsetMinutes('Z')).toBe(0)
+    expect(offsetMinutes('+00:00')).toBe(0)
+    expect(offsetMinutes('+05:30')).toBe(330)
+    expect(offsetMinutes('-07:00')).toBe(-420)
+  })
+})
+
+describe('todayDayMs', () => {
+  it("gives the user's wall-clock date, not the browser's or UTC's", () => {
+    // 2026-07-05T02:00Z is still July 4 in Los Angeles (-07:00)…
+    const nowMs = Date.UTC(2026, 6, 5, 2, 0)
+    expect(new Date(todayDayMs(nowMs, '-07:00')).toISOString().slice(0, 10)).toBe('2026-07-04')
+    // …but already July 5 in UTC and further east.
+    expect(new Date(todayDayMs(nowMs, 'Z')).toISOString().slice(0, 10)).toBe('2026-07-05')
+    expect(new Date(todayDayMs(nowMs, '+05:30')).toISOString().slice(0, 10)).toBe('2026-07-05')
+  })
+})
+
+describe('windowStartMs (rolling 7-day windows anchored on today)', () => {
+  const anchor = dayUtcMs(parseWall('2026-07-05T00:00:00Z')) // "today"
+
+  it("puts today and the next six days in today's window", () => {
+    for (let i = 0; i < 7; i++) {
+      expect(windowStartMs(anchor + i * DAY_MS, anchor)).toBe(anchor)
     }
-    expect(new Date(monday).toISOString().slice(0, 10)).toBe('2026-05-04')
   })
 
-  it('puts the next week on a different Monday', () => {
-    const w1 = weekMondayMs(dayUtcMs(parseWall('2026-05-06T10:00:00Z')))
-    const w2 = weekMondayMs(dayUtcMs(parseWall('2026-05-13T10:00:00Z')))
-    expect(w2 - w1).toBe(7 * 86_400_000)
+  it('starts the following window exactly 7 days out', () => {
+    expect(windowStartMs(anchor + 7 * DAY_MS, anchor)).toBe(anchor + 7 * DAY_MS)
+    expect(windowStartMs(anchor + 13 * DAY_MS, anchor)).toBe(anchor + 7 * DAY_MS)
+  })
+
+  it('puts past days in earlier windows (negative floor)', () => {
+    expect(windowStartMs(anchor - DAY_MS, anchor)).toBe(anchor - 7 * DAY_MS)
+    expect(windowStartMs(anchor - 7 * DAY_MS, anchor)).toBe(anchor - 7 * DAY_MS)
+    expect(windowStartMs(anchor - 8 * DAY_MS, anchor)).toBe(anchor - 14 * DAY_MS)
   })
 })
 
@@ -79,14 +109,14 @@ describe('minutesOfDay', () => {
 
 describe('isoAt (reconstruct an adjusted start)', () => {
   it('preserves the offset and lands on the right day + time', () => {
-    const monday = weekMondayMs(dayUtcMs(parseWall('2026-05-04T18:00:00-07:00')))
+    const base = dayUtcMs(parseWall('2026-05-04T18:00:00-07:00')) // window starts Mon May 4
     // Move Monday 18:00 -> Wednesday (idx 2) 10:30, same Pacific offset.
-    expect(isoAt(monday, 2, 630, '-07:00')).toBe('2026-05-06T10:30:00-07:00')
+    expect(isoAt(base, 2, 630, '-07:00')).toBe('2026-05-06T10:30:00-07:00')
   })
 
   it('round-trips back through parseWall', () => {
-    const monday = weekMondayMs(dayUtcMs(parseWall('2026-05-04T09:00:00Z')))
-    const iso = isoAt(monday, 4, 945, 'Z') // Friday 15:45
+    const base = dayUtcMs(parseWall('2026-05-04T09:00:00Z')) // a Monday
+    const iso = isoAt(base, 4, 945, 'Z') // Friday 15:45
     const w = parseWall(iso)
     expect(mondayIndex(dayUtcMs(w))).toBe(4)
     expect(minutesOfDay(w)).toBe(945)
@@ -106,11 +136,18 @@ describe('fmtMinutes', () => {
 })
 
 describe('dayHeader', () => {
-  it('labels each column from the week Monday', () => {
-    const monday = weekMondayMs(dayUtcMs(parseWall('2026-05-04T00:00:00Z')))
+  it('labels each column from the window start', () => {
+    const monday = dayUtcMs(parseWall('2026-05-04T00:00:00Z'))
     expect(dayHeader(monday, 0)).toEqual({ dow: 'Mon', label: 'May 4' })
     expect(dayHeader(monday, 2)).toEqual({ dow: 'Wed', label: 'May 6' })
     expect(dayHeader(monday, 6)).toEqual({ dow: 'Sun', label: 'May 10' })
+  })
+
+  it('uses the real weekday when the window starts mid-week (today-anchored)', () => {
+    const wednesday = dayUtcMs(parseWall('2026-05-06T00:00:00Z'))
+    expect(dayHeader(wednesday, 0)).toEqual({ dow: 'Wed', label: 'May 6' })
+    expect(dayHeader(wednesday, 1)).toEqual({ dow: 'Thu', label: 'May 7' })
+    expect(dayHeader(wednesday, 6)).toEqual({ dow: 'Tue', label: 'May 12' })
   })
 })
 

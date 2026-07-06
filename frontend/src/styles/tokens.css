@@ -616,6 +616,15 @@ select.input {
   text-align: center;
   padding: 8px 0;
 }
+/* The grid anchors on today (always the leftmost column of the current
+   window); mark it so the anchor is legible when paging other windows. */
+.sched-head .dcol-today {
+  color: var(--clay-deep);
+}
+.sched-head .dcol-today .label {
+  color: var(--clay-deep);
+  font-weight: 700;
+}
 .sched-body {
   display: flex;
 }

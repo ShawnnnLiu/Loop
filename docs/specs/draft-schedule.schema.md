@@ -167,14 +167,19 @@ kept only by the deterministic auto-placement scheduler, never by a manual
 override. The check stays deterministic — pure code over (dependencies,
 completion/drop state, placement times).
 
-The overlap rule above is hard **for the in-app drag path only**. Inbound
-calendar reconciliation reuses this validator in `overlap_advisory` mode
-(`../decisions/ADR-0009-authoritative-external-overlap.md`): a move the user
-made on their own external calendar that overlaps another proposed block or a
-fixed busy interval is applied with a non-blocking `OVERLAP_ADVISORY` warning
-instead of the `NO_VALID_CONTIGUOUS_BLOCK` refusal — the edit already exists on
-the calendar, so refusing it would only leave the plan out of sync. Allowed
-hours/weekend and daily load stay hard on both paths.
+The overlap and daily-load rules above are hard **for the in-app drag path
+only**. Inbound calendar reconciliation reuses this validator in
+`overlap_advisory` mode
+(`../decisions/ADR-0009-authoritative-external-overlap.md`) and
+`daily_load_advisory` mode
+(`../decisions/ADR-0010-external-daily-load-advisory.md`): a move the user made
+on their own external calendar that overlaps another proposed block or a fixed
+busy interval is applied with a non-blocking `OVERLAP_ADVISORY` warning instead
+of the `NO_VALID_CONTIGUOUS_BLOCK` refusal, and one that pushes a day over
+`max_daily_study_min` is applied with a non-blocking `DAILY_LOAD_ADVISORY`
+warning instead of the `DAILY_LOAD_EXCEEDED` refusal — the edit already exists
+on the calendar, so refusing it would only leave the plan out of sync. Allowed
+hours/weekend stays hard on both paths.
 
 Soft placement that the scheduler *optimizes for* but that is not a hard safety
 rule — deep-work-window adherence and `min_break_between_deep_blocks_min` — is

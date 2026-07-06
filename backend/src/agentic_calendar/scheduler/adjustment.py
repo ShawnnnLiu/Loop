@@ -15,11 +15,13 @@ placement. Field semantics follow ``docs/specs/draft-schedule.schema.md`` and
 axiom 05.
 
 Inbound calendar reconciliation reuses this validator with
-``overlap_advisory=True`` (ADR-0009): a move the user already made on their own
-external calendar demotes both overlap gates to non-blocking
-``OVERLAP_ADVISORY`` warnings — refusing an edit that already exists on the
-calendar would only leave the plan out of sync. The in-app drag path never
-sets the flag; overlap stays a hard refusal there.
+``overlap_advisory=True`` (ADR-0009) and ``daily_load_advisory=True``
+(ADR-0010): a move the user already made on their own external calendar
+demotes both overlap gates to non-blocking ``OVERLAP_ADVISORY`` warnings and
+the daily-load gate to a non-blocking ``DAILY_LOAD_ADVISORY`` warning —
+refusing an edit that already exists on the calendar would only leave the plan
+out of sync. The in-app drag path never sets either flag; overlap and daily
+load stay hard refusals there.
 """
 
 from __future__ import annotations
@@ -70,12 +72,13 @@ class PlacementConflict:
 
 @dataclass(frozen=True, slots=True)
 class PlacementWarning:
-    """One non-blocking advisory on a hand-adjusted placement (ADR-0008/0009).
+    """One non-blocking advisory on a hand-adjusted placement (ADR-0008/0009/0010).
 
     The move is applied; the warning is surfaced. ``DEPENDENCY_ADVISORY`` — a
     manual move that starts before an *unfinished* prerequisite ends — can occur
-    on both paths; ``OVERLAP_ADVISORY`` only in the reconciliation-mode call
-    (``overlap_advisory=True``).
+    on both paths; ``OVERLAP_ADVISORY`` and ``DAILY_LOAD_ADVISORY`` only in the
+    reconciliation-mode call (``overlap_advisory=True`` /
+    ``daily_load_advisory=True``).
     """
 
     task_id: str
@@ -110,8 +113,9 @@ def validate_placements(
     tz: tzinfo,
     completed_or_dropped_task_ids: Collection[str] = (),
     overlap_advisory: bool = False,
+    daily_load_advisory: bool = False,
 ) -> PlacementReview:
-    """Re-validate a hand-adjusted set of placements (ADR-0008, ADR-0009).
+    """Re-validate a hand-adjusted set of placements (ADR-0008/0009/0010).
 
     Returns a :class:`PlacementReview` splitting **hard conflicts** (which refuse
     the move) from **non-blocking warnings** (surfaced, never blocking).
@@ -123,7 +127,7 @@ def validate_placements(
     * within ``[no_events_before, no_events_after]`` and not on a disabled
       weekend (``OUTSIDE_ALLOWED_HOURS``);
     * a calendar day's total stays under ``max_daily_study_min``
-      (``DAILY_LOAD_EXCEEDED``).
+      (``DAILY_LOAD_EXCEEDED``) — unless ``daily_load_advisory`` (below).
 
     Advisory rule — a non-blocking warning, completion-relative:
 
@@ -136,8 +140,13 @@ def validate_placements(
     for an edit the user already made on their own calendar — both overlap
     gates warn with ``OVERLAP_ADVISORY`` instead of conflicting, and a
     block-vs-block overlap warns **both** tasks in the pair so the heads-up
-    lands on whichever side the user actually moved. The in-app drag path
-    leaves the flag off.
+    lands on whichever side the user actually moved. With
+    ``daily_load_advisory=True`` — the same reconciliation mode (ADR-0010) —
+    the daily-load gate warns with ``DAILY_LOAD_ADVISORY`` instead of
+    conflicting, and warns **every** task on the over-cap day for the same
+    reason: only moved tasks surface deltas, so the heads-up must exist on
+    whichever block the user moved. The in-app drag path leaves both flags
+    off.
 
     Overlap and prerequisite checks are instant-based (timezone-independent);
     the hour, weekday, and daily-load checks read each entry in the user's local
@@ -226,24 +235,32 @@ def validate_placements(
                     f"{earlier.task_id} overlaps {later.task_id}",
                 )
 
-    # 4. daily-load cap (local calendar day)
+    # 4. daily-load cap (local calendar day). Hard for an in-app drag, advisory
+    #    for an external reconciliation move (ADR-0010): the user stacked their
+    #    own day on their own calendar, so it is surfaced, never refused. In
+    #    advisory mode every task on the over-cap day warns — only moved tasks
+    #    surface deltas, so the heads-up must exist on whichever block the user
+    #    actually moved.
     minutes_by_day: dict[date, int] = {}
-    first_of_day: dict[date, str] = {}
+    tasks_by_day: dict[date, list[str]] = {}
     for entry in ordered:
         local_start, local_end = local[entry.task_id]
         day_key = local_start.date()
         minutes_by_day[day_key] = minutes_by_day.get(day_key, 0) + int(
             (local_end - local_start).total_seconds() // 60
         )
-        first_of_day.setdefault(day_key, entry.task_id)
+        tasks_by_day.setdefault(day_key, []).append(entry.task_id)
     for day_key, total in minutes_by_day.items():
         if total > policy.max_daily_study_min:
-            add(
-                first_of_day[day_key],
-                ReasonCode.DAILY_LOAD_EXCEEDED,
+            detail = (
                 f"{day_key.isoformat()} totals {total}m, over the "
-                f"{policy.max_daily_study_min}m daily cap",
+                f"{policy.max_daily_study_min}m daily cap"
             )
+            if daily_load_advisory:
+                for task_id in tasks_by_day[day_key]:
+                    warn(task_id, ReasonCode.DAILY_LOAD_ADVISORY, detail)
+            else:
+                add(tasks_by_day[day_key][0], ReasonCode.DAILY_LOAD_EXCEEDED, detail)
 
     # 5. prerequisite order — advisory + completion-relative (ADR-0008). A manual
     #    override past an *unfinished* prerequisite warns (non-blocking); a

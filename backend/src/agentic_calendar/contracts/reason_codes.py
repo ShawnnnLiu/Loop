@@ -75,8 +75,10 @@ class ReasonCode(StrEnum):
     ``used_today + duration > max_daily_study_min`` and lets the task fall
     through to ``NO_VALID_CONTIGUOUS_BLOCK`` (or the capacity-promotion path),
     so the *scheduler* never emits this directly. The drag-to-adjust placement
-    validator (``scheduler/adjustment.py``) does: a manual move that pushes a
-    calendar day over ``max_daily_study_min`` is refused with this code.
+    validator (``scheduler/adjustment.py``) does: an in-app manual move that
+    pushes a calendar day over ``max_daily_study_min`` is refused with this
+    code. An *external* reconciliation move gets ``DAILY_LOAD_ADVISORY``
+    instead (ADR-0010); reconcile no longer emits this hard code.
     Distinguishing daily-load failures inside the scheduler itself remains
     deferred to the Phase 3 solver upgrade."""
 
@@ -121,9 +123,21 @@ class ReasonCode(StrEnum):
     are visible — so the move is adopted and the overlap is surfaced (the week
     grid stacks the blocks side-by-side), never refused. Emitted only by
     ``validate_placements(..., overlap_advisory=True)``, the reconciliation
-    path; an in-app drag keeps the hard rule. When a move earns both this and
-    ``DEPENDENCY_ADVISORY``, the dependency heads-up wins on the delta (the
-    overlap is visible on the grid itself; ordering is not)."""
+    path; an in-app drag keeps the hard rule. Lowest-precedence advisory on an
+    adopted delta: ``DAILY_LOAD_ADVISORY`` and ``DEPENDENCY_ADVISORY`` both win
+    over it (the overlap is visible on the grid itself; those are not)."""
+
+    DAILY_LOAD_ADVISORY = "DAILY_LOAD_ADVISORY"
+    """An adopted external reconciliation move/resize pushed a calendar day
+    over ``max_daily_study_min`` (ADR-0010). Unlike the in-app drag path's hard
+    ``DAILY_LOAD_EXCEEDED``, this is a **non-blocking** heads-up: the user
+    stacked their own day on their own calendar, so the move is adopted and the
+    over-cap day is surfaced, never refused — the cap stays hard everywhere the
+    system chooses placements (auto-placement, in-app drag). Emitted only by
+    ``validate_placements(..., daily_load_advisory=True)``, the reconciliation
+    path. Highest-precedence advisory on an adopted delta: it wins over
+    ``DEPENDENCY_ADVISORY`` and ``OVERLAP_ADVISORY`` (the cap is a bound the
+    user explicitly configured and its breach is invisible on the grid)."""
 
     TASK_DROPPED_BY_USER = "TASK_DROPPED_BY_USER"
     """The user explicitly dropped an unfinished task. Recorded as a ``dropped``

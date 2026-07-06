@@ -1223,9 +1223,9 @@ class CycleService:
         249-253: the in-app schedule is the system of record, so treating an
         external edit as authoritative is opt-in). A valid move/resize is adopted
         into a fresh draft of the same plan version with no calendar write and no
-        re-approval — overlap and prerequisite ordering are advisory for an
-        external move (ADR-0009 / ADR-0008), so only the hard policy bounds
-        (allowed hours/weekend, daily load) reject. A rejected move, or a
+        re-approval — overlap, daily load, and prerequisite ordering are
+        advisory for an external move (ADR-0009 / ADR-0010 / ADR-0008), so only
+        the hard policy bound (allowed hours/weekend) rejects. A rejected move, or a
         deletion, is flagged (``user_modified_bool``) and left for the drift
         loop — never silently rewritten, and a deletion is never silently
         cancelled.
@@ -1376,24 +1376,32 @@ class CycleService:
             tz=user_tz,
             completed_or_dropped_task_ids=self._completed_or_dropped_ids(user_id),
             # An external move already happened on the user's own calendar:
-            # overlap warns (OVERLAP_ADVISORY) instead of rejecting (ADR-0009).
+            # overlap warns (OVERLAP_ADVISORY, ADR-0009) and daily load warns
+            # (DAILY_LOAD_ADVISORY, ADR-0010) instead of rejecting.
             overlap_advisory=True,
+            daily_load_advisory=True,
         )
-        # Advisory ordering (DEPENDENCY_ADVISORY, ADR-0008) and advisory overlap
-        # (OVERLAP_ADVISORY, ADR-0009) do NOT block adoption; only a hard policy
-        # bound (allowed hours/weekend, daily load) rejects an external move.
+        # Advisory ordering (DEPENDENCY_ADVISORY, ADR-0008), advisory overlap
+        # (OVERLAP_ADVISORY, ADR-0009), and advisory daily load
+        # (DAILY_LOAD_ADVISORY, ADR-0010) do NOT block adoption; only the hard
+        # policy bound (allowed hours/weekend) rejects an external move.
         adopt = bool(moved) and not review.conflicts
         conflict_code = {c.task_id: c.reason_code for c in review.conflicts}
         fallback_code = review.conflicts[0].reason_code if review.conflicts else None
-        # One advisory heads-up per adopted delta: DEPENDENCY_ADVISORY wins over
-        # OVERLAP_ADVISORY when both apply — the overlap is visible on the grid
-        # itself, prerequisite ordering is not (spec, "Adopt-If-Valid Rules").
+        # One advisory heads-up per adopted delta, by precedence:
+        # DAILY_LOAD_ADVISORY > DEPENDENCY_ADVISORY > OVERLAP_ADVISORY — the
+        # daily cap is a bound the user explicitly configured and its breach is
+        # invisible on the grid; the overlap is visible on the grid itself
+        # (spec, "Adopt-If-Valid Rules").
+        advisory_rank = {
+            ReasonCode.DAILY_LOAD_ADVISORY: 0,
+            ReasonCode.DEPENDENCY_ADVISORY: 1,
+            ReasonCode.OVERLAP_ADVISORY: 2,
+        }
         advisory_code: dict[str, ReasonCode] = {}
         for w in review.warnings:
-            if (
-                w.reason_code is ReasonCode.DEPENDENCY_ADVISORY
-                or w.task_id not in advisory_code
-            ):
+            held = advisory_code.get(w.task_id)
+            if held is None or advisory_rank[w.reason_code] < advisory_rank[held]:
                 advisory_code[w.task_id] = w.reason_code
 
         deltas: list[CalendarEventDelta] = []
@@ -1419,8 +1427,8 @@ class CycleService:
                     )
                     disposition = ReconciliationDisposition.ADOPTED
                     # An adopted move carries at most one advisory heads-up:
-                    # DEPENDENCY_ADVISORY (ADR-0008) or OVERLAP_ADVISORY
-                    # (ADR-0009); otherwise null.
+                    # DAILY_LOAD_ADVISORY (ADR-0010), DEPENDENCY_ADVISORY
+                    # (ADR-0008), or OVERLAP_ADVISORY (ADR-0009); otherwise null.
                     code = advisory_code.get(task_id)
                 else:
                     env.mapping_store.record_external_edit(mapping.run_id, task_id, now=now)

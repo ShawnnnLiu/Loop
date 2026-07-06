@@ -14,6 +14,7 @@ import {
   DAY_MS,
   dayHeader,
   dayUtcMs,
+  fmtAgo,
   fmtMinutes,
   isoAt,
   minutesOfDay,
@@ -21,7 +22,13 @@ import {
   todayDayMs,
   windowStartMs,
 } from '../lib/datetime'
-import { advisoryNote, flaggedReason, needsDraftRefetch, reconcileBanner } from '../lib/reconcile'
+import {
+  advisoryNote,
+  flaggedReason,
+  needsDraftRefetch,
+  reconcileBanner,
+  syncedAtMs,
+} from '../lib/reconcile'
 import { RECOVERY_OPTIONS, planDiffLine, reviewBanner, reviewMode } from '../lib/review'
 import { stackByDay } from '../lib/stack'
 import { buildWeekPlan, milestoneGroups, todayFacts, weekRangeLabel } from '../lib/weekplan'
@@ -225,6 +232,18 @@ export function ScheduleReviewScreen() {
       })
   }, [syncEnabled, status])
 
+  // Live "synced X ago" age for the banner indicator: once a pull has actually
+  // compared against Google Calendar, re-render every 30s so the label keeps up
+  // with 1-minute granularity while the tab stays open. The initial nowMs
+  // predates the pull's server stamp, but fmtAgo clamps that to "just now".
+  const syncedAt = reconcileResult ? syncedAtMs(reconcileResult) : null
+  const [nowMs, setNowMs] = useState(() => Date.now())
+  useEffect(() => {
+    if (syncedAt == null) return
+    const id = setInterval(() => setNowMs(Date.now()), 30_000)
+    return () => clearInterval(id)
+  }, [syncedAt])
+
   if (loading) return <div className="screen-center muted">Loading your draft…</div>
   if (error) return <div className="screen-center">Couldn’t load the draft — {error}</div>
 
@@ -271,6 +290,60 @@ export function ScheduleReviewScreen() {
   const banner = reviewBanner(mode, status)
   const pendingChoice = mode === 'replan' && (status?.recovery_mode_pending_user_choice ?? false)
   const recon = reconcileResult ? reconcileBanner(reconcileResult) : null
+  // The "Google Calendar synced" indicator (banner, both Grid and Plan views).
+  // Rendered only when the mount reconcile actually runs (its exact
+  // precondition: opted in + an active plan), and each state says only what is
+  // true — the green "synced · X ago" appears solely after a pull genuinely
+  // compared this plan against the calendar (server-stamped reconciled_at).
+  const syncNote = (() => {
+    if (!syncEnabled || !status || status.active_plan_version == null) return null
+    const noteStyle: React.CSSProperties = {
+      gap: 6,
+      fontSize: 12.5,
+      color: 'var(--muted)',
+      whiteSpace: 'nowrap',
+    }
+    if (syncedAt != null) {
+      return (
+        <span
+          className="row"
+          style={noteStyle}
+          title="Loop pulls the edits you made on your Google Calendar each time you open this page"
+        >
+          <span
+            style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--sage)', flex: 'none' }}
+          />
+          Google Calendar synced · {fmtAgo(syncedAt, nowMs)}
+        </span>
+      )
+    }
+    if (reconcileResult) {
+      // A pull that compared nothing must not claim "synced". `deferred` gets
+      // an honest note; `sync_disabled` (toggle raced off elsewhere) gets none.
+      return reconcileResult.outcome === 'deferred' ? (
+        <span
+          className="row"
+          style={noteStyle}
+          title="A calendar write was in progress, so this visit didn’t compare against your calendar — reopen the page to sync"
+        >
+          Google Calendar sync deferred
+        </span>
+      ) : null
+    }
+    if (reconcileError) {
+      return (
+        <span className="row" style={noteStyle}>
+          Google Calendar sync failed
+        </span>
+      )
+    }
+    return (
+      <span className="row" style={noteStyle}>
+        <span className="spin" style={{ width: 11, height: 11 }} />
+        Syncing Google Calendar…
+      </span>
+    )
+  })()
   const titleOf = (taskId: string): string => view?.task_titles[taskId] ?? taskId
   // Durable event_deleted memory (server truth, not the transient banner): these
   // blocks must never carry the written "✓" — the event is gone from the
@@ -490,6 +563,7 @@ export function ScheduleReviewScreen() {
             )}
           </div>
         )}
+        {syncNote}
         <div className="row" style={{ gap: 6 }}>
           <button
             className={viewKind === 'grid' ? 'chip on' : 'chip'}

@@ -234,6 +234,22 @@ writer of corpus documents and snapshots.
 Schemas: `../specs/corpus-document.schema.md`,
 `../specs/corpus-snapshot.schema.md`.
 
+## Claim Assembly (Grounding Layer)
+
+Claim assembly — turning retrieved chunks into `source_claim` records — is
+**deterministic** in v1: a claim is a bounded verbatim excerpt of the chunk's
+text plus provenance (document URL with section fragment, collection and
+publication dates), assembled by `tools/refresh_claims.py` and scored only by
+the sanctioned ingestor. Distilling chunks into synthesized `claim_text` via a
+model would create a fifth LLM node class, which axiom 01 does not allow — LLM
+claim extraction therefore requires an explicit axiom 01 amendment first, and
+is parked as a v2 option to be proposed only if the grounded-generation eval
+shows verbatim excerpts measurably underperforming. Corroboration links are
+exact-duplicate only (identical normalized excerpt from distinct document
+URLs); fuzzier similarity linking is deliberately absent — an unvalidated
+threshold the deterministic scorer would then amplify (open question, not an
+implementation gap).
+
 ## Related Docs
 
 - `01-system-boundaries.md`

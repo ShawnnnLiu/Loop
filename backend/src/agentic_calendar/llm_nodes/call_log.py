@@ -3,7 +3,7 @@
 Canonical spec: ``docs/specs/llm-call-log.schema.md``.
 
 :class:`LlmCallLog` is the write-only observability record axiom 22 requires:
-every provider API call made by one of the four allowed nodes appends exactly
+every provider API call made by one of the five allowed nodes appends exactly
 one entry. The record stores identifiers, counts, hashes, and outcome metadata
 only — never raw prompts or responses (``extra="forbid"`` makes a raw-content
 field structurally impossible).
@@ -32,12 +32,13 @@ _SHA256_HEX_PATTERN = r"^[0-9a-f]{64}$"
 
 
 class LlmNodeName(StrEnum):
-    """The four allowed LLM nodes (axiom 01); no other caller may log here."""
+    """The five allowed LLM nodes (axiom 01); no other caller may log here."""
 
     STRATEGIST = "strategist"
     PLANNER = "planner"
     REFLECTION_SUMMARY = "reflection_summary"
     USER_FACING_EXPLANATION = "user_facing_explanation"
+    RESUME_INTAKE = "resume_intake"
 
 
 class ValidationOutcome(StrEnum):

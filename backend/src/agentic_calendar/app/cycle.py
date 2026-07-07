@@ -79,6 +79,7 @@ from agentic_calendar.contracts.notification_log import NotificationStatus
 from agentic_calendar.contracts.plan_diff import PlanDiff
 from agentic_calendar.contracts.reason_codes import ReasonCode
 from agentic_calendar.contracts.recommitment import RecommitmentChoice, RecommitmentRequest
+from agentic_calendar.contracts.resume_intake_input import ResumeIntakeInput
 from agentic_calendar.contracts.scheduler_output import SchedulerOutput, ScheduleStatus
 from agentic_calendar.contracts.sponsor import SponsorStatus
 from agentic_calendar.contracts.syllabus_units import SyllabusUnits
@@ -125,6 +126,12 @@ from agentic_calendar.scheduler import schedule
 from agentic_calendar.scheduler.adjustment import DraftAdjustment, validate_placements
 from agentic_calendar.scheduler.inputs import FreeBusyInterval, SchedulerInput
 from agentic_calendar.scheduler.policy import policy_from_user_profile
+from agentic_calendar.skill_taxonomy import (
+    SkillTaxonomyRegistry,
+    load_registry,
+    resolve,
+    resolve_track,
+)
 from agentic_calendar.source_claims.curation import curate_claims
 from agentic_calendar.supervisor.routing import route
 from agentic_calendar.supervisor.state import SupervisorSignal as Sig
@@ -140,8 +147,10 @@ from .results import (
     AdjustViolation,
     AdjustWarning,
     ApproveResult,
+    CanonicalSkill,
     DraftView,
     DropResult,
+    ExtractResumeResult,
     IngestResult,
     MeResult,
     OnboardResult,
@@ -265,6 +274,10 @@ class CycleService:
 
     def __init__(self, env: AppEnvironment) -> None:
         self._env = env
+        # Pinned skill-taxonomy registry, loaded lazily once per service (the
+        # checked-in JSON never changes at runtime; a vocabulary change is a
+        # new file version behind a new deploy).
+        self._skill_registry: SkillTaxonomyRegistry | None = None
 
     # ------------------------------------------------------------------ #
     # onboard
@@ -308,6 +321,94 @@ class CycleService:
             created=prior is None,
             timezone=record.timezone,
             has_motivation_profile=record.motivation_profile is not None,
+        )
+
+    # ------------------------------------------------------------------ #
+    # extract (résumé intake — persistence-free)
+    # ------------------------------------------------------------------ #
+
+    def _taxonomy_registry(self) -> SkillTaxonomyRegistry:
+        if self._skill_registry is None:
+            self._skill_registry = load_registry()
+        return self._skill_registry
+
+    def extract_resume(
+        self, user_id: str, payload: Mapping[str, Any]
+    ) -> ExtractResumeResult:
+        """Run the ResumeIntakeNode over a pasted résumé — strictly persistence-free.
+
+        ``payload`` keys: ``resume_text`` (required), ``draft_context``
+        (optional draft wizard answers). The bundle is validated into
+        :class:`ResumeIntakeInput` with ``user_id`` forced to the acting user
+        (the onboard trust boundary) and ``allowed_weak_spots`` filled by this
+        service from the pinned taxonomy's track slice — never from the client.
+        An invalid payload raises pydantic's ``ValidationError`` (the router's
+        standard 422 path) before any LLM call.
+
+        This is a pre-run LLM call: the minted ``run_id`` carries the
+        ``intake-`` prefix (llm-call-log spec) and no run or checkpoint state
+        is touched. On success the proposal's skill surfaces are normalized
+        through the taxonomy kernel: matched surfaces become
+        ``skills_canonical``, unmatched ones are returned visibly flagged and
+        never silently promoted. A node failure returns the typed
+        ``reason_code`` in a normal result — unlike :meth:`_llm_failure` there
+        is no run to route to ``UNRECOVERABLE_ERROR``; extraction failure is a
+        local, retryable UX event. Profile persistence remains exclusively
+        :meth:`onboard`.
+        """
+        env = self._env
+        # First pass pins the contract (résumé bounds, draft-context shapes)
+        # so track resolution below reads typed data, not raw client JSON.
+        base = ResumeIntakeInput.model_validate(
+            {**dict(payload), "user_id": user_id, "allowed_weak_spots": []}
+        )
+        registry = self._taxonomy_registry()
+        track = resolve_track(base.draft_context.target_role)
+        entries = (
+            registry.entries_for_track(track) if track is not None else registry.entries
+        )
+        intake = ResumeIntakeInput.model_validate(
+            base.model_dump(mode="json")
+            | {"allowed_weak_spots": [entry.display_name for entry in entries]}
+        )
+
+        run_id = f"intake-{env.id_generator.new_id('run')}"
+        try:
+            proposal = env.nodes.resume_intake.run(run_id=run_id, intake=intake)
+        except LLMNodeError as exc:
+            reason = getattr(exc, "reason_code", None) or ReasonCode.LLM_CALL_FAILED
+            return ExtractResumeResult(
+                status="failed",
+                run_id=run_id,
+                user_id=user_id,
+                reason_code=reason,
+                detail=str(exc),
+            )
+
+        canonical: list[CanonicalSkill] = []
+        unmatched: list[str] = []
+        matched_ids: set[str] = set()
+        for surface in proposal.skills:
+            entry = resolve(surface, registry)
+            if entry is None:
+                unmatched.append(surface)
+            elif entry.skill_id not in matched_ids:
+                matched_ids.add(entry.skill_id)
+                canonical.append(
+                    CanonicalSkill(
+                        skill_id=entry.skill_id,
+                        display_name=entry.display_name,
+                        surface=surface,
+                    )
+                )
+        return ExtractResumeResult(
+            status="ok",
+            run_id=run_id,
+            user_id=user_id,
+            proposal=proposal,
+            skills_canonical=canonical,
+            skills_unmatched=unmatched,
+            taxonomy_version=registry.taxonomy_version,
         )
 
     # ------------------------------------------------------------------ #

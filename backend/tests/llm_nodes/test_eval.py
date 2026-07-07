@@ -307,6 +307,119 @@ def test_plan_quality_metrics_measure_depth_titles_and_granularity() -> None:
     assert plan_quality_metrics([]) is None
 
 
+# --------------------------------------------------------------------------- #
+# ResumeIntake grading (résumé intake RI-E)
+# --------------------------------------------------------------------------- #
+
+_INTAKE_INPUTS: dict[str, object] = {
+    "intake": {
+        "user_id": "user_eval",
+        "resume_text": (
+            "Senior Backend Engineer at Acme Corp\n"
+            "Python and Go services on Kubernetes for the billing platform."
+        ),
+        "draft_context": {"target_role": "Backend SWE"},
+        "allowed_weak_spots": ["System design", "Dynamic programming"],
+    }
+}
+
+_GROUNDED_EXTRACTION: dict[str, object] = {
+    "experience": [
+        {
+            "title": "Senior Backend Engineer",
+            "organization": "Acme Corp",
+            "summary": None,
+        }
+    ],
+    "skills": ["Python", "Go"],
+    "known_strengths": ["backend services"],
+    "inferred_weak_spots": ["System design"],
+    "target_company_categories": ["infra startups"],
+}
+
+
+def _resume_case_set(**case_kwargs: object) -> EvalSet:
+    return EvalSet.model_validate(
+        {
+            "eval_set_version": "vt",
+            "cases": [
+                {
+                    "case_id": "r1",
+                    "node": "resume_intake",
+                    "inputs": _INTAKE_INPUTS,
+                    **case_kwargs,
+                }
+            ],
+        }
+    )
+
+
+def test_resume_intake_validity_mirrors_the_live_repair_loop() -> None:
+    """An attempt that is contract-valid but ungrounded was REPAIRED live
+    (the post-validator runs inside the bounded loop), so grading must count
+    it invalid — first-attempt validity may not overreport."""
+    ungrounded = {**_GROUNDED_EXTRACTION, "skills": ["Python", "Flurbo.js"]}
+    recording = EvalRecording(
+        prompt_version="p",
+        model_name="m",
+        outputs={"r1": [ungrounded, _GROUNDED_EXTRACTION]},
+    )
+    report = grade_recording(_resume_case_set(), recording)
+    assert report.overall.schema_valid_first_attempt == 0
+    assert report.overall.recovered_by_repair == 1
+    assert report.overall.post_repair_invalid_rate == 0.0
+
+
+def test_resume_intake_out_of_vocabulary_weak_spot_never_grades_valid() -> None:
+    out_of_vocab = {**_GROUNDED_EXTRACTION, "inferred_weak_spots": ["Excel"]}
+    recording = EvalRecording(
+        prompt_version="p", model_name="m", outputs={"r1": [out_of_vocab]}
+    )
+    report = grade_recording(_resume_case_set(), recording)
+    assert report.overall.schema_validity_rate == 0.0
+    assert report.overall.post_repair_invalid_rate == 1.0
+
+
+def test_resume_intake_case_without_intake_inputs_refuses_to_grade() -> None:
+    eval_set = _resume_case_set(inputs={})
+    recording = EvalRecording(
+        prompt_version="p", model_name="m", outputs={"r1": [_GROUNDED_EXTRACTION]}
+    )
+    with pytest.raises(EvalError, match=r"needs inputs\.intake"):
+        grade_recording(eval_set, recording)
+
+
+def test_taxonomy_version_pinning_rejects_mismatched_recording() -> None:
+    eval_set = _resume_case_set(taxonomy_version="skill-taxonomy-v1")
+    for recorded_version in ("skill-taxonomy-v2", None):
+        recording = EvalRecording(
+            prompt_version="p",
+            model_name="m",
+            outputs={"r1": [_GROUNDED_EXTRACTION]},
+            taxonomy_version=recorded_version,
+        )
+        with pytest.raises(EvalError, match="taxonomy_version"):
+            grade_recording(eval_set, recording)
+
+
+def test_v3_fixture_recording_rates_exact() -> None:
+    """The shipped resume_intake recording grades clean: contract-valid AND
+    invariant-clean (groundedness, category hygiene, vocabulary membership)
+    on the first attempt for all seven cases."""
+    eval_set = EvalSet.model_validate(_load(EVALSETS / "eval_set_v3.json"))
+    recording = EvalRecording.model_validate(
+        _load(EVALSETS / "recordings" / "fixture_resume_intake.json")
+    )
+    assert recording.taxonomy_version == "skill-taxonomy-v1"
+    report = grade_recording(eval_set, recording)
+    assert report.overall.cases == 7
+    assert report.overall.schema_validity_rate == 1.0
+    assert report.overall.post_repair_invalid_rate == 0.0
+    # Only the dense case pins a required substring; it passes.
+    assert report.overall.rubric_graded == 1
+    assert report.overall.rubric_pass_rate == 1.0
+
+
 def test_grade_recording_rejects_judge_scores_for_unknown_cases() -> None:
     from agentic_calendar.llm_nodes.call_log import LlmNodeName
     from agentic_calendar.llm_nodes.eval import (

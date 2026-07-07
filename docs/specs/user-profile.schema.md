@@ -27,6 +27,14 @@ Convert a vague career objective into machine-readable constraints. The profile 
   "experience_level": "intermediate",
   "known_strengths": ["arrays", "hash maps"],
   "known_weaknesses": ["dynamic programming", "system design"],
+  "experience": [
+    {
+      "title": "Senior Backend Engineer",
+      "organization": "Acme Corp",
+      "summary": "Led the billing platform team; Python and Go services."
+    }
+  ],
+  "skills": ["Python", "Go", "PostgreSQL"],
   "preferred_session_length_min": 60,
   "max_session_length_min": 120,
   "deep_work_windows": [
@@ -70,22 +78,41 @@ Convert a vague career objective into machine-readable constraints. The profile 
 | --- | --- |
 | `goal` | Defines the high-level user objective |
 | `target_role` | Guides curriculum and task categories |
-| `target_companies` | Enables company-specific interview pattern retrieval |
+| `target_companies` | Enables company-specific interview pattern retrieval. Company names **or company categories**: résumé extraction only ever proposes categories; users may add names manually |
 | `target_level` | Changes depth and difficulty |
 | `timeline_weeks` | Controls pacing and compression |
 | `weekly_hours` | Caps workload |
 | `experience_level` | Affects duration estimates and module difficulty |
 | `known_strengths` | Can reduce emphasis on certain modules |
 | `known_weaknesses` | Increases priority and review frequency |
+| `experience` | The user's confirmed work-experience entries (`ExperienceItem` list, max 20, default empty). User-editable profile data; **not** consumed by Strategist/Planner prompts (see Prompt Exposure) |
+| `skills` | Tools/stack tokens (max 40, default empty), distinct from `known_strengths` (broader capabilities). Stored as display strings: extraction-matched skills are stored under their canonical taxonomy `display_name`, but the user may hand-type anything — the vocabulary constrains the LLM, not the person. Consumers needing canonical ids re-normalize at read time with the deterministic kernel |
 | `preferred_session_length_min` | Helps generate realistic task durations |
 | `max_session_length_min` | Prevents tasks too large for user sessions |
 | `deep_work_windows` | Helps schedule high-cognitive-load tasks |
 | `hard_constraints` | Defines non-negotiable scheduling boundaries |
 | `preferences` | Soft constraints used when multiple schedules are valid |
 | `motivation_profile_id` | Foreign key into `motivation_profiles`; drives accountability intensity, check-in cadence, and sponsor permissions |
-| `resume_text` | Optional free text the user pastes during onboarding. *Unparsed* context passed to the `StrategistNode` to sharpen the proposed syllabus — never a structured field, never an oracle for routing or validation. Absent for users who skip the step. |
+| `resume_text` | Optional free text the user pastes during onboarding. Raw context with exactly two consumers: the `StrategistNode` (appended as a labeled raw block to sharpen the proposed syllabus) and the `ResumeIntakeNode` (input for extract→review→confirm). Never an oracle for routing or validation. Absent for users who skip the step. |
 
-`resume_text` is **PII**: it is stored only on the user's own profile record, is not shared cross-user, and is deleted with the profile. It is sent to the Strategist LLM provider as prompt context when present, but is never persisted in the LLM call log (which records hashes and counts only — see `../axioms/22-llm-evaluation-and-observability.md`) and is never used for training. There is no résumé-parser node in this MVP; the future extract→review→confirm parser is deferred (it would add a new LLM node class — see `../axioms/01-system-boundaries.md` and `../implementation-plans/phase-loop-mvp-backend.md`).
+`resume_text` is **PII**: it is stored only on the user's own profile record, is not shared cross-user, and is deleted with the profile. It is sent to the LLM provider as prompt context by its two consumers (Strategist raw block; ResumeIntakeNode input — see `resume-intake-input.schema.md`), but is never persisted in the LLM call log (which records hashes and counts only — see `../axioms/22-llm-evaluation-and-observability.md`) and is never used for training. The extract→review→confirm parser is the `ResumeIntakeNode` (`../axioms/01-system-boundaries.md`, added 2026-07-06): it proposes candidates for the fields below; nothing it produces reaches this profile without the user confirming through `POST /api/onboard`.
+
+## Prompt Exposure (normative)
+
+Which profile fields reach which LLM node's prompt. This table is the
+source of truth; adapter code must match it (the Strategist bundle
+exclusion set is asserted against this table in tests).
+
+| Profile field | ResumeIntake | Strategist bundle | Planner |
+| --- | --- | --- | --- |
+| `experience` | output only | **excluded** (noise; the raw résumé block already covers background) | no |
+| `skills` | output only | included | no |
+| `known_strengths` / `known_weaknesses` | output only | included (coverage rule) | weaknesses only (unchanged) |
+| `target_companies` | output only (categories) | included (unchanged) | no |
+| `resume_text` | input (labeled raw block) | excluded from the structured bundle, appended as a labeled raw block (unchanged) | no |
+
+The Strategist bundle exclusion set is therefore `{"resume_text",
+"experience"}`.
 
 Motivation, accountability, sponsor visibility, and pressure tolerance live in a separate `motivation_profile` object so they can change on a different cadence than planning constraints without invalidating the syllabus. See `motivation-profile.schema.md` and `../axioms/21-accountability-layer.md`.
 
@@ -97,6 +124,11 @@ Motivation, accountability, sponsor visibility, and pressure tolerance live in a
 - `max_session_length_min` must be `>= preferred_session_length_min`.
 - `hard_constraints.no_events_before` must be earlier than `hard_constraints.no_events_after`.
 - `experience_level` must be one of `beginner`, `intermediate`, `advanced`.
+- `experience` holds at most 20 `ExperienceItem` entries: `title` required
+  (1–120 chars), `organization` optional (max 120 chars), `summary` optional
+  (max 280 chars).
+- `skills` holds at most 40 non-empty strings (each max 60 chars),
+  case-insensitively unique.
 - `deep_work_windows[*].day` must be a recognized day-of-week token.
 - `deep_work_windows[*]` start must be before end and within allowed hours.
 - All times use the user's timezone in HH:MM (24-hour) format.
@@ -160,3 +192,6 @@ Reason: invalid enum.
 - `../axioms/12-edge-case-policy-engine.md`
 - `../axioms/21-accountability-layer.md`
 - `motivation-profile.schema.md`
+- `resume-extraction.schema.md`
+- `resume-intake-input.schema.md`
+- `skill-taxonomy.schema.md`

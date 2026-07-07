@@ -12,6 +12,7 @@ identical fixture-backed, claim-seeded, frozen-clock build.
 from __future__ import annotations
 
 from datetime import timedelta
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 
@@ -21,6 +22,8 @@ from agentic_calendar.calendar_writer.in_memory_adapter import (
     InMemoryCalendarAdapter,
 )
 from agentic_calendar.common.ids import DeterministicIdGenerator
+from agentic_calendar.contracts.reason_codes import ReasonCode
+from agentic_calendar.llm_nodes import LLMGenerationError
 from tests.app.test_cycle import (
     PLAN_TASK_IDS,
     USER_ID,
@@ -29,6 +32,7 @@ from tests.app.test_cycle import (
     _motivation_profile_payload,
     make_service,
 )
+from tests.app.test_extract_resume import FailingResumeIntake
 
 
 def _client() -> tuple[TestClient, object]:
@@ -419,3 +423,78 @@ def test_recommit_route_without_open_ask_maps_to_409() -> None:
     client.post("/api/propose", json={})
     resp = client.post("/api/recommit", json={"choice": "keep_plan"})
     assert resp.status_code == 409
+
+
+# Résumé extraction (RI-C): the persistence-free onboarding extract endpoint.
+
+
+_EXTRACT_BODY = {
+    "resume_text": (
+        "Senior Backend Engineer at Acme Corp (2019-2024)\n"
+        "Led the billing platform team; Python and Go services on Kubernetes."
+    ),
+    "draft_context": {"target_role": "Backend SWE"},
+}
+
+
+def test_extract_route_returns_proposal_with_normalized_skills() -> None:
+    client, _clock = _client()
+    resp = client.post("/api/onboard/extract", json=_EXTRACT_BODY)
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "ok"
+    assert body["run_id"].startswith("intake-")
+    assert body["taxonomy_version"] == "skill-taxonomy-v1"
+    assert body["proposal"]["skills"]
+    assert {s["skill_id"] for s in body["skills_canonical"]} >= {
+        "skill.python",
+        "skill.go",
+        "skill.kubernetes",
+    }
+
+
+def test_extract_route_rejects_short_resume_with_422() -> None:
+    client, _clock = _client()
+    resp = client.post("/api/onboard/extract", json={"resume_text": "too short"})
+    assert resp.status_code == 422
+    assert resp.json()["type"] == "ValidationError"
+
+
+def test_extract_route_ignores_body_user_id() -> None:
+    client, _clock = _client()
+    resp = client.post(
+        "/api/onboard/extract", json={**_EXTRACT_BODY, "user_id": "intruder_999"}
+    )
+    assert resp.status_code == 200
+    assert resp.json()["user_id"] == USER_ID
+
+
+def test_extract_route_surfaces_llm_failure_as_200_with_reason_code() -> None:
+    failing = FailingResumeIntake(
+        LLMGenerationError("refused", reason_code=ReasonCode.LLM_REFUSAL)
+    )
+    _service, env, _clock = make_service(resume_intake=failing)
+    client = TestClient(create_app(env=env, default_user_id=USER_ID))
+    resp = client.post("/api/onboard/extract", json=_EXTRACT_BODY)
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "failed"
+    assert body["reason_code"] == "LLM_REFUSAL"
+    assert body["proposal"] is None
+
+
+def test_extract_route_persists_nothing(tmp_path: Path) -> None:
+    """The persistence-free contract at the HTTP level: no ``app_documents``
+    row appears after an extract (the only write path stays /api/onboard)."""
+    _service, env, _clock = make_service(db_path=tmp_path / "app.db")
+    client = TestClient(create_app(env=env, default_user_id=USER_ID))
+    assert env.db is not None
+
+    def row_count() -> int:
+        with env.db.read() as cursor:
+            cursor.execute("SELECT COUNT(*) FROM app_documents")
+            return int(cursor.fetchone()[0])
+
+    before = row_count()
+    assert client.post("/api/onboard/extract", json=_EXTRACT_BODY).status_code == 200
+    assert row_count() == before

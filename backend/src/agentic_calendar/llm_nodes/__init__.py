@@ -11,13 +11,15 @@ Concretely:
   must never import an LLM SDK or depend on prompt wording as control-plane
   state.
 
-Only the four named *node roles* are allowed to be LLM-backed:
+Only the five named *node roles* are allowed to be LLM-backed:
 
 - ``StrategistNode``: propose ``SyllabusUnits`` from ``UserProfile``.
 - ``PlannerNode``: propose ``TaskPlan`` from ``SyllabusUnits``.
 - ``ReflectionSummaryNode``: summarise telemetry (Phase 4+).
 - ``UserFacingExplanationNode``: explain deterministic outcomes (Phase 1 keeps
   this deterministic on purpose).
+- ``ResumeIntakeNode``: propose ``ResumeExtraction`` candidates from a pasted
+  résumé (résumé intake RI-B) — display/edit only, nothing routes on it.
 
 Phase 1 ships deterministic fakes so the rest of the system can be built and
 tested end-to-end without any external model dependency:
@@ -42,6 +44,7 @@ from .anthropic_adapter import (
     AnthropicMessagesTransport,
     AnthropicPlanner,
     AnthropicReflectionSummary,
+    AnthropicResumeIntake,
     AnthropicStrategist,
     AnthropicTransport,
     AnthropicUserFacingExplanation,
@@ -61,6 +64,7 @@ from .call_log import (
 )
 from .planner import FixturePlanner
 from .reflection_summary import DeterministicReflectionSummary, ReflectionSummary
+from .resume_intake import FixtureResumeIntake
 from .strategist import FixtureStrategist
 from .user_facing_explanation import (
     DeterministicUserFacingExplanation,
@@ -72,12 +76,14 @@ __all__ = [
     "AnthropicMessagesTransport",
     "AnthropicPlanner",
     "AnthropicReflectionSummary",
+    "AnthropicResumeIntake",
     "AnthropicStrategist",
     "AnthropicTransport",
     "AnthropicUserFacingExplanation",
     "DeterministicReflectionSummary",
     "DeterministicUserFacingExplanation",
     "FixturePlanner",
+    "FixtureResumeIntake",
     "FixtureStrategist",
     "InMemoryLlmCallLogStore",
     "LLMGenerationError",

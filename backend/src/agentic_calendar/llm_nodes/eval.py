@@ -17,15 +17,18 @@ from __future__ import annotations
 
 import json
 import re
-from collections.abc import Mapping, Sequence
-from typing import Any
+from collections.abc import Callable, Mapping, Sequence
+from typing import Any, cast
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from agentic_calendar.common.errors import AgenticCalendarError
+from agentic_calendar.contracts.resume_extraction import ResumeExtraction
 from agentic_calendar.contracts.syllabus_units import SyllabusUnits
 from agentic_calendar.contracts.task_plan import TaskPlan
 
+from .anthropic_adapter import _check_resume_extraction
+from .base import LLMNodeError
 from .call_log import LlmCallLog, LlmNodeName
 from .reflection_summary import _PSYCH_DENYLIST, ReflectionSummary
 from .user_facing_explanation import UserExplanation
@@ -41,6 +44,7 @@ TARGET_CONTRACTS: Mapping[LlmNodeName, type[BaseModel]] = {
     LlmNodeName.PLANNER: TaskPlan,
     LlmNodeName.REFLECTION_SUMMARY: ReflectionSummary,
     LlmNodeName.USER_FACING_EXPLANATION: UserExplanation,
+    LlmNodeName.RESUME_INTAKE: ResumeExtraction,
 }
 
 #: Nodes whose output is user-facing prose; graded against the axiom 07
@@ -68,6 +72,11 @@ class EvalCase(BaseModel):
     JSON). Empty for legacy fixture-only sets (v1); the capture tool refuses
     to run a case without them — recordings must come from the actual
     prompts, or the rates prove nothing (axiom 22 honesty rule)."""
+    taxonomy_version: str | None = None
+    """The skill-taxonomy version this case's ``allowed_weak_spots`` were
+    drawn from (resume_intake cases; pinning discipline per
+    ``06-skill-taxonomy.md``). Grading refuses a recording stamped with a
+    different version — the rates would measure a different vocabulary."""
 
 
 class EvalSet(BaseModel):
@@ -103,6 +112,10 @@ class EvalRecording(BaseModel):
     """Optional Tier-2 LLM-judge scores per prose case (1-5 per dimension).
     Produced only by the offline capture tooling — advisory numbers in the
     report, never gates and never runtime signals (axiom 22)."""
+    taxonomy_version: str | None = None
+    """The skill-taxonomy version the run resolved weak-spot vocabulary
+    against (stamped by the capture tool whenever the set has resume_intake
+    cases). Must match any version pinned by the cases being graded."""
 
 
 class NodeMetrics(BaseModel):
@@ -251,14 +264,51 @@ def _contains_psych_label(text: str) -> bool:
     return any(re.search(rf"\b{re.escape(term)}\b", lowered) for term in _PSYCH_DENYLIST)
 
 
+def _resume_intake_checker(case: EvalCase) -> Callable[[ResumeExtraction], None]:
+    """The live post-validator, rebuilt from the case's recorded inputs.
+
+    ResumeIntake validity is contract shape PLUS the deterministic invariants
+    (groundedness, category hygiene, closed weak-spot vocabulary) — inside the
+    live engine the post-validator runs in the bounded repair loop, so an
+    attempt that violates them was repaired, not accepted. Grading reuses
+    ``_check_resume_extraction`` itself: one checker, zero drift between what
+    ships and what the eval measures."""
+    intake = case.inputs.get("intake")
+    if not isinstance(intake, Mapping):
+        raise EvalError(
+            f"case {case.case_id!r}: resume_intake grading needs inputs.intake "
+            "(the serialized ResumeIntakeInput) — groundedness cannot be "
+            "checked without the source résumé text"
+        )
+    resume_text = str(intake.get("resume_text", ""))
+    allowed_weak_spots = [str(s) for s in intake.get("allowed_weak_spots", [])]
+
+    def check(extraction: ResumeExtraction) -> None:
+        _check_resume_extraction(
+            extraction,
+            resume_text=resume_text,
+            allowed_weak_spots=allowed_weak_spots,
+        )
+
+    return check
+
+
 def _first_valid_attempt(
     case: EvalCase, attempts: Sequence[Mapping[str, Any]]
 ) -> tuple[int | None, BaseModel | None]:
     contract = TARGET_CONTRACTS[case.node]
+    checker = (
+        _resume_intake_checker(case)
+        if case.node is LlmNodeName.RESUME_INTAKE
+        else None
+    )
     for index, payload in enumerate(attempts):
         try:
-            return index, contract.model_validate(payload)
-        except ValidationError:
+            validated = contract.model_validate(payload)
+            if checker is not None:
+                checker(cast(ResumeExtraction, validated))
+            return index, validated
+        except (ValidationError, LLMNodeError):
             continue
     return None, None
 
@@ -391,6 +441,20 @@ def grade_recording(
         raise EvalError(f"recording has no outputs for cases: {missing}")
     if unknown := sorted(recorded_ids - case_ids):
         raise EvalError(f"recording has outputs for unknown cases: {unknown}")
+
+    # Taxonomy pinning (06-skill-taxonomy.md): a case authored against one
+    # vocabulary version must not be graded against a recording captured
+    # under another — membership rates would measure a moving target.
+    if pinned_mismatch := sorted(
+        case.case_id
+        for case in eval_set.cases
+        if case.taxonomy_version is not None
+        and case.taxonomy_version != recording.taxonomy_version
+    ):
+        raise EvalError(
+            f"recording taxonomy_version {recording.taxonomy_version!r} does "
+            f"not match the version pinned by cases: {pinned_mismatch}"
+        )
 
     grades = [_grade_case(case, recording.outputs[case.case_id]) for case in eval_set.cases]
     by_node: dict[str, list[_CaseGrade]] = {}

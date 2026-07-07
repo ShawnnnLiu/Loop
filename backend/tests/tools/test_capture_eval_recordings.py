@@ -20,10 +20,11 @@ from agentic_calendar.tools.capture_eval_recordings import (
 )
 
 _EVAL_SET_PATH = Path(__file__).parents[2] / "evalsets" / "eval_set_v2.json"
+_EVAL_SET_V3_PATH = Path(__file__).parents[2] / "evalsets" / "eval_set_v3.json"
 
 
-def _load_set() -> EvalSet:
-    return EvalSet.model_validate(json.loads(_EVAL_SET_PATH.read_text()))
+def _load_set(path: Path = _EVAL_SET_PATH) -> EvalSet:
+    return EvalSet.model_validate(json.loads(path.read_text()))
 
 
 _CANNED_SYLLABUS: dict[str, Any] = {
@@ -91,6 +92,9 @@ class _CannedTransport:
             "ReflectionSummary": _CANNED_PROSE,
             "UserExplanation": _CANNED_PROSE,
             "JudgeScore": {"tone": 4, "specificity": 3, "actionability": 5},
+            # Empty extraction: contract-valid AND invariant-clean (nothing to
+            # ground, no weak spots to check) against every case's résumé.
+            "ResumeExtraction": {},
         }
         payload = by_contract[output_contract.__name__]
         return TransportResult(
@@ -165,8 +169,38 @@ def test_judge_scores_prose_cases_only_and_flows_into_the_report() -> None:
     assert report.judge_scores[next(iter(prose_ids))].tone == 4
 
 
+def test_every_v3_case_parses_into_typed_node_inputs() -> None:
+    eval_set = _load_set(_EVAL_SET_V3_PATH)
+    by_id = {case.case_id: case for case in eval_set.cases}
+    for case in eval_set.cases:
+        kwargs = parse_case_inputs(case, by_id)
+        assert set(kwargs) == {"intake"}
+
+
+def test_capture_v3_stamps_taxonomy_version_and_haiku_model() -> None:
+    """The resume_intake branch: real adapter wiring, one attempt per case,
+    taxonomy pinned on the recording (06-skill-taxonomy discipline)."""
+    eval_set = _load_set(_EVAL_SET_V3_PATH)
+    transport = _CannedTransport()
+    recording = capture(
+        eval_set,
+        transport=transport,  # type: ignore[arg-type]
+        store=InMemoryLlmCallLogStore(),
+        label="canned-intake-test",
+    )
+
+    assert set(recording.outputs) == {case.case_id for case in eval_set.cases}
+    assert all(len(attempts) == 1 for attempts in recording.outputs.values())
+    assert recording.taxonomy_version == "skill-taxonomy-v1"
+    assert recording.model_name == "claude-haiku-4-5"
+
+    report = grade_recording(eval_set, recording)
+    assert report.overall.schema_validity_rate == 1.0
+
+
 def test_cli_validate_only_is_offline_and_green() -> None:
     assert main(["--eval-set", str(_EVAL_SET_PATH), "--validate-only"]) == 0
+    assert main(["--eval-set", str(_EVAL_SET_V3_PATH), "--validate-only"]) == 0
 
 
 def test_cli_refuses_live_without_flag_and_key(monkeypatch) -> None:  # type: ignore[no-untyped-def]

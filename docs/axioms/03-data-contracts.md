@@ -9,6 +9,8 @@ The schemas in `../specs/` are the canonical contracts between LLM nodes and det
 ## Major Objects
 
 - `user_profile` — User goal, role target, constraints, availability, preferences, and capacity. See `../specs/user-profile.schema.md`.
+- `resume_intake_input` — validated bundle handed to the ResumeIntakeNode. See `../specs/resume-intake-input.schema.md`.
+- `resume_extraction` — schema-bound proposal returned by the ResumeIntakeNode. See `../specs/resume-extraction.schema.md`.
 - `source_claim` — Atomic claim from an external or internal source with provenance, deterministic confidence score, and expiration. See `../specs/source-claim.schema.md`.
 - `syllabus_units` — Structured learning modules with outcomes, priority, difficulty, and source claims. See `../specs/syllabus-units.schema.md`.
 - `task_plan` — Concrete tasks derived from syllabus units. Must not include `prerequisites_met`. See `../specs/task-plan.schema.md`.
@@ -26,6 +28,8 @@ The schemas in `../specs/` are the canonical contracts between LLM nodes and det
 | Object | Producer | Consumers |
 | --- | --- | --- |
 | `user_profile` | Onboarding UI, profile service | StrategistNode, validators, Scheduler, drift classifier |
+| `resume_intake_input` | app layer (extract request) | ResumeIntakeNode |
+| `resume_extraction` | ResumeIntakeNode | onboarding UI (display + edit), tests |
 | `source_claim` | RAG ingestion, claim extractor, deterministic scorer | StrategistNode, syllabus validator, cache, audit views |
 | `syllabus_units` | StrategistNode | syllabus validator, PlannerNode, coverage metrics |
 | `task_plan` | PlannerNode | task validator, Scheduler, approval UI |

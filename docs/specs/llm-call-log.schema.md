@@ -13,8 +13,9 @@ cost-cap monitoring (axiom 09), engineering review.
 ## Purpose
 
 `LlmCallLog` is the append-only, write-only observability record for every LLM
-call made by the four allowed nodes (`StrategistNode`, `PlannerNode`,
-`ReflectionSummaryNode`, `UserFacingExplanationNode`). Axiom 22 requires that
+call made by the five allowed nodes (`StrategistNode`, `PlannerNode`,
+`ReflectionSummaryNode`, `UserFacingExplanationNode`, `ResumeIntakeNode`).
+Axiom 22 requires that
 "every LLM call emits one structured record" carrying tokens, cost, latency,
 attempt, validation outcome, and typed `reason_code`.
 
@@ -65,9 +66,9 @@ retention-limited debug flag on the adapter and is never persisted to this log
 | Field | Type | Purpose |
 | --- | --- | --- |
 | `llm_call_log_id` | string | Primary key; unique, used for append-only dedup. |
-| `run_id` | string | Deterministic correlation id supplied by the call site. |
+| `run_id` | string | Deterministic correlation id supplied by the call site. Calls made before any run exists (résumé extraction during onboarding) use a service-minted id with the `intake-` prefix. |
 | `plan_version` | string or null | Plan version in play, where applicable; null for calls outside a plan context (e.g. onboarding Strategist). |
-| `node` | enum `LlmNodeName`: `strategist`, `planner`, `reflection_summary`, `user_facing_explanation` | Which of the four allowed nodes made the call. |
+| `node` | enum `LlmNodeName`: `strategist`, `planner`, `reflection_summary`, `user_facing_explanation`, `resume_intake` | Which of the five allowed nodes made the call. |
 | `prompt_version` | string | Version tag of the prompt template; eval before/after comparisons key on it. |
 | `model_name` | string | Provider model id (e.g. `claude-haiku-4-5-20251001`). |
 | `attempt` | int ≥ 0 | Validation-repair attempt this call serves: `0` = first generation, `1`–`2` = bounded repair re-prompts (axiom 04 cap). |

@@ -33,6 +33,7 @@ source_modules =
     agentic_calendar.consent
     agentic_calendar.identity
     agentic_calendar.disposition
+    agentic_calendar.skill_taxonomy
 forbidden_modules =
     openai
     anthropic
@@ -466,3 +467,55 @@ forbidden_modules =
     agentic_calendar.templates
     agentic_calendar.consent
     agentic_calendar.identity
+
+# ---------------------------------------------------------------------------
+# Contract 17: Skill-taxonomy kernel leaf-deps (résumé intake RI-B).
+#
+# `skill_taxonomy` (registry + normalizer over the checked-in controlled
+# vocabulary, axiom 08 "Controlled Vocabularies") is a shared kernel like
+# `source_claims`: it may depend only on `common` and `contracts`, and the
+# service layer / composition root may import it. Nothing inside it may reach
+# back into a region. It is intentionally NOT in the independence set so
+# regions can import it.
+# ---------------------------------------------------------------------------
+[importlinter:contract:skill-taxonomy-is-leaf]
+name = skill_taxonomy/ may only depend on common/ and contracts/.
+type = forbidden
+source_modules =
+    agentic_calendar.skill_taxonomy
+forbidden_modules =
+    agentic_calendar.supervisor
+    agentic_calendar.validation
+    agentic_calendar.scheduler
+    agentic_calendar.planning
+    agentic_calendar.llm_nodes
+    agentic_calendar.prerequisites
+    agentic_calendar.calendar_writer
+    agentic_calendar.approval
+    agentic_calendar.accountability
+    agentic_calendar.telemetry
+    agentic_calendar.drift
+    agentic_calendar.duration_estimation
+    agentic_calendar.source_claims
+    agentic_calendar.cache
+    agentic_calendar.templates
+    agentic_calendar.consent
+    agentic_calendar.identity
+    agentic_calendar.disposition
+
+# ---------------------------------------------------------------------------
+# Contract 18: LLM nodes never import the skill-taxonomy kernel.
+#
+# The ResumeIntakeNode's allowed weak-spot vocabulary and membership resolver
+# arrive as PLAIN DATA (`ResumeIntakeInput.allowed_weak_spots`; an injected
+# callable), wired by the service layer — the node never reads the vocabulary
+# itself. This is the structural form of "the LLM never touches the
+# vocabulary" (docs/specs/skill-taxonomy.schema.md).
+# ---------------------------------------------------------------------------
+[importlinter:contract:llm-nodes-no-skill-taxonomy]
+name = llm_nodes/ must not import skill_taxonomy/.
+type = forbidden
+source_modules =
+    agentic_calendar.llm_nodes
+forbidden_modules =
+    agentic_calendar.skill_taxonomy

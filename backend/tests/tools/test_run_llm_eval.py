@@ -13,6 +13,10 @@ BACKEND_ROOT = Path(__file__).resolve().parents[2]
 EVAL_SET = str(BACKEND_ROOT / "evalsets" / "eval_set_v1.json")
 BASELINE = str(BACKEND_ROOT / "evalsets" / "recordings" / "fixture_baseline.json")
 IMPROVED = str(BACKEND_ROOT / "evalsets" / "recordings" / "fixture_improved.json")
+EVAL_SET_V3 = str(BACKEND_ROOT / "evalsets" / "eval_set_v3.json")
+RESUME_RECORDING = str(
+    BACKEND_ROOT / "evalsets" / "recordings" / "fixture_resume_intake.json"
+)
 
 
 def test_baseline_reports_breach(capsys: pytest.CaptureFixture[str]) -> None:
@@ -119,6 +123,42 @@ def test_strict_gate_exits_nonzero_on_breach_and_zero_when_clean() -> None:
     base = ["--eval-set", EVAL_SET, "--strict"]
     assert main([*base, "--recording", IMPROVED]) == 0
     assert main([*base, "--recording", BASELINE]) == 3
+
+
+def test_strict_v3_resume_recording_is_green_at_measured_floors() -> None:
+    """The eval-gate pair for resume_intake (RI-E): the committed fixture
+    recording is contract-valid and invariant-clean on the first attempt."""
+    assert (
+        main(
+            [
+                "--eval-set",
+                EVAL_SET_V3,
+                "--recording",
+                RESUME_RECORDING,
+                "--strict",
+                "--min-schema-validity-rate",
+                "1.0",
+            ]
+        )
+        == 0
+    )
+
+
+def test_strict_fails_on_planted_groundedness_breach(tmp_path: Path) -> None:
+    """Guards the eval wiring itself: an ungrounded skill planted into the
+    recording must trip the strict gate — validity for resume_intake includes
+    the deterministic groundedness invariant, not just contract shape."""
+    recording = json.loads(Path(RESUME_RECORDING).read_text(encoding="utf-8"))
+    attempt = recording["outputs"]["resume_dense_backend_newgrad"][0]
+    attempt["skills"] = [*attempt["skills"], "Rust"]  # not in that résumé
+    tampered = tmp_path / "tampered.json"
+    tampered.write_text(json.dumps(recording), encoding="utf-8")
+    assert (
+        main(
+            ["--eval-set", EVAL_SET_V3, "--recording", str(tampered), "--strict"]
+        )
+        == 3
+    )
 
 
 def test_strict_floors_gate_schema_validity_independently() -> None:

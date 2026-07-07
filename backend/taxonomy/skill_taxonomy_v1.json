@@ -1,0 +1,2172 @@
+{
+  "taxonomy_version": "skill-taxonomy-v1",
+  "entries": [
+    {
+      "skill_id": "skill.python",
+      "display_name": "Python",
+      "aliases": [
+        "python",
+        "python3",
+        "python 3"
+      ],
+      "track_tags": [
+        "swe",
+        "mle",
+        "ai_engineer"
+      ],
+      "kind": "language",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.java",
+      "display_name": "Java",
+      "aliases": [
+        "java"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "language",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.javascript",
+      "display_name": "JavaScript",
+      "aliases": [
+        "javascript",
+        "js"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "language",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.typescript",
+      "display_name": "TypeScript",
+      "aliases": [
+        "typescript",
+        "ts"
+      ],
+      "track_tags": [
+        "swe",
+        "ai_engineer"
+      ],
+      "kind": "language",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.go",
+      "display_name": "Go",
+      "aliases": [
+        "go",
+        "golang"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "language",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.c",
+      "display_name": "C",
+      "aliases": [
+        "c"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "language",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.cpp",
+      "display_name": "C++",
+      "aliases": [
+        "c++",
+        "cpp"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "language",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.csharp",
+      "display_name": "C#",
+      "aliases": [
+        "c#",
+        "csharp"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "language",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.rust",
+      "display_name": "Rust",
+      "aliases": [
+        "rust"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "language",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.kotlin",
+      "display_name": "Kotlin",
+      "aliases": [
+        "kotlin"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "language",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.swift",
+      "display_name": "Swift",
+      "aliases": [
+        "swift"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "language",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.ruby",
+      "display_name": "Ruby",
+      "aliases": [
+        "ruby"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "language",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.php",
+      "display_name": "PHP",
+      "aliases": [
+        "php"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "language",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.scala",
+      "display_name": "Scala",
+      "aliases": [
+        "scala"
+      ],
+      "track_tags": [
+        "swe",
+        "mle"
+      ],
+      "kind": "language",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.sql",
+      "display_name": "SQL",
+      "aliases": [
+        "sql"
+      ],
+      "track_tags": [
+        "swe",
+        "mle",
+        "ai_engineer"
+      ],
+      "kind": "language",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.bash",
+      "display_name": "Bash",
+      "aliases": [
+        "bash",
+        "shell scripting",
+        "shell"
+      ],
+      "track_tags": [
+        "swe",
+        "mle"
+      ],
+      "kind": "language",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.html-css",
+      "display_name": "HTML/CSS",
+      "aliases": [
+        "html",
+        "css"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "language",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.r",
+      "display_name": "R",
+      "aliases": [
+        "r"
+      ],
+      "track_tags": [
+        "mle"
+      ],
+      "kind": "language",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.react",
+      "display_name": "React",
+      "aliases": [
+        "react",
+        "react.js",
+        "reactjs"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "framework",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.nextjs",
+      "display_name": "Next.js",
+      "aliases": [
+        "next.js",
+        "nextjs"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "framework",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.vue",
+      "display_name": "Vue",
+      "aliases": [
+        "vue",
+        "vue.js",
+        "vuejs"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "framework",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.angular",
+      "display_name": "Angular",
+      "aliases": [
+        "angular"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "framework",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.nodejs",
+      "display_name": "Node.js",
+      "aliases": [
+        "node.js",
+        "nodejs",
+        "node"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "framework",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.express",
+      "display_name": "Express",
+      "aliases": [
+        "express",
+        "express.js"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "framework",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.django",
+      "display_name": "Django",
+      "aliases": [
+        "django"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "framework",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.flask",
+      "display_name": "Flask",
+      "aliases": [
+        "flask"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "framework",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.fastapi",
+      "display_name": "FastAPI",
+      "aliases": [
+        "fastapi"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "framework",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.spring-boot",
+      "display_name": "Spring Boot",
+      "aliases": [
+        "spring boot",
+        "spring"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "framework",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.rails",
+      "display_name": "Ruby on Rails",
+      "aliases": [
+        "ruby on rails",
+        "rails"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "framework",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.dotnet",
+      "display_name": ".NET",
+      "aliases": [
+        ".net",
+        "dotnet",
+        "asp.net"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "framework",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.redux",
+      "display_name": "Redux",
+      "aliases": [
+        "redux"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "framework",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.tailwind",
+      "display_name": "Tailwind CSS",
+      "aliases": [
+        "tailwind",
+        "tailwind css"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "framework",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.vite",
+      "display_name": "Vite",
+      "aliases": [
+        "vite"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.celery",
+      "display_name": "Celery",
+      "aliases": [
+        "celery"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "framework",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.graphql",
+      "display_name": "GraphQL",
+      "aliases": [
+        "graphql"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.grpc",
+      "display_name": "gRPC",
+      "aliases": [
+        "grpc"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.postgresql",
+      "display_name": "PostgreSQL",
+      "aliases": [
+        "postgresql",
+        "postgres"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.mysql",
+      "display_name": "MySQL",
+      "aliases": [
+        "mysql"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.sqlite",
+      "display_name": "SQLite",
+      "aliases": [
+        "sqlite"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.mongodb",
+      "display_name": "MongoDB",
+      "aliases": [
+        "mongodb",
+        "mongo"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.redis",
+      "display_name": "Redis",
+      "aliases": [
+        "redis"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.elasticsearch",
+      "display_name": "Elasticsearch",
+      "aliases": [
+        "elasticsearch"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.kafka",
+      "display_name": "Kafka",
+      "aliases": [
+        "kafka",
+        "apache kafka"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.rabbitmq",
+      "display_name": "RabbitMQ",
+      "aliases": [
+        "rabbitmq"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.dynamodb",
+      "display_name": "DynamoDB",
+      "aliases": [
+        "dynamodb"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.cassandra",
+      "display_name": "Cassandra",
+      "aliases": [
+        "cassandra"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.aws",
+      "display_name": "AWS",
+      "aliases": [
+        "aws",
+        "amazon web services"
+      ],
+      "track_tags": [
+        "swe",
+        "mle"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.gcp",
+      "display_name": "Google Cloud",
+      "aliases": [
+        "gcp",
+        "google cloud",
+        "google cloud platform"
+      ],
+      "track_tags": [
+        "swe",
+        "mle"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.azure",
+      "display_name": "Azure",
+      "aliases": [
+        "azure",
+        "microsoft azure"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.docker",
+      "display_name": "Docker",
+      "aliases": [
+        "docker"
+      ],
+      "track_tags": [
+        "swe",
+        "mle"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.kubernetes",
+      "display_name": "Kubernetes",
+      "aliases": [
+        "kubernetes",
+        "k8s"
+      ],
+      "track_tags": [
+        "swe",
+        "mle"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.terraform",
+      "display_name": "Terraform",
+      "aliases": [
+        "terraform"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.git",
+      "display_name": "Git",
+      "aliases": [
+        "git"
+      ],
+      "track_tags": [
+        "swe",
+        "mle",
+        "ai_engineer"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.github-actions",
+      "display_name": "GitHub Actions",
+      "aliases": [
+        "github actions"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.jenkins",
+      "display_name": "Jenkins",
+      "aliases": [
+        "jenkins"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.linux",
+      "display_name": "Linux",
+      "aliases": [
+        "linux"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.nginx",
+      "display_name": "Nginx",
+      "aliases": [
+        "nginx"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.prometheus",
+      "display_name": "Prometheus",
+      "aliases": [
+        "prometheus"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.grafana",
+      "display_name": "Grafana",
+      "aliases": [
+        "grafana"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.datadog",
+      "display_name": "Datadog",
+      "aliases": [
+        "datadog"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.ci-cd",
+      "display_name": "CI/CD",
+      "aliases": [
+        "ci/cd",
+        "continuous integration",
+        "continuous delivery",
+        "continuous deployment"
+      ],
+      "track_tags": [
+        "swe",
+        "mle"
+      ],
+      "kind": "practice",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.serverless",
+      "display_name": "Serverless",
+      "aliases": [
+        "serverless",
+        "aws lambda"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.data-structures",
+      "display_name": "Data structures",
+      "aliases": [
+        "data structures"
+      ],
+      "track_tags": [
+        "swe",
+        "mle"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.algorithms",
+      "display_name": "Algorithms",
+      "aliases": [
+        "algorithms",
+        "algorithm design"
+      ],
+      "track_tags": [
+        "swe",
+        "mle"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.system-design",
+      "display_name": "System design",
+      "aliases": [
+        "system design",
+        "systems design",
+        "distributed system design"
+      ],
+      "track_tags": [
+        "swe",
+        "mle",
+        "ai_engineer"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.distributed-systems",
+      "display_name": "Distributed systems",
+      "aliases": [
+        "distributed systems"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.concurrency",
+      "display_name": "Concurrency",
+      "aliases": [
+        "concurrency",
+        "multithreading",
+        "parallelism"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.api-design",
+      "display_name": "API design",
+      "aliases": [
+        "api design"
+      ],
+      "track_tags": [
+        "swe",
+        "ai_engineer"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.rest-apis",
+      "display_name": "REST APIs",
+      "aliases": [
+        "rest",
+        "rest api",
+        "rest apis",
+        "restful apis"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.microservices",
+      "display_name": "Microservices",
+      "aliases": [
+        "microservices",
+        "microservice architecture"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.event-driven",
+      "display_name": "Event-driven architecture",
+      "aliases": [
+        "event-driven architecture",
+        "event driven architecture"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.caching",
+      "display_name": "Caching",
+      "aliases": [
+        "caching"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.database-design",
+      "display_name": "Database design",
+      "aliases": [
+        "database design",
+        "data modeling"
+      ],
+      "track_tags": [
+        "swe",
+        "mle"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.oop",
+      "display_name": "Object-oriented programming",
+      "aliases": [
+        "object-oriented programming",
+        "object oriented programming",
+        "oop"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.functional-programming",
+      "display_name": "Functional programming",
+      "aliases": [
+        "functional programming"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.networking",
+      "display_name": "Networking",
+      "aliases": [
+        "networking",
+        "tcp/ip",
+        "computer networks"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.operating-systems",
+      "display_name": "Operating systems",
+      "aliases": [
+        "operating systems",
+        "os internals"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.dynamic-programming",
+      "display_name": "Dynamic programming",
+      "aliases": [
+        "dynamic programming"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.graph-algorithms",
+      "display_name": "Graph algorithms",
+      "aliases": [
+        "graph algorithms",
+        "graphs"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.recursion",
+      "display_name": "Recursion",
+      "aliases": [
+        "recursion"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.complexity-analysis",
+      "display_name": "Complexity analysis",
+      "aliases": [
+        "complexity analysis",
+        "big-o analysis",
+        "big-o",
+        "time complexity"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.message-queues",
+      "display_name": "Message queues",
+      "aliases": [
+        "message queues",
+        "message queue"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.load-balancing",
+      "display_name": "Load balancing",
+      "aliases": [
+        "load balancing"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.sharding",
+      "display_name": "Sharding",
+      "aliases": [
+        "sharding",
+        "database sharding"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.websockets",
+      "display_name": "WebSockets",
+      "aliases": [
+        "websockets",
+        "websocket"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.application-security",
+      "display_name": "Application security",
+      "aliases": [
+        "application security",
+        "secure coding",
+        "security"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.authentication",
+      "display_name": "Authentication & authorization",
+      "aliases": [
+        "authentication",
+        "authorization",
+        "oauth",
+        "oauth2"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.data-pipelines",
+      "display_name": "Data pipelines",
+      "aliases": [
+        "data pipelines",
+        "data pipeline",
+        "etl"
+      ],
+      "track_tags": [
+        "swe",
+        "mle"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.testing",
+      "display_name": "Software testing",
+      "aliases": [
+        "testing",
+        "unit testing",
+        "integration testing",
+        "test-driven development",
+        "tdd"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "practice",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.debugging",
+      "display_name": "Debugging",
+      "aliases": [
+        "debugging"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "practice",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.code-review",
+      "display_name": "Code review",
+      "aliases": [
+        "code review",
+        "code reviews"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "practice",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.agile",
+      "display_name": "Agile",
+      "aliases": [
+        "agile",
+        "scrum"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "practice",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.observability",
+      "display_name": "Observability",
+      "aliases": [
+        "observability",
+        "monitoring",
+        "logging"
+      ],
+      "track_tags": [
+        "swe",
+        "mle",
+        "ai_engineer"
+      ],
+      "kind": "practice",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.performance-optimization",
+      "display_name": "Performance optimization",
+      "aliases": [
+        "performance optimization",
+        "performance tuning"
+      ],
+      "track_tags": [
+        "swe"
+      ],
+      "kind": "practice",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.ab-testing",
+      "display_name": "A/B testing",
+      "aliases": [
+        "a/b testing",
+        "ab testing"
+      ],
+      "track_tags": [
+        "swe",
+        "mle"
+      ],
+      "kind": "practice",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.machine-learning",
+      "display_name": "Machine learning",
+      "aliases": [
+        "machine learning",
+        "ml"
+      ],
+      "track_tags": [
+        "mle",
+        "ai_engineer"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.deep-learning",
+      "display_name": "Deep learning",
+      "aliases": [
+        "deep learning",
+        "neural networks"
+      ],
+      "track_tags": [
+        "mle"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.pytorch",
+      "display_name": "PyTorch",
+      "aliases": [
+        "pytorch",
+        "torch"
+      ],
+      "track_tags": [
+        "mle",
+        "ai_engineer"
+      ],
+      "kind": "framework",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.tensorflow",
+      "display_name": "TensorFlow",
+      "aliases": [
+        "tensorflow",
+        "tf"
+      ],
+      "track_tags": [
+        "mle"
+      ],
+      "kind": "framework",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.keras",
+      "display_name": "Keras",
+      "aliases": [
+        "keras"
+      ],
+      "track_tags": [
+        "mle"
+      ],
+      "kind": "framework",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.scikit-learn",
+      "display_name": "scikit-learn",
+      "aliases": [
+        "scikit-learn",
+        "sklearn",
+        "scikit learn"
+      ],
+      "track_tags": [
+        "mle"
+      ],
+      "kind": "framework",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.pandas",
+      "display_name": "pandas",
+      "aliases": [
+        "pandas"
+      ],
+      "track_tags": [
+        "mle"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.numpy",
+      "display_name": "NumPy",
+      "aliases": [
+        "numpy"
+      ],
+      "track_tags": [
+        "mle"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.xgboost",
+      "display_name": "XGBoost",
+      "aliases": [
+        "xgboost"
+      ],
+      "track_tags": [
+        "mle"
+      ],
+      "kind": "framework",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.lightgbm",
+      "display_name": "LightGBM",
+      "aliases": [
+        "lightgbm"
+      ],
+      "track_tags": [
+        "mle"
+      ],
+      "kind": "framework",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.feature-engineering",
+      "display_name": "Feature engineering",
+      "aliases": [
+        "feature engineering"
+      ],
+      "track_tags": [
+        "mle"
+      ],
+      "kind": "practice",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.model-evaluation",
+      "display_name": "Model evaluation",
+      "aliases": [
+        "model evaluation",
+        "model validation"
+      ],
+      "track_tags": [
+        "mle"
+      ],
+      "kind": "practice",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.mlflow",
+      "display_name": "MLflow",
+      "aliases": [
+        "mlflow"
+      ],
+      "track_tags": [
+        "mle"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.wandb",
+      "display_name": "Weights & Biases",
+      "aliases": [
+        "weights & biases",
+        "wandb",
+        "w&b"
+      ],
+      "track_tags": [
+        "mle"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.experiment-tracking",
+      "display_name": "Experiment tracking",
+      "aliases": [
+        "experiment tracking"
+      ],
+      "track_tags": [
+        "mle"
+      ],
+      "kind": "practice",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.mlops",
+      "display_name": "MLOps",
+      "aliases": [
+        "mlops"
+      ],
+      "track_tags": [
+        "mle"
+      ],
+      "kind": "practice",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.model-deployment",
+      "display_name": "Model deployment",
+      "aliases": [
+        "model deployment",
+        "model serving"
+      ],
+      "track_tags": [
+        "mle",
+        "ai_engineer"
+      ],
+      "kind": "practice",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.statistics",
+      "display_name": "Statistics",
+      "aliases": [
+        "statistics",
+        "statistical analysis"
+      ],
+      "track_tags": [
+        "mle"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.probability",
+      "display_name": "Probability",
+      "aliases": [
+        "probability"
+      ],
+      "track_tags": [
+        "mle"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.linear-algebra",
+      "display_name": "Linear algebra",
+      "aliases": [
+        "linear algebra"
+      ],
+      "track_tags": [
+        "mle"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.computer-vision",
+      "display_name": "Computer vision",
+      "aliases": [
+        "computer vision"
+      ],
+      "track_tags": [
+        "mle"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.nlp",
+      "display_name": "Natural language processing",
+      "aliases": [
+        "natural language processing",
+        "nlp"
+      ],
+      "track_tags": [
+        "mle",
+        "ai_engineer"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.recommendation-systems",
+      "display_name": "Recommendation systems",
+      "aliases": [
+        "recommendation systems",
+        "recommender systems"
+      ],
+      "track_tags": [
+        "mle"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.time-series",
+      "display_name": "Time-series forecasting",
+      "aliases": [
+        "time series",
+        "time series forecasting",
+        "forecasting"
+      ],
+      "track_tags": [
+        "mle"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.reinforcement-learning",
+      "display_name": "Reinforcement learning",
+      "aliases": [
+        "reinforcement learning",
+        "rl"
+      ],
+      "track_tags": [
+        "mle"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.transformers",
+      "display_name": "Transformers",
+      "aliases": [
+        "transformers",
+        "transformer models"
+      ],
+      "track_tags": [
+        "mle",
+        "ai_engineer"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.model-optimization",
+      "display_name": "Model optimization",
+      "aliases": [
+        "model quantization",
+        "quantization",
+        "pruning",
+        "model compression"
+      ],
+      "track_tags": [
+        "mle"
+      ],
+      "kind": "practice",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.distributed-training",
+      "display_name": "Distributed training",
+      "aliases": [
+        "distributed training",
+        "ddp"
+      ],
+      "track_tags": [
+        "mle"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.gpu-computing",
+      "display_name": "GPU computing",
+      "aliases": [
+        "cuda",
+        "gpu programming",
+        "gpu computing"
+      ],
+      "track_tags": [
+        "mle"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.ray",
+      "display_name": "Ray",
+      "aliases": [
+        "ray"
+      ],
+      "track_tags": [
+        "mle"
+      ],
+      "kind": "framework",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.feature-stores",
+      "display_name": "Feature stores",
+      "aliases": [
+        "feature store",
+        "feature stores"
+      ],
+      "track_tags": [
+        "mle"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.kubeflow",
+      "display_name": "Kubeflow",
+      "aliases": [
+        "kubeflow"
+      ],
+      "track_tags": [
+        "mle"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.sagemaker",
+      "display_name": "SageMaker",
+      "aliases": [
+        "sagemaker",
+        "aws sagemaker"
+      ],
+      "track_tags": [
+        "mle"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.vertex-ai",
+      "display_name": "Vertex AI",
+      "aliases": [
+        "vertex ai"
+      ],
+      "track_tags": [
+        "mle"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.jupyter",
+      "display_name": "Jupyter",
+      "aliases": [
+        "jupyter",
+        "jupyter notebooks"
+      ],
+      "track_tags": [
+        "mle"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.spark",
+      "display_name": "Spark",
+      "aliases": [
+        "spark",
+        "apache spark",
+        "pyspark"
+      ],
+      "track_tags": [
+        "mle",
+        "swe"
+      ],
+      "kind": "framework",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.airflow",
+      "display_name": "Airflow",
+      "aliases": [
+        "airflow",
+        "apache airflow"
+      ],
+      "track_tags": [
+        "mle",
+        "swe"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.dbt",
+      "display_name": "dbt",
+      "aliases": [
+        "dbt"
+      ],
+      "track_tags": [
+        "mle"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.bigquery",
+      "display_name": "BigQuery",
+      "aliases": [
+        "bigquery"
+      ],
+      "track_tags": [
+        "mle",
+        "swe"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.snowflake",
+      "display_name": "Snowflake",
+      "aliases": [
+        "snowflake"
+      ],
+      "track_tags": [
+        "mle"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.llms",
+      "display_name": "Large language models",
+      "aliases": [
+        "large language models",
+        "llms",
+        "llm"
+      ],
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.prompt-engineering",
+      "display_name": "Prompt engineering",
+      "aliases": [
+        "prompt engineering",
+        "prompting"
+      ],
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "kind": "practice",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.rag",
+      "display_name": "Retrieval-augmented generation",
+      "aliases": [
+        "retrieval-augmented generation",
+        "retrieval augmented generation",
+        "rag"
+      ],
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.embeddings",
+      "display_name": "Embeddings",
+      "aliases": [
+        "embeddings",
+        "text embeddings",
+        "vector embeddings"
+      ],
+      "track_tags": [
+        "ai_engineer",
+        "mle"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.vector-databases",
+      "display_name": "Vector databases",
+      "aliases": [
+        "vector database",
+        "vector databases",
+        "vector search"
+      ],
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.pinecone",
+      "display_name": "Pinecone",
+      "aliases": [
+        "pinecone"
+      ],
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.weaviate",
+      "display_name": "Weaviate",
+      "aliases": [
+        "weaviate"
+      ],
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.pgvector",
+      "display_name": "pgvector",
+      "aliases": [
+        "pgvector"
+      ],
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.faiss",
+      "display_name": "FAISS",
+      "aliases": [
+        "faiss"
+      ],
+      "track_tags": [
+        "ai_engineer",
+        "mle"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.fine-tuning",
+      "display_name": "Fine-tuning",
+      "aliases": [
+        "fine-tuning",
+        "fine tuning",
+        "lora",
+        "peft"
+      ],
+      "track_tags": [
+        "ai_engineer",
+        "mle"
+      ],
+      "kind": "practice",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.langchain",
+      "display_name": "LangChain",
+      "aliases": [
+        "langchain"
+      ],
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "kind": "framework",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.llamaindex",
+      "display_name": "LlamaIndex",
+      "aliases": [
+        "llamaindex",
+        "llama index"
+      ],
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "kind": "framework",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.ai-agents",
+      "display_name": "AI agents",
+      "aliases": [
+        "ai agents",
+        "agentic systems",
+        "agent orchestration",
+        "multi-agent systems"
+      ],
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.function-calling",
+      "display_name": "Function calling / tool use",
+      "aliases": [
+        "function calling",
+        "tool use",
+        "tool calling"
+      ],
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.openai-api",
+      "display_name": "OpenAI API",
+      "aliases": [
+        "openai api",
+        "openai"
+      ],
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.anthropic-api",
+      "display_name": "Anthropic API",
+      "aliases": [
+        "anthropic api",
+        "anthropic",
+        "claude api"
+      ],
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.hugging-face",
+      "display_name": "Hugging Face",
+      "aliases": [
+        "hugging face",
+        "huggingface"
+      ],
+      "track_tags": [
+        "ai_engineer",
+        "mle"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.llm-evaluation",
+      "display_name": "LLM evaluation",
+      "aliases": [
+        "llm evaluation",
+        "evals",
+        "eval harness"
+      ],
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "kind": "practice",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.guardrails",
+      "display_name": "LLM guardrails",
+      "aliases": [
+        "guardrails",
+        "output validation"
+      ],
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "kind": "practice",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.semantic-search",
+      "display_name": "Semantic search",
+      "aliases": [
+        "semantic search"
+      ],
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.reranking",
+      "display_name": "Reranking",
+      "aliases": [
+        "reranking",
+        "rerankers"
+      ],
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.chunking",
+      "display_name": "Chunking",
+      "aliases": [
+        "chunking",
+        "text chunking"
+      ],
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.structured-outputs",
+      "display_name": "Structured outputs",
+      "aliases": [
+        "structured outputs",
+        "structured output",
+        "json mode"
+      ],
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.vllm",
+      "display_name": "vLLM",
+      "aliases": [
+        "vllm"
+      ],
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.inference-optimization",
+      "display_name": "LLM inference optimization",
+      "aliases": [
+        "inference optimization"
+      ],
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "kind": "practice",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.ollama",
+      "display_name": "Ollama",
+      "aliases": [
+        "ollama"
+      ],
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "kind": "tool",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.multimodal",
+      "display_name": "Multimodal models",
+      "aliases": [
+        "multimodal models",
+        "multimodal"
+      ],
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.responsible-ai",
+      "display_name": "Responsible AI",
+      "aliases": [
+        "responsible ai",
+        "ai safety"
+      ],
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.mcp",
+      "display_name": "Model Context Protocol",
+      "aliases": [
+        "model context protocol",
+        "mcp"
+      ],
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.llm-observability",
+      "display_name": "LLM observability",
+      "aliases": [
+        "llm observability",
+        "llm tracing"
+      ],
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "kind": "practice",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.diffusion-models",
+      "display_name": "Diffusion models",
+      "aliases": [
+        "diffusion models",
+        "stable diffusion"
+      ],
+      "track_tags": [
+        "ai_engineer",
+        "mle"
+      ],
+      "kind": "concept",
+      "corpus_evidence": null
+    }
+  ]
+}

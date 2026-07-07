@@ -6,6 +6,7 @@ All estimates assume current pricing as of July 2026 and must be revalidated qua
 
 - **Frontier model** (Strategist; `claude-opus-4-8` in the Phase 8 adapters): $5.00 per 1M input tokens, $25.00 per 1M output tokens.
 - **Sonnet-tier model** (Planner, Reflection, user-facing explanations; `claude-sonnet-5`): $3.00 per 1M input tokens, $15.00 per 1M output tokens. Sticker price is encoded, not the introductory $2.00/$10.00 that runs through 2026-08-31 — encoding the promo would silently understate costs after it lapses.
+- **Haiku-tier model** (ResumeIntake; `claude-haiku-4-5`): $1.00 per 1M input tokens, $5.00 per 1M output tokens (same figures as the pre-2026-07-04 mid-tier entry in the change log).
 - **Embedding**: ~$0.02 per 1M tokens (assumption unchanged; not yet exercised).
 
 Prompt-cache tiers (2026-07-05): with the adapter's 5-minute-TTL `ephemeral`
@@ -23,6 +24,10 @@ If pricing changes by more than 25%, the cost tables below must be regenerated a
 
 Change log:
 
+- **2026-07-06**: `ResumeIntakeNode` added on the Haiku tier
+  (`claude-haiku-4-5`, $1.00/$5.00). The onboarding table gains an additive
+  résumé-extraction row; tables NOT regenerated — the row is additive and no
+  existing figure moved.
 - **2026-07-05**: cache-tier pricing added to per-call cost estimation
   (`AdapterConfig.estimate_cost_usd` / `llm_call_log.cost_estimate_usd`):
   cache writes at 1.25x and cache reads at 0.10x the input rate (5-minute
@@ -41,7 +46,13 @@ Change log:
 | Strategist (initial syllabus) | Frontier | 8,000 | 4,000 | $0.140 |
 | Planner (initial task plan) | Sonnet-tier | 6,000 | 8,000 | $0.138 |
 | RAG retrieval (8 queries) | Embedding | 2,000 | — | $0.00004 |
+| Résumé extraction | Haiku-tier (`claude-haiku-4-5`) | 3,500 | 800 | $0.008 |
 | **Total onboarding** | | | | **~$0.28** |
+
+Résumé extraction is user-initiated (the Extract button; 0 or more presses
+per onboarding) and a heuristic prior like every figure here; it is excluded
+from the one-time total above, which predates it and was deliberately not
+regenerated.
 
 ### Replan Cycle (drift-triggered, ~weekly per active user)
 
@@ -139,7 +150,7 @@ this section whenever the cost tables are regenerated.
 - **Per-user hourly cap:** 5 LLM calls per hour. Call-count-based, so unaffected by the pricing change; re-checked 2026-07-04 and kept.
 - **Per-user monthly cap:** $8.00 LLM spend (~5× the expected ~$1.70; alert at 80%). Raised from $4.00 in the 2026-07-04 regeneration (and from $2.00 in the 2026-06-11 one) to preserve the 5× headroom intent.
 - **Per-user retry caps:** 2 validation repair attempts; 2 Scheduler-Planner iterations.
-- **Model tiering:** frontier model only for `StrategistNode`; Sonnet-tier for `PlannerNode`, `ReflectionSummaryNode`, and `UserFacingExplanationNode` (upgraded from small-tier 2026-07-04 — these nodes write every task title and user-facing sentence, so perceived quality lives here).
+- **Model tiering:** frontier model only for `StrategistNode`; Sonnet-tier for `PlannerNode`, `ReflectionSummaryNode`, and `UserFacingExplanationNode` (upgraded from small-tier 2026-07-04 — these nodes write every task title and user-facing sentence, so perceived quality lives here); Haiku-tier for `ResumeIntakeNode` (structured extraction against a deterministic post-validator, user-reviewed before any write — the cheapest tier is sufficient).
 - **Aggressive caching:** identical `user_profile` inputs hit cache for 7 days; see `18-caching-strategy.md`. (Status: realized but unwired — no production composition root constructs the object cache; see 18's wiring-status note. Not an active enforcement mechanism.)
 
 ## Scheduling Quality Metrics

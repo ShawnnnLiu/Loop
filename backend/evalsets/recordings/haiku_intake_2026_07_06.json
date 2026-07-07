@@ -1,0 +1,49 @@
+{
+  "prompt_version": "haiku-intake-smoke-2026-07-06",
+  "model_name": "claude-haiku-4-5",
+  "outputs": {
+    "resume_dense_backend_newgrad": [
+      {
+        "experience": [
+          {
+            "title": "Backend Engineering Intern",
+            "organization": "Acme Cloud",
+            "summary": "Built Python microservices with gRPC, PostgreSQL, and Redis. Containerized services using Docker and Kubernetes; wired CI/CD in GitHub Actions."
+          },
+          {
+            "title": "Teaching Assistant",
+            "organization": "State University",
+            "summary": "Ran weekly sections on data structures and algorithms; graded SQL labs."
+          }
+        ],
+        "skills": [
+          "Python",
+          "gRPC",
+          "PostgreSQL",
+          "Redis",
+          "Docker",
+          "Kubernetes",
+          "GitHub Actions",
+          "Go",
+          "REST"
+        ],
+        "known_strengths": [
+          "microservices",
+          "caching",
+          "containerization"
+        ],
+        "inferred_weak_spots": [
+          "System design",
+          "Distributed systems",
+          "Concurrency"
+        ],
+        "target_company_categories": [
+          "backend platforms",
+          "cloud infrastructure"
+        ]
+      }
+    ]
+  },
+  "judge_scores": {},
+  "taxonomy_version": "skill-taxonomy-v1"
+}

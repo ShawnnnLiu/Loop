@@ -10,6 +10,18 @@
   "experience_level": "intermediate",
   "known_strengths": ["arrays", "hash maps"],
   "known_weaknesses": ["dynamic programming", "system design"],
+  "experience": [
+    {
+      "title": "Senior Backend Engineer",
+      "organization": "Acme Corp",
+      "summary": "Led the billing platform rebuild; Python and Go services."
+    },
+    {
+      "title": "Backend Engineer",
+      "organization": "Initech"
+    }
+  ],
+  "skills": ["Python", "Go", "PostgreSQL"],
   "preferred_session_length_min": 60,
   "max_session_length_min": 120,
   "deep_work_windows": [

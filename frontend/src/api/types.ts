@@ -28,6 +28,14 @@ export interface Preferences {
   avoid_back_to_back_deep_work: boolean
 }
 
+/** Mirror of contracts/user_profile.py::ExperienceItem — one confirmed
+ *  work-experience entry (RI-A). */
+export interface ExperienceItem {
+  title: string
+  organization: string | null
+  summary: string | null
+}
+
 /** Mirror of contracts/user_profile.py::UserProfile. Times are HH:MM strings;
  *  created_at/updated_at are tz-aware ISO datetimes. */
 export interface UserProfile {
@@ -42,6 +50,8 @@ export interface UserProfile {
   experience_level: ExperienceLevel
   known_strengths: string[]
   known_weaknesses: string[]
+  experience: ExperienceItem[]
+  skills: string[]
   preferred_session_length_min: number
   max_session_length_min: number
   deep_work_windows: DeepWorkWindow[]
@@ -65,6 +75,66 @@ export interface OnboardResult {
   created: boolean
   timezone: string
   has_motivation_profile: boolean
+}
+
+// Résumé intake (RI-D). The wizard's Extract button drives one persistence-
+// free POST /api/onboard/extract: the ResumeIntakeNode proposes candidates,
+// the user edits them client-side, and only the finished wizard writes —
+// via POST /api/onboard, the unchanged single write path.
+
+/** Draft answers from earlier wizard steps, all optional (mirror of
+ *  contracts/resume_intake_input.py::DraftProfileContext). */
+export interface DraftProfileContext {
+  goal?: string | null
+  target_role?: string | null
+  experience_level?: ExperienceLevel | null
+  timeline_weeks?: number | null
+  weekly_hours?: number | null
+}
+
+/** Body of POST /api/onboard/extract. The acting user is session-derived;
+ *  the allowed weak-spot vocabulary is service-resolved — the client sends
+ *  neither. */
+export interface ExtractResumePayload {
+  resume_text: string
+  draft_context?: DraftProfileContext
+}
+
+/** Mirror of contracts/resume_extraction.py::ResumeExtraction — the node's
+ *  schema-bound proposal. Provenance is structural, by field group:
+ *  experience/skills = extracted, strengths/weak spots = inferred,
+ *  company categories = suggested. No confidence values anywhere. */
+export interface ResumeExtraction {
+  experience: ExperienceItem[]
+  skills: string[]
+  known_strengths: string[]
+  inferred_weak_spots: string[]
+  target_company_categories: string[]
+}
+
+/** One extracted skill surface resolved onto the taxonomy (mirror of
+ *  app/results.py::CanonicalSkill). `display_name` is what the wizard
+ *  offers to store. */
+export interface CanonicalSkill {
+  skill_id: string
+  display_name: string
+  surface: string
+}
+
+/** Mirror of app/results.py::ExtractResumeResult. An LLM failure arrives as
+ *  a 200 with status "failed" + the typed reason_code — a local, retryable
+ *  UX event, not an ApiError. Out-of-vocabulary skill surfaces come back
+ *  visibly flagged in `skills_unmatched`, never silently promoted. */
+export interface ExtractResumeResult {
+  status: 'ok' | 'failed'
+  run_id: string
+  user_id: string
+  proposal: ResumeExtraction | null
+  skills_canonical: CanonicalSkill[]
+  skills_unmatched: string[]
+  taxonomy_version: string | null
+  reason_code: ReasonCode | null
+  detail: string | null
 }
 
 export interface MeResult {

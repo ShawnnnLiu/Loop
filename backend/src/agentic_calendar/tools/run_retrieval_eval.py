@@ -3,7 +3,7 @@
 Usage::
 
     uv run python -m agentic_calendar.tools.run_retrieval_eval \\
-        --queries evalsets/retrieval_queries_v1.json \\
+        --queries evalsets/retrieval_queries_v2.json \\
         --db corpus/corpus.db --snapshot snap_xxxxxxxxxxxxxxxx [--k 5] \\
         [--mode bm25|hybrid] \\
         [--strict --min-recall 0.8 --min-mrr 0.7 --min-ndcg 0.75]

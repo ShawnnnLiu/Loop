@@ -91,17 +91,21 @@ eval-gate:
 # therefore a LOCAL gate: it needs corpus/corpus.db, rebuilt by re-running
 # the ingest CLI (fetch is ask-first; re-fetching on a later date yields new
 # doc_ids, so keep the db). It is not wired into CI or `check`.
-# Floors are the values MEASURED on the first labeled run (57 cases,
-# 2026-07-06, snapshot snap_b0ce947cafdafc8b): heuristic priors until more
-# labels accumulate. Floors equal to measured always pass until the labels,
-# corpus, chunking, or ranking change.
+# Floors are the values MEASURED on the v2 labeled run (75 cases, 2026-07-06,
+# snapshot snap_26c44499e582a96a — the G-I six-track expansion): heuristic
+# priors until more labels accumulate. For the record, the v1 floors measured
+# on the 3-track snapshot were 0.9181/0.8523/0.8380; re-measuring the same v1
+# queries against the expanded corpus gave 0.9006/0.8289/0.8174 (more corpus =
+# more ranking competition; the drop is honest, not a regression bug). Floors
+# equal to measured always pass until the labels, corpus, chunking, or
+# ranking change.
 retrieval-eval:
 	uv run python -m agentic_calendar.tools.run_retrieval_eval --strict \
-		--queries evalsets/retrieval_queries_v1.json \
+		--queries evalsets/retrieval_queries_v2.json \
 		--db corpus/corpus.db \
-		--snapshot snap_b0ce947cafdafc8b \
+		--snapshot snap_26c44499e582a96a \
 		--k 5 \
-		--min-recall 0.9181 --min-mrr 0.8523 --min-ndcg 0.8380
+		--min-recall 0.8978 --min-mrr 0.8500 --min-ndcg 0.8327
 
 visualize:
 	uv run agentic-calendar-visualize --scenario success --out ../schedule.html

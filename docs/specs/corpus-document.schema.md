@@ -55,8 +55,10 @@ are derived — see Field Semantics.)
 
 `track_tags` values come from `contracts/career_track.py` — the closed track
 enum shared with the résumé-intake skill taxonomy
-(`skill-taxonomy.schema.md`, planned). Starting members: `swe`, `mle`,
-`ai_engineer`. New tracks are added to the enum in review, never free-typed.
+(`skill-taxonomy.schema.md`, planned). Members: `swe`, `mle`, `ai_engineer`
+(starting three), plus `quant_dev`, `data_scientist`, `product_manager`
+(grounding G-I track expansion). New tracks are added to the enum in review,
+never free-typed.
 
 ## Contract vs. Registry Responsibility
 

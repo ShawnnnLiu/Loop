@@ -12,7 +12,14 @@ from agentic_calendar.contracts.career_track import CareerTrack
 
 
 def test_member_values_are_pinned() -> None:
-    assert [track.value for track in CareerTrack] == ["swe", "mle", "ai_engineer"]
+    assert [track.value for track in CareerTrack] == [
+        "swe",
+        "mle",
+        "ai_engineer",
+        "quant_dev",
+        "data_scientist",
+        "product_manager",
+    ]
 
 
 def test_values_round_trip_from_strings() -> None:

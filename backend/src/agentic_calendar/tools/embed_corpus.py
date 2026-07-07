@@ -4,7 +4,7 @@ Usage::
 
     uv run python -m agentic_calendar.tools.embed_corpus \\
         --db corpus/corpus.db --snapshot snap_xxxxxxxxxxxxxxxx \\
-        --queries evalsets/retrieval_queries_v1.json [--dry-run] \\
+        --queries evalsets/retrieval_queries_v2.json [--dry-run] \\
         [--max-tokens 1000000]
 
 This is the ONLY place embedding provider calls happen (ask-first networked

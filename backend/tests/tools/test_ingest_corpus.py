@@ -424,7 +424,9 @@ def test_repo_manifest_is_valid_and_consistent_with_classifier() -> None:
         )
 
 
-def test_repo_manifest_covers_all_three_starter_tracks() -> None:
+def test_repo_manifest_covers_every_track() -> None:
+    # Three starter tracks (G-B) plus the G-I expansion — a new enum member
+    # without manifest sources would ship a track with no corpus behind it.
     manifest = load_manifest(_REPO_MANIFEST)
     covered = {tag for source in manifest.sources for tag in source.track_tags}
-    assert covered == {CareerTrack.SWE, CareerTrack.MLE, CareerTrack.AI_ENGINEER}
+    assert covered == set(CareerTrack)

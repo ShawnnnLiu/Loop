@@ -24,3 +24,6 @@ class CareerTrack(StrEnum):
     SWE = "swe"
     MLE = "mle"
     AI_ENGINEER = "ai_engineer"
+    QUANT_DEV = "quant_dev"
+    DATA_SCIENTIST = "data_scientist"
+    PRODUCT_MANAGER = "product_manager"

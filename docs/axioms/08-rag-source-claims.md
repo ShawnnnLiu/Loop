@@ -250,6 +250,26 @@ URLs); fuzzier similarity linking is deliberately absent — an unvalidated
 threshold the deterministic scorer would then amplify (open question, not an
 implementation gap).
 
+## Freshness Monitoring (Grounding Layer)
+
+Freshness *machinery* — expiry stamps, the inclusive `is_expired` boundary,
+the stale-penalty ramp — is enforced per claim by the priors above. The
+*report* over it is `tools/corpus_stats.py`: expired and stale-window claim
+shares per source type and per track (joined to corpus documents by document
+URL), corpus document age distributions per track, and snapshot ages.
+
+- A claim counts as **in the stale window** when it is unexpired but within
+  `stale_ramp_days` (30) of expiry — the same prior the scorer ramps on,
+  never a second threshold.
+- A **track counts as decaying** when more than **50%** of its claims are
+  expired-or-stale. This threshold is a heuristic prior like every other
+  threshold in this document: chosen to be plausible (an evidence base more
+  old than fresh warrants a refresh), not derived from data, and tunable.
+- The refresh loop is deliberately **manual in v1**: an operator reads the
+  stats view and re-runs the two gated CLIs (`ingest_corpus`, hash-idempotent,
+  then `refresh_claims`, claim-id-idempotent). No cron, no automation — corpus
+  fetches are networked side effects and stay ask-first.
+
 ## Related Docs
 
 - `01-system-boundaries.md`

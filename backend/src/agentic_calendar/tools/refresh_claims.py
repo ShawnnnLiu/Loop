@@ -4,7 +4,7 @@ Usage::
 
     # Offline preview: assemble, classify, score — write nothing.
     uv run python -m agentic_calendar.tools.refresh_claims \\
-        --queries corpus/claim_queries_v1.json \\
+        --queries corpus/claim_queries_v2.json \\
         --manifest corpus/manifest_v1.json \\
         --corpus-db corpus/corpus.db --snapshot snap_xxxxxxxxxxxxxxxx \\
         --dry-run

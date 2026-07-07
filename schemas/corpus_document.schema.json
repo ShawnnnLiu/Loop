@@ -5,7 +5,10 @@
       "enum": [
         "swe",
         "mle",
-        "ai_engineer"
+        "ai_engineer",
+        "quant_dev",
+        "data_scientist",
+        "product_manager"
       ],
       "title": "CareerTrack",
       "type": "string"

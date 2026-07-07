@@ -76,6 +76,29 @@ export function reconcileBanner(result: CalendarReconciliationResult): Reconcile
   }
 }
 
+/** Stable identity of what a warning banner is nagging about, used to persist a
+ *  dismissal. Deletions and rejected moves are re-detected by EVERY pull (the
+ *  event stays gone / stays at the invalid time), so the same banner regenerates
+ *  on each Week mount even though the deletion is already durably recorded
+ *  server-side (event_deleted disposition → DraftView.deleted_task_ids). A
+ *  dismissal therefore keys on the flagged content: same flagged set → same key
+ *  → stays dismissed; a new deletion, a re-move to a different invalid time, or
+ *  a new plan version changes the key and re-surfaces the banner.
+ *
+ *  Deliberately flagged-only: adopted edits self-heal (the next pull sees them
+ *  as unchanged), so a mixed banner collapsing to flagged-only with the same
+ *  flagged set must keep its key rather than re-nag. Null when there is nothing
+ *  recurring to dismiss — no banner, or an adopted-only banner. */
+export function reconcileDismissKey(result: CalendarReconciliationResult): string | null {
+  const banner = reconcileBanner(result)
+  if (banner == null || banner.flagged.length === 0) return null
+  const sig = banner.flagged
+    .map((d) => `${d.task_id}:${d.disposition}:${d.observed_start ?? ''}:${d.observed_end ?? ''}`)
+    .sort()
+    .join('|')
+  return `${result.plan_version}::${sig}`
+}
+
 /** The server-stamped instant this pull actually compared the plan against the
  *  user's Google Calendar (ms since epoch) — the honest "synced X ago" time for
  *  the Week indicator. Null when no comparison ran (`sync_disabled` /

@@ -27,6 +27,7 @@ import {
   flaggedReason,
   needsDraftRefetch,
   reconcileBanner,
+  reconcileDismissKey,
   syncedAtMs,
 } from '../lib/reconcile'
 import { RECOVERY_OPTIONS, planDiffLine, reviewBanner, reviewMode } from '../lib/review'
@@ -77,6 +78,12 @@ type DragState = { taskId: string; dayIdx: number; startMin: number }
 // choice is cosmetic, so it lives client-side only.
 type ReviewViewKind = 'grid' | 'plan'
 const VIEW_PREF_KEY = 'loop.review.view'
+// Last dismissed reconcile-banner key (lib/reconcile.ts reconcileDismissKey).
+// Client-side only by design: the flagged edits themselves are already durable
+// server truth (event_deleted dispositions → DraftView.deleted_task_ids, and
+// the grid/rail mark each block), so dismissing the roll-up banner loses
+// nothing — it just stops the same pull re-nagging on every Week mount.
+const RECON_DISMISS_KEY = 'loop.review.reconcileDismissed'
 
 function toBlocks(view: DraftView): Block[] {
   const titles = view.task_titles
@@ -132,6 +139,14 @@ export function ScheduleReviewScreen() {
   const [syncEnabled, setSyncEnabled] = useState(false)
   const [reconcileResult, setReconcileResult] = useState<CalendarReconciliationResult | null>(null)
   const [reconcileError, setReconcileError] = useState<string | null>(null)
+  const [reconHidden, setReconHidden] = useState(false)
+  const [dismissedReconKey, setDismissedReconKey] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem(RECON_DISMISS_KEY)
+    } catch {
+      return null
+    }
+  })
   const reconciledRef = useRef(false)
   const mountedRef = useRef(true)
   const colsRef = useRef<HTMLDivElement>(null)
@@ -290,6 +305,22 @@ export function ScheduleReviewScreen() {
   const banner = reviewBanner(mode, status)
   const pendingChoice = mode === 'replan' && (status?.recovery_mode_pending_user_choice ?? false)
   const recon = reconcileResult ? reconcileBanner(reconcileResult) : null
+  // Dismissal: hidden for this visit once ×'d, and — for warning banners, whose
+  // flagged edits are re-detected by every pull — persistently, until the
+  // flagged content changes (new deletion, different move, new plan version).
+  const reconKey = reconcileResult ? reconcileDismissKey(reconcileResult) : null
+  const reconDismissed = reconHidden || (reconKey != null && reconKey === dismissedReconKey)
+  const dismissRecon = () => {
+    setReconHidden(true)
+    if (reconKey != null) {
+      setDismissedReconKey(reconKey)
+      try {
+        localStorage.setItem(RECON_DISMISS_KEY, reconKey)
+      } catch {
+        // Storage unavailable → the dismissal still holds for this visit.
+      }
+    }
+  }
   // The "Google Calendar synced" indicator (banner, both Grid and Plan views).
   // Rendered only when the mount reconcile actually runs (its exact
   // precondition: opted in + an active plan), and each state says only what is
@@ -680,13 +711,23 @@ export function ScheduleReviewScreen() {
         </div>
       )}
 
-      {recon && (
+      {recon && !reconDismissed && (
         <div
           className={`recon-banner ${recon.tone === 'adopted' ? 'recon-ok' : 'recon-warn'}`}
           style={{ margin: '12px clamp(16px,4vw,26px) 0' }}
           role="status"
         >
-          <div style={{ fontWeight: 600, fontSize: 14 }}>{recon.title}</div>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+            <div style={{ fontWeight: 600, fontSize: 14, flex: 1 }}>{recon.title}</div>
+            <button
+              className="recon-dismiss"
+              type="button"
+              aria-label="Dismiss calendar sync notice"
+              onClick={dismissRecon}
+            >
+              ×
+            </button>
+          </div>
           <div style={{ fontSize: 13, marginTop: 2, opacity: 0.85 }}>{recon.sub}</div>
           {recon.adopted.some((d) => advisoryNote(d) != null) && (
             // Non-blocking heads-ups on ADOPTED edits (ADR-0008/0009): the move

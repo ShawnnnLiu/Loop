@@ -141,6 +141,25 @@ def onboard(
     return _json(service.onboard(payload))
 
 
+@router.post("/onboard/extract")
+def onboard_extract(
+    service: Service,
+    user_id: ActingUser,
+    payload: Annotated[dict[str, Any], Body()],
+) -> JSONResponse:
+    """Persistence-free résumé extraction for the wizard's Résumé step.
+
+    Body: ``{resume_text, draft_context?}``. The acting user is session-derived;
+    a client-supplied ``user_id`` is ignored (the onboard trust boundary). LLM
+    failures return HTTP 200 with the typed ``reason_code``; contract-invalid
+    payloads (résumé too short/long, bad draft context) are the standard 422.
+    Nothing persists — the only profile write path stays ``POST /api/onboard``.
+    Rate limiting beyond auth is deliberately deferred for the MVP: extraction
+    sits behind an explicit button on per-press-priced Haiku calls.
+    """
+    return _json(service.extract_resume(user_id, payload))
+
+
 @router.post("/propose")
 def propose(
     request: Request,

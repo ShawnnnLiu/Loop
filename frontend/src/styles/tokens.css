@@ -486,6 +486,19 @@ select.input {
   padding: 12px 14px;
   border: 1px solid;
 }
+.recon-banner .recon-dismiss {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 17px;
+  line-height: 1;
+  padding: 0 2px;
+  cursor: pointer;
+  opacity: 0.55;
+}
+.recon-banner .recon-dismiss:hover {
+  opacity: 1;
+}
 .recon-banner .recon-list {
   margin: 8px 0 0;
   padding-left: 18px;

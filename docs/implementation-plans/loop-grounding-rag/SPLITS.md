@@ -104,7 +104,9 @@ the shipped v1 posture).
   corroboration (+ the near-duplicates-do-NOT-link restraint test); D1
   serving filter reused untouched (or built to its HANDOFF spec if D1 was
   cut); axiom 08 sentence on deterministic assembly. Then
-  `eval_set_v3.json` grounded/ungrounded twins, three Tier-1 graders
+  `eval_set_v4.json` grounded/ungrounded twins (named `v3` at planning
+  time; renamed when résumé intake's `eval_set_v3.json` reached main
+  first), three Tier-1 graders
   (citation coverage, claim utilization, high-confidence share), Tier-2
   groundedness rubric (advisory), captures, `run_llm_eval --compare`,
   eval-gate floors.

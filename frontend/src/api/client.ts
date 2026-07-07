@@ -6,6 +6,8 @@ import type {
   CheckinResult,
   DraftAdjustment,
   DraftView,
+  ExtractResumePayload,
+  ExtractResumeResult,
   MeResult,
   OnboardPayload,
   OnboardResult,
@@ -83,6 +85,12 @@ export const api = {
   thresholds: () => request<ThresholdsResult>('GET', '/thresholds'),
   accountability: () => request<AccountabilityResult>('GET', '/accountability'),
   onboard: (payload: OnboardPayload) => request<OnboardResult>('POST', '/onboard', payload),
+  // Résumé intake (RI-D): persistence-free extraction behind the wizard's
+  // explicit Extract button. An LLM failure is a 200 with status "failed" +
+  // typed reason_code (inspected, not caught); only a contract-invalid
+  // payload 422s. Nothing is stored until the wizard finishes via onboard.
+  extractResume: (payload: ExtractResumePayload) =>
+    request<ExtractResumeResult>('POST', '/onboard/extract', payload),
   propose: (body: ProposeRequest = {}) => request<ProposeResult>('POST', '/propose', body),
   // Approval gate (F-F). `approve` records the explicit decision and mints the
   // approval_event_id + hash the write requires; `write` is the only call that

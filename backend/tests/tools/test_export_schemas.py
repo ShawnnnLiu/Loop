@@ -87,6 +87,10 @@ def test_every_contract_registered() -> None:
         # Loop: grounding layer (retrieval pipeline, G-D)
         "retrieval_query",
         "retrieval_result",
+        # Loop: résumé intake onboarding
+        "resume_extraction",
+        "resume_intake_input",
+        "skill_taxonomy",
     }
     assert set(CONTRACTS.keys()) == expected
 

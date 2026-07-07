@@ -227,7 +227,7 @@ stops citing.
 
 | Number | Artifact |
 | --- | --- |
-| Grounded/ungrounded Tier-1 rates (0.6444 / 0.8667 / 1.0 / 0 fabricated; 6/6 validity) | `backend/evalsets/recordings/grounding_2026_07_06.json` + `backend/evalsets/reports/grounding_2026_07_06.report.json`, graded by `run_llm_eval` against `backend/evalsets/eval_set_v3.json` |
+| Grounded/ungrounded Tier-1 rates (0.6444 / 0.8667 / 1.0 / 0 fabricated; 6/6 validity) | `backend/evalsets/recordings/grounding_2026_07_06.json` + `backend/evalsets/reports/grounding_2026_07_06.report.json`, graded by `run_llm_eval` against `backend/evalsets/eval_set_v4.json` |
 | Citation-coverage gate floor 0.6444 | `backend/Makefile` `eval-gate` target (`--min-citation-coverage`) |
 | v1 retrieval metrics (0.9181 / 0.8523 / 0.8380) | `backend/evalsets/retrieval_queries_v1.json` vs snapshot `snap_b0ce947cafdafc8b` (G-D commit) |
 | v1-on-expanded-corpus (0.9006 / 0.8289 / 0.8174) | same query file vs snapshot `snap_26c44499e582a96a` (G-I commit message) |

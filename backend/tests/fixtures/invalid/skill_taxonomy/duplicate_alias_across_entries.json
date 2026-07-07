@@ -1,0 +1,21 @@
+{
+  "taxonomy_version": "skill-taxonomy-v1",
+  "entries": [
+    {
+      "skill_id": "skill.python",
+      "display_name": "Python",
+      "aliases": ["python"],
+      "track_tags": ["swe"],
+      "kind": "language",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.python-lang",
+      "display_name": "Python (language)",
+      "aliases": ["python"],
+      "track_tags": ["swe"],
+      "kind": "language",
+      "corpus_evidence": null
+    }
+  ]
+}

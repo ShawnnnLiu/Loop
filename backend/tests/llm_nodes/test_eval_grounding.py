@@ -29,7 +29,7 @@ from agentic_calendar.llm_nodes.eval import (
 from agentic_calendar.llm_nodes.eval_judge import judge_groundedness
 from tests._fixture_loader import iter_valid
 
-_EVAL_SET_V3 = Path(__file__).parents[2] / "evalsets" / "eval_set_v3.json"
+_EVAL_SET_V4 = Path(__file__).parents[2] / "evalsets" / "eval_set_v4.json"
 
 
 def _module(module_id: str, cited: list[str]) -> dict[str, Any]:
@@ -234,16 +234,17 @@ def test_judge_groundedness_skips_cases_without_valid_output() -> None:
 
 
 # --------------------------------------------------------------------------- #
-# the committed v3 eval set
+# the committed v4 eval set (the grounded/ungrounded twins; v3 is the
+# résumé-intake set that landed on main first)
 # --------------------------------------------------------------------------- #
 
 
-def test_eval_set_v3_twins_are_consistent() -> None:
+def test_eval_set_v4_twins_are_consistent() -> None:
     """Every grounded case pins full contract-valid claims from the real
     store; every ungrounded twin refs its grounded profile with an empty
     claim list — today's production, verbatim."""
-    eval_set = EvalSet.model_validate(json.loads(_EVAL_SET_V3.read_text(encoding="utf-8")))
-    assert eval_set.eval_set_version == "v3"
+    eval_set = EvalSet.model_validate(json.loads(_EVAL_SET_V4.read_text(encoding="utf-8")))
+    assert eval_set.eval_set_version == "v4"
     by_id = {case.case_id: case for case in eval_set.cases}
     grounded = [c for c in eval_set.cases if c.case_id.endswith("_grounded")]
     ungrounded = [c for c in eval_set.cases if c.case_id.endswith("_ungrounded")]
@@ -261,14 +262,14 @@ def test_eval_set_v3_twins_are_consistent() -> None:
         assert ref in by_id and by_id[ref].inputs.get("user_profile")
 
 
-def test_eval_set_v3_claims_do_not_overlap_fixture_claim_ids() -> None:
-    """v3 claims are content-hash ids from the real corpus, disjoint from the
+def test_eval_set_v4_claims_do_not_overlap_fixture_claim_ids() -> None:
+    """v4 claims are content-hash ids from the real corpus, disjoint from the
     hand-written fixture claim ids used by golden tests."""
-    eval_set = EvalSet.model_validate(json.loads(_EVAL_SET_V3.read_text(encoding="utf-8")))
+    eval_set = EvalSet.model_validate(json.loads(_EVAL_SET_V4.read_text(encoding="utf-8")))
     fixture_ids = {str(fixture.payload["claim_id"]) for fixture in iter_valid("source_claim")}
-    v3_ids = {
+    v4_ids = {
         str(raw["claim_id"])
         for case in eval_set.cases
         for raw in case.inputs.get("source_claims", [])
     }
-    assert v3_ids and not v3_ids & fixture_ids
+    assert v4_ids and not v4_ids & fixture_ids

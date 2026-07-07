@@ -1,6 +1,6 @@
 {
   "call_aggregates": {},
-  "eval_set_version": "v3",
+  "eval_set_version": "v4",
   "groundedness_scores": {
     "strategist_aie_grounded": {
       "groundedness": 4

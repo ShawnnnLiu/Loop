@@ -41,6 +41,7 @@ from agentic_calendar.llm_nodes.planner import FixturePlanner
 from agentic_calendar.llm_nodes.reflection_summary import (
     DeterministicReflectionSummary,
 )
+from agentic_calendar.llm_nodes.resume_intake import FixtureResumeIntake
 from agentic_calendar.llm_nodes.strategist import FixtureStrategist
 from agentic_calendar.llm_nodes.user_facing_explanation import (
     DeterministicUserFacingExplanation,
@@ -464,6 +465,7 @@ def test_populated_store_feeds_strategist_through_curation_and_validation(
             planner=FixturePlanner({syllabus.syllabus_version: plan}),
             reflection=DeterministicReflectionSummary(),
             explanation=DeterministicUserFacingExplanation(),
+            resume_intake=FixtureResumeIntake(taxonomy_aliases={"python": "Python"}),
         )
 
     env = build_environment(

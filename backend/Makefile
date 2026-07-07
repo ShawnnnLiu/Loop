@@ -57,6 +57,9 @@ schema-check:
 # vacuous on these recordings and arms on the first recording that
 # exercises repair. Grading a committed recording is deterministic —
 # floors equal to measured always pass until a new recording lands.
+# The v3 pair (resume_intake, RI-E) grades the FixtureResumeIntake
+# recording — validity there includes the groundedness/vocabulary
+# invariants, so the gate also guards the eval wiring itself.
 eval-gate:
 	uv run python -m agentic_calendar.tools.run_llm_eval --strict \
 		--eval-set evalsets/eval_set_v1.json \
@@ -75,11 +78,15 @@ eval-gate:
 		--min-schema-validity-rate 1.0 --min-repair-recovery-rate 1.0
 	uv run python -m agentic_calendar.tools.run_llm_eval --strict \
 		--eval-set evalsets/eval_set_v3.json \
+		--recording evalsets/recordings/fixture_resume_intake.json \
+		--min-schema-validity-rate 1.0 --min-repair-recovery-rate 1.0
+	uv run python -m agentic_calendar.tools.run_llm_eval --strict \
+		--eval-set evalsets/eval_set_v4.json \
 		--recording evalsets/recordings/grounding_2026_07_06.json \
 		--min-schema-validity-rate 1.0 --min-repair-recovery-rate 1.0 \
 		--min-citation-coverage 0.6444
 
-# The v3 pair grades the grounded/ungrounded twins (grounding-RAG G-H).
+# The v4 pair grades the grounded/ungrounded twins (grounding-RAG G-H).
 # citation-coverage floor seeded at the measured grounded-arm value
 # (2026-07-06 capture: coverage 0.6444, utilization 0.8667, zero unknown
 # citations) — a heuristic prior like every seeded floor.

@@ -1,0 +1,7 @@
+{
+  "error_substrings": [
+    "aliases must be globally unique",
+    "skill.python",
+    "skill.python-lang"
+  ]
+}

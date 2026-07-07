@@ -10,6 +10,7 @@ deterministic fields are always sufficient to act on without reading them.
 from __future__ import annotations
 
 from datetime import date, datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -21,6 +22,7 @@ from agentic_calendar.contracts.drift_event import DriftEvent
 from agentic_calendar.contracts.plan_diff import PlanDiff
 from agentic_calendar.contracts.reason_codes import ReasonCode
 from agentic_calendar.contracts.recommitment import RecommitmentChoice
+from agentic_calendar.contracts.resume_extraction import ResumeExtraction
 from agentic_calendar.contracts.scheduler_output import RepairOption, UnscheduledTask
 from agentic_calendar.contracts.threshold_change_log import ThresholdChange
 from agentic_calendar.contracts.user_profile import UserProfile
@@ -40,6 +42,47 @@ class OnboardResult(BaseModel):
     """``True`` on first onboarding, ``False`` when an existing record was updated."""
     timezone: str
     has_motivation_profile: bool
+
+
+class CanonicalSkill(BaseModel):
+    """One extracted skill surface resolved onto the taxonomy (deterministic
+    alias lookup, ``skill_taxonomy/``). ``surface`` is the résumé span the node
+    emitted; ``display_name`` is what the wizard offers to store."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    skill_id: str
+    display_name: str
+    surface: str
+
+
+class ExtractResumeResult(BaseModel):
+    """Outcome of one persistence-free résumé extraction (RI-C).
+
+    ``proposal`` is the node's schema-bound candidate verbatim — the frontend
+    maps its field groups to provenance labels; nothing here is stored until
+    the user finishes the wizard through ``POST /api/onboard``. The
+    normalized-skills view rides beside it: matched surfaces as
+    ``skills_canonical``, out-of-vocabulary surfaces visibly flagged in
+    ``skills_unmatched`` (never silently promoted). An LLM failure is a
+    normal result with ``status="failed"`` and the typed ``reason_code`` —
+    a local, retryable UX event, not a run failure.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    status: Literal["ok", "failed"]
+    run_id: str
+    """Service-minted ``intake-``-prefixed correlation id (llm-call-log spec)."""
+    user_id: str
+    proposal: ResumeExtraction | None = None
+    skills_canonical: list[CanonicalSkill] = Field(default_factory=list)
+    """One entry per matched taxonomy entry (first surface wins when two
+    surfaces resolve to the same entry — profile skills are unique)."""
+    skills_unmatched: list[str] = Field(default_factory=list)
+    taxonomy_version: str | None = None
+    reason_code: ReasonCode | None = None
+    detail: str | None = None
 
 
 class ProposeResult(BaseModel):

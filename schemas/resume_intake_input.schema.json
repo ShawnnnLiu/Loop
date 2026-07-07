@@ -1,0 +1,118 @@
+{
+  "$defs": {
+    "DraftProfileContext": {
+      "additionalProperties": false,
+      "description": "Draft onboarding answers; every field optional (unanswered = ``None``).",
+      "properties": {
+        "experience_level": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExperienceLevel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "goal": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Goal"
+        },
+        "target_role": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target Role"
+        },
+        "timeline_weeks": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Timeline Weeks"
+        },
+        "weekly_hours": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "maximum": 40,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Weekly Hours"
+        }
+      },
+      "title": "DraftProfileContext",
+      "type": "object"
+    },
+    "ExperienceLevel": {
+      "enum": [
+        "beginner",
+        "intermediate",
+        "advanced"
+      ],
+      "title": "ExperienceLevel",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Validated input bundle for the ResumeIntakeNode.",
+  "properties": {
+    "allowed_weak_spots": {
+      "items": {
+        "maxLength": 60,
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Allowed Weak Spots",
+      "type": "array"
+    },
+    "draft_context": {
+      "$ref": "#/$defs/DraftProfileContext"
+    },
+    "resume_text": {
+      "maxLength": 40000,
+      "minLength": 50,
+      "title": "Resume Text",
+      "type": "string"
+    },
+    "user_id": {
+      "minLength": 1,
+      "title": "User Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "user_id",
+    "resume_text"
+  ],
+  "title": "ResumeIntakeInput",
+  "type": "object"
+}

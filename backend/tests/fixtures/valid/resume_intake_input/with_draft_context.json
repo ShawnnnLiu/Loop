@@ -1,0 +1,12 @@
+{
+  "user_id": "user_123",
+  "resume_text": "Senior backend engineer with 4 years of experience in Python and Go. Led the billing platform rebuild at Acme Corp; on-call rotation owner. Strengths: distributed systems, API design.",
+  "draft_context": {
+    "goal": "Backend SWE interview prep",
+    "target_role": "Backend SWE",
+    "experience_level": "intermediate",
+    "timeline_weeks": 10,
+    "weekly_hours": 8
+  },
+  "allowed_weak_spots": ["System design", "Dynamic programming", "SQL"]
+}

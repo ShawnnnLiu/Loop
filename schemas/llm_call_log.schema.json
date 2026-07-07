@@ -1,12 +1,13 @@
 {
   "$defs": {
     "LlmNodeName": {
-      "description": "The four allowed LLM nodes (axiom 01); no other caller may log here.",
+      "description": "The five allowed LLM nodes (axiom 01); no other caller may log here.",
       "enum": [
         "strategist",
         "planner",
         "reflection_summary",
-        "user_facing_explanation"
+        "user_facing_explanation",
+        "resume_intake"
       ],
       "title": "LlmNodeName",
       "type": "string"

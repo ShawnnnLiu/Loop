@@ -1,0 +1,13 @@
+{
+  "taxonomy_version": "v1",
+  "entries": [
+    {
+      "skill_id": "skill.python",
+      "display_name": "Python",
+      "aliases": ["python"],
+      "track_tags": ["swe"],
+      "kind": "language",
+      "corpus_evidence": null
+    }
+  ]
+}

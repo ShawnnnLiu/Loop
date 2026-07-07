@@ -10,6 +10,7 @@ import {
   flaggedReason,
   needsDraftRefetch,
   reconcileBanner,
+  reconcileDismissKey,
   syncedAtMs,
 } from './reconcile'
 
@@ -184,6 +185,49 @@ describe('advisoryNote', () => {
     expect(advisoryNote(deletedDelta)).toBeNull()
     // An unknown advisory code says nothing rather than inventing a note.
     expect(advisoryNote(delta({ disposition: 'adopted', reason_code: 'SOME_NEW_CODE' }))).toBeNull()
+  })
+})
+
+describe('reconcileDismissKey', () => {
+  it('is null when there is nothing recurring to dismiss — no banner, or adopted-only (which self-heals off the next pull)', () => {
+    expect(reconcileDismissKey(result('no_change', []))).toBeNull()
+    expect(reconcileDismissKey(result('sync_disabled', []))).toBeNull()
+    expect(reconcileDismissKey(result('adopted', [adoptedDelta]))).toBeNull()
+  })
+
+  it('is stable across pulls that re-detect the same flagged edits (different run/timestamp)', () => {
+    // Deleted events stay gone, so every Week-mount pull re-produces the same
+    // flagged deltas — the whole reason a dismissal must key on content.
+    const first = result('flagged', [rejectedDelta, deletedDelta])
+    const later: CalendarReconciliationResult = {
+      ...result('flagged', [deletedDelta, rejectedDelta]), // order-independent too
+      run_id: 'run_2',
+      reconciled_at: '2026-06-24T08:00:00-07:00',
+    }
+    expect(reconcileDismissKey(first)).not.toBeNull()
+    expect(reconcileDismissKey(later)).toBe(reconcileDismissKey(first))
+  })
+
+  it('keeps its key when a mixed banner collapses to flagged-only with the same flagged set', () => {
+    // The adopted half self-heals (next pull sees it unchanged); the surviving
+    // deletion is the same nag, so it must stay dismissed.
+    const mixed = result('mixed', [adoptedDelta, deletedDelta])
+    const flaggedOnly = result('flagged', [deletedDelta])
+    expect(reconcileDismissKey(mixed)).toBe(reconcileDismissKey(flaggedOnly))
+  })
+
+  it('changes when the flagged content changes — new deletion, re-moved edit, or new plan version', () => {
+    const base = result('flagged', [deletedDelta])
+    const extraDeletion = result('flagged', [
+      deletedDelta,
+      delta({ ...deletedDelta, task_id: 'dp_d2' }),
+    ])
+    const movedAgain = result('flagged', [
+      delta({ ...rejectedDelta, observed_start: '2026-06-25T23:00:00-07:00', observed_end: '2026-06-26T00:30:00-07:00' }),
+    ])
+    const newPlan: CalendarReconciliationResult = { ...base, plan_version: 'plan_005' }
+    const keys = [base, extraDeletion, movedAgain, newPlan].map(reconcileDismissKey)
+    expect(new Set(keys).size).toBe(keys.length)
   })
 })
 

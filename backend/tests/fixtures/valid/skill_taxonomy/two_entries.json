@@ -1,0 +1,25 @@
+{
+  "taxonomy_version": "skill-taxonomy-v1",
+  "entries": [
+    {
+      "skill_id": "skill.system-design",
+      "display_name": "System design",
+      "aliases": ["system design", "systems design"],
+      "track_tags": ["swe", "mle", "ai_engineer"],
+      "kind": "concept",
+      "corpus_evidence": null
+    },
+    {
+      "skill_id": "skill.python",
+      "display_name": "Python",
+      "aliases": ["python", "python3"],
+      "track_tags": ["swe"],
+      "kind": "language",
+      "corpus_evidence": {
+        "snapshot_id": "corpus-snapshot-000",
+        "occurrence_count": 12,
+        "supporting_doc_ids": ["doc_001", "doc_002"]
+      }
+    }
+  ]
+}

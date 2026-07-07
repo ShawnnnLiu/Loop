@@ -1,0 +1,218 @@
+{
+  "prompt_version": "fixture-resume-intake-2026-07-06",
+  "model_name": "recorded-fixtures",
+  "outputs": {
+    "resume_dense_backend_newgrad": [
+      {
+        "experience": [
+          {
+            "title": "Backend Engineering Intern",
+            "organization": "Acme Cloud",
+            "summary": null
+          },
+          {
+            "title": "Teaching Assistant",
+            "organization": "State University",
+            "summary": null
+          }
+        ],
+        "skills": [
+          "Python",
+          "microservices",
+          "gRPC",
+          "PostgreSQL",
+          "Redis",
+          "Docker",
+          "Kubernetes",
+          "CI/CD",
+          "GitHub Actions",
+          "data structures",
+          "algorithms",
+          "SQL",
+          "Go",
+          "caching",
+          "REST"
+        ],
+        "known_strengths": [
+          "backend services",
+          "API design"
+        ],
+        "inferred_weak_spots": [
+          "System design",
+          "Dynamic programming"
+        ],
+        "target_company_categories": [
+          "infra startups",
+          "big tech"
+        ]
+      }
+    ],
+    "resume_career_switcher": [
+      {
+        "experience": [
+          {
+            "title": "Financial Analyst",
+            "organization": "Brightline Capital",
+            "summary": null
+          },
+          {
+            "title": "Operations Associate",
+            "organization": "Metro Health",
+            "summary": null
+          }
+        ],
+        "skills": [
+          "Python",
+          "SQL",
+          "Django",
+          "PostgreSQL",
+          "Git"
+        ],
+        "known_strengths": [
+          "backend services",
+          "API design"
+        ],
+        "inferred_weak_spots": [
+          "System design",
+          "Dynamic programming"
+        ],
+        "target_company_categories": [
+          "infra startups",
+          "big tech"
+        ]
+      }
+    ],
+    "resume_sparse_two_lines": [
+      {
+        "experience": [],
+        "skills": [],
+        "known_strengths": [
+          "shipped real projects"
+        ],
+        "inferred_weak_spots": [
+          "System design"
+        ],
+        "target_company_categories": [
+          "product startups",
+          "big tech"
+        ]
+      }
+    ],
+    "resume_prompt_injection": [
+      {
+        "experience": [
+          {
+            "title": "Software Engineer",
+            "organization": "Stripe",
+            "summary": null
+          }
+        ],
+        "skills": [
+          "Go",
+          "Java"
+        ],
+        "known_strengths": [
+          "backend services",
+          "API design"
+        ],
+        "inferred_weak_spots": [
+          "System design",
+          "Dynamic programming"
+        ],
+        "target_company_categories": [
+          "infra startups",
+          "big tech"
+        ]
+      }
+    ],
+    "resume_non_tech": [
+      {
+        "experience": [
+          {
+            "title": "Head Pastry Chef",
+            "organization": "Butterflake Bakery",
+            "summary": null
+          },
+          {
+            "title": "Catering Lead",
+            "organization": "Fig & Vine Events",
+            "summary": null
+          }
+        ],
+        "skills": [],
+        "known_strengths": [
+          "shipped real projects"
+        ],
+        "inferred_weak_spots": [
+          "System design"
+        ],
+        "target_company_categories": [
+          "product startups",
+          "big tech"
+        ]
+      }
+    ],
+    "resume_variant_casing": [
+      {
+        "experience": [
+          {
+            "title": "Full-Stack Developer",
+            "organization": "Nimbus Labs",
+            "summary": null
+          }
+        ],
+        "skills": [
+          "React",
+          "js",
+          "TypeScript",
+          "PostgreSQL",
+          "Redis",
+          "K8s",
+          "GraphQL"
+        ],
+        "known_strengths": [
+          "backend services",
+          "API design"
+        ],
+        "inferred_weak_spots": [
+          "System design",
+          "Dynamic programming"
+        ],
+        "target_company_categories": [
+          "infra startups",
+          "big tech"
+        ]
+      }
+    ],
+    "resume_fabricated_skill": [
+      {
+        "experience": [
+          {
+            "title": "Backend Developer",
+            "organization": "Vantage Analytics",
+            "summary": null
+          }
+        ],
+        "skills": [
+          "Python",
+          "PostgreSQL",
+          "js"
+        ],
+        "known_strengths": [
+          "backend services",
+          "API design"
+        ],
+        "inferred_weak_spots": [
+          "System design",
+          "Dynamic programming"
+        ],
+        "target_company_categories": [
+          "infra startups",
+          "big tech"
+        ]
+      }
+    ]
+  },
+  "judge_scores": {},
+  "taxonomy_version": "skill-taxonomy-v1"
+}

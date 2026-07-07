@@ -1,0 +1,137 @@
+{
+  "$defs": {
+    "CareerTrack": {
+      "description": "Closed set of supported career-preparation tracks.",
+      "enum": [
+        "swe",
+        "mle",
+        "ai_engineer",
+        "quant_dev",
+        "data_scientist",
+        "product_manager"
+      ],
+      "title": "CareerTrack",
+      "type": "string"
+    },
+    "CorpusEvidence": {
+      "additionalProperties": false,
+      "description": "Corpus-derived annotation for one entry (filled only by RI-F enrichment).\n\nEvidence informs human curation; it never auto-creates, auto-deletes, or\nauto-ranks entries.",
+      "properties": {
+        "occurrence_count": {
+          "minimum": 0,
+          "title": "Occurrence Count",
+          "type": "integer"
+        },
+        "snapshot_id": {
+          "minLength": 1,
+          "title": "Snapshot Id",
+          "type": "string"
+        },
+        "supporting_doc_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Supporting Doc Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "snapshot_id",
+        "occurrence_count"
+      ],
+      "title": "CorpusEvidence",
+      "type": "object"
+    },
+    "SkillEntry": {
+      "additionalProperties": false,
+      "description": "One canonical skill with the aliases that resolve to it.",
+      "properties": {
+        "aliases": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Aliases",
+          "type": "array"
+        },
+        "corpus_evidence": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CorpusEvidence"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "display_name": {
+          "maxLength": 60,
+          "minLength": 1,
+          "title": "Display Name",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/SkillKind"
+        },
+        "skill_id": {
+          "pattern": "^skill\\.[a-z0-9-]+$",
+          "title": "Skill Id",
+          "type": "string"
+        },
+        "track_tags": {
+          "items": {
+            "$ref": "#/$defs/CareerTrack"
+          },
+          "minItems": 1,
+          "title": "Track Tags",
+          "type": "array"
+        }
+      },
+      "required": [
+        "skill_id",
+        "display_name",
+        "aliases",
+        "track_tags",
+        "kind"
+      ],
+      "title": "SkillEntry",
+      "type": "object"
+    },
+    "SkillKind": {
+      "description": "What kind of thing a taxonomy entry names.",
+      "enum": [
+        "language",
+        "framework",
+        "tool",
+        "concept",
+        "practice"
+      ],
+      "title": "SkillKind",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A versioned vocabulary: unique entry ids, globally unique aliases.",
+  "properties": {
+    "entries": {
+      "items": {
+        "$ref": "#/$defs/SkillEntry"
+      },
+      "minItems": 1,
+      "title": "Entries",
+      "type": "array"
+    },
+    "taxonomy_version": {
+      "pattern": "^skill-taxonomy-v\\d+$",
+      "title": "Taxonomy Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "taxonomy_version",
+    "entries"
+  ],
+  "title": "SkillTaxonomy",
+  "type": "object"
+}

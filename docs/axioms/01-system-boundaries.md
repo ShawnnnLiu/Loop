@@ -12,12 +12,13 @@ The rule is simple: the LLM may write the message that says, "You are behind and
 
 ## Allowed LLM Nodes
 
-Only four nodes may call an LLM in the MVP:
+Only five nodes may call an LLM in the MVP:
 
 - `StrategistNode` — proposes structured syllabus modules.
 - `PlannerNode` — proposes task plans from validated syllabus units.
 - `ReflectionSummaryNode` — summarizes user progress and friction.
 - `UserFacingExplanationNode` — explains deterministic decisions in plain language.
+- `ResumeIntakeNode` — proposes structured profile-field candidates (experience, skills, strengths, inferred weak spots, target-company categories) from a pasted résumé plus draft onboarding answers, for the user to review and edit before any write.
 
 LLMs may also be used for natural-language clarification during onboarding, but the resulting structured `user_profile` object must be deterministic.
 
@@ -33,6 +34,7 @@ LLM node output must be schema-validated before any consumer uses it.
 - Friendly accountability message wording.
 - Sponsor-safe weekly summary wording.
 - Recovery-plan explanations.
+- Proposing candidates for user-editable profile fields during onboarding.
 
 ## LLM Forbidden Responsibilities
 
@@ -51,6 +53,13 @@ LLMs must not be used for:
 - Parent notification decisions.
 - Cost cap enforcement.
 - Concurrency lock enforcement.
+
+The `ResumeIntakeNode` specifically:
+
+- never writes the profile — its output reaches storage only through the user-confirmed `POST /api/onboard` payload;
+- never proposes company names or prestige-ranked labels in target-company categories;
+- never assigns confidence values — provenance is structural (extracted / inferred / suggested, by field group) and display-only; no deterministic code may route on it;
+- runs only on explicit user action (the Extract button), never automatically.
 
 ## Deterministic Ownership
 
@@ -111,6 +120,7 @@ The task graph itself must remain acyclic (see `15-plan-versioning-and-diffs.md`
 | --- | --- | --- | --- |
 | Supervisor | Routes state to next node | No | Yes |
 | Structured Onboarding | Captures goal, constraints, and user profile | No | Yes |
+| Résumé Intake | Proposes profile-field candidates from a pasted résumé | Yes | Schema-bound |
 | Motivation Profiler | Captures accountability preferences and procrastination risk | No | Yes |
 | Accountability Contract Manager | Stores commitment rules, check-in settings, and sponsor permissions | No | Yes |
 | Curriculum Strategist | Generates syllabus modules | Yes | Schema-bound |
@@ -133,6 +143,7 @@ The task graph itself must remain acyclic (see `15-plan-versioning-and-diffs.md`
 | Stage | Input | Owner | Output | Deterministic? | Failure Mode | Recovery |
 | --- | --- | --- | --- | --- | --- | --- |
 | Onboarding | User answers | Onboarding service | `user_profile` | Yes | Missing required fields | Ask user for missing fields |
+| Résumé extraction | `resume_intake_input` | `ResumeIntakeNode` | `resume_extraction` | No, schema-bound | Invalid extraction schema | Repair (max 2) then manual entry |
 | Syllabus generation | `user_profile`, source claims | `StrategistNode` | `syllabus_units` | No, schema-bound | Invalid module schema | Repair or regenerate |
 | Source scoring | Retrieved claims | Source system | Scored claims | Yes | Source missing metadata | Mark low confidence |
 | Task planning | profile + syllabus | `PlannerNode` | `task_plan` | No, schema-bound | Invalid task graph | Validator repair loop |
@@ -147,6 +158,10 @@ The task graph itself must remain acyclic (see `15-plan-versioning-and-diffs.md`
 ## Boundary Tests
 
 Every implementation that calls an LLM must have tests proving that invalid output is rejected before reaching deterministic consumers. Every side-effecting implementation must have tests proving that no prompt can bypass approval and write directly.
+
+## Change Log
+
+- **2026-07-06**: `ResumeIntakeNode` added as the fifth allowed LLM node — a revival of the deferred D-3 résumé parser (user-approved 2026-07-06). It proposes candidates for user-editable profile fields during onboarding; the human review gate plus deterministic schema validation remain the disposal side. See `../specs/resume-extraction.schema.md` and `../specs/resume-intake-input.schema.md`.
 
 ## Related Docs
 

@@ -61,7 +61,9 @@ Reuses the recordings harness exactly as the draft hoped — it exists
 (capture tool → committed recordings → `run_llm_eval` → `make eval-gate`).
 
 - **Eval set:** extend the strategist cases in a new
-  `eval_set_v3.json` (append-only versioning per axiom 22): each grounded
+  `eval_set_v4.json` (append-only versioning per axiom 22; planned as
+  `v3`, renamed when résumé intake's `eval_set_v3.json` reached main
+  first): each grounded
   case carries a realistic `source_claims` payload drawn from the real
   corpus (claims produced by G-G, pinned in the case); each has an
   ungrounded twin (`source_claims: []` — i.e., today's production).

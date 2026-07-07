@@ -57,3 +57,25 @@ def test_unknown_field_rejected() -> None:
     with pytest.raises(ValidationError) as exc_info:
         UserProfile.model_validate(payload)
     assert "snowflake_field" in str(exc_info.value)
+
+
+def test_experience_and_skills_default_empty() -> None:
+    payload = {
+        k: v
+        for k, v in next(iter_valid(CONTRACT)).payload.items()
+        if k not in ("experience", "skills")
+    }
+    profile = UserProfile.model_validate(payload)
+    assert profile.experience == []
+    assert profile.skills == []
+
+
+def test_strategist_bundle_exclusion_matches_spec() -> None:
+    """The spec's normative Prompt Exposure table
+    (docs/specs/user-profile.schema.md) fixes the Strategist bundle exclusion
+    set; the adapter constant must match it exactly."""
+    from agentic_calendar.llm_nodes.anthropic_adapter import (
+        STRATEGIST_BUNDLE_EXCLUDED_PROFILE_FIELDS,
+    )
+
+    assert {"resume_text", "experience"} == STRATEGIST_BUNDLE_EXCLUDED_PROFILE_FIELDS

@@ -584,6 +584,28 @@ def test_strategist_prompt_omits_resume_text_cleanly_when_none() -> None:
     assert "résumé" not in prompt.lower()
 
 
+def test_strategist_bundle_excludes_experience_but_carries_skills() -> None:
+    """The spec's Prompt Exposure table: `experience` never reaches the
+    Strategist bundle (the raw résumé block already covers background);
+    `skills` is included for the coverage rule."""
+    fixture = next(
+        f for f in iter_valid("user_profile") if f.name == "backend_swe_intermediate"
+    )
+    profile = UserProfile.model_validate(
+        {
+            **fixture.payload,
+            "experience": [{"title": "EXCLUDED_TITLE", "organization": "EXCLUDED_ORG"}],
+            "skills": ["INCLUDED_SKILL"],
+        }
+    )
+    transport = _run_strategist_once(profile)
+    prompt = transport.requests[0]["user_prompt"]
+    assert '"experience"' not in prompt
+    assert "EXCLUDED_TITLE" not in prompt
+    assert "EXCLUDED_ORG" not in prompt
+    assert '"skills": ["INCLUDED_SKILL"]' in prompt
+
+
 #: Parses as JSON but violates the SyllabusUnits contract: a high-priority
 #: module with no ``reason`` (``SyllabusModule._high_priority_needs_reason``).
 #: This is the live-dogfood failure that crashed propose with a raw 422.

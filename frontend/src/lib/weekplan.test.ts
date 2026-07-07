@@ -75,6 +75,8 @@ const profileFixture = (): UserProfile => ({
   experience_level: 'intermediate',
   known_strengths: [],
   known_weaknesses: [],
+  experience: [],
+  skills: [],
   preferred_session_length_min: 60,
   max_session_length_min: 120,
   deep_work_windows: [],

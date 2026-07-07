@@ -72,6 +72,8 @@ from agentic_calendar.consent.sqlite_store import SqliteConsentStore
 from agentic_calendar.consent.store import ConsentStore, InMemoryConsentStore
 from agentic_calendar.contracts.checkin_event import RecoveryAction
 from agentic_calendar.contracts.drift_event import DriftEvent
+from agentic_calendar.contracts.resume_extraction import ResumeExtraction
+from agentic_calendar.contracts.resume_intake_input import ResumeIntakeInput
 from agentic_calendar.contracts.source_claim import SourceClaim
 from agentic_calendar.contracts.strategy_constraints import StrategyConstraints
 from agentic_calendar.contracts.syllabus_units import SyllabusUnits
@@ -194,14 +196,30 @@ class ExplanationNode(Protocol):
     ) -> UserExplanation: ...
 
 
+@runtime_checkable
+class ResumeIntakeNode(Protocol):
+    """Structural surface shared by ``FixtureResumeIntake`` and ``AnthropicResumeIntake``.
+
+    Persistence-free onboarding extraction (the fifth allowed node, axiom 01):
+    the service mints an ``intake-``-prefixed ``run_id`` (no run exists yet)
+    and fills ``intake.allowed_weak_spots`` from the skill-taxonomy kernel —
+    the node itself receives the vocabulary as plain data and never imports
+    the kernel (``.importlinter`` contract 18)."""
+
+    def run(
+        self, *, run_id: str, intake: ResumeIntakeInput
+    ) -> ResumeExtraction: ...
+
+
 @dataclass(frozen=True, slots=True)
 class LlmNodeBundle:
-    """The four allowed LLM nodes (axiom 01) — fixture or real, never mixed in here."""
+    """The five allowed LLM nodes (axiom 01) — fixture or real, never mixed in here."""
 
     strategist: StrategistNode
     planner: PlannerNode
     reflection: ReflectionNode
     explanation: ExplanationNode
+    resume_intake: ResumeIntakeNode
 
 
 @dataclass(frozen=True, slots=True)

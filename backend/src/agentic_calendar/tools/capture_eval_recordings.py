@@ -41,6 +41,7 @@ from typing import Any
 from agentic_calendar.common.clock import SystemClock
 from agentic_calendar.common.ids import UuidIdGenerator
 from agentic_calendar.contracts.drift_event import DriftEvent
+from agentic_calendar.contracts.resume_intake_input import ResumeIntakeInput
 from agentic_calendar.contracts.source_claim import SourceClaim
 from agentic_calendar.contracts.strategy_constraints import StrategyConstraints
 from agentic_calendar.contracts.syllabus_units import SyllabusUnits
@@ -50,6 +51,7 @@ from agentic_calendar.llm_nodes import (
     AnthropicMessagesTransport,
     AnthropicPlanner,
     AnthropicReflectionSummary,
+    AnthropicResumeIntake,
     AnthropicStrategist,
     AnthropicTransport,
     AnthropicUserFacingExplanation,
@@ -60,6 +62,7 @@ from agentic_calendar.llm_nodes.anthropic_adapter import (
     EXPLANATION_CONFIG,
     PLANNER_CONFIG,
     REFLECTION_CONFIG,
+    RESUME_INTAKE_CONFIG,
     STRATEGIST_CONFIG,
 )
 from agentic_calendar.llm_nodes.call_log import LlmNodeName
@@ -69,6 +72,7 @@ from agentic_calendar.llm_nodes.eval_judge import (
     judge_groundedness,
     judge_recording,
 )
+from agentic_calendar.skill_taxonomy import load_registry, resolve
 from agentic_calendar.tools.llm_smoke import SmokeGuardTripped, _GuardedTransport
 
 _NODE_CONFIGS = {
@@ -76,6 +80,7 @@ _NODE_CONFIGS = {
     LlmNodeName.PLANNER: PLANNER_CONFIG,
     LlmNodeName.REFLECTION_SUMMARY: REFLECTION_CONFIG,
     LlmNodeName.USER_FACING_EXPLANATION: EXPLANATION_CONFIG,
+    LlmNodeName.RESUME_INTAKE: RESUME_INTAKE_CONFIG,
 }
 
 #: Headroom multiplier over one clean pass at each case's output cap — covers
@@ -147,6 +152,8 @@ def parse_case_inputs(
             ],
             "completion_rate": inputs.get("completion_rate"),
         }
+    if case.node is LlmNodeName.RESUME_INTAKE:
+        return {"intake": ResumeIntakeInput.model_validate(inputs["intake"])}
     return {
         "validation_result": ValidationResult.model_validate(inputs["validation_result"]),
     }
@@ -171,6 +178,16 @@ def _adapter_for(
         return AnthropicPlanner(**common)
     if node is LlmNodeName.REFLECTION_SUMMARY:
         return AnthropicReflectionSummary(**common)
+    if node is LlmNodeName.RESUME_INTAKE:
+        # The kernel's resolver, injected as a plain callable — the same
+        # composition-root wiring the live bundle uses (run_cycle.py).
+        registry = load_registry()
+
+        def _resolver(surface: str) -> str | None:
+            entry = resolve(surface, registry)
+            return entry.skill_id if entry is not None else None
+
+        return AnthropicResumeIntake(**common, weak_spot_resolver=_resolver)
     return AnthropicUserFacingExplanation(**common)
 
 
@@ -210,10 +227,23 @@ def capture(
             f"  {case.case_id}: {len(outputs[case.case_id])} attempt(s) recorded",
             file=sys.stderr,
         )
+    # Label with the models of the nodes actually in the set, and pin the
+    # taxonomy version whenever a resume_intake case ran (06-skill-taxonomy
+    # pinning discipline — grading cross-checks it against the cases).
     model_name = "+".join(
-        sorted({config.model_name for config in _NODE_CONFIGS.values()})
+        sorted({_NODE_CONFIGS[case.node].model_name for case in eval_set.cases})
     )
-    return EvalRecording(prompt_version=label, model_name=model_name, outputs=outputs)
+    taxonomy_version = (
+        load_registry().taxonomy_version
+        if any(case.node is LlmNodeName.RESUME_INTAKE for case in eval_set.cases)
+        else None
+    )
+    return EvalRecording(
+        prompt_version=label,
+        model_name=model_name,
+        outputs=outputs,
+        taxonomy_version=taxonomy_version,
+    )
 
 
 def _default_budget(eval_set: EvalSet) -> float:
@@ -308,6 +338,7 @@ def main(argv: list[str] | None = None) -> int:
                 outputs=recording.outputs,
                 judge_scores=scores,
                 groundedness_scores=grounded_scores,
+                taxonomy_version=recording.taxonomy_version,
             )
             if unjudged:
                 print(f"judge could not score: {unjudged}", file=sys.stderr)

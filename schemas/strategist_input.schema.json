@@ -48,6 +48,51 @@
       "title": "DeepWorkWindow",
       "type": "object"
     },
+    "ExperienceItem": {
+      "additionalProperties": false,
+      "description": "One confirmed work-experience entry.\n\nProfile vocabulary: lives here because the profile owns the confirmed\nvalues; ``resume_extraction`` (the ResumeIntakeNode proposal) imports it\nrather than redeclaring.",
+      "properties": {
+        "organization": {
+          "anyOf": [
+            {
+              "maxLength": 120,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Organization"
+        },
+        "summary": {
+          "anyOf": [
+            {
+              "maxLength": 280,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Summary"
+        },
+        "title": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "title"
+      ],
+      "title": "ExperienceItem",
+      "type": "object"
+    },
     "ExperienceLevel": {
       "enum": [
         "beginner",
@@ -274,6 +319,14 @@
           "title": "Deep Work Windows",
           "type": "array"
         },
+        "experience": {
+          "items": {
+            "$ref": "#/$defs/ExperienceItem"
+          },
+          "maxItems": 20,
+          "title": "Experience",
+          "type": "array"
+        },
         "experience_level": {
           "$ref": "#/$defs/ExperienceLevel"
         },
@@ -342,6 +395,16 @@
           ],
           "default": null,
           "title": "Resume Text"
+        },
+        "skills": {
+          "items": {
+            "maxLength": 60,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 40,
+          "title": "Skills",
+          "type": "array"
         },
         "target_companies": {
           "items": {

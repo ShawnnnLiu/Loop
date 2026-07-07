@@ -17,10 +17,17 @@ import pytest
 from pydantic import ValidationError
 
 from agentic_calendar.app.environment import ResumeIntakeNode
+from agentic_calendar.common.clock import FrozenClock
+from agentic_calendar.common.ids import DeterministicIdGenerator
 from agentic_calendar.contracts.reason_codes import ReasonCode
 from agentic_calendar.contracts.resume_extraction import ResumeExtraction
 from agentic_calendar.contracts.resume_intake_input import ResumeIntakeInput
-from agentic_calendar.llm_nodes import LLMGenerationError, LLMNodeError
+from agentic_calendar.llm_nodes import (
+    InMemoryLlmCallLogStore,
+    LLMGenerationError,
+    LLMNodeError,
+)
+from agentic_calendar.llm_nodes.anthropic_adapter import AnthropicResumeIntake
 from agentic_calendar.llm_nodes.resume_intake import FixtureResumeIntake
 from agentic_calendar.skill_taxonomy import load_registry, resolve_track
 from tests.app.test_cycle import (
@@ -29,6 +36,7 @@ from tests.app.test_cycle import (
     _canonical_profile,
     make_service,
 )
+from tests.llm_nodes.test_anthropic_adapter import _NOW, FakeTransport, _ok
 
 _RESUME = (
     "Senior Backend Engineer at Acme Corp (2019-2024)\n"
@@ -235,6 +243,55 @@ def test_untyped_node_error_maps_to_llm_call_failed() -> None:
     result = service.extract_resume(USER_ID, _payload())
     assert result.status == "failed"
     assert result.reason_code is ReasonCode.LLM_CALL_FAILED
+
+
+# --------------------------------------------------------------------------- #
+# observability (RI-E): the service path writes hashed Haiku call-log rows
+# --------------------------------------------------------------------------- #
+
+
+def test_extract_via_service_logs_haiku_rows_with_hashes_only() -> None:
+    """A full extract through the service (real adapter, fake transport)
+    emits one call-log row carrying the resume_intake node name, the
+    service-minted ``intake-`` run_id, the Haiku config's pricing/version —
+    and hashes only: the résumé (PII) never appears in the record."""
+    grounded = {
+        "experience": [
+            {
+                "title": "Senior Backend Engineer",
+                "organization": "Acme Corp",
+                "summary": None,
+            }
+        ],
+        "skills": ["Python", "Go", "Kubernetes"],
+        "known_strengths": ["backend services"],
+        "inferred_weak_spots": ["System design"],
+        "target_company_categories": ["infra startups"],
+    }
+    store = InMemoryLlmCallLogStore()
+    node = AnthropicResumeIntake(
+        transport=FakeTransport([_ok(grounded)]),
+        store=store,
+        clock=FrozenClock(_NOW),
+        id_generator=DeterministicIdGenerator(),
+        sleeper=lambda _s: None,
+    )
+    service, _env, _clock = make_service(resume_intake=node)
+
+    result = service.extract_resume(USER_ID, _payload())
+
+    assert result.status == "ok"
+    (row,) = store.list_all()
+    assert row.node.value == "resume_intake"
+    assert row.run_id == result.run_id
+    assert row.run_id.startswith("intake-")
+    assert row.model_name == "claude-haiku-4-5"
+    assert row.prompt_version == "resume-intake-v1-2026-07-06"
+    assert row.cost_estimate_usd == (100 * 1.00 + 50 * 5.00) / 1_000_000
+    assert row.prompt_hash is not None and row.response_hash is not None
+    serialized = row.model_dump_json()
+    assert "Senior Backend Engineer" not in serialized
+    assert "Acme Corp" not in serialized
 
 
 # --------------------------------------------------------------------------- #

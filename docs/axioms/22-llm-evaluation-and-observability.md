@@ -50,7 +50,8 @@ Per node, per eval run, tagged with `prompt_version` and `model_name`:
 - **Post-repair invalid rate** — fraction still invalid after the cap. This is the metric behind the `Invalid Planner output rate <5% after repair` target in `09-cost-and-metrics.md`.
 - **Reflection quality** — drift-summary correctness graded against the deterministic rubric: does it match the deterministic `drift_type`, and does it describe behavior rather than diagnose identity. Any LLM-as-judge scoring is advisory only and must be labeled non-authoritative.
 - **Plan quality (Tier 1, deterministic)** — pure functions over recorded valid plans: distinct-title ratio, max dependency depth, tasks-per-module. Objective facts a human reads as before/after deltas; CI-safe.
-- **Prose quality (Tier 2, LLM-judge)** — permitted ONLY in offline eval tooling (`llm_nodes/eval_judge.py`, invoked from the capture CLI). The judge is deliberately not one of axiom 01's four workflow node classes: it grades already-recorded prose on tone/specificity/actionability, its scores ride the recording as advisory numbers, and they are never gates and never runtime signals.
+- **Prose quality (Tier 2, LLM-judge)** — permitted ONLY in offline eval tooling (`llm_nodes/eval_judge.py`, invoked from the capture CLI). The judge is deliberately not one of axiom 01's five workflow node classes: it grades already-recorded prose on tone/specificity/actionability, its scores ride the recording as advisory numbers, and they are never gates and never runtime signals.
+- **Résumé-extraction validity (Tier 1, deterministic)** — for `resume_intake` cases, schema validity additionally includes the node's deterministic post-validator invariants (groundedness against the case's résumé text, category hygiene, closed weak-spot vocabulary membership). The live engine runs that post-validator inside the bounded repair loop, so an attempt that violates it was repaired, not accepted — grading must count it the same way or first-attempt validity overreports. Cases and recordings carry a pinned `taxonomy_version`; grading refuses a mismatch.
 - **Latency per node and per plan** and **token cost per plan** — read from observability records, not re-measured.
 
 A prompt change must report before/after on these metrics (for example, "Planner schema-validity 78% → 96% after adding a schema example"). Regressions past threshold block the prompt change — and, once the change's recording is committed, the strict recorded-output gate blocks the merge too (see the gating split above).
@@ -114,7 +115,7 @@ A trace view (an operator CLI, matching the existing `tools/` pattern) renders t
 
 ## Relationship to the Boundary
 
-This axiom does not widen the LLM's authority. It instruments and grades the four allowed nodes (`StrategistNode`, `PlannerNode`, `ReflectionSummaryNode`, `UserFacingExplanationNode`) and nothing else. See `../decisions/ADR-0006-llm-never-touches-the-calendar.md` for why the boundary sits where it does.
+This axiom does not widen the LLM's authority. It instruments and grades the five allowed nodes (`StrategistNode`, `PlannerNode`, `ReflectionSummaryNode`, `UserFacingExplanationNode`, `ResumeIntakeNode`) and nothing else. See `../decisions/ADR-0006-llm-never-touches-the-calendar.md` for why the boundary sits where it does.
 
 ## Test Expectations
 
@@ -123,6 +124,10 @@ This axiom does not widen the LLM's authority. It instruments and grades the fou
 - Boundary re-validation tests prove schema-enforced output is still re-validated before return.
 - Observability tests assert record completeness and that no raw prompt/response content is persisted without the debug flag.
 - A fallback test proves exhaustion routes to `error_requires_user` and never to a calendar write.
+
+## Change Log
+
+- **2026-07-06**: `ResumeIntakeNode` registered in the harness (résumé intake RI-E), following its addition as the fifth allowed node in `01-system-boundaries.md`. Structured output, so Tier-1 deterministic grading suffices — no judge rubric. Its validity metric reuses the live post-validator (groundedness, category hygiene, closed weak-spot vocabulary), and eval cases/recordings pin the `taxonomy_version` they ran against.
 
 ## Related Docs
 

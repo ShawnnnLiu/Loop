@@ -56,6 +56,9 @@ schema-check:
 # vacuous on these recordings and arms on the first recording that
 # exercises repair. Grading a committed recording is deterministic —
 # floors equal to measured always pass until a new recording lands.
+# The v3 pair (resume_intake, RI-E) grades the FixtureResumeIntake
+# recording — validity there includes the groundedness/vocabulary
+# invariants, so the gate also guards the eval wiring itself.
 eval-gate:
 	uv run python -m agentic_calendar.tools.run_llm_eval --strict \
 		--eval-set evalsets/eval_set_v1.json \
@@ -71,6 +74,10 @@ eval-gate:
 	uv run python -m agentic_calendar.tools.run_llm_eval --strict \
 		--eval-set evalsets/eval_set_v2.json \
 		--recording evalsets/recordings/voice_2026_07_05.json \
+		--min-schema-validity-rate 1.0 --min-repair-recovery-rate 1.0
+	uv run python -m agentic_calendar.tools.run_llm_eval --strict \
+		--eval-set evalsets/eval_set_v3.json \
+		--recording evalsets/recordings/fixture_resume_intake.json \
 		--min-schema-validity-rate 1.0 --min-repair-recovery-rate 1.0
 
 visualize:

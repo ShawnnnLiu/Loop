@@ -1,7 +1,10 @@
 # Résumé Intake Onboarding — Extract → Review → Confirm
 
-Status: **planned, not started.** Branch: `resume-intake-onboarding` from
-`main` after the `calendar-authoritative-moves` PR merges (see Sequencing).
+Status: **IMPLEMENTED** on branch `resume-intake-onboarding` — RI-A
+`166e566`, RI-B `8034246`, RI-C `135f6b5`, RI-D `8005235`, RI-E (evals,
+observability, docs; final commit of the branch). RI-F (corpus-evidence
+enrichment) remains **gated** on grounding-RAG G-A–G-D (`06-skill-taxonomy.md`)
+and is not part of this branch.
 
 Provenance: design session 2026-07-06, grounded in a code exploration of the
 onboarding surfaces and the LLM-node harness. All file references verified on

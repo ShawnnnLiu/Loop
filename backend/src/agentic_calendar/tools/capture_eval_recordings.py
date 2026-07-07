@@ -67,7 +67,11 @@ from agentic_calendar.llm_nodes.anthropic_adapter import (
 )
 from agentic_calendar.llm_nodes.call_log import LlmNodeName
 from agentic_calendar.llm_nodes.eval import EvalCase, EvalRecording, EvalSet
-from agentic_calendar.llm_nodes.eval_judge import JUDGE_CONFIG, judge_recording
+from agentic_calendar.llm_nodes.eval_judge import (
+    JUDGE_CONFIG,
+    judge_groundedness,
+    judge_recording,
+)
 from agentic_calendar.skill_taxonomy import load_registry, resolve
 from agentic_calendar.tools.llm_smoke import SmokeGuardTripped, _GuardedTransport
 
@@ -298,7 +302,13 @@ def main(argv: list[str] | None = None) -> int:
         if case.node
         in (LlmNodeName.REFLECTION_SUMMARY, LlmNodeName.USER_FACING_EXPLANATION)
     )
-    max_calls = len(eval_set.cases) * 3 + (prose_cases * 3 if args.judge else 0)
+    # --judge adds one voice call per prose case and one groundedness call
+    # per strategist case (each with the bounded judge retries).
+    strategist_cases = sum(
+        1 for case in eval_set.cases if case.node is LlmNodeName.STRATEGIST
+    )
+    judged_cases = prose_cases + strategist_cases
+    max_calls = len(eval_set.cases) * 3 + (judged_cases * 3 if args.judge else 0)
     budget = args.max_cost_usd if args.max_cost_usd is not None else _default_budget(eval_set)
     pricing = {
         config.model_name: (config.input_price_per_mtok, config.output_price_per_mtok)
@@ -319,15 +329,24 @@ def main(argv: list[str] | None = None) -> int:
             scores, unjudged = judge_recording(
                 eval_set, recording, transport=transport
             )
+            grounded_scores, ungrounded_judged = judge_groundedness(
+                eval_set, recording, transport=transport
+            )
             recording = EvalRecording(
                 prompt_version=recording.prompt_version,
                 model_name=recording.model_name,
                 outputs=recording.outputs,
                 judge_scores=scores,
+                groundedness_scores=grounded_scores,
                 taxonomy_version=recording.taxonomy_version,
             )
             if unjudged:
                 print(f"judge could not score: {unjudged}", file=sys.stderr)
+            if ungrounded_judged:
+                print(
+                    f"groundedness judge could not score: {ungrounded_judged}",
+                    file=sys.stderr,
+                )
     except SmokeGuardTripped as exc:
         print(f"aborted by guard: {exc}", file=sys.stderr)
         return 2

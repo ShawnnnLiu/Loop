@@ -1,0 +1,74 @@
+{
+  "$defs": {
+    "ChunkingParams": {
+      "additionalProperties": false,
+      "description": "The chunking configuration a snapshot's derived chunks are valid for.\n\n``target_chars`` is a soft maximum (a chunk closes before the unit that\nwould overshoot it; only a single oversized unit is hard-split) and\n``overlap_chars`` is an upper bound (overlap snaps to unit boundaries).\nValues are heuristic priors \u2014 chunk size is an eval ablation, not a tuned\nconstant. A change to chunking *behavior* is a new ``algorithm`` value.",
+      "properties": {
+        "algorithm": {
+          "const": "structure_v1",
+          "title": "Algorithm",
+          "type": "string"
+        },
+        "overlap_chars": {
+          "minimum": 0,
+          "title": "Overlap Chars",
+          "type": "integer"
+        },
+        "target_chars": {
+          "exclusiveMinimum": 0,
+          "title": "Target Chars",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "algorithm",
+        "target_chars",
+        "overlap_chars"
+      ],
+      "title": "ChunkingParams",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "One immutable, content-addressed pin of a corpus membership.",
+  "properties": {
+    "chunking_params": {
+      "$ref": "#/$defs/ChunkingParams"
+    },
+    "content_hashes": {
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Content Hashes",
+      "type": "array"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "doc_ids": {
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Doc Ids",
+      "type": "array"
+    },
+    "snapshot_id": {
+      "pattern": "^snap_[0-9a-f]{16}$",
+      "title": "Snapshot Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "snapshot_id",
+    "created_at",
+    "doc_ids",
+    "content_hashes",
+    "chunking_params"
+  ],
+  "title": "CorpusSnapshot",
+  "type": "object"
+}

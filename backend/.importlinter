@@ -33,6 +33,7 @@ source_modules =
     agentic_calendar.consent
     agentic_calendar.identity
     agentic_calendar.disposition
+    agentic_calendar.retrieval
     agentic_calendar.skill_taxonomy
 forbidden_modules =
     openai
@@ -519,3 +520,37 @@ source_modules =
     agentic_calendar.llm_nodes
 forbidden_modules =
     agentic_calendar.skill_taxonomy
+
+# ---------------------------------------------------------------------------
+# Contract 19: Retrieval leaf-deps (grounding layer).
+#
+# `retrieval` (corpus registry; later chunking + FTS5 retriever) may depend
+# only on `common` and `contracts`. Notably it must NOT import
+# `source_claims`: claim assembly composes the two kernels from outside the
+# region set (the tools/ CLI + composition root), keeping them siblings, not
+# dependents — the same seam discipline as cache/claim-store (contract 12).
+# ---------------------------------------------------------------------------
+[importlinter:contract:retrieval-is-leaf]
+name = retrieval/ may only depend on common/ and contracts/.
+type = forbidden
+source_modules =
+    agentic_calendar.retrieval
+forbidden_modules =
+    agentic_calendar.supervisor
+    agentic_calendar.validation
+    agentic_calendar.scheduler
+    agentic_calendar.planning
+    agentic_calendar.llm_nodes
+    agentic_calendar.prerequisites
+    agentic_calendar.calendar_writer
+    agentic_calendar.approval
+    agentic_calendar.accountability
+    agentic_calendar.telemetry
+    agentic_calendar.drift
+    agentic_calendar.duration_estimation
+    agentic_calendar.source_claims
+    agentic_calendar.cache
+    agentic_calendar.templates
+    agentic_calendar.consent
+    agentic_calendar.identity
+    agentic_calendar.disposition

@@ -10,6 +10,7 @@ Core thesis: **LLMs propose. Deterministic infrastructure disposes.**
 - `docs/specs/` — Data contracts for structured objects exchanged between nodes and deterministic services.
 - `docs/decisions/` — Architecture decision records that explain irreversible or high-cost choices.
 - `docs/implementation-plans/` — Phased build plans with deliverables, acceptance criteria, non-goals, and tests.
+- `docs/writeups/` — Engineering writeups over completed, measured work (numbers trace to committed artifacts).
 - `docs/golden-test-cases.md` — Required deterministic test scenarios.
 - `docs/risks-and-mitigations.md` — Risk register and cross-cutting mitigations.
 - `docs/technical-stack.md` — Recommended stack for the MVP.

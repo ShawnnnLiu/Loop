@@ -1,0 +1,62 @@
+{
+  "call_aggregates": {},
+  "eval_set_version": "v4",
+  "groundedness_scores": {
+    "strategist_aie_grounded": {
+      "groundedness": 4
+    },
+    "strategist_aie_ungrounded": {
+      "groundedness": 5
+    },
+    "strategist_mle_grounded": {
+      "groundedness": 5
+    },
+    "strategist_mle_ungrounded": {
+      "groundedness": 5
+    },
+    "strategist_swe_grounded": {
+      "groundedness": 3
+    },
+    "strategist_swe_ungrounded": {
+      "groundedness": 5
+    }
+  },
+  "grounding": {
+    "cases_with_claims": 3,
+    "cases_without_claims": 3,
+    "citation_coverage": 0.6444,
+    "claim_utilization": 0.8667,
+    "high_confidence_share": 1.0,
+    "unknown_citation_count": 0
+  },
+  "judge_scores": {},
+  "model_name": "claude-opus-4-8+claude-sonnet-5",
+  "overall": {
+    "cases": 6,
+    "invalid_after_repair": 0,
+    "post_repair_invalid_rate": 0.0,
+    "recovered_by_repair": 0,
+    "repair_recovery_rate": null,
+    "rubric_graded": 0,
+    "rubric_pass_rate": null,
+    "rubric_passed": 0,
+    "schema_valid_first_attempt": 6,
+    "schema_validity_rate": 1.0
+  },
+  "per_node": {
+    "strategist": {
+      "cases": 6,
+      "invalid_after_repair": 0,
+      "post_repair_invalid_rate": 0.0,
+      "recovered_by_repair": 0,
+      "repair_recovery_rate": null,
+      "rubric_graded": 0,
+      "rubric_pass_rate": null,
+      "rubric_passed": 0,
+      "schema_valid_first_attempt": 6,
+      "schema_validity_rate": 1.0
+    }
+  },
+  "plan_quality": null,
+  "prompt_version": "grounding-2026-07-06"
+}

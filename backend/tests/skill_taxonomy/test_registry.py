@@ -44,11 +44,18 @@ def test_registry_alias_index_covers_every_alias() -> None:
             assert registry.by_alias(alias) is registry.by_id(entry.skill_id)
 
 
+# Taxonomy v1 curates entries for the starting three tracks only; the G-I
+# expansion tracks are corpus-only until entries are curated for them
+# (docs/specs/skill-taxonomy.schema.md).
+_TAXONOMY_V1_TRACKS = {CareerTrack.SWE, CareerTrack.MLE, CareerTrack.AI_ENGINEER}
+
+
 @pytest.mark.parametrize("track", list(CareerTrack))
 def test_entries_for_track_returns_exactly_the_tagged_slice(track: CareerTrack) -> None:
     registry = load_registry()
     slice_ = registry.entries_for_track(track)
-    assert slice_, f"track {track.value} has an empty vocabulary slice"
+    if track in _TAXONOMY_V1_TRACKS:
+        assert slice_, f"track {track.value} has an empty vocabulary slice"
     assert all(track in entry.track_tags for entry in slice_)
     tagged_ids = {e.skill_id for e in registry.entries if track in e.track_tags}
     assert {e.skill_id for e in slice_} == tagged_ids

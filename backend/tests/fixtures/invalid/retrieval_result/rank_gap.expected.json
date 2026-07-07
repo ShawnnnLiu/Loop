@@ -1,0 +1,5 @@
+{
+  "error_substrings": [
+    "ranks must be contiguous from 1"
+  ]
+}

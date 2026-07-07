@@ -1,0 +1,10 @@
+{
+  "snapshot_id": "snap_7d3a91c04b5e2f68",
+  "query": {
+    "query_text": "system design",
+    "track": "swe",
+    "k": 3
+  },
+  "results": [],
+  "reranked": false
+}

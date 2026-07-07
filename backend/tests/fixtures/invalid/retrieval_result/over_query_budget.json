@@ -1,0 +1,30 @@
+{
+  "snapshot_id": "snap_7d3a91c04b5e2f68",
+  "query": {
+    "query_text": "system design",
+    "track": "swe",
+    "k": 1
+  },
+  "results": [
+    {
+      "rank": 1,
+      "chunk_id": "chunk_9e21c04b5e2f68d3",
+      "doc_id": "doc_2f6c1b8a9d4e0357",
+      "ordinal": 0,
+      "score": 3.0,
+      "start_char": 0,
+      "end_char": 100,
+      "breadcrumb": null
+    },
+    {
+      "rank": 2,
+      "chunk_id": "chunk_04b5e2f68d39e21c",
+      "doc_id": "doc_8b1e44d0a2c97f13",
+      "ordinal": 0,
+      "score": 2.0,
+      "start_char": 0,
+      "end_char": 100,
+      "breadcrumb": null
+    }
+  ]
+}

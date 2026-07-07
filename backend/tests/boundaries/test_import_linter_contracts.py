@@ -43,6 +43,7 @@ _LLM_SDKS = (
     "anthropic",
     "cohere",
     "mistralai",
+    "voyageai",
     "google",
     "vertexai",
     "groq",

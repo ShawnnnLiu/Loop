@@ -1,0 +1,490 @@
+{
+  "query_set_version": "retrieval-queries-v1",
+  "comment": "Labeled retrieval query set (grounding-RAG G-D), doc-level relevance, labels name source_urls resolved against the pinned snapshot at eval time. Judged against the FETCHED CONTENT of snapshot snap_b0ce947cafdafc8b on 2026-07-06 (operator delegated the judging to the implementing session; evidence per case in notes). Dropped from the 60-case draft: rq_swe_streaming_infra (Netflix fetched as 277 chars of page chrome), rq_swe_incident_postmortems (no fetched doc covers incidents), rq_swe_interview_mistakes (no fetched doc covers candidate mistakes). Append-only from here: extend via a new version, never edit committed cases.",
+  "cases": [
+    {
+      "query_id": "rq_swe_system_design_prep",
+      "query_text": "how to prepare for a system design interview",
+      "track": "swe",
+      "relevant_source_urls": [
+        "https://interviewing.io/guides/system-design-interview",
+        "https://github.com/donnemartin/system-design-primer"
+      ]
+    },
+    {
+      "query_id": "rq_swe_microservices_tradeoffs",
+      "query_text": "microservices versus monolith architecture trade-offs",
+      "track": "swe",
+      "relevant_source_urls": [
+        "https://martinfowler.com/articles/microservices.html"
+      ]
+    },
+    {
+      "query_id": "rq_swe_career_levels",
+      "query_text": "software engineer career levels and progression",
+      "track": "swe",
+      "relevant_source_urls": [
+        "https://www.levels.fyi/t/software-engineer"
+      ]
+    },
+    {
+      "query_id": "rq_swe_compensation",
+      "query_text": "software engineer compensation by seniority level",
+      "track": "swe",
+      "relevant_source_urls": [
+        "https://www.levels.fyi/t/software-engineer"
+      ]
+    },
+    {
+      "query_id": "rq_swe_sharding",
+      "query_text": "database sharding and partitioning strategies",
+      "track": "swe",
+      "relevant_source_urls": [
+        "https://github.com/donnemartin/system-design-primer"
+      ]
+    },
+    {
+      "query_id": "rq_swe_caching",
+      "query_text": "caching strategies for scalable web systems",
+      "track": "swe",
+      "relevant_source_urls": [
+        "https://github.com/donnemartin/system-design-primer"
+      ]
+    },
+    {
+      "query_id": "rq_swe_load_balancing",
+      "query_text": "how load balancers distribute traffic across servers",
+      "track": "swe",
+      "relevant_source_urls": [
+        "https://github.com/donnemartin/system-design-primer"
+      ]
+    },
+    {
+      "query_id": "rq_swe_cap_theorem",
+      "query_text": "CAP theorem consistency and availability trade-offs",
+      "track": "swe",
+      "relevant_source_urls": [
+        "https://github.com/donnemartin/system-design-primer"
+      ]
+    },
+    {
+      "query_id": "rq_swe_capacity_estimation",
+      "query_text": "back of the envelope capacity estimation for interviews",
+      "track": "swe",
+      "relevant_source_urls": [
+        "https://github.com/donnemartin/system-design-primer"
+      ],
+      "notes": "Judged 2026-07-06: the interviewing.io guide has zero capacity/estimation coverage; the primer has a back-of-the-envelope section."
+    },
+    {
+      "query_id": "rq_swe_message_queues",
+      "query_text": "when to use message queues and asynchronous processing",
+      "track": "swe",
+      "relevant_source_urls": [
+        "https://github.com/donnemartin/system-design-primer"
+      ]
+    },
+    {
+      "query_id": "rq_swe_cdn_latency",
+      "query_text": "how content delivery networks reduce latency",
+      "track": "swe",
+      "relevant_source_urls": [
+        "https://github.com/donnemartin/system-design-primer"
+      ]
+    },
+    {
+      "query_id": "rq_swe_api_design",
+      "query_text": "REST API design and RPC trade-offs",
+      "track": "swe",
+      "relevant_source_urls": [
+        "https://github.com/donnemartin/system-design-primer"
+      ]
+    },
+    {
+      "query_id": "rq_swe_scalability_basics",
+      "query_text": "how to scale a web application to millions of users",
+      "track": "swe",
+      "relevant_source_urls": [
+        "https://github.com/donnemartin/system-design-primer"
+      ]
+    },
+    {
+      "query_id": "rq_swe_distributed_consistency",
+      "query_text": "consistency patterns in distributed systems",
+      "track": "swe",
+      "relevant_source_urls": [
+        "https://github.com/donnemartin/system-design-primer"
+      ]
+    },
+    {
+      "query_id": "rq_swe_mock_interviews",
+      "query_text": "do mock interviews improve interview performance",
+      "track": "swe",
+      "relevant_source_urls": [
+        "https://interviewing.io/blog"
+      ],
+      "notes": "Judged 2026-07-06: fetched page substantively discusses mock-interview practice (13 mentions)."
+    },
+    {
+      "query_id": "rq_swe_engineering_culture",
+      "query_text": "how engineering teams work inside large tech companies",
+      "track": "swe",
+      "relevant_source_urls": [
+        "https://blog.pragmaticengineer.com/"
+      ],
+      "notes": "Judged 2026-07-06: fetched index self-describes the big-tech engineering beat (11 'big tech' mentions); soft label."
+    },
+    {
+      "query_id": "rq_swe_system_design_communication",
+      "query_text": "communicating design decisions during a system design interview",
+      "track": "swe",
+      "relevant_source_urls": [
+        "https://interviewing.io/guides/system-design-interview"
+      ]
+    },
+    {
+      "query_id": "rq_mle_training_debugging",
+      "query_text": "why is my neural network not learning during training",
+      "track": "mle",
+      "relevant_source_urls": [
+        "https://karpathy.github.io/2019/04/25/recipe/"
+      ]
+    },
+    {
+      "query_id": "rq_mle_training_recipe",
+      "query_text": "step by step recipe for training neural networks",
+      "track": "mle",
+      "relevant_source_urls": [
+        "https://karpathy.github.io/2019/04/25/recipe/"
+      ]
+    },
+    {
+      "query_id": "rq_mle_overfit_first",
+      "query_text": "overfit a single batch before regularizing",
+      "track": "mle",
+      "relevant_source_urls": [
+        "https://karpathy.github.io/2019/04/25/recipe/"
+      ]
+    },
+    {
+      "query_id": "rq_mle_lstm_memory",
+      "query_text": "how do LSTM networks remember long sequences",
+      "track": "mle",
+      "relevant_source_urls": [
+        "https://colah.github.io/posts/2015-08-Understanding-LSTMs/"
+      ]
+    },
+    {
+      "query_id": "rq_mle_vanishing_gradients",
+      "query_text": "vanishing gradients in recurrent neural networks",
+      "track": "mle",
+      "relevant_source_urls": [
+        "https://colah.github.io/posts/2015-08-Understanding-LSTMs/"
+      ],
+      "notes": "Judged 2026-07-06: the doc covers the long-term dependency problem without the phrase 'vanishing gradients' - relevant by topic, a legitimate BM25 vocabulary-mismatch stress case."
+    },
+    {
+      "query_id": "rq_mle_production_rules",
+      "query_text": "best practices for machine learning systems in production",
+      "track": "mle",
+      "relevant_source_urls": [
+        "https://developers.google.com/machine-learning/guides/rules-of-ml"
+      ]
+    },
+    {
+      "query_id": "rq_mle_simple_first_model",
+      "query_text": "should the first production model be simple",
+      "track": "mle",
+      "relevant_source_urls": [
+        "https://developers.google.com/machine-learning/guides/rules-of-ml"
+      ]
+    },
+    {
+      "query_id": "rq_mle_training_serving_skew",
+      "query_text": "training serving skew causes and fixes",
+      "track": "mle",
+      "relevant_source_urls": [
+        "https://developers.google.com/machine-learning/guides/rules-of-ml"
+      ]
+    },
+    {
+      "query_id": "rq_mle_heuristics_vs_ml",
+      "query_text": "when to use heuristics instead of machine learning",
+      "track": "mle",
+      "relevant_source_urls": [
+        "https://developers.google.com/machine-learning/guides/rules-of-ml"
+      ]
+    },
+    {
+      "query_id": "rq_mle_monitoring_drift",
+      "query_text": "monitoring deployed models for data drift",
+      "track": "mle",
+      "relevant_source_urls": [
+        "https://developers.google.com/machine-learning/guides/rules-of-ml"
+      ],
+      "notes": "Judged 2026-07-06: covers monitoring/staleness/silent failures; never uses the word 'drift'. Vocabulary-mismatch stress case."
+    },
+    {
+      "query_id": "rq_mle_rlhf_mechanics",
+      "query_text": "how does reinforcement learning from human feedback work",
+      "track": "mle",
+      "relevant_source_urls": [
+        "https://huggingface.co/blog/rlhf"
+      ]
+    },
+    {
+      "query_id": "rq_mle_reward_models",
+      "query_text": "reward models and human preference data for fine-tuning",
+      "track": "mle",
+      "relevant_source_urls": [
+        "https://huggingface.co/blog/rlhf"
+      ]
+    },
+    {
+      "query_id": "rq_mle_visual_explanations",
+      "query_text": "visual interactive explanations of machine learning concepts",
+      "track": "mle",
+      "relevant_source_urls": [
+        "https://distill.pub/",
+        "https://colah.github.io/posts/2015-08-Understanding-LSTMs/"
+      ],
+      "notes": "Distill is an index page - judge after fetch."
+    },
+    {
+      "query_id": "rq_mle_pytorch_releases",
+      "query_text": "what is new in recent PyTorch releases",
+      "track": "mle",
+      "relevant_source_urls": [
+        "https://pytorch.org/blog/"
+      ],
+      "notes": "Judged 2026-07-06: fetched page is the announcements index with current article titles; volatile, soft label."
+    },
+    {
+      "query_id": "rq_mle_attention_transformers",
+      "query_text": "how attention works in transformer models",
+      "track": "mle",
+      "relevant_source_urls": [
+        "https://sebastianraschka.com/blog/"
+      ],
+      "notes": "Judged 2026-07-06: relabeled from Lil'Log index (1 attention mention) to Raschka's blog index (24 attention / 11 transformer mentions, lists self-attention articles with descriptions)."
+    },
+    {
+      "query_id": "rq_mle_ml_system_design_interview",
+      "query_text": "machine learning system design interview preparation",
+      "track": "mle",
+      "relevant_source_urls": [
+        "https://huyenchip.com/blog/"
+      ],
+      "notes": "Judged 2026-07-06: thin index that links her ML Interviews book; marginal but the corpus has no better ML-interview doc. Candidate for a specific URL at the G-I expansion."
+    },
+    {
+      "query_id": "rq_mle_hyperparameter_tuning",
+      "query_text": "hyperparameter tuning without overfitting the validation set",
+      "track": "mle",
+      "relevant_source_urls": [
+        "https://karpathy.github.io/2019/04/25/recipe/"
+      ]
+    },
+    {
+      "query_id": "rq_mle_ridesharing_ml",
+      "query_text": "how ride sharing companies apply machine learning",
+      "track": "mle",
+      "relevant_source_urls": [
+        "https://eng.uber.com/"
+      ]
+    },
+    {
+      "query_id": "rq_mle_open_model_hub",
+      "query_text": "using open source models from a model hub",
+      "track": "mle",
+      "relevant_source_urls": [
+        "https://huggingface.co/blog"
+      ],
+      "notes": "Index page - judge after fetch."
+    },
+    {
+      "query_id": "rq_mle_offline_evaluation",
+      "query_text": "offline evaluation before deploying a model to production",
+      "track": "mle",
+      "relevant_source_urls": [
+        "https://developers.google.com/machine-learning/guides/rules-of-ml"
+      ]
+    },
+    {
+      "query_id": "rq_aie_agent_design",
+      "query_text": "how to design LLM agents with planning and memory",
+      "track": "ai_engineer",
+      "relevant_source_urls": [
+        "https://lilianweng.github.io/posts/2023-06-23-agent/",
+        "https://www.anthropic.com/engineering/building-effective-agents"
+      ]
+    },
+    {
+      "query_id": "rq_aie_agent_workflow_patterns",
+      "query_text": "workflow patterns for building effective agents",
+      "track": "ai_engineer",
+      "relevant_source_urls": [
+        "https://www.anthropic.com/engineering/building-effective-agents"
+      ]
+    },
+    {
+      "query_id": "rq_aie_agent_memory",
+      "query_text": "memory architectures for autonomous language agents",
+      "track": "ai_engineer",
+      "relevant_source_urls": [
+        "https://lilianweng.github.io/posts/2023-06-23-agent/"
+      ]
+    },
+    {
+      "query_id": "rq_aie_tool_use",
+      "query_text": "giving language models access to external tools",
+      "track": "ai_engineer",
+      "relevant_source_urls": [
+        "https://lilianweng.github.io/posts/2023-06-23-agent/",
+        "https://www.anthropic.com/engineering/building-effective-agents"
+      ]
+    },
+    {
+      "query_id": "rq_aie_prompt_techniques",
+      "query_text": "prompt engineering techniques few-shot and chain of thought",
+      "track": "ai_engineer",
+      "relevant_source_urls": [
+        "https://www.promptingguide.ai/"
+      ]
+    },
+    {
+      "query_id": "rq_aie_llm_production_challenges",
+      "query_text": "challenges building LLM applications for production",
+      "track": "ai_engineer",
+      "relevant_source_urls": [
+        "https://huyenchip.com/2023/04/11/llm-engineering.html",
+        "https://applied-llms.org/"
+      ]
+    },
+    {
+      "query_id": "rq_aie_llm_patterns",
+      "query_text": "design patterns for building LLM based systems",
+      "track": "ai_engineer",
+      "relevant_source_urls": [
+        "https://eugeneyan.com/writing/llm-patterns/"
+      ]
+    },
+    {
+      "query_id": "rq_aie_evals",
+      "query_text": "how to evaluate the quality of LLM outputs",
+      "track": "ai_engineer",
+      "relevant_source_urls": [
+        "https://eugeneyan.com/writing/llm-patterns/",
+        "https://applied-llms.org/"
+      ]
+    },
+    {
+      "query_id": "rq_aie_rag_practices",
+      "query_text": "retrieval augmented generation best practices",
+      "track": "ai_engineer",
+      "relevant_source_urls": [
+        "https://eugeneyan.com/writing/llm-patterns/",
+        "https://applied-llms.org/"
+      ]
+    },
+    {
+      "query_id": "rq_aie_hallucination_mitigation",
+      "query_text": "reducing hallucinations in LLM applications",
+      "track": "ai_engineer",
+      "relevant_source_urls": [
+        "https://eugeneyan.com/writing/llm-patterns/",
+        "https://applied-llms.org/"
+      ]
+    },
+    {
+      "query_id": "rq_aie_finetune_vs_prompt",
+      "query_text": "when to fine-tune versus prompt engineering",
+      "track": "ai_engineer",
+      "relevant_source_urls": [
+        "https://applied-llms.org/",
+        "https://huyenchip.com/2023/04/11/llm-engineering.html",
+        "https://eugeneyan.com/writing/llm-patterns/"
+      ],
+      "notes": "Judged 2026-07-06: all three discuss finetuning-vs-prompting (spelled 'finetuning', unhyphenated - another vocabulary form the tokenizer must handle)."
+    },
+    {
+      "query_id": "rq_aie_alignment_rlhf",
+      "query_text": "how chat models are aligned with human feedback",
+      "track": "ai_engineer",
+      "relevant_source_urls": [
+        "https://huggingface.co/blog/rlhf"
+      ]
+    },
+    {
+      "query_id": "rq_aie_cost_latency",
+      "query_text": "managing cost and latency of LLM API calls",
+      "track": "ai_engineer",
+      "relevant_source_urls": [
+        "https://huyenchip.com/2023/04/11/llm-engineering.html",
+        "https://applied-llms.org/"
+      ]
+    },
+    {
+      "query_id": "rq_aie_structured_output",
+      "query_text": "validating structured output from language models",
+      "track": "ai_engineer",
+      "relevant_source_urls": [
+        "https://eugeneyan.com/writing/llm-patterns/",
+        "https://applied-llms.org/"
+      ]
+    },
+    {
+      "query_id": "rq_aie_llm_caching",
+      "query_text": "caching responses in LLM applications",
+      "track": "ai_engineer",
+      "relevant_source_urls": [
+        "https://eugeneyan.com/writing/llm-patterns/"
+      ]
+    },
+    {
+      "query_id": "rq_aie_prompt_injection",
+      "query_text": "prompt injection risks in LLM applications",
+      "track": "ai_engineer",
+      "relevant_source_urls": [
+        "https://simonwillison.net/"
+      ],
+      "notes": "Judged 2026-07-06: front page carries one prompt-injection mention; volatile index of the canonical source. Soft label."
+    },
+    {
+      "query_id": "rq_aie_industry_news",
+      "query_text": "keeping up with AI engineering industry news",
+      "track": "ai_engineer",
+      "relevant_source_urls": [
+        "https://simonwillison.net/",
+        "https://www.latent.space/"
+      ]
+    },
+    {
+      "query_id": "rq_aie_industry_analysis",
+      "query_text": "AI engineering interviews and industry analysis podcast",
+      "track": "ai_engineer",
+      "relevant_source_urls": [
+        "https://www.latent.space/"
+      ]
+    },
+    {
+      "query_id": "rq_aie_context_windows",
+      "query_text": "fitting long documents into limited context windows",
+      "track": "ai_engineer",
+      "relevant_source_urls": [
+        "https://huyenchip.com/2023/04/11/llm-engineering.html",
+        "https://eugeneyan.com/writing/llm-patterns/"
+      ],
+      "notes": "Judged 2026-07-06: both cover context management (5 and 31 'context' mentions)."
+    },
+    {
+      "query_id": "rq_aie_agentic_evals",
+      "query_text": "evaluating autonomous agent performance",
+      "track": "ai_engineer",
+      "relevant_source_urls": [
+        "https://www.anthropic.com/engineering/building-effective-agents"
+      ],
+      "notes": "Judged 2026-07-06: Anthropic's post discusses evaluating agent performance (13 'evaluat' mentions); the Lil'Log agent post does not center evaluation and was removed."
+    }
+  ]
+}

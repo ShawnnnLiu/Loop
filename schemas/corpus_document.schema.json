@@ -1,0 +1,102 @@
+{
+  "$defs": {
+    "CareerTrack": {
+      "description": "Closed set of supported career-preparation tracks.",
+      "enum": [
+        "swe",
+        "mle",
+        "ai_engineer",
+        "quant_dev",
+        "data_scientist",
+        "product_manager"
+      ],
+      "title": "CareerTrack",
+      "type": "string"
+    },
+    "SourceType": {
+      "description": "Deterministic source classification (axiom 08 table).\n\nClassified by domain / URL rules (``source_claims/classification.py``),\nnever by LLM judgment.",
+      "enum": [
+        "official_job_posting",
+        "company_engineering_blog",
+        "role_taxonomy",
+        "interview_postmortem",
+        "interview_report",
+        "personal_anecdote",
+        "unclassified",
+        "canonical_topic_module"
+      ],
+      "title": "SourceType",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Registered metadata for one corpus document (text lives in the registry).",
+  "properties": {
+    "content_hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Content Hash",
+      "type": "string"
+    },
+    "date_collected": {
+      "format": "date",
+      "title": "Date Collected",
+      "type": "string"
+    },
+    "doc_id": {
+      "pattern": "^doc_[0-9a-f]{16}$",
+      "title": "Doc Id",
+      "type": "string"
+    },
+    "license_note": {
+      "minLength": 1,
+      "title": "License Note",
+      "type": "string"
+    },
+    "source_published_date": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Source Published Date"
+    },
+    "source_type": {
+      "$ref": "#/$defs/SourceType"
+    },
+    "source_url": {
+      "minLength": 1,
+      "title": "Source Url",
+      "type": "string"
+    },
+    "title": {
+      "minLength": 1,
+      "title": "Title",
+      "type": "string"
+    },
+    "track_tags": {
+      "items": {
+        "$ref": "#/$defs/CareerTrack"
+      },
+      "minItems": 1,
+      "title": "Track Tags",
+      "type": "array"
+    }
+  },
+  "required": [
+    "doc_id",
+    "source_url",
+    "source_type",
+    "license_note",
+    "date_collected",
+    "track_tags",
+    "content_hash",
+    "title"
+  ],
+  "title": "CorpusDocument",
+  "type": "object"
+}

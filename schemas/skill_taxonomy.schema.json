@@ -1,11 +1,14 @@
 {
   "$defs": {
     "CareerTrack": {
-      "description": "Closed set of career tracks the product plans for.",
+      "description": "Closed set of supported career-preparation tracks.",
       "enum": [
         "swe",
         "mle",
-        "ai_engineer"
+        "ai_engineer",
+        "quant_dev",
+        "data_scientist",
+        "product_manager"
       ],
       "title": "CareerTrack",
       "type": "string"

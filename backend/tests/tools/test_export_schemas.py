@@ -81,6 +81,12 @@ def test_every_contract_registered() -> None:
         "task_disposition",
         # UX pass B5: durable reflections / explanations
         "prose_attachment",
+        # Loop: grounding layer (corpus registry, G-A)
+        "corpus_document",
+        "corpus_snapshot",
+        # Loop: grounding layer (retrieval pipeline, G-D)
+        "retrieval_query",
+        "retrieval_result",
         # Loop: résumé intake onboarding
         "resume_extraction",
         "resume_intake_input",

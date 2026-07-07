@@ -1,4 +1,4 @@
-.PHONY: help install sync test test-fast lint typecheck format boundaries schemas schema-check eval-gate visualize check clean
+.PHONY: help install sync test test-fast lint typecheck format boundaries schemas schema-check eval-gate retrieval-eval visualize check clean
 
 help:
 	@echo "Targets:"
@@ -13,6 +13,7 @@ help:
 	@echo "  schemas     regenerate /schemas/*.schema.json from Pydantic contracts"
 	@echo "  schema-check verify committed /schemas match the contracts (no write)"
 	@echo "  eval-gate   strict-grade committed eval recordings (offline; amended axiom 22)"
+	@echo "  retrieval-eval  grade the labeled retrieval query set against the pinned corpus snapshot (LOCAL: needs corpus/corpus.db)"
 	@echo "  visualize   render the 'success' scheduler scenario to ../schedule.html"
 	@echo "  check       lint + typecheck + schema-check + test (boundaries run inside test)"
 	@echo "  clean       remove caches and build artifacts"
@@ -79,6 +80,39 @@ eval-gate:
 		--eval-set evalsets/eval_set_v3.json \
 		--recording evalsets/recordings/fixture_resume_intake.json \
 		--min-schema-validity-rate 1.0 --min-repair-recovery-rate 1.0
+	uv run python -m agentic_calendar.tools.run_llm_eval --strict \
+		--eval-set evalsets/eval_set_v4.json \
+		--recording evalsets/recordings/grounding_2026_07_06.json \
+		--min-schema-validity-rate 1.0 --min-repair-recovery-rate 1.0 \
+		--min-citation-coverage 0.6444
+
+# The v4 pair grades the grounded/ungrounded twins (grounding-RAG G-H).
+# citation-coverage floor seeded at the measured grounded-arm value
+# (2026-07-06 capture: coverage 0.6444, utilization 0.8667, zero unknown
+# citations) — a heuristic prior like every seeded floor.
+
+# Retrieval eval gate (grounding-RAG G-D). Deterministic like eval-gate —
+# queries + labels + snapshot pin are all versioned — but the corpus TEXT is
+# deliberately NOT committed: every manifest license_note promises bounded
+# excerpts, so full page text stays out of the public repo. This target is
+# therefore a LOCAL gate: it needs corpus/corpus.db, rebuilt by re-running
+# the ingest CLI (fetch is ask-first; re-fetching on a later date yields new
+# doc_ids, so keep the db). It is not wired into CI or `check`.
+# Floors are the values MEASURED on the v2 labeled run (75 cases, 2026-07-06,
+# snapshot snap_26c44499e582a96a — the G-I six-track expansion): heuristic
+# priors until more labels accumulate. For the record, the v1 floors measured
+# on the 3-track snapshot were 0.9181/0.8523/0.8380; re-measuring the same v1
+# queries against the expanded corpus gave 0.9006/0.8289/0.8174 (more corpus =
+# more ranking competition; the drop is honest, not a regression bug). Floors
+# equal to measured always pass until the labels, corpus, chunking, or
+# ranking change.
+retrieval-eval:
+	uv run python -m agentic_calendar.tools.run_retrieval_eval --strict \
+		--queries evalsets/retrieval_queries_v2.json \
+		--db corpus/corpus.db \
+		--snapshot snap_26c44499e582a96a \
+		--k 5 \
+		--min-recall 0.8978 --min-mrr 0.8500 --min-ndcg 0.8327
 
 visualize:
 	uv run agentic-calendar-visualize --scenario success --out ../schedule.html

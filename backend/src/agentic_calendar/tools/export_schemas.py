@@ -35,6 +35,8 @@ from agentic_calendar.contracts.calendar_reconciliation import (
 from agentic_calendar.contracts.checkin_event import CheckinEvent
 from agentic_calendar.contracts.company_target import CompanyTarget
 from agentic_calendar.contracts.consent_record import ConsentRecord
+from agentic_calendar.contracts.corpus_document import CorpusDocument
+from agentic_calendar.contracts.corpus_snapshot import CorpusSnapshot
 from agentic_calendar.contracts.data_access_audit import DataAccessAuditEntry
 from agentic_calendar.contracts.draft_schedule import DraftSchedule
 from agentic_calendar.contracts.drift_event import DriftEvent
@@ -54,6 +56,8 @@ from agentic_calendar.contracts.recommitment import (
 )
 from agentic_calendar.contracts.resume_extraction import ResumeExtraction
 from agentic_calendar.contracts.resume_intake_input import ResumeIntakeInput
+from agentic_calendar.contracts.retrieval_query import RetrievalQuery
+from agentic_calendar.contracts.retrieval_result import RetrievalResult
 from agentic_calendar.contracts.scheduler_output import SchedulerOutput
 from agentic_calendar.contracts.skill_taxonomy import SkillTaxonomy
 from agentic_calendar.contracts.source_claim import SourceClaim
@@ -84,6 +88,10 @@ CONTRACTS: dict[str, type[BaseModel]] = {
     "motivation_profile": MotivationProfile,
     "syllabus_units": SyllabusUnits,
     "source_claim": SourceClaim,
+    "corpus_document": CorpusDocument,
+    "corpus_snapshot": CorpusSnapshot,
+    "retrieval_query": RetrievalQuery,
+    "retrieval_result": RetrievalResult,
     "strategy_constraints": StrategyConstraints,
     "strategist_input": StrategistInput,
     "company_target": CompanyTarget,

@@ -83,6 +83,25 @@ def _print_report(report: EvalReport, thresholds: EvalThresholds) -> None:
                 f"cost=${agg.total_cost_estimate_usd:.4f} "
                 f"mean_latency={agg.mean_latency_ms:.0f}ms"
             )
+    if report.grounding is not None:
+        g = report.grounding
+        print()
+        print(
+            f"  grounding (tier-1): {g.cases_with_claims} grounded / "
+            f"{g.cases_without_claims} ungrounded strategist case(s)"
+        )
+        print(
+            f"    citation_coverage={_fmt_rate(g.citation_coverage)} "
+            f"claim_utilization={_fmt_rate(g.claim_utilization)} "
+            f"high_confidence_share={_fmt_rate(g.high_confidence_share)} "
+            f"unknown_citations={g.unknown_citation_count}"
+        )
+    if report.groundedness_scores:
+        scores = ", ".join(
+            f"{case_id}={score.groundedness}"
+            for case_id, score in sorted(report.groundedness_scores.items())
+        )
+        print(f"  groundedness (tier-2, advisory): {scores}")
     print()
     breaches = threshold_breaches(report, thresholds)
     if breaches:
@@ -158,6 +177,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         help="Floor on repair recovery (off unless set; seed from a baseline).",
     )
     parser.add_argument(
+        "--min-citation-coverage",
+        type=float,
+        default=None,
+        help="Floor on grounded-arm Tier-1 citation coverage (off unless set; "
+        "seed from a grounded baseline).",
+    )
+    parser.add_argument(
         "--strict",
         action="store_true",
         help="Exit 3 on any threshold breach (the recorded-output CI gate).",
@@ -177,6 +203,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             max_post_repair_invalid_rate=args.max_post_repair_invalid_rate,
             min_schema_validity_rate=args.min_schema_validity_rate,
             min_repair_recovery_rate=args.min_repair_recovery_rate,
+            min_citation_coverage=args.min_citation_coverage,
         )
     except (OSError, json.JSONDecodeError, ValidationError, EvalError) as exc:
         print(f"error: {exc}", file=sys.stderr)

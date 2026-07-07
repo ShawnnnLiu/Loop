@@ -62,10 +62,18 @@ later annotate taxonomy entries deterministically.
 | `swe` | Software engineering |
 | `mle` | Machine-learning engineering |
 | `ai_engineer` | AI engineering (LLM/agent application work) |
+| `quant_dev` | Quantitative development (trading-systems engineering) |
+| `data_scientist` | Data science |
+| `product_manager` | Product management |
 
-Both this taxonomy and the grounding-RAG corpus (`track_tags` in
-`corpus-document.schema.md`, once that plan lands) use **this** enum;
-whichever branch lands first creates the module.
+Both this taxonomy and the grounding-layer corpus (`track_tags` in
+`corpus-document.schema.md`) use **this** enum. The taxonomy is not
+required to cover every track: taxonomy v1 has entries for the starting
+three only, and `resolve_track`'s role markers likewise cover the
+starting three — a target role that resolves to no track means the
+caller uses the union of all entries as the weak-spot choice set
+(`quant_dev`, `data_scientist`, `product_manager` are corpus-only until
+taxonomy entries and role markers are curated for them).
 
 ### `SkillEntry`
 

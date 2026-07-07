@@ -205,6 +205,71 @@ through to `unclassified` rather than being guessed. In particular, no
 platform host (Medium, Substack, etc.) is hardcoded as a personal blog, because
 those same platforms also host official company engineering blogs.
 
+## Corpus Registry (Grounding Layer)
+
+The retrieval corpus that feeds claim assembly is **versioned evidence, not a
+scrape pile**. It lives in the `CorpusRegistry` (`retrieval/`), the only
+writer of corpus documents and snapshots.
+
+- Every registered document carries a required `license_note` — the ToS basis
+  for holding a snapshot of that page. No license basis, no registration.
+- `source_type` for corpus documents comes from the **same** deterministic
+  URL-classification rules above (`source_claims/classification.py`, with the
+  same operator-declared `known_company_domains` / `engineering_blog_hosts` /
+  `personal_blog_hosts` context). One classifier; corpus ingestion never grows
+  a second set of rules.
+- The registry is **snapshot-versioned** for eval reproducibility: retrieval
+  metrics and grounded-generation evals pin a `snapshot_id` (a derived hash
+  over member content hashes plus the chunking parameters), never "the corpus
+  as of whenever the eval ran". Snapshots are immutable; a corpus change or a
+  chunking-parameter change is a new snapshot — an eval can never silently run
+  against re-chunked data.
+- Corpus text is **public-web content only. User data never enters the
+  corpus** — no résumé text, no calendar data, nothing user-derived. This
+  keeps the corpus shareable and axiom 06's privacy posture trivially
+  satisfied on the retrieval side.
+- Curation lives in the checked-in source manifest, in review — not in
+  crawler heuristics. The ingestion tool fetches exactly the manifest's URLs.
+
+Schemas: `../specs/corpus-document.schema.md`,
+`../specs/corpus-snapshot.schema.md`.
+
+## Claim Assembly (Grounding Layer)
+
+Claim assembly — turning retrieved chunks into `source_claim` records — is
+**deterministic** in v1: a claim is a bounded verbatim excerpt of the chunk's
+text plus provenance (document URL with section fragment, collection and
+publication dates), assembled by `tools/refresh_claims.py` and scored only by
+the sanctioned ingestor. Distilling chunks into synthesized `claim_text` via a
+model would create a fifth LLM node class, which axiom 01 does not allow — LLM
+claim extraction therefore requires an explicit axiom 01 amendment first, and
+is parked as a v2 option to be proposed only if the grounded-generation eval
+shows verbatim excerpts measurably underperforming. Corroboration links are
+exact-duplicate only (identical normalized excerpt from distinct document
+URLs); fuzzier similarity linking is deliberately absent — an unvalidated
+threshold the deterministic scorer would then amplify (open question, not an
+implementation gap).
+
+## Freshness Monitoring (Grounding Layer)
+
+Freshness *machinery* — expiry stamps, the inclusive `is_expired` boundary,
+the stale-penalty ramp — is enforced per claim by the priors above. The
+*report* over it is `tools/corpus_stats.py`: expired and stale-window claim
+shares per source type and per track (joined to corpus documents by document
+URL), corpus document age distributions per track, and snapshot ages.
+
+- A claim counts as **in the stale window** when it is unexpired but within
+  `stale_ramp_days` (30) of expiry — the same prior the scorer ramps on,
+  never a second threshold.
+- A **track counts as decaying** when more than **50%** of its claims are
+  expired-or-stale. This threshold is a heuristic prior like every other
+  threshold in this document: chosen to be plausible (an evidence base more
+  old than fresh warrants a refresh), not derived from data, and tunable.
+- The refresh loop is deliberately **manual in v1**: an operator reads the
+  stats view and re-runs the two gated CLIs (`ingest_corpus`, hash-idempotent,
+  then `refresh_claims`, claim-id-idempotent). No cron, no automation — corpus
+  fetches are networked side effects and stay ask-first.
+
 ## Controlled Vocabularies
 
 Axiom 08 owns what counts as evidence and who scores it. Controlled
@@ -239,5 +304,7 @@ under `backend/taxonomy/`). The rules generalize to any future vocabulary:
 - `03-data-contracts.md`
 - `18-caching-strategy.md`
 - `../specs/source-claim.schema.md`
+- `../specs/corpus-document.schema.md`
+- `../specs/corpus-snapshot.schema.md`
 - `../specs/skill-taxonomy.schema.md`
 - `../decisions/ADR-0005-structured-syllabus-not-prose.md`

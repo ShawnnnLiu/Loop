@@ -73,6 +73,16 @@ eval-gate:
 		--eval-set evalsets/eval_set_v2.json \
 		--recording evalsets/recordings/voice_2026_07_05.json \
 		--min-schema-validity-rate 1.0 --min-repair-recovery-rate 1.0
+	uv run python -m agentic_calendar.tools.run_llm_eval --strict \
+		--eval-set evalsets/eval_set_v3.json \
+		--recording evalsets/recordings/grounding_2026_07_06.json \
+		--min-schema-validity-rate 1.0 --min-repair-recovery-rate 1.0 \
+		--min-citation-coverage 0.6444
+
+# The v3 pair grades the grounded/ungrounded twins (grounding-RAG G-H).
+# citation-coverage floor seeded at the measured grounded-arm value
+# (2026-07-06 capture: coverage 0.6444, utilization 0.8667, zero unknown
+# citations) — a heuristic prior like every seeded floor.
 
 # Retrieval eval gate (grounding-RAG G-D). Deterministic like eval-gate —
 # queries + labels + snapshot pin are all versioned — but the corpus TEXT is

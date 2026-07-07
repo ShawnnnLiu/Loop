@@ -1,0 +1,384 @@
+{
+  "eval_set_version": "v3",
+  "cases": [
+    {
+      "case_id": "strategist_swe_grounded",
+      "node": "strategist",
+      "description": "Backend-SWE profile with real corpus-derived claims (grounding-RAG G-G store, snap_b0ce947cafdafc8b) — the grounded arm of the before/after pair.",
+      "required_substrings": [],
+      "inputs": {
+        "user_profile": {
+          "user_id": "user_eval",
+          "profile_version": "profile_eval_v3_swe",
+          "goal": "Backend SWE interview prep",
+          "target_role": "Backend SWE",
+          "target_companies": [
+            "Uber"
+          ],
+          "target_level": "new_grad",
+          "timeline_weeks": 10,
+          "weekly_hours": 8,
+          "experience_level": "intermediate",
+          "known_strengths": [
+            "arrays",
+            "hash maps"
+          ],
+          "known_weaknesses": [
+            "system design",
+            "behavioral interviews"
+          ],
+          "preferred_session_length_min": 60,
+          "max_session_length_min": 120,
+          "deep_work_windows": [
+            {
+              "day": "Mon",
+              "start": "18:00",
+              "end": "21:00"
+            },
+            {
+              "day": "Wed",
+              "start": "19:00",
+              "end": "21:30"
+            }
+          ],
+          "hard_constraints": {
+            "no_events_before": "08:00",
+            "no_events_after": "22:30",
+            "allow_weekends": true,
+            "max_daily_study_min": 180,
+            "min_break_between_deep_blocks_min": 30
+          },
+          "preferences": {
+            "prefer_evening_sessions": true,
+            "prefer_weekend_long_blocks": false,
+            "avoid_back_to_back_deep_work": true
+          },
+          "motivation_profile_id": null,
+          "created_at": "2026-07-06T12:00:00-07:00",
+          "updated_at": "2026-07-06T12:00:00-07:00"
+        },
+        "source_claims": [
+          {
+            "claim_id": "claim_e265d3982756e7a1",
+            "claim_text": "System Design Interview Guide for Senior Engineers We helped write the sequel to \"Cracking the Coding Interview\".",
+            "source_url": "https://interviewing.io/guides/system-design-interview",
+            "source_type": "interview_postmortem",
+            "date_collected": "2026-07-07",
+            "source_published_date": null,
+            "confidence_score": 0.65,
+            "confidence_bucket": "medium",
+            "expires_at": "2026-11-04",
+            "corroborating_claim_ids": [],
+            "contradicting_claim_ids": []
+          },
+          {
+            "claim_id": "claim_06d4fb7599160fef",
+            "claim_text": "By Gilad Naor | Published: \"Why don't you tell me about a time you received constructive feedback?\" Simple question. Staff-level candidate. Should be easy. \"I was leading development of a new service at Amazon. Tight deadlines, exciting technical challenges. My role included end-to-end delivery and then transition to the next project. I prioritized shipping the core functionality. Built it, tested it, launched it. The service worked technically.",
+            "source_url": "https://interviewing.io/blog",
+            "source_type": "interview_postmortem",
+            "date_collected": "2026-07-07",
+            "source_published_date": null,
+            "confidence_score": 0.65,
+            "confidence_bucket": "medium",
+            "expires_at": "2026-11-04",
+            "corroborating_claim_ids": [],
+            "contradicting_claim_ids": []
+          },
+          {
+            "claim_id": "claim_a8d67a7d44388d24",
+            "claim_text": "Get started Most popular posts Read nine chapters of Beyond Cracking the Coding Interview for free We co-wrote the official sequel to Cracking the Coding Interview! Are recruiters better than a coin flip at judging resumes? Here's the data. The unwritten rules (till now) of negotiating with Meta How hard is it to cheat in technical interviews with ChatGPT? We ran an experiment.",
+            "source_url": "https://interviewing.io/blog",
+            "source_type": "interview_postmortem",
+            "date_collected": "2026-07-07",
+            "source_published_date": null,
+            "confidence_score": 0.65,
+            "confidence_bucket": "medium",
+            "expires_at": "2026-11-04",
+            "corroborating_claim_ids": [],
+            "contradicting_claim_ids": []
+          },
+          {
+            "claim_id": "claim_a9069c1d8b9b5af7",
+            "claim_text": "Software Engineer Salary Download AppChange LoginSign Up All Data By Location By Company By Title Salary Calculator Chart Visualizations Verified Salaries Internships H-1B Salaries Negotiation Support Compare Benefits Who's Hiring 2025 Pay Report Top Paying Companies Integrate Blog Press Google Software Engineer Product Manager New York City Area Data Scientist Explore By Different Titles Levels FYI Logo Salaries 📂 All Data 🌎 By Location 🏢 By Company 🖋 By Title 🏭️ By Industry 📍 Salary Heatmap 📈",
+            "source_url": "https://www.levels.fyi/t/software-engineer",
+            "source_type": "role_taxonomy",
+            "date_collected": "2026-07-07",
+            "source_published_date": null,
+            "confidence_score": 0.7,
+            "confidence_bucket": "medium",
+            "expires_at": "2027-01-03",
+            "corroborating_claim_ids": [],
+            "contradicting_claim_ids": []
+          },
+          {
+            "claim_id": "claim_15efcf2a3dd3a766",
+            "claim_text": "Read more → DATA How Uber Scaled Data Replication to Move Petabytes Every Day Petabyte-scale data replication across on-premise and cloud infrastructure created bottlenecks: HDFS client contention blocked job submissions, and sequential file merging delayed commits by 30+ minutes. Uber shifted Copy Listing to distributed Application Masters, parallelized namenode calls, and enabled Uber jobs for small transfers.",
+            "source_url": "https://eng.uber.com/",
+            "source_type": "company_engineering_blog",
+            "date_collected": "2026-07-07",
+            "source_published_date": null,
+            "confidence_score": 0.75,
+            "confidence_bucket": "medium",
+            "expires_at": "2027-12-29",
+            "corroborating_claim_ids": [],
+            "contradicting_claim_ids": []
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "strategist_swe_ungrounded",
+      "node": "strategist",
+      "description": "Ungrounded twin of strategist_swe_grounded: identical profile, source_claims: [] — exactly today's production baseline.",
+      "required_substrings": [],
+      "inputs": {
+        "user_profile_ref": "strategist_swe_grounded",
+        "source_claims": []
+      }
+    },
+    {
+      "case_id": "strategist_mle_grounded",
+      "node": "strategist",
+      "description": "MLE profile with real corpus-derived claims (grounding-RAG G-G store, snap_b0ce947cafdafc8b) — the grounded arm of the before/after pair.",
+      "required_substrings": [],
+      "inputs": {
+        "user_profile": {
+          "user_id": "user_eval",
+          "profile_version": "profile_eval_v3_mle",
+          "goal": "Machine learning engineer interview prep",
+          "target_role": "Machine Learning Engineer",
+          "target_companies": [
+            "Hugging Face",
+            "Uber"
+          ],
+          "target_level": "senior",
+          "timeline_weeks": 8,
+          "weekly_hours": 6,
+          "experience_level": "advanced",
+          "known_strengths": [
+            "python",
+            "classical ml"
+          ],
+          "known_weaknesses": [
+            "rlhf and alignment",
+            "ml system design"
+          ],
+          "preferred_session_length_min": 60,
+          "max_session_length_min": 120,
+          "deep_work_windows": [
+            {
+              "day": "Mon",
+              "start": "18:00",
+              "end": "21:00"
+            },
+            {
+              "day": "Wed",
+              "start": "19:00",
+              "end": "21:30"
+            }
+          ],
+          "hard_constraints": {
+            "no_events_before": "08:00",
+            "no_events_after": "22:30",
+            "allow_weekends": true,
+            "max_daily_study_min": 180,
+            "min_break_between_deep_blocks_min": 30
+          },
+          "preferences": {
+            "prefer_evening_sessions": true,
+            "prefer_weekend_long_blocks": false,
+            "avoid_back_to_back_deep_work": true
+          },
+          "motivation_profile_id": null,
+          "created_at": "2026-07-06T12:00:00-07:00",
+          "updated_at": "2026-07-06T12:00:00-07:00"
+        },
+        "source_claims": [
+          {
+            "claim_id": "claim_502edf011c95591f",
+            "claim_text": "Optionally, RLHF can continue from this point by iteratively updating the reward model and the policy together. As the RL policy updates, users can continue ranking these outputs versus the model's earlier versions. Most papers have yet to discuss implementing this operation, as the deployment mode needed to collect this type of data only works for dialogue agents with access to an engaged user base.",
+            "source_url": "https://huggingface.co/blog/rlhf",
+            "source_type": "company_engineering_blog",
+            "date_collected": "2026-07-07",
+            "source_published_date": null,
+            "confidence_score": 0.75,
+            "confidence_bucket": "medium",
+            "expires_at": "2027-12-29",
+            "corroborating_claim_ids": [],
+            "contradicting_claim_ids": []
+          },
+          {
+            "claim_id": "claim_b9115672b72c0d1b",
+            "claim_text": "Here are some papers on RLHF that pre-date the LM focus: TAMER: Training an Agent Manually via Evaluative Reinforcement (Knox and Stone 2008): Proposed a learned agent where humans provided scores on the actions taken iteratively to learn a reward model. Interactive Learning from Policy-Dependent Human Feedback (MacGlashan et al. 2017): Proposed an actor-critic algorithm, COACH, where human feedback (both positive and negative) is used to tune the advantage function.",
+            "source_url": "https://huggingface.co/blog/rlhf",
+            "source_type": "company_engineering_blog",
+            "date_collected": "2026-07-07",
+            "source_published_date": null,
+            "confidence_score": 0.75,
+            "confidence_bucket": "medium",
+            "expires_at": "2027-12-29",
+            "corroborating_claim_ids": [],
+            "contradicting_claim_ids": []
+          },
+          {
+            "claim_id": "claim_bc7b5f0e6f277b30",
+            "claim_text": "WebGPT: Browser-assisted question-answering with human feedback (OpenAI, 2021): Using RLHF to train an agent to navigate the web. InstructGPT: Training language models to follow instructions with human feedback (OpenAI Alignment Team 2022): RLHF applied to a general language model [Blog post on InstructGPT]. GopherCite: Teaching language models to support answers with verified quotes (Menick et al. 2022): Train a LM with RLHF to return answers with specific citations.",
+            "source_url": "https://huggingface.co/blog/rlhf",
+            "source_type": "company_engineering_blog",
+            "date_collected": "2026-07-07",
+            "source_published_date": null,
+            "confidence_score": 0.75,
+            "confidence_bucket": "medium",
+            "expires_at": "2027-12-29",
+            "corroborating_claim_ids": [],
+            "contradicting_claim_ids": []
+          },
+          {
+            "claim_id": "claim_187143c9a2a2a3d6",
+            "claim_text": "Read more → DATA Evolution and Scale of Uber's Delivery Search Platform Lexical search broke on Uber Eats — failing on synonyms, typos, and multilingual queries like \"pan\" (bread or cookware?). The new semantic stack: a two-tower deep network with a Qwen LLM backbone, trained via DeepSpeed ZeRO-3. Matryoshka embeddings cut storage 50% with under 0.3% quality loss; scalar quantization halves latency.",
+            "source_url": "https://eng.uber.com/",
+            "source_type": "company_engineering_blog",
+            "date_collected": "2026-07-07",
+            "source_published_date": null,
+            "confidence_score": 0.75,
+            "confidence_bucket": "medium",
+            "expires_at": "2027-12-29",
+            "corroborating_claim_ids": [],
+            "contradicting_claim_ids": []
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "strategist_mle_ungrounded",
+      "node": "strategist",
+      "description": "Ungrounded twin of strategist_mle_grounded: identical profile, source_claims: [] — exactly today's production baseline.",
+      "required_substrings": [],
+      "inputs": {
+        "user_profile_ref": "strategist_mle_grounded",
+        "source_claims": []
+      }
+    },
+    {
+      "case_id": "strategist_aie_grounded",
+      "node": "strategist",
+      "description": "AI-engineer profile with real corpus-derived claims (grounding-RAG G-G store, snap_b0ce947cafdafc8b) — the grounded arm of the before/after pair.",
+      "required_substrings": [],
+      "inputs": {
+        "user_profile": {
+          "user_id": "user_eval",
+          "profile_version": "profile_eval_v3_aie",
+          "goal": "AI engineer interview prep",
+          "target_role": "AI Engineer",
+          "target_companies": [
+            "Anthropic"
+          ],
+          "target_level": "senior",
+          "timeline_weeks": 6,
+          "weekly_hours": 7,
+          "experience_level": "intermediate",
+          "known_strengths": [
+            "backend engineering"
+          ],
+          "known_weaknesses": [
+            "agent architectures",
+            "llm evaluation"
+          ],
+          "preferred_session_length_min": 60,
+          "max_session_length_min": 120,
+          "deep_work_windows": [
+            {
+              "day": "Mon",
+              "start": "18:00",
+              "end": "21:00"
+            },
+            {
+              "day": "Wed",
+              "start": "19:00",
+              "end": "21:30"
+            }
+          ],
+          "hard_constraints": {
+            "no_events_before": "08:00",
+            "no_events_after": "22:30",
+            "allow_weekends": true,
+            "max_daily_study_min": 180,
+            "min_break_between_deep_blocks_min": 30
+          },
+          "preferences": {
+            "prefer_evening_sessions": true,
+            "prefer_weekend_long_blocks": false,
+            "avoid_back_to_back_deep_work": true
+          },
+          "motivation_profile_id": null,
+          "created_at": "2026-07-06T12:00:00-07:00",
+          "updated_at": "2026-07-06T12:00:00-07:00"
+        },
+        "source_claims": [
+          {
+            "claim_id": "claim_c25a0b025b7d49ad",
+            "claim_text": "Complex search tasks that require multiple rounds of searching and analysis to gather comprehensive information, where the evaluator decides whether further searches are warranted. Agents Agents are emerging in production as LLMs mature in key capabilities—understanding complex inputs, engaging in reasoning and planning, using tools reliably, and recovering from errors. Agents begin their work with either a command from, or interactive discussion with, the human user.",
+            "source_url": "https://www.anthropic.com/engineering/building-effective-agents",
+            "source_type": "company_engineering_blog",
+            "date_collected": "2026-07-07",
+            "source_published_date": null,
+            "confidence_score": 0.75,
+            "confidence_bucket": "medium",
+            "expires_at": "2027-12-29",
+            "corroborating_claim_ids": [],
+            "contradicting_claim_ids": []
+          },
+          {
+            "claim_id": "claim_62f89fbeee8329e6",
+            "claim_text": "The autonomous nature of agents means higher costs, and the potential for compounding errors. We recommend extensive testing in sandboxed environments, along with the appropriate guardrails. Examples where agents are useful: The following examples are from our own implementations: A coding Agent to resolve SWE-bench tasks, which involve edits to many files based on a task description; Our “computer use” reference implementation, where Claude uses a computer to accomplish tasks.",
+            "source_url": "https://www.anthropic.com/engineering/building-effective-agents",
+            "source_type": "company_engineering_blog",
+            "date_collected": "2026-07-07",
+            "source_published_date": null,
+            "confidence_score": 0.75,
+            "confidence_bucket": "medium",
+            "expires_at": "2027-12-29",
+            "corroborating_claim_ids": [],
+            "contradicting_claim_ids": []
+          },
+          {
+            "claim_id": "claim_502edf011c95591f",
+            "claim_text": "Optionally, RLHF can continue from this point by iteratively updating the reward model and the policy together. As the RL policy updates, users can continue ranking these outputs versus the model's earlier versions. Most papers have yet to discuss implementing this operation, as the deployment mode needed to collect this type of data only works for dialogue agents with access to an engaged user base.",
+            "source_url": "https://huggingface.co/blog/rlhf",
+            "source_type": "company_engineering_blog",
+            "date_collected": "2026-07-07",
+            "source_published_date": null,
+            "confidence_score": 0.75,
+            "confidence_bucket": "medium",
+            "expires_at": "2027-12-29",
+            "corroborating_claim_ids": [],
+            "contradicting_claim_ids": []
+          },
+          {
+            "claim_id": "claim_bc7b5f0e6f277b30",
+            "claim_text": "WebGPT: Browser-assisted question-answering with human feedback (OpenAI, 2021): Using RLHF to train an agent to navigate the web. InstructGPT: Training language models to follow instructions with human feedback (OpenAI Alignment Team 2022): RLHF applied to a general language model [Blog post on InstructGPT]. GopherCite: Teaching language models to support answers with verified quotes (Menick et al. 2022): Train a LM with RLHF to return answers with specific citations.",
+            "source_url": "https://huggingface.co/blog/rlhf",
+            "source_type": "company_engineering_blog",
+            "date_collected": "2026-07-07",
+            "source_published_date": null,
+            "confidence_score": 0.75,
+            "confidence_bucket": "medium",
+            "expires_at": "2027-12-29",
+            "corroborating_claim_ids": [],
+            "contradicting_claim_ids": []
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "strategist_aie_ungrounded",
+      "node": "strategist",
+      "description": "Ungrounded twin of strategist_aie_grounded: identical profile, source_claims: [] — exactly today's production baseline.",
+      "required_substrings": [],
+      "inputs": {
+        "user_profile_ref": "strategist_aie_grounded",
+        "source_claims": []
+      }
+    }
+  ]
+}

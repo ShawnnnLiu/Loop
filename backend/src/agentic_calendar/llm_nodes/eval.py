@@ -103,6 +103,9 @@ class EvalRecording(BaseModel):
     """Optional Tier-2 LLM-judge scores per prose case (1-5 per dimension).
     Produced only by the offline capture tooling — advisory numbers in the
     report, never gates and never runtime signals (axiom 22)."""
+    groundedness_scores: dict[str, dict[str, int]] = Field(default_factory=dict)
+    """Optional Tier-2 groundedness scores per strategist case (G-H), same
+    advisory-only rules as ``judge_scores``."""
 
 
 class NodeMetrics(BaseModel):
@@ -155,6 +158,100 @@ class PlanQualityMetrics(BaseModel):
     """Coverage granularity: how finely modules decompose into tasks."""
 
 
+class GroundingMetrics(BaseModel):
+    """Tier-1 deterministic grounding facts over valid Strategist outputs.
+
+    Grounded/ungrounded twins live in one eval set (grounding-RAG G-H): a
+    strategist case whose ``inputs.source_claims`` is non-empty is a grounded
+    arm; its empty twin is today's production baseline. Whether prose content
+    is *semantically* supported is a judgment call — Tier-2 territory
+    (:class:`GroundednessScore`); the gateable proxy here is citation
+    coverage, a pure function over recorded outputs."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    cases_with_claims: int
+    cases_without_claims: int
+    citation_coverage: float | None
+    """Mean over grounded cases of the fraction of syllabus modules citing
+    >=1 claim id from the case's supplied claim set (None without grounded
+    cases). The ungrounded twin's coverage is 0 by construction, so the
+    grounded-arm number IS the before/after delta."""
+    claim_utilization: float | None
+    """Mean over grounded cases of the fraction of supplied claims cited at
+    least once — detects prompt-stuffing the model ignores."""
+    high_confidence_share: float | None
+    """Fraction of set-valid citations in grounded cases pointing at
+    ``high``/``medium`` bucket claims (axiom 08's preference order,
+    measured; None when nothing was validly cited)."""
+    unknown_citation_count: int
+    """Citations naming ids absent from the case's claim set, across every
+    graded strategist case — the fabricated-citation signal the syllabus
+    validator rejects at runtime, counted here for the before/after story."""
+
+
+def grounding_metrics(
+    graded: Sequence[tuple[EvalCase, SyllabusUnits]],
+) -> GroundingMetrics | None:
+    """Tier-1 grounding facts over (case, valid output) pairs (None if empty)."""
+    if not graded:
+        return None
+    coverages: list[float] = []
+    utilizations: list[float] = []
+    valid_citations = 0
+    preferred_citations = 0
+    unknown_citations = 0
+    with_claims = 0
+    without_claims = 0
+    for case, syllabus in graded:
+        supplied = case.inputs.get("source_claims") or []
+        buckets: dict[str, str] = {
+            str(claim.get("claim_id")): str(claim.get("confidence_bucket", ""))
+            for claim in supplied
+            if isinstance(claim, Mapping)
+        }
+        cited = [
+            claim_id
+            for module in syllabus.modules
+            for claim_id in module.source_claim_ids
+        ]
+        unknown_citations += sum(1 for cid in cited if cid not in buckets)
+        if not buckets:
+            without_claims += 1
+            continue
+        with_claims += 1
+        covered = sum(
+            1
+            for module in syllabus.modules
+            if any(cid in buckets for cid in module.source_claim_ids)
+        )
+        coverages.append(covered / len(syllabus.modules))
+        utilizations.append(len({c for c in cited if c in buckets}) / len(buckets))
+        for cid in cited:
+            bucket = buckets.get(cid)
+            if bucket is None:
+                continue
+            valid_citations += 1
+            if bucket in ("high", "medium"):
+                preferred_citations += 1
+    return GroundingMetrics(
+        cases_with_claims=with_claims,
+        cases_without_claims=without_claims,
+        citation_coverage=(
+            round(sum(coverages) / with_claims, 4) if with_claims else None
+        ),
+        claim_utilization=(
+            round(sum(utilizations) / with_claims, 4) if with_claims else None
+        ),
+        high_confidence_share=(
+            round(preferred_citations / valid_citations, 4)
+            if valid_citations
+            else None
+        ),
+        unknown_citation_count=unknown_citations,
+    )
+
+
 class JudgeScore(BaseModel):
     """Tier-2 LLM-judge scores for one prose output (advisory only)."""
 
@@ -166,6 +263,24 @@ class JudgeScore(BaseModel):
     """Names the user's actual situation vs generic filler."""
     actionability: int = Field(ge=1, le=5)
     """Ends with a concrete next step the user could take today."""
+
+
+class GroundednessScore(BaseModel):
+    """Tier-2 LLM-judge groundedness for one strategist output (advisory).
+
+    Operationalizes "unsupported-claim rate" honestly (G-H): whether module
+    content is *semantically* supported by the supplied claims is judgment,
+    so it stays advisory — never a gate, never a runtime signal — exactly
+    like tone/specificity. The gateable proxy remains Tier-1 citation
+    coverage."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    groundedness: int = Field(ge=1, le=5)
+    """Company/role-specific assertions are supported by the supplied claims
+    (5) … invented despite or beyond the evidence (1). With no claims
+    supplied, grades whether the syllabus avoids asserting facts it could
+    not know."""
 
 
 class EvalReport(BaseModel):
@@ -182,9 +297,15 @@ class EvalReport(BaseModel):
     plan_quality: PlanQualityMetrics | None = None
     """Tier-1 deterministic quality facts (None when no planner case
     produced a valid plan)."""
+    grounding: GroundingMetrics | None = None
+    """Tier-1 deterministic grounding facts (None when no strategist case
+    produced a valid syllabus)."""
     judge_scores: dict[str, JudgeScore] = Field(default_factory=dict)
     """Tier-2 advisory judge scores, copied through from the recording when
     present. Never a gate, never a runtime signal."""
+    groundedness_scores: dict[str, GroundednessScore] = Field(default_factory=dict)
+    """Tier-2 advisory groundedness scores (strategist cases), copied through
+    from the recording when present. Never a gate, never a runtime signal."""
 
 
 class EvalThresholds(BaseModel):
@@ -208,6 +329,11 @@ class EvalThresholds(BaseModel):
     min_repair_recovery_rate: float | None = Field(default=None, ge=0, le=1)
     """Floor on repair recovery (of initially-invalid cases); None = not
     enforced. Vacuously satisfied when nothing needed repair."""
+
+    min_citation_coverage: float | None = Field(default=None, ge=0, le=1)
+    """Floor on Tier-1 grounded-arm citation coverage (G-H); None = not
+    enforced. Vacuously satisfied on recordings with no grounded strategist
+    cases — only meaningful against a grounded eval set."""
 
 
 class RateComparison(BaseModel):
@@ -397,14 +523,18 @@ def grade_recording(
     for grade in grades:
         by_node.setdefault(grade.node.value, []).append(grade)
 
-    # Tier-1 plan quality over every planner case's first VALID attempt.
+    # Tier-1 plan quality over every planner case's first VALID attempt, and
+    # grounding facts over every strategist case's first VALID attempt.
     valid_plans: list[TaskPlan] = []
+    valid_syllabi: list[tuple[EvalCase, SyllabusUnits]] = []
     for case in eval_set.cases:
-        if case.node is not LlmNodeName.PLANNER:
+        if case.node not in (LlmNodeName.PLANNER, LlmNodeName.STRATEGIST):
             continue
         _, validated = _first_valid_attempt(case, recording.outputs[case.case_id])
         if isinstance(validated, TaskPlan):
             valid_plans.append(validated)
+        elif isinstance(validated, SyllabusUnits):
+            valid_syllabi.append((case, validated))
 
     # Tier-2 judge scores are advisory copies; unknown case ids are an error,
     # not a silent drop — same honesty rule as the outputs themselves.
@@ -413,6 +543,14 @@ def grade_recording(
     judge_scores = {
         case_id: JudgeScore.model_validate(scores)
         for case_id, scores in sorted(recording.judge_scores.items())
+    }
+    if unknown_grounded := sorted(set(recording.groundedness_scores) - case_ids):
+        raise EvalError(
+            f"recording has groundedness scores for unknown cases: {unknown_grounded}"
+        )
+    groundedness_scores = {
+        case_id: GroundednessScore.model_validate(scores)
+        for case_id, scores in sorted(recording.groundedness_scores.items())
     }
 
     return EvalReport(
@@ -423,7 +561,9 @@ def grade_recording(
         overall=_metrics_from_grades(grades),
         call_aggregates=aggregate_calls(calls),
         plan_quality=plan_quality_metrics(valid_plans),
+        grounding=grounding_metrics(valid_syllabi),
         judge_scores=judge_scores,
+        groundedness_scores=groundedness_scores,
     )
 
 
@@ -447,6 +587,12 @@ def threshold_breaches(report: EvalReport, thresholds: EvalThresholds) -> list[s
     if recovery_floor is not None and recovery is not None and recovery < recovery_floor:
         breaches.append(
             f"repair_recovery_rate {recovery:.4f} below floor {recovery_floor:.4f}"
+        )
+    coverage_floor = thresholds.min_citation_coverage
+    coverage = report.grounding.citation_coverage if report.grounding else None
+    if coverage_floor is not None and coverage is not None and coverage < coverage_floor:
+        breaches.append(
+            f"citation_coverage {coverage:.4f} below floor {coverage_floor:.4f}"
         )
     return breaches
 
@@ -493,6 +639,22 @@ def compare_reports(before: EvalReport, after: EvalReport) -> EvalComparison:
         ):
             b = getattr(before.plan_quality, metric, None) if before.plan_quality else None
             a = getattr(after.plan_quality, metric, None) if after.plan_quality else None
+            overall.append(
+                RateComparison(
+                    metric=metric,
+                    before=b,
+                    after=a,
+                    delta=(a - b) if a is not None and b is not None else None,
+                )
+            )
+    if before.grounding is not None or after.grounding is not None:
+        for metric in (
+            "citation_coverage",
+            "claim_utilization",
+            "high_confidence_share",
+        ):
+            b = getattr(before.grounding, metric, None) if before.grounding else None
+            a = getattr(after.grounding, metric, None) if after.grounding else None
             overall.append(
                 RateComparison(
                     metric=metric,

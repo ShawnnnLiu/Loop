@@ -30,7 +30,10 @@ Change log:
   "RAG retrieval" line item, updated below). One-time corpus embed
   (564 chunks + 57 labeled queries, snapshot `snap_b0ce947cafdafc8b`) costs
   ~$0.013; the vector cache makes re-runs free until the corpus or model
-  changes.
+  changes. Per-refresh cost measured at the G-I six-track expansion:
+  growing the corpus 35 → 55 documents embedded only the 242 new chunks +
+  18 new queries (82,616 tokens, ~$0.005) — the content-hash cache makes
+  refresh cost proportional to what changed, not to corpus size.
 - **2026-07-05**: cache-tier pricing added to per-call cost estimation
   (`AdapterConfig.estimate_cost_usd` / `llm_call_log.cost_estimate_usd`):
   cache writes at 1.25x and cache reads at 0.10x the input rate (5-minute

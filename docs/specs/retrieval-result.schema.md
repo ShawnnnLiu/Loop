@@ -76,7 +76,7 @@ asserted by test.
 | `chunk_id` | Stable chunk identity (`chunk_` + 16 hex chars), derived from `doc_id` + `ordinal` + the snapshot's chunking-params fingerprint. |
 | `doc_id` | The parent document (doc-level relevance labels in the retrieval eval judge against this). |
 | `ordinal` | The chunk's 0-based position within its document's chunking. |
-| `score` | BM25 relevance, negated so **higher is better** (SQLite FTS5 reports lower-is-better). A pure function of query + snapshot; never LLM-assigned (axiom 08: no model in the retrieval path). |
+| `score` | Retriever-relative relevance, **higher is better**. For the FTS5 retriever: BM25, negated (SQLite reports lower-is-better). For the hybrid retriever (G-E): reciprocal-rank-fusion mass over the BM25 and dense-cosine rankings. Either way a pure function of query + snapshot (+ the pinned embedding model and fusion params for hybrid); scores from different retrievers are not comparable, and no score is ever LLM-assigned (axiom 08: no LLM in the retrieval path). |
 | `start_char` / `end_char` | Exact half-open slice of the document's normalized text this chunk covers (auditability: a claim can point back into the exact region). |
 | `breadcrumb` | Section-heading trail (`"A > B"`) when the document structure exposed one; becomes claim provenance in G-G. |
 

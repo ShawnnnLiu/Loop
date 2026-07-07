@@ -24,6 +24,7 @@ import json
 import math
 from collections.abc import Sequence
 from pathlib import Path
+from typing import Protocol, runtime_checkable
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
@@ -34,12 +35,23 @@ from agentic_calendar.contracts.corpus_snapshot import CorpusSnapshot
 from agentic_calendar.contracts.retrieval_query import RetrievalQuery
 from agentic_calendar.contracts.retrieval_result import RetrievalResult
 
-from .index import SqliteChunkIndex
 from .registry import CorpusRegistry
 
 
 class RetrievalEvalError(AgenticCalendarError):
     """A query set, label, or recording is unusable; never a silent skip."""
+
+
+@runtime_checkable
+class ChunkSearcher(Protocol):
+    """Any deterministic retriever the eval can grade (the ablation seam).
+
+    ``SqliteChunkIndex`` (BM25) and ``HybridSearcher`` (G-E) both satisfy
+    this; the eval grades whichever it is handed, so hybrid-vs-BM25 is two
+    runs of the same grading code over the same labels.
+    """
+
+    def search(self, query: RetrievalQuery, *, snapshot_id: str) -> RetrievalResult: ...
 
 
 # --------------------------------------------------------------------------- #
@@ -222,16 +234,16 @@ def grade_case(
 def evaluate_query_set(
     query_set: RetrievalQuerySet,
     *,
-    index: SqliteChunkIndex,
+    searcher: ChunkSearcher,
     registry: CorpusRegistry,
     snapshot: CorpusSnapshot,
     k: int,
 ) -> RetrievalReport:
-    """Run every case against the built index for ``snapshot`` and aggregate.
+    """Run every case against one retriever for ``snapshot`` and aggregate.
 
-    Deterministic end to end: the index's determinism rule plus pure metric
-    arithmetic. Every case is graded — a case that cannot resolve its labels
-    raises rather than being skipped.
+    Deterministic end to end: the retriever's determinism rule plus pure
+    metric arithmetic. Every case is graded — a case that cannot resolve its
+    labels raises rather than being skipped.
     """
     documents = [d for d in (registry.get_document(i) for i in snapshot.doc_ids) if d]
     if len(documents) != len(snapshot.doc_ids):
@@ -242,7 +254,7 @@ def evaluate_query_set(
     per_case = []
     for case in query_set.cases:
         query = RetrievalQuery(query_text=case.query_text, track=case.track, k=k)
-        result = index.search(query, snapshot_id=snapshot.snapshot_id)
+        result = searcher.search(query, snapshot_id=snapshot.snapshot_id)
         per_case.append(grade_case(case, result, documents, k=k))
     count = len(per_case)
     return RetrievalReport(

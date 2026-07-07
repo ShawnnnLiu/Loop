@@ -5,6 +5,7 @@ Usage::
     uv run python -m agentic_calendar.tools.run_retrieval_eval \\
         --queries evalsets/retrieval_queries_v1.json \\
         --db corpus/corpus.db --snapshot snap_xxxxxxxxxxxxxxxx [--k 5] \\
+        [--mode bm25|hybrid] \\
         [--strict --min-recall 0.8 --min-mrr 0.7 --min-ndcg 0.75]
 
 Fully offline and deterministic (amended axiom 22: grading checked-in data
@@ -13,6 +14,12 @@ all versioned inputs; the FTS index is derived data and is (re)built
 idempotently before grading. ``--strict`` requires all three floors and
 exits non-zero on any breach — the ``make retrieval-eval`` gate. Floors are
 heuristic priors seeded from the first measured run.
+
+``--mode hybrid`` grades the G-E hybrid retriever (BM25 + dense cosine under
+reciprocal rank fusion) using **cached vectors only** — still offline; a
+missing vector is a typed error pointing at the (ask-first, networked) embed
+CLI, never a silent fall-back to BM25. The BM25 mode stays the CI gate;
+hybrid runs exist to measure the ablation, two runs over the same labels.
 """
 
 from __future__ import annotations
@@ -23,8 +30,14 @@ from pathlib import Path
 
 from agentic_calendar.common.errors import AgenticCalendarError
 from agentic_calendar.common.sqlite import SqliteDatabase
-from agentic_calendar.retrieval import SqliteChunkIndex, SqliteCorpusRegistry
+from agentic_calendar.retrieval import (
+    HybridSearcher,
+    SqliteChunkIndex,
+    SqliteCorpusRegistry,
+    SqliteVectorStore,
+)
 from agentic_calendar.retrieval.eval import (
+    ChunkSearcher,
     RetrievalFloors,
     RetrievalReport,
     evaluate_query_set,
@@ -67,6 +80,17 @@ def main(argv: list[str] | None = None) -> int:
         "--snapshot", required=True, help="Pinned snapshot id (snap_ + 16 hex)."
     )
     parser.add_argument("--k", type=int, default=5)
+    parser.add_argument(
+        "--mode",
+        choices=("bm25", "hybrid"),
+        default="bm25",
+        help="Retriever to grade: bm25 (the CI gate) or hybrid (G-E ablation).",
+    )
+    parser.add_argument(
+        "--embedding-model",
+        default="voyage-3.5",
+        help="Vector-cache model name for --mode hybrid.",
+    )
     parser.add_argument("--strict", action="store_true")
     parser.add_argument("--min-recall", type=float, default=None)
     parser.add_argument("--min-mrr", type=float, default=None)
@@ -107,13 +131,27 @@ def main(argv: list[str] | None = None) -> int:
         index = SqliteChunkIndex(db)
         # Derived data: (re)building is offline, idempotent, deterministic.
         index.build(registry, snapshot)
+        hybrid: HybridSearcher | None = None
+        if args.mode == "hybrid":
+            hybrid = HybridSearcher(
+                index, SqliteVectorStore(db), model_name=args.embedding_model
+            )
+        searcher: ChunkSearcher = hybrid if hybrid is not None else index
         report = evaluate_query_set(
-            query_set, index=index, registry=registry, snapshot=snapshot, k=args.k
+            query_set, searcher=searcher, registry=registry, snapshot=snapshot, k=args.k
         )
     except AgenticCalendarError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
 
+    if hybrid is not None:
+        print(
+            f"retriever: hybrid (model {args.embedding_model}, "
+            f"rrf_k={hybrid.params.rrf_k}, "
+            f"candidate_depth={hybrid.params.candidate_depth})"
+        )
+    else:
+        print("retriever: bm25")
     _print_report(report)
 
     if floors is not None:

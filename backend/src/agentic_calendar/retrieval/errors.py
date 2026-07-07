@@ -87,3 +87,31 @@ class SnapshotNotIndexedError(RetrievalIndexError):
             f"snapshot {snapshot_id!r} has no built chunk index; run "
             "SqliteChunkIndex.build(...) for it first"
         )
+
+
+class MissingEmbeddingsError(RetrievalIndexError):
+    """Hybrid retrieval needs vectors the cache does not hold.
+
+    A typed setup error, never a silent fall-back to BM25-only: an ablation
+    that quietly served a different retriever would fake its own numbers.
+    The fix is one (ask-first, networked) embed CLI run.
+    """
+
+    def __init__(
+        self,
+        *,
+        model_name: str,
+        input_type: str,
+        missing_count: int,
+        sample: list[str],
+    ) -> None:
+        self.model_name = model_name
+        self.input_type = input_type
+        self.missing_count = missing_count
+        self.sample = sample
+        super().__init__(
+            f"{missing_count} {input_type} embedding(s) for model "
+            f"{model_name!r} are not cached (e.g. {sample}); run "
+            "python -m agentic_calendar.tools.embed_corpus to populate the "
+            "vector cache first"
+        )

@@ -22,6 +22,7 @@ import re
 import sqlite3
 
 from agentic_calendar.common.sqlite import SqliteDatabase
+from agentic_calendar.contracts.career_track import CareerTrack
 from agentic_calendar.contracts.corpus_snapshot import CorpusSnapshot
 from agentic_calendar.contracts.retrieval_query import RetrievalQuery
 from agentic_calendar.contracts.retrieval_result import RankedChunk, RetrievalResult
@@ -212,6 +213,41 @@ class SqliteChunkIndex:
                 for position, row in enumerate(rows, start=1)
             ],
         )
+
+    def list_chunks(
+        self, snapshot_id: str, *, track: CareerTrack | None = None
+    ) -> list[Chunk]:
+        """Every indexed chunk of one built snapshot, ``chunk_id`` ascending.
+
+        The dense arm of hybrid retrieval (G-E) ranks over this listing, so
+        it applies the same track filter as :meth:`search` — the two arms
+        must always see the same candidate universe.
+        """
+        if not self.is_built(snapshot_id):
+            raise SnapshotNotIndexedError(snapshot_id)
+        sql = (
+            "SELECT chunk_id, doc_id, ordinal, text, start_char, end_char,"
+            " breadcrumb FROM retrieval_chunks WHERE snapshot_id = ?"
+        )
+        parameters: list[object] = [snapshot_id]
+        if track is not None:
+            sql += " AND instr(track_tags, ?) > 0"
+            parameters.append(f",{track.value},")
+        sql += " ORDER BY chunk_id ASC"
+        with self._db.read() as cur:
+            rows = cur.execute(sql, parameters).fetchall()
+        return [
+            Chunk(
+                chunk_id=row[0],
+                doc_id=row[1],
+                ordinal=row[2],
+                text=row[3],
+                start_char=row[4],
+                end_char=row[5],
+                breadcrumb=row[6],
+            )
+            for row in rows
+        ]
 
     def get_chunk(self, snapshot_id: str, chunk_id: str) -> Chunk | None:
         """Resolve a ranked reference back to its full chunk (claim assembly)."""

@@ -6,7 +6,7 @@ All estimates assume current pricing as of July 2026 and must be revalidated qua
 
 - **Frontier model** (Strategist; `claude-opus-4-8` in the Phase 8 adapters): $5.00 per 1M input tokens, $25.00 per 1M output tokens.
 - **Sonnet-tier model** (Planner, Reflection, user-facing explanations; `claude-sonnet-5`): $3.00 per 1M input tokens, $15.00 per 1M output tokens. Sticker price is encoded, not the introductory $2.00/$10.00 that runs through 2026-08-31 — encoding the promo would silently understate costs after it lapses.
-- **Embedding**: ~$0.02 per 1M tokens (assumption unchanged; not yet exercised).
+- **Embedding** (retrieval grounding, Voyage `voyage-3.5`): $0.06 per 1M tokens — first exercised 2026-07-06 (grounding G-E). Offline corpus embedding only (chunks + labeled queries, cached by content hash — embed once per text per model); embeddings are not in any runtime request path yet, so per-user cost tables are unaffected until retrieval-time query embedding ships.
 
 Prompt-cache tiers (2026-07-05): with the adapter's 5-minute-TTL `ephemeral`
 caching, the provider excludes cache tokens from `input_tokens` and bills cache
@@ -23,6 +23,14 @@ If pricing changes by more than 25%, the cost tables below must be regenerated a
 
 Change log:
 
+- **2026-07-06**: embedding line exercised for the first time (grounding
+  G-E): provider decision recorded as Voyage `voyage-3.5` at $0.06 per 1M
+  tokens, replacing the dormant ~$0.02 assumption (a >25% change, but
+  embedding cost appears in no runtime budget table — only the onboarding
+  "RAG retrieval" line item, updated below). One-time corpus embed
+  (564 chunks + 57 labeled queries, snapshot `snap_b0ce947cafdafc8b`) costs
+  ~$0.013; the vector cache makes re-runs free until the corpus or model
+  changes.
 - **2026-07-05**: cache-tier pricing added to per-call cost estimation
   (`AdapterConfig.estimate_cost_usd` / `llm_call_log.cost_estimate_usd`):
   cache writes at 1.25x and cache reads at 0.10x the input rate (5-minute
@@ -40,7 +48,7 @@ Change log:
 | --- | --- | --- | --- | --- |
 | Strategist (initial syllabus) | Frontier | 8,000 | 4,000 | $0.140 |
 | Planner (initial task plan) | Sonnet-tier | 6,000 | 8,000 | $0.138 |
-| RAG retrieval (8 queries) | Embedding | 2,000 | — | $0.00004 |
+| RAG retrieval (8 queries) | Embedding | 2,000 | — | $0.00012 |
 | **Total onboarding** | | | | **~$0.28** |
 
 ### Replan Cycle (drift-triggered, ~weekly per active user)

@@ -10,9 +10,11 @@ artifacts (claim records, eval reports) are self-describing.
 The determinism rule is enforced *by the contract*: ranks are contiguous,
 scores are non-increasing, and exact score ties are ordered by ``chunk_id``
 ascending — the producing index cannot emit an out-of-order result without
-failing validation here. Scores come from BM25 (negated so higher is
-better); they are a pure function of query + snapshot and are never assigned
-by an LLM (axiom 08).
+failing validation here. Scores are retriever-relative — BM25 (negated so
+higher is better) from the FTS5 index, or reciprocal-rank-fusion mass from
+the hybrid retriever — a pure function of query + snapshot (+ the pinned
+embedding model for hybrid) either way, and never assigned by an LLM
+(axiom 08).
 """
 
 from __future__ import annotations

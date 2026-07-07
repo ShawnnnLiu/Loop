@@ -1,4 +1,4 @@
-.PHONY: help install sync test test-fast lint typecheck format boundaries schemas schema-check eval-gate visualize check clean
+.PHONY: help install sync test test-fast lint typecheck format boundaries schemas schema-check eval-gate retrieval-eval visualize check clean
 
 help:
 	@echo "Targets:"
@@ -13,6 +13,7 @@ help:
 	@echo "  schemas     regenerate /schemas/*.schema.json from Pydantic contracts"
 	@echo "  schema-check verify committed /schemas match the contracts (no write)"
 	@echo "  eval-gate   strict-grade committed eval recordings (offline; amended axiom 22)"
+	@echo "  retrieval-eval  grade the labeled retrieval query set against the pinned corpus snapshot (LOCAL: needs corpus/corpus.db)"
 	@echo "  visualize   render the 'success' scheduler scenario to ../schedule.html"
 	@echo "  check       lint + typecheck + schema-check + test (boundaries run inside test)"
 	@echo "  clean       remove caches and build artifacts"
@@ -72,6 +73,25 @@ eval-gate:
 		--eval-set evalsets/eval_set_v2.json \
 		--recording evalsets/recordings/voice_2026_07_05.json \
 		--min-schema-validity-rate 1.0 --min-repair-recovery-rate 1.0
+
+# Retrieval eval gate (grounding-RAG G-D). Deterministic like eval-gate —
+# queries + labels + snapshot pin are all versioned — but the corpus TEXT is
+# deliberately NOT committed: every manifest license_note promises bounded
+# excerpts, so full page text stays out of the public repo. This target is
+# therefore a LOCAL gate: it needs corpus/corpus.db, rebuilt by re-running
+# the ingest CLI (fetch is ask-first; re-fetching on a later date yields new
+# doc_ids, so keep the db). It is not wired into CI or `check`.
+# Floors are the values MEASURED on the first labeled run (57 cases,
+# 2026-07-06, snapshot snap_b0ce947cafdafc8b): heuristic priors until more
+# labels accumulate. Floors equal to measured always pass until the labels,
+# corpus, chunking, or ranking change.
+retrieval-eval:
+	uv run python -m agentic_calendar.tools.run_retrieval_eval --strict \
+		--queries evalsets/retrieval_queries_v1.json \
+		--db corpus/corpus.db \
+		--snapshot snap_b0ce947cafdafc8b \
+		--k 5 \
+		--min-recall 0.9181 --min-mrr 0.8523 --min-ndcg 0.8380
 
 visualize:
 	uv run agentic-calendar-visualize --scenario success --out ../schedule.html

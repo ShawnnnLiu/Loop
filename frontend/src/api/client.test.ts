@@ -90,6 +90,38 @@ describe('api client request handling', () => {
     })
   })
 
+  it('extractResume posts the résumé + draft context and returns an LLM failure as a normal result', async () => {
+    const fetchMock = vi.fn(async () =>
+      jsonResponse(200, {
+        status: 'failed',
+        run_id: 'intake-run_1',
+        user_id: 'u_1',
+        proposal: null,
+        skills_canonical: [],
+        skills_unmatched: [],
+        taxonomy_version: null,
+        reason_code: 'LLM_RETRY_LIMIT_EXCEEDED',
+        detail: 'transport failed after retries',
+      }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    const payload = {
+      resume_text: 'x'.repeat(60),
+      draft_context: { goal: null, target_role: 'Backend SWE' },
+    }
+    const result = await api.extractResume(payload)
+
+    expect(result.status).toBe('failed')
+    expect(result.reason_code).toBe('LLM_RETRY_LIMIT_EXCEEDED')
+    expect(fetchMock).toHaveBeenCalledWith('/api/onboard/extract', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+  })
+
   it('reconcile posts an empty body and returns the typed reconciliation result', async () => {
     const fetchMock = vi.fn(async () =>
       jsonResponse(200, { run_id: 'run_1', outcome: 'sync_disabled', deltas: [] }),

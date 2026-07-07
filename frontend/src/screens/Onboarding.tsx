@@ -2,141 +2,39 @@ import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 
 import { ApiError, api, errorMessage } from '../api/client'
-import type { ExperienceLevel, MeResult, OnboardPayload, Weekday } from '../api/types'
+import type { ExperienceLevel, ExtractResumeResult, MeResult, Weekday } from '../api/types'
+import {
+  RESUME_MIN_CHARS,
+  STEP_LABELS,
+  addChips,
+  applyProposal,
+  browserTimezone,
+  buildPayload,
+  cleanList,
+  draftContext,
+  extractDisabled,
+  failureNotice,
+  initialForm,
+  sectionsHaveContent,
+  stepFromParam,
+  weakAreasAreGuess,
+  type ExperienceRow,
+  type FormState,
+} from '../lib/intake'
 
-// The deterministic onboarding wizard. Every field maps straight onto the
-// UserProfile contract, which is the single validation oracle — the wizard only
-// shapes input (CSV -> list, day toggles -> windows). The one AI-adjacent field,
-// the résumé, is captured as RAW TEXT only: no extract/review card (backend D-3).
-// Google is already connected (it is the entry gate), so the final step confirms
-// the connection rather than triggering OAuth.
+// The onboarding wizard. Every field maps straight onto the UserProfile
+// contract, which is the single validation oracle — the wizard only shapes
+// input (chips -> lists, day toggles -> windows). One step is AI-assisted
+// (RI-D): "Résumé & profile" can call the persistence-free extract endpoint
+// behind an explicit button; the proposal lands in client state the user
+// reviews and edits, and nothing persists until the wizard finishes through
+// POST /api/onboard — LLMs propose, the review gate + contract dispose.
+// Skipping the résumé keeps every field fully hand-editable. Google is
+// already connected (it is the entry gate), so the final step confirms the
+// connection rather than triggering OAuth.
 
 const DAYS: Weekday[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-const WEEKDAYS: Weekday[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
 const LEVELS: ExperienceLevel[] = ['beginner', 'intermediate', 'advanced']
-const STEP_LABELS = ['Goal', 'Time & constraints', 'Skills', 'Résumé & targets', 'Connect']
-
-interface FormState {
-  goal: string
-  target_role: string
-  experience_level: ExperienceLevel
-  timeline_weeks: number
-  weekly_hours: number
-  preferred_session_length_min: number
-  max_session_length_min: number
-  dwwDays: Weekday[]
-  dwwStart: string
-  dwwEnd: string
-  timezone: string
-  no_events_before: string
-  no_events_after: string
-  allow_weekends: boolean
-  max_daily_study_min: number
-  min_break_between_deep_blocks_min: number
-  prefer_evening_sessions: boolean
-  prefer_weekend_long_blocks: boolean
-  avoid_back_to_back_deep_work: boolean
-  known_strengths: string
-  known_weaknesses: string
-  resume_text: string
-  target_companies: string
-  target_level: string
-}
-
-function browserTimezone(): string {
-  try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
-  } catch {
-    return 'UTC'
-  }
-}
-
-function initialForm(me: MeResult): FormState {
-  const profile = me.profile
-  const windows = profile?.deep_work_windows ?? []
-  return {
-    goal: profile?.goal ?? '',
-    target_role: profile?.target_role ?? '',
-    experience_level: profile?.experience_level ?? 'intermediate',
-    timeline_weeks: profile?.timeline_weeks ?? 10,
-    weekly_hours: profile?.weekly_hours ?? 8,
-    preferred_session_length_min: profile?.preferred_session_length_min ?? 60,
-    max_session_length_min: profile?.max_session_length_min ?? 180,
-    // New users start with weekday deep-work windows pre-selected so a
-    // click-through onboard has real windows for the scheduler; an existing
-    // profile keeps whatever days it saved (even none).
-    dwwDays: profile ? windows.map((w) => w.day) : WEEKDAYS,
-    dwwStart: windows[0]?.start ?? '18:00',
-    dwwEnd: windows[0]?.end ?? '21:00',
-    // Prefer a real saved zone; "UTC" is the server's fallback default (not a
-    // zone a user picks), so treat it as unset and re-detect from the browser —
-    // this runs for returning users too, who previously kept the UTC default.
-    timezone: me.timezone && me.timezone !== 'UTC' ? me.timezone : browserTimezone(),
-    no_events_before: profile?.hard_constraints.no_events_before ?? '08:00',
-    no_events_after: profile?.hard_constraints.no_events_after ?? '22:30',
-    allow_weekends: profile?.hard_constraints.allow_weekends ?? true,
-    max_daily_study_min: profile?.hard_constraints.max_daily_study_min ?? 180,
-    min_break_between_deep_blocks_min:
-      profile?.hard_constraints.min_break_between_deep_blocks_min ?? 30,
-    prefer_evening_sessions: profile?.preferences.prefer_evening_sessions ?? false,
-    prefer_weekend_long_blocks: profile?.preferences.prefer_weekend_long_blocks ?? false,
-    avoid_back_to_back_deep_work: profile?.preferences.avoid_back_to_back_deep_work ?? false,
-    known_strengths: (profile?.known_strengths ?? []).join(', '),
-    known_weaknesses: (profile?.known_weaknesses ?? []).join(', '),
-    resume_text: profile?.resume_text ?? '',
-    target_companies: (profile?.target_companies ?? []).join(', '),
-    target_level: profile?.target_level ?? '',
-  }
-}
-
-function csv(value: string): string[] {
-  return value
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean)
-}
-
-function buildPayload(form: FormState, timezone: string): OnboardPayload {
-  const now = new Date().toISOString()
-  const windows =
-    form.dwwDays.length > 0 && form.dwwStart && form.dwwEnd
-      ? form.dwwDays.map((day) => ({ day, start: form.dwwStart, end: form.dwwEnd }))
-      : []
-  return {
-    timezone,
-    user_profile: {
-      user_id: 'pending', // server overrides with the session user
-      profile_version: 'profile_001',
-      goal: form.goal.trim(),
-      target_role: form.target_role.trim(),
-      target_companies: csv(form.target_companies),
-      target_level: form.target_level.trim() || null,
-      timeline_weeks: form.timeline_weeks,
-      weekly_hours: form.weekly_hours,
-      experience_level: form.experience_level,
-      known_strengths: csv(form.known_strengths),
-      known_weaknesses: csv(form.known_weaknesses),
-      preferred_session_length_min: form.preferred_session_length_min,
-      max_session_length_min: form.max_session_length_min,
-      deep_work_windows: windows,
-      hard_constraints: {
-        no_events_before: form.no_events_before,
-        no_events_after: form.no_events_after,
-        allow_weekends: form.allow_weekends,
-        max_daily_study_min: form.max_daily_study_min,
-        min_break_between_deep_blocks_min: form.min_break_between_deep_blocks_min,
-      },
-      preferences: {
-        prefer_evening_sessions: form.prefer_evening_sessions,
-        prefer_weekend_long_blocks: form.prefer_weekend_long_blocks,
-        avoid_back_to_back_deep_work: form.avoid_back_to_back_deep_work,
-      },
-      resume_text: form.resume_text.trim() || null,
-      created_at: now,
-      updated_at: now,
-    },
-  }
-}
 
 // ——— small controls ———
 
@@ -195,20 +93,105 @@ function ConfigRow({
   )
 }
 
+const chipButtonStyle: React.CSSProperties = {
+  background: 'none',
+  border: 'none',
+  cursor: 'pointer',
+  color: 'inherit',
+  font: 'inherit',
+  fontSize: 13,
+  padding: '0 0 0 6px',
+  lineHeight: 1,
+}
+
+/** Chip editor over a string list: type, Enter/comma/blur commits, × removes.
+ *  Free-text entry is always allowed — the skill vocabulary constrains the
+ *  AI's proposals, never the user. */
+function ChipInput({
+  id,
+  value,
+  onChange,
+  placeholder,
+}: {
+  id: string
+  value: string[]
+  onChange: (next: string[]) => void
+  placeholder: string
+}) {
+  const [text, setText] = useState('')
+  const commit = () => {
+    if (!text.trim()) return
+    onChange(addChips(value, text))
+    setText('')
+  }
+  return (
+    <div className="chip-row" style={{ alignItems: 'center', marginTop: 8 }}>
+      {value.map((item) => (
+        <span key={item} className="chip on sm">
+          {item}
+          <button
+            type="button"
+            aria-label={`remove ${item}`}
+            style={chipButtonStyle}
+            onClick={() => onChange(value.filter((entry) => entry !== item))}
+          >
+            ×
+          </button>
+        </span>
+      ))}
+      <input
+        id={id}
+        className="input"
+        style={{ maxWidth: 230, padding: '6px 10px', fontSize: 13 }}
+        value={text}
+        placeholder={placeholder}
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ',') {
+            e.preventDefault()
+            commit()
+          }
+        }}
+        onBlur={commit}
+      />
+    </div>
+  )
+}
+
+/** Structural provenance label for a section the last extraction filled —
+ *  per field group (extracted / inferred / suggested), never per chip, and
+ *  never a confidence score (axiom 08: LLMs do not assign confidence). */
+function Provenance({ kind, show }: { kind: 'extracted' | 'inferred' | 'suggested'; show: boolean }) {
+  if (!show) return null
+  return (
+    <span className="tag" style={{ marginLeft: 8 }}>
+      AI · {kind}
+    </span>
+  )
+}
+
 export function OnboardingScreen({ me }: { me: MeResult }) {
   const navigate = useNavigate()
   // Reason-aware deep link (B5): a capacity/fit failure sends the user
   // straight to the step that caused it — /onboarding?step=1 opens
-  // "Time & constraints" instead of restarting the whole form.
+  // "Time & constraints". Indices are the 4-step layout's (RI-D); stale
+  // 5-step-era links clamp inside stepFromParam.
   const [searchParams] = useSearchParams()
-  const [step, setStep] = useState(() => {
-    const requested = Number.parseInt(searchParams.get('step') ?? '0', 10)
-    if (Number.isNaN(requested)) return 0
-    return Math.min(Math.max(requested, 0), STEP_LABELS.length - 1)
-  })
+  const [step, setStep] = useState(() => stepFromParam(searchParams.get('step')))
   const [form, setForm] = useState<FormState>(() => initialForm(me))
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Extraction state is client-only (RI-D): applied proposals live in the
+  // same editable form as hand-typed input; unmatched skill surfaces and the
+  // weak-spot origin list exist only to render the flagged group / "a guess"
+  // tag until the wizard finishes.
+  const [extracting, setExtracting] = useState(false)
+  const [applied, setApplied] = useState(false)
+  const [extractError, setExtractError] = useState<{ code: string | null; detail: string | null } | null>(null)
+  const [pendingProposal, setPendingProposal] = useState<ExtractResumeResult | null>(null)
+  const [unmatched, setUnmatched] = useState<string[]>([])
+  const [extractedWeakSpots, setExtractedWeakSpots] = useState<string[]>([])
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -221,12 +204,73 @@ export function OnboardingScreen({ me }: { me: MeResult }) {
         : [...prev.dwwDays, day],
     }))
 
+  const setExperienceRow = (index: number, field: keyof ExperienceRow, value: string) =>
+    setForm((prev) => ({
+      ...prev,
+      experience: prev.experience.map((row, i) => (i === index ? { ...row, [field]: value } : row)),
+    }))
+  const addExperienceRow = () =>
+    setForm((prev) => ({
+      ...prev,
+      experience: [...prev.experience, { title: '', organization: '', summary: '' }],
+    }))
+  const removeExperienceRow = (index: number) =>
+    setForm((prev) => ({ ...prev, experience: prev.experience.filter((_, i) => i !== index) }))
+
+  function applyResult(result: ExtractResumeResult) {
+    setForm((prev) => applyProposal(prev, result))
+    setUnmatched(result.skills_unmatched)
+    setExtractedWeakSpots(result.proposal?.inferred_weak_spots ?? [])
+    setApplied(true)
+    setPendingProposal(null)
+  }
+
+  const keepUnmatched = (surface: string) => {
+    setForm((prev) => ({ ...prev, skills: cleanList([...prev.skills, surface]) }))
+    setUnmatched((prev) => prev.filter((entry) => entry !== surface))
+  }
+  const dropUnmatched = (surface: string) =>
+    setUnmatched((prev) => prev.filter((entry) => entry !== surface))
+
+  async function runExtract() {
+    setExtracting(true)
+    setExtractError(null)
+    setPendingProposal(null)
+    try {
+      const result = await api.extractResume({
+        resume_text: form.resume_text,
+        draft_context: draftContext(form),
+      })
+      const failure = failureNotice(result)
+      if (failure) {
+        // LLM failure: HTTP 200 + typed reason_code. Local and retryable —
+        // every section below stays hand-editable, the wizard stays navigable.
+        setExtractError(failure)
+      } else if (sectionsHaveContent(form)) {
+        // Never destroy hand-typed input silently: hold the proposal until
+        // the user confirms the replace.
+        setPendingProposal(result)
+      } else {
+        applyResult(result)
+      }
+      setExtracting(false)
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) return // redirected to login
+      // Transport / contract-invalid (422) failures carry no typed
+      // reason_code; surface the message honestly instead of inventing one.
+      setExtractError({ code: null, detail: errorMessage(err) })
+      setExtracting(false)
+    }
+  }
+
   // Client-side guards mirror the contract's hard rules so most submits pass;
   // the server stays the oracle and any remaining rejection surfaces below.
   const goalReady = form.goal.trim().length > 0 && form.target_role.trim().length > 0
   const sessionsValid = form.max_session_length_min >= form.preferred_session_length_min
   const canAdvance = step !== 0 || goalReady
   const isLast = step === STEP_LABELS.length - 1
+  const resumeLength = form.resume_text.trim().length
+  const weakAreasGuess = weakAreasAreGuess(form.known_weaknesses, extractedWeakSpots)
 
   async function submit() {
     setSubmitting(true)
@@ -454,46 +498,14 @@ export function OnboardingScreen({ me }: { me: MeResult }) {
       {step === 2 && (
         <section>
           <h1 className="t-h1" style={{ marginTop: 14 }}>
-            Your skills
+            Résumé &amp; profile
           </h1>
           <p className="muted" style={{ marginTop: 4 }}>
-            We protect more time for weak areas. Comma-separated — no AI here.
+            Paste your résumé and Loop drafts the fields below — the one AI-assisted step, and you
+            review every field. Prefer to type? Everything works by hand. Nothing is saved until you
+            finish setup.
           </p>
-          <div className="field">
-            <label className="field-label" htmlFor="weak">
-              Weak areas
-            </label>
-            <input
-              id="weak"
-              className="input"
-              value={form.known_weaknesses}
-              onChange={(e) => set('known_weaknesses', e.target.value)}
-              placeholder="graphs, dynamic programming, system design"
-            />
-          </div>
-          <div className="field">
-            <label className="field-label" htmlFor="strong">
-              Strong areas
-            </label>
-            <input
-              id="strong"
-              className="input"
-              value={form.known_strengths}
-              onChange={(e) => set('known_strengths', e.target.value)}
-              placeholder="arrays, hashing, SQL"
-            />
-          </div>
-        </section>
-      )}
 
-      {step === 3 && (
-        <section>
-          <h1 className="t-h1" style={{ marginTop: 14 }}>
-            Résumé &amp; targets
-          </h1>
-          <p className="muted" style={{ marginTop: 4 }}>
-            Optional. Paste your résumé as plain text — it gives the planner background context.
-          </p>
           <div className="field">
             <label className="field-label" htmlFor="resume">
               Paste your résumé (optional)
@@ -510,18 +522,226 @@ export function OnboardingScreen({ me }: { me: MeResult }) {
               Stays on your account, never shared with other users, never used for training.
             </div>
           </div>
+
+          <div className="row" style={{ gap: 12, alignItems: 'center' }}>
+            <button
+              className="btn btn-primary"
+              type="button"
+              disabled={extractDisabled(form.resume_text, extracting)}
+              onClick={() => void runExtract()}
+            >
+              {extracting ? (
+                <>
+                  <span className="spin" style={{ width: 11, height: 11, marginRight: 7 }} />
+                  Reading your résumé…
+                </>
+              ) : applied ? (
+                'Looks wrong? Re-extract'
+              ) : (
+                'Extract from résumé'
+              )}
+            </button>
+            {resumeLength > 0 && resumeLength < RESUME_MIN_CHARS && (
+              <span className="field-hint" style={{ marginTop: 0 }}>
+                paste at least {RESUME_MIN_CHARS} characters to extract
+              </span>
+            )}
+          </div>
+
+          {extractError && (
+            <div className="banner-error" style={{ marginTop: 14 }}>
+              We couldn&rsquo;t read your résumé this time — nothing below was changed. Fill the
+              fields in by hand or try again.
+              {extractError.code && (
+                <span className="err-code" style={{ marginLeft: 8 }}>
+                  {extractError.code}
+                </span>
+              )}
+              {extractError.detail && (
+                <div style={{ marginTop: 4, fontSize: 12.5 }}>{extractError.detail}</div>
+              )}
+            </div>
+          )}
+
+          {pendingProposal && (
+            <div className="card" style={{ padding: '12px 16px', marginTop: 14 }}>
+              <div style={{ fontWeight: 600 }}>
+                Replace your current entries with the extracted ones?
+              </div>
+              <div className="muted" style={{ fontSize: 13, marginTop: 3 }}>
+                Some fields below already have content — extracting overwrites the experience,
+                skills, strong/weak areas, and target sections. Your résumé text and target level
+                stay untouched.
+              </div>
+              <div className="row" style={{ gap: 8, marginTop: 10 }}>
+                <button
+                  className="btn btn-primary sm"
+                  type="button"
+                  onClick={() => applyResult(pendingProposal)}
+                >
+                  Replace
+                </button>
+                <button
+                  className="btn btn-quiet sm"
+                  type="button"
+                  onClick={() => setPendingProposal(null)}
+                >
+                  Keep mine
+                </button>
+              </div>
+            </div>
+          )}
+
+          {applied && (
+            <div className="row" style={{ marginTop: 18, gap: 8, alignItems: 'baseline' }}>
+              <span className="label">Extracted from your résumé</span>
+              <span className="tag warn">AI · please review</span>
+            </div>
+          )}
+
+          <div className="field">
+            <span className="field-label">
+              Experience
+              <Provenance kind="extracted" show={applied} />
+            </span>
+            {form.experience.map((row, i) => (
+              <div key={i} className="card soft" style={{ padding: '10px 12px', marginTop: 8 }}>
+                <div className="row" style={{ gap: 8 }}>
+                  <input
+                    className="input"
+                    style={{ flex: 1 }}
+                    aria-label={`experience ${i + 1} title`}
+                    placeholder="Title — e.g. Backend intern"
+                    value={row.title}
+                    onChange={(e) => setExperienceRow(i, 'title', e.target.value)}
+                  />
+                  <input
+                    className="input"
+                    style={{ flex: 1 }}
+                    aria-label={`experience ${i + 1} organization`}
+                    placeholder="Organization (optional)"
+                    value={row.organization}
+                    onChange={(e) => setExperienceRow(i, 'organization', e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-quiet sm"
+                    aria-label={`remove experience ${i + 1}`}
+                    onClick={() => removeExperienceRow(i)}
+                  >
+                    ×
+                  </button>
+                </div>
+                <input
+                  className="input"
+                  style={{ marginTop: 8, width: '100%', boxSizing: 'border-box' }}
+                  aria-label={`experience ${i + 1} summary`}
+                  placeholder="One-line summary (optional)"
+                  value={row.summary}
+                  onChange={(e) => setExperienceRow(i, 'summary', e.target.value)}
+                />
+              </div>
+            ))}
+            <div>
+              <button type="button" className="btn btn-quiet sm" style={{ marginTop: 8 }} onClick={addExperienceRow}>
+                + Add experience
+              </button>
+            </div>
+          </div>
+
+          <div className="field">
+            <label className="field-label" htmlFor="skills-input">
+              Skills
+              <Provenance kind="extracted" show={applied} />
+            </label>
+            <ChipInput
+              id="skills-input"
+              value={form.skills}
+              onChange={(next) => set('skills', next)}
+              placeholder="e.g. Python — Enter to add"
+            />
+            {unmatched.length > 0 && (
+              <div
+                className="card soft"
+                style={{ padding: '10px 12px', marginTop: 10, borderStyle: 'dashed' }}
+              >
+                <span className="field-label">Not recognized</span>
+                <div className="field-hint" style={{ marginTop: 2 }}>
+                  Found in your résumé but not in our skill vocabulary — keep or remove.
+                </div>
+                <div className="chip-row" style={{ marginTop: 8 }}>
+                  {unmatched.map((surface) => (
+                    <span key={surface} className="chip sm">
+                      {surface}
+                      <button type="button" style={chipButtonStyle} onClick={() => keepUnmatched(surface)}>
+                        keep
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={`remove ${surface}`}
+                        style={chipButtonStyle}
+                        onClick={() => dropUnmatched(surface)}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
           <div className="grid-2">
             <div className="field">
-              <label className="field-label" htmlFor="companies">
-                Target companies
+              <label className="field-label" htmlFor="strong-input">
+                Strong areas
+                <Provenance kind="inferred" show={applied} />
               </label>
-              <input
-                id="companies"
-                className="input"
-                value={form.target_companies}
-                onChange={(e) => set('target_companies', e.target.value)}
-                placeholder="comma-separated, optional"
+              <ChipInput
+                id="strong-input"
+                value={form.known_strengths}
+                onChange={(next) => set('known_strengths', next)}
+                placeholder="e.g. SQL — Enter to add"
               />
+            </div>
+            <div className="field">
+              <label className="field-label" htmlFor="weak-input">
+                Weak areas
+                {weakAreasGuess && (
+                  <span className="tag warn" style={{ marginLeft: 8 }}>
+                    a guess
+                  </span>
+                )}
+              </label>
+              <ChipInput
+                id="weak-input"
+                value={form.known_weaknesses}
+                onChange={(next) => set('known_weaknesses', next)}
+                placeholder="e.g. system design — Enter to add"
+              />
+              {weakAreasGuess ? (
+                <div className="field-hint">Inferred from your résumé — edit freely.</div>
+              ) : (
+                <div className="field-hint">We protect more time for weak areas.</div>
+              )}
+            </div>
+          </div>
+
+          <div className="grid-2">
+            <div className="field">
+              <label className="field-label" htmlFor="companies-input">
+                Target companies or categories
+                <Provenance kind="suggested" show={applied} />
+              </label>
+              <ChipInput
+                id="companies-input"
+                value={form.target_companies}
+                onChange={(next) => set('target_companies', next)}
+                placeholder="e.g. infra startups — Enter to add"
+              />
+              <div className="field-hint">
+                Extraction suggests categories only — type any company names you want.
+              </div>
             </div>
             <div className="field">
               <label className="field-label" htmlFor="level">
@@ -534,12 +754,13 @@ export function OnboardingScreen({ me }: { me: MeResult }) {
                 onChange={(e) => set('target_level', e.target.value)}
                 placeholder="e.g. new grad, senior (optional)"
               />
+              <div className="field-hint">Always yours to set — never auto-filled.</div>
             </div>
           </div>
         </section>
       )}
 
-      {step === 4 && (
+      {step === 3 && (
         <section>
           <h1 className="t-h1" style={{ marginTop: 14 }}>
             You&rsquo;re connected

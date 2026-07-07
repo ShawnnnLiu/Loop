@@ -33,6 +33,7 @@ import argparse
 import json
 import os
 import sys
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -59,18 +60,43 @@ from agentic_calendar.llm_nodes import (
     AnthropicMessagesTransport,
     AnthropicPlanner,
     AnthropicReflectionSummary,
+    AnthropicResumeIntake,
     AnthropicStrategist,
     AnthropicUserFacingExplanation,
     DeterministicReflectionSummary,
     DeterministicUserFacingExplanation,
     FixturePlanner,
+    FixtureResumeIntake,
     FixtureStrategist,
 )
+from agentic_calendar.skill_taxonomy import SkillTaxonomyRegistry, load_registry, resolve
 from agentic_calendar.tools.google_calendar_auth import (
     DEFAULT_TOKEN_PATH,
     build_calendar_service,
 )
 from agentic_calendar.tools.llm_smoke import sample_fixture_inputs
+
+
+def _taxonomy_aliases(registry: SkillTaxonomyRegistry) -> dict[str, str]:
+    """Alias → canonical display name, extracted as plain data for the fixture
+    node (which must not import the kernel; ``.importlinter`` contract 18)."""
+    return {
+        alias: entry.display_name
+        for entry in registry.entries
+        for alias in entry.aliases
+    }
+
+
+def _weak_spot_resolver(registry: SkillTaxonomyRegistry) -> Callable[[str], str | None]:
+    """Surface → ``skill_id`` (or ``None`` when out-of-vocabulary): the kernel's
+    resolver wrapped as the plain callable the Anthropic adapter's post-validator
+    takes (same no-kernel-import boundary as the fixture aliases)."""
+
+    def _resolve(surface: str) -> str | None:
+        entry = resolve(surface, registry)
+        return entry.skill_id if entry is not None else None
+
+    return _resolve
 
 
 def _fixture_bundle(deps: NodeDependencies) -> LlmNodeBundle:
@@ -98,6 +124,9 @@ def _fixture_bundle(deps: NodeDependencies) -> LlmNodeBundle:
         planner=FixturePlanner({clean_syllabus.syllabus_version: plan}),
         reflection=DeterministicReflectionSummary(),
         explanation=DeterministicUserFacingExplanation(),
+        resume_intake=FixtureResumeIntake(
+            taxonomy_aliases=_taxonomy_aliases(load_registry())
+        ),
     )
 
 
@@ -139,6 +168,13 @@ def _live_bundle(deps: NodeDependencies) -> LlmNodeBundle:
             store=deps.call_log_store,
             clock=deps.clock,
             id_generator=deps.id_generator,
+        ),
+        resume_intake=AnthropicResumeIntake(
+            transport=transport,
+            store=deps.call_log_store,
+            clock=deps.clock,
+            id_generator=deps.id_generator,
+            weak_spot_resolver=_weak_spot_resolver(load_registry()),
         ),
     )
 

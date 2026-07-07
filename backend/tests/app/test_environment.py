@@ -28,6 +28,7 @@ from agentic_calendar.contracts.task_plan import TaskPlan
 from agentic_calendar.disposition.disposition_store import TaskDispositionStore
 from agentic_calendar.llm_nodes.planner import FixturePlanner
 from agentic_calendar.llm_nodes.reflection_summary import DeterministicReflectionSummary
+from agentic_calendar.llm_nodes.resume_intake import FixtureResumeIntake
 from agentic_calendar.llm_nodes.strategist import FixtureStrategist
 from agentic_calendar.llm_nodes.user_facing_explanation import (
     DeterministicUserFacingExplanation,
@@ -45,6 +46,8 @@ def _factory(deps: NodeDependencies) -> LlmNodeBundle:
         planner=FixturePlanner({"v": _PLAN}),
         reflection=DeterministicReflectionSummary(),
         explanation=DeterministicUserFacingExplanation(),
+        # These tests never extract; a minimal alias mapping satisfies the node.
+        resume_intake=FixtureResumeIntake(taxonomy_aliases={"python": "Python"}),
     )
 
 

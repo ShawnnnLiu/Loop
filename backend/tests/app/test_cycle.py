@@ -44,6 +44,7 @@ from agentic_calendar.app.environment import (
     NodeDependencies,
     PlannerNode,
     ReflectionNode,
+    ResumeIntakeNode,
     StrategistNode,
     build_environment,
 )
@@ -94,6 +95,7 @@ from agentic_calendar.llm_nodes.reflection_summary import (
     DeterministicReflectionSummary,
     ReflectionSummary,
 )
+from agentic_calendar.llm_nodes.resume_intake import FixtureResumeIntake
 from agentic_calendar.llm_nodes.strategist import FixtureStrategist
 from agentic_calendar.llm_nodes.user_facing_explanation import (
     DeterministicUserFacingExplanation,
@@ -102,10 +104,19 @@ from agentic_calendar.planning.plan_version import LifecycleState
 from agentic_calendar.scheduler import schedule
 from agentic_calendar.scheduler.adjustment import DraftAdjustment
 from agentic_calendar.scheduler.inputs import SchedulerInput
+from agentic_calendar.skill_taxonomy import load_registry
 from agentic_calendar.supervisor.state import SupervisorState as S
 from tests._fixture_loader import iter_valid
 
 USER_ID = "user_123"
+
+#: Alias → display name, extracted once as plain data for the fixture intake
+#: node (the same extraction the composition root performs in run_cycle.py).
+TAXONOMY_ALIASES: dict[str, str] = {
+    alias: entry.display_name
+    for entry in load_registry().entries
+    for alias in entry.aliases
+}
 
 #: Monday noon UTC, matching the golden-suite HORIZON_START anchor (Mon
 #: 2026-05-04) so deep-work day-of-week math is deterministic.
@@ -279,6 +290,7 @@ def make_service(
     strategist: StrategistNode | None = None,
     planner: PlannerNode | None = None,
     reflection: ReflectionNode | None = None,
+    resume_intake: ResumeIntakeNode | None = None,
     seed_claims: bool = True,
     onboard: bool = True,
     now: datetime = HAPPY_NOW,
@@ -304,6 +316,8 @@ def make_service(
             or FixturePlanner(planner_fixtures or {syllabus.syllabus_version: plan}),
             reflection=reflection or DeterministicReflectionSummary(),
             explanation=DeterministicUserFacingExplanation(),
+            resume_intake=resume_intake
+            or FixtureResumeIntake(taxonomy_aliases=TAXONOMY_ALIASES),
         )
 
     env = build_environment(

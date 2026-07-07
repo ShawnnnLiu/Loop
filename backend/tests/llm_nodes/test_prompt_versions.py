@@ -54,6 +54,7 @@ from agentic_calendar.llm_nodes import anthropic_adapter as adapter
 from agentic_calendar.llm_nodes.anthropic_adapter import (
     AnthropicPlanner,
     AnthropicReflectionSummary,
+    AnthropicResumeIntake,
     AnthropicStrategist,
     AnthropicUserFacingExplanation,
 )
@@ -70,13 +71,21 @@ from tests.llm_nodes.test_anthropic_adapter import (
     _profile,
     _profile_with_resume,
 )
+from tests.llm_nodes.test_anthropic_resume_intake import (
+    _UNGROUNDED_EXTRACTION,
+    _VALID_EXTRACTION,
+    _intake,
+)
 
 #: (prompt constant name, config, pinned prompt_version, pinned SHA-256).
 _PINNED: list[tuple[str, object, str, str]] = [
     (
         "_STRATEGIST_SYSTEM",
         adapter.STRATEGIST_CONFIG,
-        "strategist-v3-2026-07-06",
+        # v4: the RI-B bundle-exclusion change bumped the version; the system
+        # prompt bytes themselves did not change (assembly-only edit — the
+        # full-rendered pin below covers it).
+        "strategist-v4-2026-07-06",
         "60fa04c32e9f33929f921fdc3c576ed72097b55a9c303d4309d9893175d4c093",
     ),
     (
@@ -96,6 +105,12 @@ _PINNED: list[tuple[str, object, str, str]] = [
         adapter.EXPLANATION_CONFIG,
         "explanation-v3-2026-07-05",
         "cbd9e9a559f6e67ed77fa2ad28e58a7633340c00226b9f8ce0bbd8be7dde3a59",
+    ),
+    (
+        "_RESUME_INTAKE_SYSTEM",
+        adapter.RESUME_INTAKE_CONFIG,
+        "resume-intake-v1-2026-07-06",
+        "b66507979c492488688bb77c0860518e7ade3e8de91eb65f6d88326971aa4076",
     ),
 ]
 
@@ -300,6 +315,22 @@ def _explanation_full() -> tuple[adapter.AdapterConfig, FakeTransport]:
     return adapter.EXPLANATION_CONFIG, transport
 
 
+def _resume_intake_full() -> tuple[adapter.AdapterConfig, FakeTransport]:
+    """Optional sections: allowed weak-spot vocabulary block + labeled résumé
+    block; engine repair suffix (the first response carries an ungrounded
+    skill, so round 2 carries the typed groundedness rejection)."""
+    transport = FakeTransport([_ok(_UNGROUNDED_EXTRACTION), _ok(_VALID_EXTRACTION)])
+    node = AnthropicResumeIntake(transport=transport, **_node_kwargs())  # type: ignore[arg-type]
+    node.run(run_id="intake-pin", intake=_intake())
+    # Guard: the pin must actually cover what it claims (builder-rot check).
+    prompt = transport.requests[0]["user_prompt"]
+    assert "Allowed weak-spot vocabulary (choose only from this list):" in prompt
+    assert "Candidate résumé" in prompt
+    assert '"resume_text"' not in prompt
+    assert transport.requests[1]["repair_suffix"] is not None
+    return adapter.RESUME_INTAKE_CONFIG, transport
+
+
 #: (node id, builder, pinned prompt_version, pinned full-prompt SHA-256).
 _FULL_PROMPT_PINS: list[
     tuple[str, Callable[[], tuple[adapter.AdapterConfig, FakeTransport]], str, str]
@@ -307,8 +338,8 @@ _FULL_PROMPT_PINS: list[
     (
         "strategist",
         _strategist_full,
-        "strategist-v3-2026-07-06",
-        "200ff829877db7e8e4248efcdb5ad73f27c71be023c57c0d5bc91a60dba8c6b1",
+        "strategist-v4-2026-07-06",
+        "e2770005289c9ee5207ea3a63c812d6e705c062cf6043a265b4a8322fa6ac936",
     ),
     (
         "planner",
@@ -327,6 +358,12 @@ _FULL_PROMPT_PINS: list[
         _explanation_full,
         "explanation-v3-2026-07-05",
         "cf9f95ac76221c187a9c42bdc5648f90f9a7771d9b41f3774e89582f79db2fe2",
+    ),
+    (
+        "resume_intake",
+        _resume_intake_full,
+        "resume-intake-v1-2026-07-06",
+        "2cba92a5bddaa29fe09302742003418026f579e69f415656a5de2da0fa1865dc",
     ),
 ]
 

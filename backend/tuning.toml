@@ -58,3 +58,7 @@
 # min_weighted_sample = 5.0
 # multiplier_min = 0.5
 # multiplier_max = 2.0
+
+# [claim_curation]
+# min_confidence = 0.25
+# max_per_host = 5

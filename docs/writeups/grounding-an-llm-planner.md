@@ -253,3 +253,41 @@ stops citing.
 - [x] Negative results are stated as findings: the reranker was not
   earned at this corpus size; corpus growth lowered same-query metrics;
   some evidence is born stale; zero corroboration groups exist.
+
+## Post-publication updates (2026-07-14)
+
+Two of the warts above were fixed after publication; the original text is
+kept as written, the fixes are recorded here.
+
+- **"Only medium-bucket claims currently serve" — resolved.** The 0.30
+  curation floor turned out to be a derivation bug, not a taste decision:
+  it was set from the anecdote *base* score (0.35) and overlooked the flat
+  −0.10 anecdotal penalty, so every ingested anecdote (uniformly 0.25 in
+  the store) was silently banned — against both axiom 08's "anecdotal
+  reports only when labeled low confidence" and the floor's own docstring.
+  The default is now 0.25 (the exact post-penalty anecdote score);
+  unclassified claims (0.10) still need saturated corroboration to serve.
+  The penalties were deliberately *not* touched: at −0.05 a maxed-out
+  anecdote reaches 0.55, the `medium` boundary, breaking the
+  anecdotes-ceiling-at-`low` invariant. Change record: axiom 08 "Serving
+  curation floor"; simulation data:
+  `docs/implementation-plans/loop-grounding-rag/05-production-operations.md`.
+- **"Index-page chrome produces junk claims" — now gated.** Measured
+  against this store: 20 of 117 claims were navigation chrome, including
+  **10 of the 27 claims that were actually serving** (all three levels.fyi
+  salary-page menus among them, at role_taxonomy 0.70). Claim assembly now
+  skips excerpts flagged by a deterministic four-signal gate
+  (`refresh_claims.is_navigation_chrome`: curated nav phrases, pipe
+  density, Title-Case runs, glued-anchor camel joints), and corpus
+  ingestion refuses pages under 200 normalized chars (the 0-byte
+  levels.fyi fetch is the motivating case). Both are conservative,
+  disclosed heuristics: title-list teasers with real sentences still pass,
+  and coherent marketing prose is beyond a deterministic filter.
+- The store was rebuilt from the same pinned snapshot with the gate
+  active (2026-07-14): 85 claims (36 chrome retrieval hits skipped at
+  assembly), of which **37 serve** at the retuned floor (~3.8k prompt
+  tokens) — 8 company-blog, 5 interview-postmortem, 21 personal-anecdote
+  (labeled low), 3 role-taxonomy — versus the published
+  27-of-which-10-chrome. quant_dev / data_scientist coverage remains thin:
+  their sources classify mostly `unclassified`, which is a manifest and
+  classifier-host-list problem, not a floor problem.

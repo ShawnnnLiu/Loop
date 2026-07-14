@@ -91,6 +91,7 @@ one sentence in the writeup, nothing in the code.
 | `02-retrieval-pipeline.md` | G-C chunking · G-D FTS5 retrieval + labeled query set + retrieval eval gate · G-E hybrid embeddings (gated) · G-F reranker (gated) |
 | `03-grounding-integration.md` | G-G claim assembly + store population + curation · G-H end-to-end grounded-vs-ungrounded eval |
 | `04-evaluation-and-writeup.md` | G-I freshness + remaining tracks · G-J writeup + eval appendix |
+| `05-production-operations.md` | Post-ship runbook: populate the production claim store (local + Fly), manual refresh loop, retune dataset, rollback |
 
 Session sizing: `SPLITS.md` groups these into 5 fresh-context sessions of
 ≤300k tokens each, with per-split kickoff prompts.

@@ -215,13 +215,29 @@ class IngestStatus(StrEnum):
     FETCH_FAILED = "fetch_failed"
     ROBOTS_DISALLOWED = "robots_disallowed"
     SKIPPED_OVER_CAP = "skipped_over_cap"
+    SKIPPED_THIN = "skipped_thin"
 
 
 #: Statuses that make the run exit non-zero: the operator must act (prune the
-#: URL, fix the manifest, or re-fetch on a new day for a changed page).
+#: URL, fix the manifest, or re-fetch on a new day for a changed page). A
+#: thin fetch is a failure too: the page fetched but yielded (almost) no
+#: text — usually a JS-rendered shell — and registering it would plant a
+#: permanently empty document in the append-only registry (the v1 corpus
+#: carries exactly one such 0-char document as the cautionary example).
 FAILURE_STATUSES: frozenset[IngestStatus] = frozenset(
-    {IngestStatus.CONFLICT, IngestStatus.FETCH_FAILED, IngestStatus.ROBOTS_DISALLOWED}
+    {
+        IngestStatus.CONFLICT,
+        IngestStatus.FETCH_FAILED,
+        IngestStatus.ROBOTS_DISALLOWED,
+        IngestStatus.SKIPPED_THIN,
+    }
 )
+
+#: Minimum normalized-text size for registration — a heuristic prior (axiom
+#: 08 sense) meant to catch degenerate fetches (0-byte JS shells), not to
+#: judge content: the smallest real document in the v1 corpus is 277 chars.
+#: ``--min-doc-chars 0`` disables the gate.
+DEFAULT_MIN_DOC_CHARS = 200
 
 
 @dataclass(frozen=True)
@@ -274,6 +290,7 @@ def run_ingestion(
     fetcher: Fetcher,
     today: date,
     max_fetches: int,
+    min_doc_chars: int = DEFAULT_MIN_DOC_CHARS,
 ) -> IngestionReport:
     """Fetch and register every manifest source, bounded by ``max_fetches``."""
     results: list[SourceResult] = []
@@ -316,6 +333,21 @@ def run_ingestion(
             continue
 
         text = normalize_fetched_text(outcome.text)
+        if len(text) < min_doc_chars:
+            results.append(
+                SourceResult(
+                    url=source.url,
+                    status=IngestStatus.SKIPPED_THIN,
+                    expected_type=source.expected_type,
+                    classified_type=classified,
+                    error=(
+                        f"normalized text is {len(text)} chars "
+                        f"(< {min_doc_chars}); not registered — likely a "
+                        "JS-rendered or empty page"
+                    ),
+                )
+            )
+            continue
         document = CorpusDocument(
             doc_id=derive_doc_id(source.url, today),
             source_url=source.url,
@@ -443,6 +475,16 @@ def main(
         help=f"Per-request timeout in seconds (default {_DEFAULT_TIMEOUT_SECONDS:g}).",
     )
     parser.add_argument(
+        "--min-doc-chars",
+        type=int,
+        default=DEFAULT_MIN_DOC_CHARS,
+        help=(
+            "Minimum normalized-text chars to register a fetched page "
+            f"(default {DEFAULT_MIN_DOC_CHARS}; 0 disables). Thin fetches "
+            "report as skipped_thin and fail the run."
+        ),
+    )
+    parser.add_argument(
         "--snapshot",
         action="store_true",
         help="After a live run, pin a snapshot over every registered document.",
@@ -494,6 +536,7 @@ def main(
         fetcher=effective_fetcher,
         today=effective_today,
         max_fetches=args.max_fetches,
+        min_doc_chars=args.min_doc_chars,
     )
     _print_report(report)
 

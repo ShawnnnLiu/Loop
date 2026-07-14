@@ -13,7 +13,7 @@ help:
 	@echo "  schemas     regenerate /schemas/*.schema.json from Pydantic contracts"
 	@echo "  schema-check verify committed /schemas match the contracts (no write)"
 	@echo "  eval-gate   strict-grade committed eval recordings (offline; amended axiom 22)"
-	@echo "  retrieval-eval  grade the labeled retrieval query set against the pinned corpus snapshot (LOCAL: needs corpus/corpus.db)"
+	@echo "  retrieval-eval  grade the labeled retrieval query set against the pinned corpus snapshot (corpus/corpus.db, committed)"
 	@echo "  visualize   render the 'success' scheduler scenario to ../schedule.html"
 	@echo "  check       lint + typecheck + schema-check + test (boundaries run inside test)"
 	@echo "  clean       remove caches and build artifacts"
@@ -92,12 +92,13 @@ eval-gate:
 # citations) — a heuristic prior like every seeded floor.
 
 # Retrieval eval gate (grounding-RAG G-D). Deterministic like eval-gate —
-# queries + labels + snapshot pin are all versioned — but the corpus TEXT is
-# deliberately NOT committed: every manifest license_note promises bounded
-# excerpts, so full page text stays out of the public repo. This target is
-# therefore a LOCAL gate: it needs corpus/corpus.db, rebuilt by re-running
-# the ingest CLI (fetch is ask-first; re-fetching on a later date yields new
-# doc_ids, so keep the db). It is not wired into CI or `check`.
+# queries + labels + snapshot pin are all versioned. Since 2026-07-14 the
+# corpus database IS committed (owner decision: corpus/corpus.db holds only
+# public-web text — axiom 08 — and re-fetching does not reproduce the bytes
+# behind the pinned snapshot, so reproducibility of these floors won over
+# keeping page text out of the repo; see the writeup's post-publication
+# updates). This target therefore runs anywhere the repo is checked out.
+# It is not wired into CI or `check` yet — a follow-up decision.
 # Floors are the values MEASURED on the v2 labeled run (75 cases, 2026-07-06,
 # snapshot snap_26c44499e582a96a — the G-I six-track expansion): heuristic
 # priors until more labels accumulate. For the record, the v1 floors measured

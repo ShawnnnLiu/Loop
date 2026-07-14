@@ -291,3 +291,15 @@ kept as written, the fixes are recorded here.
   27-of-which-10-chrome. quant_dev / data_scientist coverage remains thin:
   their sources classify mostly `unclassified`, which is a manifest and
   classifier-host-list problem, not a floor problem.
+- **"Corpus text is deliberately not committed" — reversed by owner
+  decision (2026-07-14).** `backend/corpus/corpus.db` is now committed.
+  What the original bullet protected (bounded excerpts in what we *serve
+  and publish*) still holds — the license notes govern serving, and no
+  user data ever enters the corpus (axiom 08). What it cost was
+  reproducibility: the database was the only copy of the pinned snapshot
+  behind the committed retrieval floors and the planned RI-F enrichment,
+  and this project's own fetch log shows re-fetching does not reproduce
+  bytes (per-request byte drift, a 429, a 0-byte JS shell). A snapshotted
+  copy of publicly available pages, source-attributed in the manifest,
+  was judged the honest trade. `make retrieval-eval` now runs anywhere
+  the repo is checked out (still not CI-wired).

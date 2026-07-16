@@ -2,10 +2,12 @@
 
 The corpus is the project's before/after evidence surface, shared with the
 ``show_placement_quality`` operator CLI. "Before" is the all-weights-zero
-config — argmin over ``(0, start)`` is earliest-feasible-start placement,
-i.e. the pre-scoring first-fit policy (modulo the deep-gap grid fix) — and
-"after" is the default weights; both are scored with ``score_schedule``
-under the *default* weights so the totals are comparable.
+config — argmin over ``(0, start)`` places each task at its earliest
+feasible start, i.e. the pre-scoring first-fit policy (modulo the deep-gap
+grid fix and the regret insertion order; see ``ZERO_WEIGHTS`` in
+``_helpers``) — and "after" is the default weights; both are scored with
+``score_schedule`` under the *default* weights so the totals are
+comparable.
 """
 
 from __future__ import annotations
@@ -16,22 +18,11 @@ import pytest
 
 from agentic_calendar.scheduler import schedule
 from agentic_calendar.scheduler.inputs import SchedulerInput
-from agentic_calendar.scheduler.scoring import (
-    PlacementScoringConfig,
-    score_schedule,
-)
+from agentic_calendar.scheduler.scoring import score_schedule
+from tests.scheduler._helpers import ZERO_WEIGHTS
 
 CORPUS_DIR = Path(__file__).parents[1] / "fixtures" / "placement_quality"
 CORPUS_FILES = sorted(CORPUS_DIR.glob("*.json"))
-
-ZERO_WEIGHTS = PlacementScoringConfig(
-    w_daily_balance=0,
-    w_back_to_back=0,
-    w_fragmentation=0,
-    w_deep_window_conservation=0,
-    w_evening_preference=0,
-    w_weekend_long_block=0,
-)
 
 
 def _load(path: Path) -> SchedulerInput:

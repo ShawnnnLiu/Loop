@@ -46,6 +46,7 @@ _TERM_FIELDS = (
     "back_to_back_total",
     "fragmentation_total",
     "deep_window_conservation_total",
+    "earliness_total",
     "evening_preference_total",
     "weekend_long_block_total",
 )

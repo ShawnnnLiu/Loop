@@ -50,7 +50,7 @@ def topological_order(
 
     ready: list[Task] = sorted(
         (t for t in plan.tasks if in_degree[t.task_id] == 0),
-        key=lambda t: _sort_key(t, module_priority),
+        key=lambda t: sort_key(t, module_priority),
     )
     out: list[Task] = []
     while ready:
@@ -60,13 +60,18 @@ def topological_order(
             in_degree[child_id] -= 1
             if in_degree[child_id] == 0:
                 ready.append(by_id[child_id])
-        ready.sort(key=lambda t: _sort_key(t, module_priority))
+        ready.sort(key=lambda t: sort_key(t, module_priority))
     return out
 
 
-def _sort_key(
+def sort_key(
     task: Task, module_priority: Mapping[str, Priority] | None
 ) -> tuple[int, int, str]:
+    """The deterministic ordering key (priority rank, cognitive load, task_id).
+
+    Public because the greedy loop reuses it for insertion-order tie-breaks
+    (axiom 05 "Insertion order") — one key definition, two consumers.
+    """
     priority_rank = (
         PRIORITY_RANK.get(module_priority[task.module_id], len(PRIORITY_RANK))
         if module_priority is not None and task.module_id in module_priority

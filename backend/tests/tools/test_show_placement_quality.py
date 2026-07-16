@@ -55,6 +55,7 @@ def test_json_output_carries_the_full_breakdown(
         "back_to_back_total",
         "fragmentation_total",
         "deep_window_conservation_total",
+        "earliness_total",
         "evening_preference_total",
         "weekend_long_block_total",
         "total_cost",

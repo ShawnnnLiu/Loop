@@ -1,14 +1,16 @@
 """Scored-placement tests (axiom 05 "Scored Placement").
 
 Covers the candidate grid, each cost term in isolation (two-window fixtures
-where only that term discriminates), the ``(cost, start)`` tie-break,
-byte-level determinism, and the phase acceptance fixture (5 tasks x 3 free
-days spreads across days instead of stacking day 1).
+where only that term discriminates), the ``(cost, start)`` tie-break, the
+regret ranking that powers insertion order, byte-level determinism, and the
+phase acceptance fixtures (5 tasks x 3 free days spreads across days
+instead of stacking day 1; 6 equal tasks x 3 equal days land 2/2/2).
 
 The P-B first-fit equivalence proof (``_first_fit_reference``) was deleted
 when the scoring terms landed — the equivalence deliberately stopped
 holding. The all-weights-zero test below pins the surviving relationship:
-zero weights reduce scored placement to earliest-feasible-start.
+zero weights reduce each *placement* to earliest-feasible-start (see the
+``ZERO_WEIGHTS`` note in ``_helpers`` for the insertion-order caveat).
 """
 
 from __future__ import annotations
@@ -25,12 +27,15 @@ from agentic_calendar.scheduler.scoring import (
     PlacementScoringConfig,
     PlacementState,
     back_to_back_penalty,
+    compute_day_quotas,
     compute_target_daily_min,
     daily_balance_penalty,
     deep_window_conservation_penalty,
+    earliness_penalty,
     enumerate_candidates,
     evening_preference_bonus,
     fragmentation_penalty,
+    rank_placement,
     score_schedule,
     select_placement,
     weekend_long_block_bonus,
@@ -39,6 +44,7 @@ from agentic_calendar.scheduler.windows import FreeWindow
 from tests.scheduler._helpers import (
     DEEP_WORK_POLICY,
     DEFAULT_POLICY,
+    ZERO_WEIGHTS,
     busy,
     make_input,
     make_plan,
@@ -48,14 +54,11 @@ from tests.scheduler._helpers import (
 MONDAY = datetime(2026, 5, 4, 0, 0, tzinfo=UTC)
 SCORING = DEFAULT_PLACEMENT_SCORING_CONFIG
 
-ZERO_WEIGHTS = PlacementScoringConfig(
-    w_daily_balance=0,
-    w_back_to_back=0,
-    w_fragmentation=0,
-    w_deep_window_conservation=0,
-    w_evening_preference=0,
-    w_weekend_long_block=0,
-)
+#: A week of effectively-unconstraining quotas so term tests that are not
+#: about daily balance see a zero balance penalty everywhere.
+WEEK_QUOTAS = {
+    (MONDAY + timedelta(days=d)).date().isoformat(): 240 for d in range(7)
+}
 
 
 def _window(start: datetime, minutes: int, *, deep: bool = False) -> FreeWindow:
@@ -88,7 +91,8 @@ def _select(
     state: PlacementState | None = None,
     policy: SchedulingPolicy = DEFAULT_POLICY,
     scoring: PlacementScoringConfig = SCORING,
-    target_daily_min: int = 240,
+    day_quotas: dict[str, int] | None = None,
+    horizon_start: datetime = MONDAY,
 ) -> PlacementCandidate | None:
     return select_placement(
         candidates,
@@ -96,7 +100,29 @@ def _select(
         state=state if state is not None else _fresh_state(),
         policy=policy,
         scoring=scoring,
-        target_daily_min=target_daily_min,
+        day_quotas=day_quotas if day_quotas is not None else WEEK_QUOTAS,
+        horizon_start=horizon_start,
+    )
+
+
+def _rank(
+    candidates: list[PlacementCandidate],
+    *,
+    task: Task,
+    state: PlacementState | None = None,
+    policy: SchedulingPolicy = DEFAULT_POLICY,
+    scoring: PlacementScoringConfig = SCORING,
+    day_quotas: dict[str, int] | None = None,
+    horizon_start: datetime = MONDAY,
+):
+    return rank_placement(
+        candidates,
+        task=task,
+        state=state if state is not None else _fresh_state(),
+        policy=policy,
+        scoring=scoring,
+        day_quotas=day_quotas if day_quotas is not None else WEEK_QUOTAS,
+        horizon_start=horizon_start,
     )
 
 
@@ -232,9 +258,12 @@ def test_daily_balance_penalty_values() -> None:
     task = _task(task_id="t", estimated_duration_min=60)
     w = _window(MONDAY.replace(hour=9), 60)
     state = _fresh_state()
-    assert daily_balance_penalty(_candidate(w), task, state, 100) == 0
+    quotas = {"2026-05-04": 100}
+    assert daily_balance_penalty(_candidate(w), task, state, quotas) == 0
     state.minutes_per_day["2026-05-04"] = 80
-    assert daily_balance_penalty(_candidate(w), task, state, 100) == 40
+    assert daily_balance_penalty(_candidate(w), task, state, quotas) == 40
+    # A day absent from the map has no enumerated capacity — quota 0.
+    assert daily_balance_penalty(_candidate(w), task, state, {}) == 140
 
 
 def test_daily_balance_steers_to_the_lighter_day() -> None:
@@ -247,10 +276,47 @@ def test_daily_balance_steers_to_the_lighter_day() -> None:
         [_candidate(loaded_day), _candidate(empty_day)],
         task=task,
         state=state,
-        target_daily_min=60,
+        day_quotas={"2026-05-04": 60, "2026-05-05": 60},
     )
     assert chosen is not None
     assert chosen.start == empty_day.start
+
+
+def test_daily_balance_reads_per_day_quotas() -> None:
+    """Distinct per-day quotas steer placement — the map is not just a
+    uniform target in disguise (P-F: tests can override individual days)."""
+    task = _task(task_id="t", estimated_duration_min=60)
+    monday = _window(MONDAY.replace(hour=9), 60)
+    tuesday = _window(MONDAY.replace(hour=9) + timedelta(days=1), 60)
+    quota_free_tuesday = {"2026-05-04": 0, "2026-05-05": 240}
+    chosen = _select(
+        [_candidate(monday), _candidate(tuesday)],
+        task=task,
+        day_quotas=quota_free_tuesday,
+    )
+    assert chosen is not None
+    assert chosen.start == tuesday.start
+
+
+def test_compute_day_quotas_uniform_map_over_working_days() -> None:
+    plan = make_plan(
+        make_task(task_id="a", estimated_duration_min=100),
+        make_task(task_id="b", estimated_duration_min=100),
+        make_task(task_id="c", estimated_duration_min=100),
+    )
+    inp = make_input(plan)
+    windows = [
+        _window(MONDAY.replace(hour=9), 120),
+        _window(MONDAY.replace(hour=14), 60),  # same day — one working day
+        _window(MONDAY.replace(hour=9) + timedelta(days=1), 120),
+    ]
+    # Same value per day (the formula has no per-day inputs yet).
+    assert compute_day_quotas(inp, windows) == {
+        "2026-05-04": 150,
+        "2026-05-05": 150,
+    }
+    # No windows → no working days → empty map.
+    assert compute_day_quotas(inp, []) == {}
 
 
 def test_back_to_back_penalty_shortfall_and_sides() -> None:
@@ -448,6 +514,80 @@ def test_weekend_long_block_bonus_and_steering() -> None:
     assert chosen.start == saturday.start
 
 
+def test_earliness_penalty_values() -> None:
+    same_day = _candidate(_window(MONDAY.replace(hour=22), 60))
+    assert earliness_penalty(same_day, MONDAY) == 0
+    third_day = _candidate(_window(MONDAY.replace(hour=8) + timedelta(days=3), 60))
+    assert earliness_penalty(third_day, MONDAY) == 3
+    # Local-date arithmetic: a mid-day horizon start still counts whole days.
+    assert earliness_penalty(third_day, MONDAY.replace(hour=13)) == 3
+
+
+def test_earliness_is_tiny_fill_earlier_pressure() -> None:
+    """Earliness (day-scaled) breaks near-ties toward earlier days but never
+    outweighs a minutes-scaled term: a 2-min sliver today beats an exact fit
+    three days out only because of the earliness term."""
+    task = _task(task_id="t", estimated_duration_min=60)
+    near_sliver = _window(MONDAY.replace(hour=9), 62)
+    far_exact = _window(MONDAY.replace(hour=9) + timedelta(days=3), 60)
+    candidates = [
+        _candidate(near_sliver, offset_min=2),  # lead sliver 2, trail 0
+        _candidate(far_exact),
+    ]
+    chosen = _select(candidates, task=task)
+    assert chosen is not None
+    assert chosen.start == near_sliver.start + timedelta(minutes=2)
+    # Without the term the exact fit three days out wins on fragmentation.
+    no_earliness = PlacementScoringConfig(w_earliness=0)
+    chosen = _select(candidates, task=task, scoring=no_earliness)
+    assert chosen is not None
+    assert chosen.start == far_exact.start
+
+
+# --------------------------------------------------------------------------- #
+# Regret ranking — the insertion-order facts (axiom 05 "Insertion order")
+# --------------------------------------------------------------------------- #
+
+
+def test_rank_placement_empty_returns_none() -> None:
+    assert _rank([], task=_task(task_id="t")) is None
+
+
+def test_rank_placement_single_candidate_sets_the_flag() -> None:
+    task = _task(task_id="t", estimated_duration_min=60)
+    only = _candidate(_window(MONDAY.replace(hour=9), 60))
+    ranking = _rank([only], task=task)
+    assert ranking is not None
+    assert ranking.candidate == only
+    assert ranking.single_candidate
+    assert ranking.regret == 0
+
+
+def test_rank_placement_regret_is_second_best_minus_best() -> None:
+    """An exact fit (cost 0) against a full-sliver placement (cost 30):
+    regret is the cost gap, and the best candidate is the argmin."""
+    task = _task(task_id="t", estimated_duration_min=60)
+    exact = _candidate(_window(MONDAY.replace(hour=12), 60))
+    slivered = _candidate(_window(MONDAY.replace(hour=9), 90))  # trail 30
+    ranking = _rank([slivered, exact], task=task)
+    assert ranking is not None
+    assert ranking.candidate == exact
+    assert ranking.cost == 0
+    assert ranking.second_best_cost == 30
+    assert ranking.regret == 30
+    assert not ranking.single_candidate
+
+
+def test_rank_placement_tied_best_costs_mean_zero_regret() -> None:
+    task = _task(task_id="t", estimated_duration_min=60)
+    early = _candidate(_window(MONDAY.replace(hour=9), 60))
+    late = _candidate(_window(MONDAY.replace(hour=12), 60))  # same day, same cost
+    ranking = _rank([late, early], task=task)
+    assert ranking is not None
+    assert ranking.candidate == early  # (cost, start) argmin
+    assert ranking.regret == 0
+
+
 def test_compute_target_daily_min() -> None:
     plan = make_plan(
         make_task(task_id="a", estimated_duration_min=100),
@@ -497,6 +637,21 @@ def test_five_tasks_three_days_spread_instead_of_stacking_day_one() -> None:
         key = st.start.date().isoformat()
         per_day[key] = per_day.get(key, 0) + 60
     assert per_day == {"2026-05-04": 120, "2026-05-05": 120, "2026-05-06": 60}
+
+
+def test_six_equal_tasks_over_three_equal_days_land_two_per_day() -> None:
+    """P-F acceptance: 6 x 60-min tasks over 3 equally free days spread
+    2/2/2 under the per-day soft quotas — never 6/0/0."""
+    plan = make_plan(
+        *[make_task(task_id=f"t_{i}", estimated_duration_min=60) for i in range(6)]
+    )
+    out = schedule(make_input(plan, horizon_days=3))
+    assert len(out.scheduled_tasks) == 6
+    per_day: dict[str, int] = {}
+    for st in out.scheduled_tasks:
+        key = st.start.date().isoformat()
+        per_day[key] = per_day.get(key, 0) + 1
+    assert per_day == {"2026-05-04": 2, "2026-05-05": 2, "2026-05-06": 2}
 
 
 def test_scoring_override_changes_placement() -> None:
@@ -558,6 +713,7 @@ def test_score_schedule_zero_cost_day() -> None:
     assert breakdown.daily_balance_total == 0
     assert breakdown.back_to_back_total == 0
     assert breakdown.fragmentation_total == 0
+    assert breakdown.earliness_total == 0
     assert breakdown.total_cost == 0
     assert breakdown.per_day_minutes == {"2026-05-04": 120}
     assert breakdown.band_histogram == {"morning": 2}
@@ -567,7 +723,8 @@ def test_score_schedule_zero_cost_day() -> None:
 def test_score_schedule_totals_on_a_stacked_schedule() -> None:
     """Hand-checked totals for the zero-weight stacking of the acceptance
     fixture: Mon 08/09/10/11 + Tue 08 → daily overflow 140, three adjacent
-    Mon pairs at gap 0 → 45, no slivers."""
+    Mon pairs at gap 0 → 45, no slivers, one block a day past horizon
+    start → earliness 1."""
     plan = make_plan(
         *[make_task(task_id=f"t_{i}", estimated_duration_min=60) for i in range(5)]
     )
@@ -579,7 +736,8 @@ def test_score_schedule_totals_on_a_stacked_schedule() -> None:
     assert breakdown.daily_balance_total == 140
     assert breakdown.back_to_back_total == 45
     assert breakdown.fragmentation_total == 0
-    assert breakdown.total_cost == 3 * 140 + 2 * 45
+    assert breakdown.earliness_total == 1
+    assert breakdown.total_cost == 3 * 140 + 2 * 45 + 1 * 1
 
 
 def test_score_schedule_deep_conservation_and_pair_doubling() -> None:

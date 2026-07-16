@@ -3,6 +3,9 @@
 Axiom 05 "Scored Placement": enumerate every feasible candidate start
 (window starts plus a fixed intra-window grid), then pick the deterministic
 argmin of an integer cost under the ``(cost, start)`` total-order tie-break.
+``rank_placement`` additionally exposes the second-best cost, which powers
+the greedy loop's regret-based insertion order (axiom 05 "Insertion
+order"): the task with the most to lose places first.
 
 All arithmetic is integer minutes. Soft terms reorder feasible candidates
 and never reject one — every hard check the first-fit loop applied is still
@@ -19,6 +22,7 @@ schedule-level definitions are the audit surface.
 from __future__ import annotations
 
 import itertools
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
@@ -50,6 +54,7 @@ class PlacementScoringConfig:
     w_deep_window_conservation: int = 2
     w_evening_preference: int = 1
     w_weekend_long_block: int = 1
+    w_earliness: int = 1
     buffer_min: int = 15
     candidate_grid_min: int = 15
 
@@ -126,6 +131,22 @@ def compute_target_daily_min(inp: SchedulerInput, windows: list[FreeWindow]) -> 
     )
 
 
+def compute_day_quotas(
+    inp: SchedulerInput, windows: list[FreeWindow]
+) -> dict[str, int]:
+    """Per-day soft quotas for the ``daily_balance`` term (axiom 05).
+
+    Every working day (a distinct local date carrying ≥ 1 window in the
+    initial enumeration) gets the same even-spread target today — the
+    formula has no per-day inputs yet — but the term reads a precomputed
+    map so per-day refinement (and tests) can override individual days.
+    A day absent from the map has no enumerated free capacity; consumers
+    treat its quota as 0.
+    """
+    target = compute_target_daily_min(inp, windows)
+    return {day: target for day in sorted({day_key(w.start) for w in windows})}
+
+
 def enumerate_candidates(
     task: Task,
     windows: list[FreeWindow],
@@ -190,11 +211,17 @@ def daily_balance_penalty(
     candidate: PlacementCandidate,
     task: Task,
     state: PlacementState,
-    target_daily_min: int,
+    day_quotas: Mapping[str, int],
 ) -> int:
-    """Minutes the candidate pushes its day past the even-spread target."""
-    used_today = state.minutes_per_day.get(day_key(candidate.start), 0)
-    return max(0, used_today + task.estimated_duration_min - target_daily_min)
+    """Minutes the candidate pushes its day past that day's soft quota.
+
+    A day missing from the map carries no enumerated free capacity, so its
+    quota is 0 — every placed minute there counts as overflow. Quotas are
+    soft: they reorder candidates, never reject one.
+    """
+    key = day_key(candidate.start)
+    used_today = state.minutes_per_day.get(key, 0)
+    return max(0, used_today + task.estimated_duration_min - day_quotas.get(key, 0))
 
 
 def back_to_back_penalty(
@@ -260,6 +287,16 @@ def deep_window_conservation_penalty(
     return 0
 
 
+def earliness_penalty(candidate: PlacementCandidate, horizon_start: datetime) -> int:
+    """Days from horizon start to the candidate's local date.
+
+    Deliberately tiny (unit = days, default weight 1): the minutes-scaled
+    terms dominate it, so it acts only as fill-earlier tie pressure — a
+    pure balance objective would otherwise scatter work arbitrarily late.
+    """
+    return (candidate.start.date() - horizon_start.date()).days
+
+
 def evening_preference_bonus(
     candidate: PlacementCandidate, task: Task, policy: SchedulingPolicy
 ) -> int:
@@ -298,25 +335,94 @@ def candidate_cost(
     state: PlacementState,
     policy: SchedulingPolicy,
     scoring: PlacementScoringConfig,
-    target_daily_min: int,
+    day_quotas: Mapping[str, int],
+    horizon_start: datetime,
 ) -> int:
     """Integer cost of a candidate (axiom 05 scored placement).
 
-    ``cost = Σ w·penalty - Σ w·bonus``; every term is a non-negative
-    minutes-scaled int and every weight an int.
+    ``cost = Σ w·penalty - Σ w·bonus``; every penalty/bonus is a
+    non-negative int (minutes-scaled except the day-scaled ``earliness``)
+    and every weight an int.
     """
     return (
         scoring.w_daily_balance
-        * daily_balance_penalty(candidate, task, state, target_daily_min)
+        * daily_balance_penalty(candidate, task, state, day_quotas)
         + scoring.w_back_to_back
         * back_to_back_penalty(candidate, task, state, policy, scoring)
         + scoring.w_fragmentation * fragmentation_penalty(candidate, policy)
         + scoring.w_deep_window_conservation
         * deep_window_conservation_penalty(candidate, task)
+        + scoring.w_earliness * earliness_penalty(candidate, horizon_start)
         - scoring.w_evening_preference
         * evening_preference_bonus(candidate, task, policy)
         - scoring.w_weekend_long_block
         * weekend_long_block_bonus(candidate, task, policy)
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class PlacementRanking:
+    """A task's best candidate plus the facts the insertion order needs.
+
+    ``regret = second_best_cost - cost`` measures how much the task loses
+    if its best slot is taken (0 when the two cheapest candidates tie). A
+    single-candidate task has no second-best; the flag — not an infinity
+    sentinel — encodes "place me first" (axiom 05 "Insertion order").
+    """
+
+    candidate: PlacementCandidate
+    cost: int
+    second_best_cost: int | None
+
+    @property
+    def single_candidate(self) -> bool:
+        return self.second_best_cost is None
+
+    @property
+    def regret(self) -> int:
+        if self.second_best_cost is None:
+            return 0
+        return self.second_best_cost - self.cost
+
+
+def rank_placement(
+    candidates: list[PlacementCandidate],
+    *,
+    task: Task,
+    state: PlacementState,
+    policy: SchedulingPolicy,
+    scoring: PlacementScoringConfig,
+    day_quotas: Mapping[str, int],
+    horizon_start: datetime,
+) -> PlacementRanking | None:
+    """Rank a task's candidates: the ``(cost, start)`` argmin plus regret.
+
+    Returns ``None`` for an empty candidate list — the caller fails the
+    task through its typed reason path.
+    """
+    if not candidates:
+        return None
+    scored = [
+        (
+            candidate_cost(
+                c,
+                task=task,
+                state=state,
+                policy=policy,
+                scoring=scoring,
+                day_quotas=day_quotas,
+                horizon_start=horizon_start,
+            ),
+            c,
+        )
+        for c in candidates
+    ]
+    best_cost, best = min(scored, key=lambda pair: (pair[0], pair[1].start))
+    if len(scored) == 1:
+        return PlacementRanking(candidate=best, cost=best_cost, second_best_cost=None)
+    second_best_cost = sorted(cost for cost, _ in scored)[1]
+    return PlacementRanking(
+        candidate=best, cost=best_cost, second_best_cost=second_best_cost
     )
 
 
@@ -327,7 +433,8 @@ def select_placement(
     state: PlacementState,
     policy: SchedulingPolicy,
     scoring: PlacementScoringConfig,
-    target_daily_min: int,
+    day_quotas: Mapping[str, int],
+    horizon_start: datetime,
 ) -> PlacementCandidate | None:
     """Deterministic argmin under the total-order key ``(cost, start)``.
 
@@ -335,22 +442,16 @@ def select_placement(
     so no two candidates share a ``start`` — the key is a total order and
     the selection is unique.
     """
-    if not candidates:
-        return None
-    return min(
+    ranking = rank_placement(
         candidates,
-        key=lambda c: (
-            candidate_cost(
-                c,
-                task=task,
-                state=state,
-                policy=policy,
-                scoring=scoring,
-                target_daily_min=target_daily_min,
-            ),
-            c.start,
-        ),
+        task=task,
+        state=state,
+        policy=policy,
+        scoring=scoring,
+        day_quotas=day_quotas,
+        horizon_start=horizon_start,
     )
+    return None if ranking is None else ranking.candidate
 
 
 def _live_windows(
@@ -385,6 +486,7 @@ class ScheduleScoreBreakdown:
     back_to_back_total: int
     fragmentation_total: int
     deep_window_conservation_total: int
+    earliness_total: int
     evening_preference_total: int
     weekend_long_block_total: int
     total_cost: int
@@ -414,6 +516,7 @@ def score_schedule(
         policy=inp.policy,
     )
     target_daily_min = compute_target_daily_min(inp, initial_windows)
+    day_quotas = compute_day_quotas(inp, initial_windows)
 
     blocks = sorted(
         (
@@ -440,7 +543,11 @@ def score_schedule(
         band_histogram[band] = band_histogram.get(band, 0) + 1
 
     daily_balance_total = sum(
-        max(0, minutes - target_daily_min) for minutes in per_day_minutes.values()
+        max(0, minutes - day_quotas.get(day, 0))
+        for day, minutes in per_day_minutes.items()
+    )
+    earliness_total = sum(
+        (block.start.date() - inp.horizon_start.date()).days for block in blocks
     )
 
     back_to_back_total = 0
@@ -502,6 +609,7 @@ def score_schedule(
         + scoring.w_back_to_back * back_to_back_total
         + scoring.w_fragmentation * fragmentation_total
         + scoring.w_deep_window_conservation * deep_window_conservation_total
+        + scoring.w_earliness * earliness_total
         - scoring.w_evening_preference * evening_preference_total
         - scoring.w_weekend_long_block * weekend_long_block_total
     )
@@ -510,6 +618,7 @@ def score_schedule(
         back_to_back_total=back_to_back_total,
         fragmentation_total=fragmentation_total,
         deep_window_conservation_total=deep_window_conservation_total,
+        earliness_total=earliness_total,
         evening_preference_total=evening_preference_total,
         weekend_long_block_total=weekend_long_block_total,
         total_cost=total_cost,

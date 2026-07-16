@@ -183,18 +183,28 @@ def test_scheduler_placement_weight_override_journals_and_serves() -> None:
     an override serves through ``EffectiveTuning.scheduler_placement`` and
     journals exactly one entry."""
     store = InMemoryThresholdChangeLogStore()
-    tuning = _apply({"scheduler_placement": {"w_daily_balance": 5}} | PROSE, store)
+    tuning = _apply(
+        {"scheduler_placement": {"w_daily_balance": 5, "w_earliness": 2}} | PROSE,
+        store,
+    )
     assert tuning.scheduler_placement.w_daily_balance == 5
+    assert tuning.scheduler_placement.w_earliness == 2
     # Untouched knobs keep their defaults.
     assert tuning.scheduler_placement.candidate_grid_min == (
         DEFAULT_PLACEMENT_SCORING_CONFIG.candidate_grid_min
     )
-    entries = store.list_all()
-    assert len(entries) == 1
-    assert entries[0].config_section == "scheduler_placement"
-    assert entries[0].threshold_field == "w_daily_balance"
-    assert entries[0].prior_value == DEFAULT_PLACEMENT_SCORING_CONFIG.w_daily_balance
-    assert entries[0].new_value == 5
+    by_field = {e.threshold_field: e for e in store.list_all()}
+    assert set(by_field) == {"w_daily_balance", "w_earliness"}
+    for entry in by_field.values():
+        assert entry.config_section == "scheduler_placement"
+    assert by_field["w_daily_balance"].prior_value == (
+        DEFAULT_PLACEMENT_SCORING_CONFIG.w_daily_balance
+    )
+    assert by_field["w_daily_balance"].new_value == 5
+    assert by_field["w_earliness"].prior_value == (
+        DEFAULT_PLACEMENT_SCORING_CONFIG.w_earliness
+    )
+    assert by_field["w_earliness"].new_value == 2
 
 
 def test_replay_effective_reproduces_history() -> None:

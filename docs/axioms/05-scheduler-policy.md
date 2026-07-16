@@ -69,6 +69,11 @@ The Scheduler must respect:
 6. Mock interviews require contiguous blocks.
 7. Filter tasks whose dependencies are not yet complete.
 
+This list defines the deterministic sort key (priority rank, cognitive
+load, task id) and the output ordering. *Placement* order within
+topological readiness is regret-driven — see "Insertion order" under
+Scored Placement below.
+
 ## Scored Placement
 
 Within the ordered task loop, placement is a deterministic argmin over
@@ -97,12 +102,20 @@ only. The term list (exact formulas live in
 
 | Term | Sign | Intent |
 | --- | --- | --- |
-| `daily_balance` | penalty | placement pushing a day past its even-spread daily target |
+| `daily_balance` | penalty | placement pushing a day past its per-day soft quota (the even-spread daily target, precomputed once per run as a day → quota map) |
 | `back_to_back` | penalty | gap to an adjacent placed study block below the buffer; doubled for a deep block adjacent to another deep block when `avoid_back_to_back_deep_work` |
 | `fragmentation` | penalty | leaving an unusable sliver (`0 < leftover < preferred_session_length_min`) in the window |
 | `deep_window_conservation` | penalty | a non-deep task consuming scarce deep-window capacity |
+| `earliness` | penalty | days from horizon start to the candidate's day — deliberately tiny (unit = days, not minutes) so it only acts as fill-earlier tie pressure; without it a pure balance objective scatters work arbitrarily late |
 | `evening_preference` | bonus | evening-band start when `prefer_evening_sessions` |
 | `weekend_long_block` | bonus | weekend placement of a task longer than `preferred_session_length_min` when `prefer_weekend_long_blocks` and weekends are allowed |
+
+Per-day quotas are soft: `quota(day) = min(max_daily_study_min,
+ceil(total_plan_min / working_days))`, computed once per run over the
+days carrying at least one initially-enumerated free window. Quotas
+never eliminate feasibility — in a crunch week tasks still place past
+quota, and the capacity-vs-fragmentation promotion fires on exactly the
+same inputs as before.
 
 ### Selection and tie-break
 
@@ -110,6 +123,24 @@ The chosen candidate is the argmin under the total-order key
 `(cost, candidate_start)`. Free windows are disjoint and grid starts within
 a window are distinct, so no two candidates share a start — the order is
 total and placement is fully deterministic.
+
+### Insertion order (regret)
+
+Which task places next is itself deterministic. Each round, over the
+ready set (tasks whose dependencies are completed or already placed this
+run), the scheduler computes every ready task's best and second-best
+candidate cost and places exactly one task: the one maximizing
+`(single_candidate_flag, regret)` where `regret = second_best_cost −
+best_cost` (0 when the two cheapest candidates tie) and a task with
+exactly one feasible candidate outranks any regret. Ties break by the
+ascending Task Ordering sort key. A ready task with zero feasible
+candidates (or too long and unsplittable) fails in that round with its
+typed `reason_code`; a task whose dependency never places fails
+`DEPENDENCY_BLOCKED` exactly as under linear order. Output ordering —
+`scheduled_tasks` and `unscheduled_tasks` alike — remains the task's
+position in the topological order, so insertion order never changes the
+output shape. Complexity is O(rounds × ready × candidates), fine at MVP
+plan sizes (tens of tasks).
 
 ### Weights are heuristic priors
 
@@ -133,7 +164,10 @@ first (window-start candidates only, cost ≡ 0) with an output-equivalence
 proof; the scoring-terms increment then activated the intra-window grid
 and the six cost terms above, deliberately re-pinning placement-instant
 test expectations while leaving every reason_code, debug payload, and
-Supervisor routing assertion unchanged. Weights and knobs serve from
+Supervisor routing assertion unchanged. The day-balancing increment then
+made insertion order regret-driven, replaced the global daily target with
+the per-day soft-quota map, and added the `earliness` term — again
+re-pinning placement instants only. Weights and knobs serve from
 `PlacementScoringConfig` defaults unless overridden via
 `backend/tuning.toml` `[scheduler_placement]`.
 

@@ -1,28 +1,31 @@
 """Pure greedy MVP placement loop.
 
-Algorithm:
+Algorithm (axiom 05 "Scored Placement" + "Insertion order"):
 
-1. Filter out tasks whose prerequisites are not met → ``DEPENDENCY_BLOCKED``.
-2. Reject tasks where ``estimated_duration_min > max_session_length_min`` and
-   ``splittable=False`` → ``TASK_TOO_LONG_UNSPLITTABLE``.
-3. For each remaining task in topo + priority order, place it via the
-   scored-candidate machinery (``scoring.py``): enumerate feasible
+1. Compute the deterministic topological order (module priority /
+   cognitive load / task_id tie-breaks) — it remains the *output*
+   ordering for scheduled and unscheduled tasks alike.
+2. Maintain the ready set: tasks whose dependencies are completed or
+   already placed this run. Each round, rank every ready task's feasible
    candidates (window starts plus the intra-window grid, under the
-   deep-work / daily-load / break-between-deep hard checks), pick the
-   ``(cost, start)`` argmin of the six-term integer cost (axiom 05
-   "Scored Placement").
-4. If no candidate is feasible, emit a typed reason with debug payload.
-5. After every placement, mark the placed range busy so subsequent tasks see it.
+   deep-work / daily-load / break-between-deep hard checks) by the
+   integer cost terms, and place the task with the most to lose:
+   single-candidate tasks first, then largest regret (second-best -
+   best cost), ties by the ordering sort key. Ready tasks that are too
+   long and unsplittable (``TASK_TOO_LONG_UNSPLITTABLE``) or have zero
+   feasible candidates fail that round with their typed reason.
+3. After every placement the placed range becomes busy, windows are
+   re-enumerated, and the next round re-ranks against the new state.
+4. Tasks whose dependencies never place fail ``DEPENDENCY_BLOCKED``.
 
-The algorithm is intentionally naïve. Phase 3 may swap in OR-Tools without
-changing the public contract (``schedule(input) -> SchedulerOutput``).
+The algorithm is intentionally a greedy heuristic. Phase 3 may swap in
+OR-Tools without changing the public contract
+(``schedule(input) -> SchedulerOutput``).
 """
 
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass
-from datetime import datetime
 
 from agentic_calendar.contracts.common_types import FocusLevel, Priority
 from agentic_calendar.contracts.reason_codes import ReasonCode
@@ -39,16 +42,18 @@ from agentic_calendar.contracts.task_plan import Task
 from . import debug as dbg
 from .errors import SchedulerError
 from .inputs import FreeBusyInterval, SchedulerInput
-from .ordering import topological_order
+from .ordering import sort_key, topological_order
 from .scoring import (
     DEFAULT_PLACEMENT_SCORING_CONFIG,
     PlacedBlock,
+    PlacementCandidate,
+    PlacementRanking,
     PlacementScoringConfig,
     PlacementState,
-    compute_target_daily_min,
+    compute_day_quotas,
     day_key,
     enumerate_candidates,
-    select_placement,
+    rank_placement,
 )
 from .windows import FreeWindow, enumerate_free_windows
 
@@ -119,6 +124,7 @@ def _schedule_validated(
 ) -> SchedulerOutput:
     """Run the greedy placement loop on contract-valid input."""
     ordered_tasks = topological_order(inp.plan, module_priority=module_priority)
+    topo_position = {t.task_id: i for i, t in enumerate(ordered_tasks)}
     free_windows = enumerate_free_windows(
         horizon_start=inp.horizon_start,
         horizon_end=inp.horizon_end,
@@ -127,7 +133,7 @@ def _schedule_validated(
     )
     available_capacity_min = sum(w.duration_min for w in free_windows)
     largest_block_min = max((w.duration_min for w in free_windows), default=0)
-    target_daily_min = compute_target_daily_min(inp, free_windows)
+    day_quotas = compute_day_quotas(inp, free_windows)
 
     state = PlacementState(
         busy=list(inp.calendar_free_busy),
@@ -138,66 +144,107 @@ def _schedule_validated(
 
     scheduled: list[ScheduledTask] = []
     unscheduled: list[UnscheduledTask] = []
-    # Within a single run, a task placed earlier in topo order satisfies the
-    # dependency relation for tasks placed later (axiom 11: prereqs are
-    # computed deterministically from completion plus in-flight placements).
-    #
-    # Because ``ordered_tasks`` is a topological order, the only deps a task
-    # can have are tasks that appeared earlier in the iteration — so the
-    # per-task readiness check is a single subset test against the running
-    # ``completed_or_placed`` set: O(deps) per task, O(edges) overall.
+    # Within a single run, a placed task satisfies the dependency relation
+    # for tasks ranked later (axiom 11: prereqs are computed
+    # deterministically from completion plus in-flight placements). A task
+    # enters the ready set only when every dependency is in this set, so
+    # topology stays a hard gate no matter which ready task wins a round.
     completed_or_placed: set[str] = set(inp.completed_task_ids)
 
-    for task in ordered_tasks:
-        blocked_by = [dep for dep in task.dependencies if dep not in completed_or_placed]
-        if blocked_by:
-            unscheduled.append(
-                UnscheduledTask(
+    remaining = list(ordered_tasks)
+    while remaining:
+        ready = [
+            t
+            for t in remaining
+            if all(dep in completed_or_placed for dep in t.dependencies)
+        ]
+        if not ready:
+            break
+        ready.sort(key=lambda t: sort_key(t, module_priority))
+        resolved: set[str] = set()
+        ranked: list[tuple[Task, PlacementRanking]] = []
+        for task in ready:
+            if (
+                task.estimated_duration_min > inp.policy.max_session_length_min
+                and not task.splittable
+            ):
+                unscheduled.append(
+                    UnscheduledTask(
+                        task_id=task.task_id,
+                        reason_code=ReasonCode.TASK_TOO_LONG_UNSPLITTABLE,
+                        debug=dbg.task_too_long_unsplittable_debug(
+                            duration_min=task.estimated_duration_min,
+                            max_session_length_min=inp.policy.max_session_length_min,
+                        ),
+                    )
+                )
+                resolved.add(task.task_id)
+                continue
+            candidates = enumerate_candidates(
+                task, free_windows, state, inp.policy, scoring
+            )
+            ranking = rank_placement(
+                candidates,
+                task=task,
+                state=state,
+                policy=inp.policy,
+                scoring=scoring,
+                day_quotas=day_quotas,
+                horizon_start=inp.horizon_start,
+            )
+            if ranking is None:
+                # Fail-fast: a ready task with zero candidates fails this
+                # round (axiom 05 "Insertion order") — its dependents never
+                # become ready and fall out as DEPENDENCY_BLOCKED below.
+                unscheduled.append(_failure_for(task, free_windows, inp))
+                resolved.add(task.task_id)
+                continue
+            ranked.append((task, ranking))
+
+        if ranked:
+            task, ranking = min(
+                ranked,
+                key=lambda pair: (
+                    0 if pair[1].single_candidate else 1,
+                    -pair[1].regret,
+                    sort_key(pair[0], module_priority),
+                ),
+            )
+            chosen = ranking.candidate
+            scheduled.append(
+                ScheduledTask(
                     task_id=task.task_id,
-                    reason_code=ReasonCode.DEPENDENCY_BLOCKED,
-                    debug=dbg.dependency_blocked_debug(blocked_by=blocked_by),
+                    start=chosen.start,
+                    end=chosen.end,
+                    calendar_event_status=CalendarEventStatus.DRAFT_ONLY,
                 )
             )
-            continue
+            _record_placement(task, chosen, state, free_windows, inp)
+            completed_or_placed.add(task.task_id)
+            resolved.add(task.task_id)
 
-        if (
-            task.estimated_duration_min > inp.policy.max_session_length_min
-            and not task.splittable
-        ):
-            unscheduled.append(
-                UnscheduledTask(
-                    task_id=task.task_id,
-                    reason_code=ReasonCode.TASK_TOO_LONG_UNSPLITTABLE,
-                    debug=dbg.task_too_long_unsplittable_debug(
-                        duration_min=task.estimated_duration_min,
-                        max_session_length_min=inp.policy.max_session_length_min,
-                    ),
-                )
-            )
-            continue
+        remaining = [t for t in remaining if t.task_id not in resolved]
 
-        placement = _try_place(
-            task,
-            free_windows,
-            inp,
-            state,
-            scoring=scoring,
-            target_daily_min=target_daily_min,
-        )
-        if placement is None:
-            unscheduled.append(_failure_for(task, free_windows, inp))
-            continue
-
-        scheduled.append(
-            ScheduledTask(
+    for task in remaining:  # never became ready — a dependency failed upstream
+        unscheduled.append(
+            UnscheduledTask(
                 task_id=task.task_id,
-                start=placement.start,
-                end=placement.end,
-                calendar_event_status=CalendarEventStatus.DRAFT_ONLY,
+                reason_code=ReasonCode.DEPENDENCY_BLOCKED,
+                debug=dbg.dependency_blocked_debug(
+                    blocked_by=[
+                        dep
+                        for dep in task.dependencies
+                        if dep not in completed_or_placed
+                    ]
+                ),
             )
         )
-        _record_placement(task, placement, state, free_windows, inp)
-        completed_or_placed.add(task.task_id)
+
+    # Output ordering is the task's topological position, not placement
+    # round (axiom 05 "Insertion order") — byte-identical to the linear
+    # loop whenever placements coincide.
+    scheduled.sort(key=lambda st: topo_position[st.task_id])
+    unscheduled.sort(key=lambda u: topo_position[u.task_id])
 
     unscheduled = _promote_capacity_failures(
         unscheduled,
@@ -255,42 +302,9 @@ def _promote_capacity_failures(
     return promoted
 
 
-@dataclass(frozen=True, slots=True)
-class _Placement:
-    start: datetime
-    end: datetime
-    window_was_deep: bool
-
-
-def _try_place(
-    task: Task,
-    windows: list[FreeWindow],
-    inp: SchedulerInput,
-    state: PlacementState,
-    *,
-    scoring: PlacementScoringConfig,
-    target_daily_min: int,
-) -> _Placement | None:
-    """Select a placement via the scored-candidate machinery (axiom 05)."""
-    candidates = enumerate_candidates(task, windows, state, inp.policy, scoring)
-    chosen = select_placement(
-        candidates,
-        task=task,
-        state=state,
-        policy=inp.policy,
-        scoring=scoring,
-        target_daily_min=target_daily_min,
-    )
-    if chosen is None:
-        return None
-    return _Placement(
-        start=chosen.start, end=chosen.end, window_was_deep=chosen.window.is_deep_work
-    )
-
-
 def _record_placement(
     task: Task,
-    placement: _Placement,
+    placement: PlacementCandidate,
     state: PlacementState,
     windows: list[FreeWindow],
     inp: SchedulerInput,

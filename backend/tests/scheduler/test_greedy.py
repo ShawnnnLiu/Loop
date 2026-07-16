@@ -18,6 +18,7 @@ from agentic_calendar.scheduler import schedule
 from tests.scheduler._helpers import (
     DEEP_WORK_POLICY,
     DEFAULT_POLICY,
+    ZERO_WEIGHTS,
     busy,
     make_input,
     make_plan,
@@ -144,6 +145,69 @@ def test_deep_work_task_placed_in_deep_window() -> None:
     placement = out.scheduled_tasks[0]
     expected_start = datetime(2026, 5, 4, 18, 0, 0, tzinfo=UTC)  # Mon 18:00 UTC
     assert placement.start == expected_start
+
+
+def test_regret_order_places_the_stranded_deep_task() -> None:
+    """Insertion order (axiom 05): the single-candidate 120-min deep task
+    places before the flexible 60-min deep task, so both fit. Under the old
+    first-come order, ``a_flex`` (earlier sort key) took Monday's deep
+    window first and stranded ``b_long`` — its only feasible slot."""
+    from agentic_calendar.scheduler.policy import DeepWorkWindowPolicy
+
+    policy = DEEP_WORK_POLICY.model_copy(
+        update={
+            "deep_work_windows": [
+                DeepWorkWindowPolicy(day="Mon", start="18:00", end="20:00"),
+                DeepWorkWindowPolicy(day="Tue", start="18:00", end="19:00"),
+            ]
+        }
+    )
+    plan = make_plan(
+        make_task(
+            task_id="a_flex", estimated_duration_min=60, required_focus_level="deep"
+        ),
+        make_task(
+            task_id="b_long", estimated_duration_min=120, required_focus_level="deep"
+        ),
+    )
+    horizon_start = datetime(2026, 5, 4, 0, 0, 0, tzinfo=UTC)  # Mon
+    out = schedule(
+        make_input(plan, policy=policy, horizon_days=7, horizon_start=horizon_start)
+    )
+    assert out.schedule_status is ScheduleStatus.SUCCESS
+    starts = {st.task_id: st.start for st in out.scheduled_tasks}
+    assert starts == {
+        "b_long": datetime(2026, 5, 4, 18, 0, 0, tzinfo=UTC),  # its only slot
+        "a_flex": datetime(2026, 5, 5, 18, 0, 0, tzinfo=UTC),
+    }
+    # Output ordering stays topological (a_flex first), not placement round.
+    assert [st.task_id for st in out.scheduled_tasks] == ["a_flex", "b_long"]
+
+
+def test_crunch_week_failures_identical_to_zero_weight_baseline() -> None:
+    """Soft quotas never eliminate feasibility (axiom 05): in a crunch week
+    (load > capacity) the default weights fail exactly the same tasks as
+    the zero-weight baseline, and the capacity promotion still fires."""
+    plan = make_plan(
+        *[
+            make_task(task_id=f"t{i}", estimated_duration_min=120, splittable=True)
+            for i in range(4)  # 480 min required
+        ]
+    )
+    crunch = DEFAULT_POLICY.model_copy(
+        update={"no_events_before": "20:00", "no_events_after": "21:00"}
+    )
+    inp = make_input(plan, policy=crunch, horizon_days=3)  # 180 min capacity
+    default_out = schedule(inp)
+    baseline_out = schedule(inp, scoring=ZERO_WEIGHTS)
+    assert [(u.task_id, u.reason_code) for u in default_out.unscheduled_tasks] == [
+        (u.task_id, u.reason_code) for u in baseline_out.unscheduled_tasks
+    ]
+    assert default_out.unscheduled_tasks, "crunch fixture must fail tasks"
+    assert all(
+        u.reason_code is ReasonCode.INSUFFICIENT_WEEKLY_CAPACITY
+        for u in default_out.unscheduled_tasks
+    )
 
 
 def test_partial_failure_when_some_tasks_fit_others_dont() -> None:

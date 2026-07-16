@@ -11,6 +11,22 @@ from agentic_calendar.scheduler.policy import (
     DeepWorkWindowPolicy,
     SchedulingPolicy,
 )
+from agentic_calendar.scheduler.scoring import PlacementScoringConfig
+
+#: Every cost weight zeroed: the argmin over ``(0, start)`` is
+#: earliest-feasible-start placement — the shared "before" baseline for the
+#: corpus and the crunch/override tests. Insertion order is still
+#: regret-driven, but with all costs 0 regret is 0 everywhere and only
+#: single-candidate tasks can jump the queue.
+ZERO_WEIGHTS = PlacementScoringConfig(
+    w_daily_balance=0,
+    w_back_to_back=0,
+    w_fragmentation=0,
+    w_deep_window_conservation=0,
+    w_evening_preference=0,
+    w_weekend_long_block=0,
+    w_earliness=0,
+)
 
 
 def make_task(

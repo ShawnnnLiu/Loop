@@ -1,41 +1,72 @@
 {
   "manifest_version": "corpus-manifest-v1",
-  "comment": "Starter manifest (G-B) expanded by the G-I track expansion (quant_dev, data_scientist, product_manager; plus specific-article depth for the starting tracks - index-page chrome sources are kept, not removed, because committed retrieval labels reference them and registered documents are immutable). Expand further toward 30-60 docs per track at future fetch checkpoints (operator review; every live run is ask-first). known_company_domains stays empty until specific job postings are curated at fetch time - they expire fastest (axiom-08 45-day prior).",
+  "comment": "Starter manifest (G-B), expanded by the G-I track expansion, then the 2026-07-15 fetch-checkpoint expansion (all six tracks to 30+ docs; every new URL is a specific article pre-verified against the ingest fetcher's robots/thin gates). Index-page chrome sources are kept, not removed, because committed retrieval labels reference them and registered documents are immutable. Host-list judgment call: company editorial blogs that are not strictly engineering blogs (tryexponent, amplitude, intercom) are declared under engineering_blog_hosts — the only honest reachable bucket for company-published content; review owns this mapping. known_company_domains stays empty until specific job postings are curated at fetch time - they expire fastest (axiom-08 45-day prior).",
   "known_company_domains": [],
   "engineering_blog_hosts": [
+    "amplitude.com",
     "anthropic.com",
     "blog.cloudflare.com",
+    "blog.duolingo.com",
     "blog.janestreet.com",
+    "databento.com",
     "dropbox.tech",
+    "eng.lyft.com",
     "eng.uber.com",
     "engineering.atlassian.com",
+    "engineering.atspotify.com",
     "engineering.fb.com",
+    "evidentlyai.com",
     "github.blog",
-    "huggingface.co",
     "hudsonrivertrading.com",
+    "huggingface.co",
+    "imc.com",
+    "intercom.com",
+    "langchain.com",
+    "man.com",
     "multithreaded.stitchfix.com",
     "netflixtechblog.com",
+    "optiver.com",
     "pytorch.org",
     "shopify.engineering",
     "slack.engineering",
     "stackoverflow.blog",
     "stripe.com",
+    "tryexponent.com",
     "twosigma.com"
   ],
   "personal_blog_hosts": [
+    "askgib.substack.com",
     "blog.pragmaticengineer.com",
+    "bringthedonuts.com",
+    "chrisstucchio.com",
     "colah.github.io",
+    "counting-stuff.com",
+    "erikbern.com",
+    "ethanrosenthal.com",
     "eugeneyan.com",
+    "hamel.dev",
+    "hookedondata.org",
     "huyenchip.com",
+    "jspauld.com",
+    "jvns.ca",
+    "jxnl.co",
     "karpathy.github.io",
     "kennorton.com",
     "latent.space",
     "lennysnewsletter.com",
     "lilianweng.github.io",
+    "locallyoptimistic.com",
     "martinfowler.com",
+    "mechanicalmarkets.wordpress.com",
+    "melissaperri.com",
+    "newsletter.pragmaticengineer.com",
+    "producttalk.org",
+    "sachinrekhi.com",
     "sebastianraschka.com",
     "simonwillison.net",
-    "svpg.com"
+    "staffeng.com",
+    "svpg.com",
+    "vickiboykis.com"
   ],
   "sources": [
     {
@@ -126,16 +157,6 @@
       ],
       "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
       "title": "Stripe Engineering Blog",
-      "comment": "index page - replace/augment with specific article URLs during the fetch-checkpoint expansion"
-    },
-    {
-      "url": "https://engineering.atlassian.com/",
-      "expected_type": "company_engineering_blog",
-      "track_tags": [
-        "swe"
-      ],
-      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
-      "title": "Atlassian Engineering",
       "comment": "index page - replace/augment with specific article URLs during the fetch-checkpoint expansion"
     },
     {
@@ -476,16 +497,6 @@
       "title": "The First Rule of Machine Learning: Start without Machine Learning (Eugene Yan)"
     },
     {
-      "url": "https://www.interviewquery.com/",
-      "expected_type": "unclassified",
-      "track_tags": [
-        "data_scientist"
-      ],
-      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
-      "title": "Interview Query (data science interview preparation)",
-      "comment": "index page - replace/augment with specific article URLs during the fetch-checkpoint expansion"
-    },
-    {
       "url": "https://www.levels.fyi/t/product-manager",
       "expected_type": "role_taxonomy",
       "track_tags": [
@@ -543,15 +554,6 @@
       "comment": "index page - replace/augment with specific article URLs during the fetch-checkpoint expansion"
     },
     {
-      "url": "https://www.levels.fyi/t/machine-learning-engineer",
-      "expected_type": "role_taxonomy",
-      "track_tags": [
-        "mle"
-      ],
-      "license_note": "Public levels.fyi taxonomy page; snapshot held for research reference; volatile data, refresh per axiom-08 expiry.",
-      "title": "levels.fyi: Machine Learning Engineer levels"
-    },
-    {
       "url": "https://stripe.com/blog/online-migrations",
       "expected_type": "company_engineering_blog",
       "track_tags": [
@@ -598,6 +600,1331 @@
       "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
       "title": "Agents (Chip Huyen)",
       "published_date": "2025-01-07"
+    },
+    {
+      "url": "https://eugeneyan.com/writing/evals/",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Task-Specific LLM Evals that Do and Don't Work",
+      "published_date": "2024-03-01"
+    },
+    {
+      "url": "https://eugeneyan.com/writing/llm-evaluators/",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Evaluating the Effectiveness of LLM-Evaluators (aka LLM-as-Judge)",
+      "published_date": "2024-08-01"
+    },
+    {
+      "url": "https://github.blog/ai-and-ml/generative-ai/prompt-engineering-guide-generative-ai-llms/",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "A developer's guide to prompt engineering and LLMs",
+      "published_date": "2023-07-17"
+    },
+    {
+      "url": "https://hamel.dev/blog/posts/evals/",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Your AI Product Needs Evals",
+      "published_date": "2024-03-29"
+    },
+    {
+      "url": "https://hamel.dev/blog/posts/llm-judge/",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Creating a LLM-as-a-Judge That Drives Business Results",
+      "published_date": "2024-10-29"
+    },
+    {
+      "url": "https://huggingface.co/blog/evaluation-structured-outputs",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Improving Prompt Consistency with Structured Generations",
+      "published_date": "2024-04-30"
+    },
+    {
+      "url": "https://huyenchip.com/2024/07/25/genai-platform.html",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Building A Generative AI Platform",
+      "published_date": "2024-07-25"
+    },
+    {
+      "url": "https://interviewing.io/blog/becoming-an-mle-at-faang-what-you-need-to-know",
+      "expected_type": "interview_postmortem",
+      "track_tags": [
+        "ai_engineer",
+        "data_scientist",
+        "mle"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Becoming an MLE at FAANG: What you need to know about MLE roles and interviews"
+    },
+    {
+      "url": "https://jxnl.co/writing/2024/05/22/systematically-improving-your-rag/",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Systematically Improving Your RAG",
+      "published_date": "2024-05-22"
+    },
+    {
+      "url": "https://lilianweng.github.io/posts/2023-03-15-prompt-engineering/",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Prompt Engineering",
+      "published_date": "2023-03-15"
+    },
+    {
+      "url": "https://martinfowler.com/articles/gen-ai-patterns/",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Emerging Patterns in Building GenAI Products",
+      "published_date": "2025-02-25"
+    },
+    {
+      "url": "https://newsletter.pragmaticengineer.com/p/the-ai-engineering-stack",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "The AI Engineering Stack",
+      "published_date": "2025-05-20"
+    },
+    {
+      "url": "https://simonwillison.net/2024/Dec/31/llms-in-2024/",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Things we learned about LLMs in 2024",
+      "published_date": "2024-12-31"
+    },
+    {
+      "url": "https://simonwillison.net/2025/Mar/11/using-llms-for-code/",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Here's how I use LLMs to help me write code",
+      "published_date": "2025-03-11"
+    },
+    {
+      "url": "https://www.anthropic.com/engineering/built-multi-agent-research-system",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "How we built our multi-agent research system",
+      "published_date": "2025-06-13"
+    },
+    {
+      "url": "https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Effective context engineering for AI agents",
+      "published_date": "2025-09-29"
+    },
+    {
+      "url": "https://www.anthropic.com/engineering/writing-tools-for-agents",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Writing effective tools for agents — with agents",
+      "published_date": "2025-09-11"
+    },
+    {
+      "url": "https://www.anthropic.com/news/contextual-retrieval",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Introducing Contextual Retrieval",
+      "published_date": "2024-09-19"
+    },
+    {
+      "url": "https://www.langchain.com/blog/the-rise-of-context-engineering",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "ai_engineer"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "The rise of context engineering",
+      "published_date": "2025-06-23"
+    },
+    {
+      "url": "https://www.latent.space/p/ai-engineer",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "ai_engineer",
+        "mle"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "The Rise of the AI Engineer",
+      "published_date": "2023-06-30"
+    },
+    {
+      "url": "https://blog.duolingo.com/growth-model-duolingo/",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "data_scientist",
+        "product_manager"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Meaningful metrics: How data sharpened the focus of product teams",
+      "published_date": "2023-02-17"
+    },
+    {
+      "url": "https://blog.duolingo.com/improving-duolingo-one-experiment-at-a-time/",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "data_scientist"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Improving Duolingo, one experiment at a time",
+      "published_date": "2020-01-10"
+    },
+    {
+      "url": "https://eng.lyft.com/challenges-in-experimentation-be9ab98a7ef4",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "data_scientist"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Challenges in Experimentation",
+      "published_date": "2022-04-19"
+    },
+    {
+      "url": "https://eng.lyft.com/experimentation-in-a-ridesharing-marketplace-f75a9c4fcf01",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "data_scientist"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Experimentation in a Ridesharing Marketplace",
+      "published_date": "2016-12-15"
+    },
+    {
+      "url": "https://eng.lyft.com/my-starter-project-on-the-lyft-rider-data-science-team-86a60dddd935",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "data_scientist"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "My Starter Project on the Lyft Rider Data Science Team",
+      "published_date": "2025-10-07"
+    },
+    {
+      "url": "https://eng.lyft.com/what-is-data-science-at-lyft-4101a69be028",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "data_scientist"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "What is Data Science at Lyft?",
+      "published_date": "2020-04-27"
+    },
+    {
+      "url": "https://engineering.atspotify.com/2020/10/spotifys-new-experimentation-platform-part-1",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "data_scientist"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Spotify's New Experimentation Platform (Part 1)",
+      "published_date": "2020-10-29"
+    },
+    {
+      "url": "https://engineering.atspotify.com/2023/03/choosing-sequential-testing-framework-comparisons-and-discussions",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "data_scientist"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Choosing a Sequential Testing Framework — Comparisons and Discussions",
+      "published_date": "2023-03-21"
+    },
+    {
+      "url": "https://engineering.atspotify.com/2024/03/risk-aware-product-decisions-in-a-b-tests-with-multiple-metrics",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "data_scientist"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Risk-Aware Product Decisions in A/B Tests with Multiple Metrics",
+      "published_date": "2024-03-05"
+    },
+    {
+      "url": "https://erikbern.com/2021/07/07/the-data-team-a-short-story.html",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "data_scientist"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Building a data team at a mid-stage startup: a short story",
+      "published_date": "2021-07-07"
+    },
+    {
+      "url": "https://hookedondata.org/posts/2018-05-29_advice-for-applying-to-data-science-jobs/",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "data_scientist"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Advice for Applying to Data Science Jobs",
+      "published_date": "2018-05-29"
+    },
+    {
+      "url": "https://hookedondata.org/red-flags-in-data-science-interviews",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "data_scientist"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Red Flags in Data Science Interviews",
+      "published_date": "2018-07-03"
+    },
+    {
+      "url": "https://interviewing.io/blog/we-analyzed-thousands-of-technical-interviews-on-everything-from-language-to-code-style-here-s-what-we-found",
+      "expected_type": "interview_postmortem",
+      "track_tags": [
+        "data_scientist",
+        "swe"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "We analyzed thousands of technical interviews on everything from language to code style. Here's what we found."
+    },
+    {
+      "url": "https://locallyoptimistic.com/post/analytics-engineer/",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "data_scientist"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "The Analytics Engineer",
+      "published_date": "2019-01-27"
+    },
+    {
+      "url": "https://locallyoptimistic.com/post/career-ladders-part-1/",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "data_scientist"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Why You Need A Career Ladder",
+      "published_date": "2020-01-06"
+    },
+    {
+      "url": "https://multithreaded.stitchfix.com/blog/2019/03/11/FullStackDS-Generalists/",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "data_scientist",
+        "mle"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Beware the data science pin factory: The power of the full-stack data science generalist",
+      "published_date": "2019-03-11"
+    },
+    {
+      "url": "https://netflixtechblog.com/analytics-at-netflix-who-we-are-and-what-we-do-7d9c08fe6965",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "data_scientist"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Analytics at Netflix: Who We Are and What We Do",
+      "published_date": "2020-09-18"
+    },
+    {
+      "url": "https://netflixtechblog.com/decision-making-at-netflix-33065fa06481",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "data_scientist"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Decision Making at Netflix",
+      "published_date": "2021-09-07"
+    },
+    {
+      "url": "https://netflixtechblog.com/experimentation-is-a-major-focus-of-data-science-across-netflix-f67923f8e985",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "data_scientist"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Experimentation is a major focus of Data Science across Netflix",
+      "published_date": "2022-01-11"
+    },
+    {
+      "url": "https://netflixtechblog.com/interpreting-a-b-test-results-false-positives-and-statistical-significance-c1522d0db27a",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "data_scientist"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Interpreting A/B test results: false positives and statistical significance",
+      "published_date": "2021-10-07"
+    },
+    {
+      "url": "https://netflixtechblog.com/round-2-a-survey-of-causal-inference-applications-at-netflix-fd78328ee0bb",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "data_scientist"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Round 2: A Survey of Causal Inference Applications at Netflix",
+      "published_date": "2024-06-06"
+    },
+    {
+      "url": "https://netflixtechblog.com/what-is-an-a-b-test-b08cc1b57962",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "data_scientist"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "What is an A/B Test?",
+      "published_date": "2021-09-22"
+    },
+    {
+      "url": "https://shopify.engineering/lessons-learned-online-experiments",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "data_scientist"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "10 Lessons Learned From Online Experiments",
+      "published_date": "2021-06-17"
+    },
+    {
+      "url": "https://shopify.engineering/shopify-unique-data-science-hierarchy-of-needs",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "data_scientist"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Shopify's Unique Data Science Hierarchy Of Needs",
+      "published_date": "2021-12-21"
+    },
+    {
+      "url": "https://shopify.engineering/using-quasi-experiments-counterfactuals",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "data_scientist"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "How to Use Quasi-experiments and Counterfactuals to Build Great Products",
+      "published_date": "2020-09-28"
+    },
+    {
+      "url": "https://vickiboykis.com/2019/02/13/data-science-is-different-now/",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "data_scientist"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Data science is different now",
+      "published_date": "2019-02-13"
+    },
+    {
+      "url": "https://www.counting-stuff.com/data-cleaning-is-analysis-not-grunt-65949948516031001b3512e5/",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "data_scientist"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Data Cleaning IS Analysis, Not Grunt Work",
+      "published_date": "2020-09-15"
+    },
+    {
+      "url": "https://www.ethanrosenthal.com/2020/01/08/freelance-ds-consulting/",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "data_scientist"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Doing Freelance Data Science Consulting in 2019",
+      "published_date": "2020-01-08"
+    },
+    {
+      "url": "https://www.levels.fyi/blog/what-are-career-levels-ladders.html",
+      "expected_type": "role_taxonomy",
+      "track_tags": [
+        "data_scientist",
+        "swe"
+      ],
+      "license_note": "Public levels.fyi taxonomy page; snapshot held for research reference; volatile data, refresh per axiom-08 expiry.",
+      "title": "Levels, Ladders and Titles: Everything You Need to Know",
+      "published_date": "2020-12-04"
+    },
+    {
+      "url": "https://docs.cloud.google.com/architecture/mlops-continuous-delivery-and-automation-pipelines-in-machine-learning",
+      "expected_type": "unclassified",
+      "track_tags": [
+        "mle"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "MLOps: Continuous delivery and automation pipelines in machine learning",
+      "published_date": "2024-08-28"
+    },
+    {
+      "url": "https://engineering.atspotify.com/2023/02/unleashing-ml-innovation-at-spotify-with-ray",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "mle"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Unleashing ML Innovation at Spotify with Ray",
+      "published_date": "2023-02-01"
+    },
+    {
+      "url": "https://engineering.fb.com/2024/06/12/data-infrastructure/training-large-language-models-at-scale-meta/",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "mle"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "How Meta trains large language models at scale",
+      "published_date": "2024-06-12"
+    },
+    {
+      "url": "https://eugeneyan.com/writing/system-design-for-discovery/",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "mle"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "System Design for Recommendations and Search",
+      "published_date": "2021-06-01"
+    },
+    {
+      "url": "https://huggingface.co/blog/how-to-generate",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "mle"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "How to generate text: using different decoding methods for language generation with Transformers",
+      "published_date": "2020-03-01"
+    },
+    {
+      "url": "https://huyenchip.com/2022/01/02/real-time-machine-learning-challenges-and-solutions.html",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "mle"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Real-time machine learning: challenges and solutions",
+      "published_date": "2022-01-02"
+    },
+    {
+      "url": "https://huyenchip.com/2022/02/07/data-distribution-shifts-and-monitoring.html",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "mle"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Data Distribution Shifts and Monitoring",
+      "published_date": "2022-02-07"
+    },
+    {
+      "url": "https://netflixtechblog.com/supporting-diverse-ml-systems-at-netflix-2d2e6b6d205d",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "mle"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Supporting Diverse ML Systems at Netflix",
+      "published_date": "2024-03-07"
+    },
+    {
+      "url": "https://pytorch.org/blog/accelerating-generative-ai/",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "mle"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Accelerating Generative AI with PyTorch: Segment Anything, Fast",
+      "published_date": "2023-11-16"
+    },
+    {
+      "url": "https://sebastianraschka.com/blog/2023/self-attention-from-scratch.html",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "mle"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Understanding and Coding the Self-Attention Mechanism of Large Language Models From Scratch",
+      "published_date": "2023-02-09"
+    },
+    {
+      "url": "https://shopify.engineering/merlin-shopify-machine-learning-platform",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "mle"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "The Magic of Merlin: Shopify's New Machine Learning Platform",
+      "published_date": "2022-04-06"
+    },
+    {
+      "url": "https://www.evidentlyai.com/blog/ml-monitoring-data-drift-how-to-handle",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "mle"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "My data drifted. What's next? How to handle ML model drift in production",
+      "published_date": "2021-11-17"
+    },
+    {
+      "url": "https://www.levels.fyi/blog/ai-engineer-compensation-trends-q3-2025.html",
+      "expected_type": "role_taxonomy",
+      "track_tags": [
+        "mle",
+        "ai_engineer"
+      ],
+      "license_note": "Public levels.fyi taxonomy page; snapshot held for research reference; volatile data, refresh per axiom-08 expiry.",
+      "title": "AI Engineer Compensation Trends Q3 2025",
+      "published_date": "2025-07-17"
+    },
+    {
+      "url": "https://amplitude.com/blog/good-bad-north-star-metric",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "product_manager"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "What Makes a Good vs Bad North Star Metric",
+      "published_date": "2024-08-15"
+    },
+    {
+      "url": "https://amplitude.com/blog/product-north-star-metric",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "product_manager"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Every Product Needs a North Star Metric: Here's How to Find Yours",
+      "published_date": "2024-08-20"
+    },
+    {
+      "url": "https://askgib.substack.com/p/ask-gib-how-do-all-your-product-strategy",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "product_manager"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Ask Gib: How do all your product strategy frameworks fit together?",
+      "published_date": "2025-01-07"
+    },
+    {
+      "url": "https://askgib.substack.com/p/how-do-you-build-up-skills-in-product",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "product_manager"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "How do you build up skills in product strategy?",
+      "published_date": "2021-01-22"
+    },
+    {
+      "url": "https://github.blog/developer-skills/github/how-were-using-github-projects-to-standardize-our-workflows-and-stay-aligned/",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "product_manager"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "How we're using GitHub Projects to standardize our workflows and stay aligned",
+      "published_date": "2024-02-28"
+    },
+    {
+      "url": "https://melissaperri.com/blog/2014/08/05/the-build-trap",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "product_manager"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "The Build Trap",
+      "published_date": "2014-08-05"
+    },
+    {
+      "url": "https://www.bringthedonuts.com/essays/10x-not-10-percent.html",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "product_manager"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "10x Not 10%",
+      "published_date": "2015-12-17"
+    },
+    {
+      "url": "https://www.bringthedonuts.com/essays/how-to-work-with-software-engineers.html",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "product_manager"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "How to Work With Software Engineers",
+      "published_date": "2015-11-23"
+    },
+    {
+      "url": "https://www.bringthedonuts.com/essays/leading-cross-functional-teams.html",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "product_manager"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Leading Cross-Functional Teams",
+      "published_date": "2015-11-21"
+    },
+    {
+      "url": "https://www.intercom.com/blog/rice-simple-prioritization-for-product-managers/",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "product_manager"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "RICE: Simple prioritization for product managers",
+      "published_date": "2018-01-05"
+    },
+    {
+      "url": "https://www.lennysnewsletter.com/p/how-to-get-into-product-management",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "product_manager"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "How to get into product management",
+      "published_date": "2019-06-14"
+    },
+    {
+      "url": "https://www.lennysnewsletter.com/p/product-sense",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "product_manager"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "How to develop product sense",
+      "published_date": "2022-03-15"
+    },
+    {
+      "url": "https://www.levels.fyi/blog/facebook-product-manager.html",
+      "expected_type": "role_taxonomy",
+      "track_tags": [
+        "product_manager"
+      ],
+      "license_note": "Public levels.fyi taxonomy page; snapshot held for research reference; volatile data, refresh per axiom-08 expiry.",
+      "title": "Acing Facebook Product Manager Interview Process",
+      "published_date": "2021-02-13"
+    },
+    {
+      "url": "https://www.mindtheproduct.com/what-exactly-is-a-product-manager/",
+      "expected_type": "unclassified",
+      "track_tags": [
+        "product_manager"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "What, exactly, is a Product Manager?",
+      "published_date": "2011-10-05"
+    },
+    {
+      "url": "https://www.producttalk.org/opportunity-solution-trees/",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "product_manager"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Opportunity Solution Trees: Visualize Your Discovery to Stay Aligned and Drive Outcomes",
+      "published_date": "2023-12-06"
+    },
+    {
+      "url": "https://www.producttalk.org/show-your-work/",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "product_manager"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Show Your Work: How to Justify Your Decisions and Get Stakeholder Buy-In",
+      "published_date": "2019-08-14"
+    },
+    {
+      "url": "https://www.sachinrekhi.com/product-management-career-ladders-at-8-top-technology-firms",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "product_manager"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Product Management Career Ladders at 8 Top Technology Firms",
+      "published_date": "2016-06-07"
+    },
+    {
+      "url": "https://www.sachinrekhi.com/what-is-product-management",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "product_manager"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "What is Product Management?",
+      "published_date": "2013-01-28"
+    },
+    {
+      "url": "https://www.svpg.com/four-big-risks/",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "product_manager"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "The Four Big Risks",
+      "published_date": "2017-12-04"
+    },
+    {
+      "url": "https://www.svpg.com/good-product-team-bad-product-team/",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "product_manager"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Good Product Team / Bad Product Team",
+      "published_date": "2014-06-13"
+    },
+    {
+      "url": "https://www.svpg.com/product-discovery/",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "product_manager"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Product Discovery",
+      "published_date": "2007-09-24"
+    },
+    {
+      "url": "https://www.svpg.com/product-manager-vs-product-owner-revisited/",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "product_manager"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Product Manager vs. Product Owner Revisited",
+      "published_date": "2016-12-13"
+    },
+    {
+      "url": "https://www.svpg.com/the-alternative-to-roadmaps/",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "product_manager"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "The Alternative to Roadmaps",
+      "published_date": "2015-09-07"
+    },
+    {
+      "url": "https://www.svpg.com/the-vp-product-role/",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "product_manager"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "The VP Product Role"
+    },
+    {
+      "url": "https://www.tryexponent.com/blog/prepare-product-management-behavioral-interviews",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "product_manager"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "How to Prepare for Product Management (PM) Behavioral Interviews"
+    },
+    {
+      "url": "https://www.tryexponent.com/blog/product-sense-interview",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "product_manager"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Product Sense Interview Prep (2026 Guide)"
+    },
+    {
+      "url": "https://www.tryexponent.com/blog/the-ultimate-pm-interview-study-plan",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "product_manager"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Product Manager Interview Prep (2026 Study Plan)"
+    },
+    {
+      "url": "https://www.tryexponent.com/blog/top-product-manager-interview-questions",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "product_manager"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Product Manager Interview Questions and Answers (2026 Guide)"
+    },
+    {
+      "url": "https://blog.janestreet.com/interviewing-at-jane-street/",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "quant_dev"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Interviewing At Jane Street",
+      "published_date": "2014-10-24"
+    },
+    {
+      "url": "https://blog.janestreet.com/introducing-oxcaml/",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "quant_dev"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Introducing OxCaml",
+      "published_date": "2025-06-14"
+    },
+    {
+      "url": "https://blog.janestreet.com/what-a-jane-street-dev-interview-is-like/",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "quant_dev"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "What a Jane Street software engineering interview is like",
+      "published_date": "2017-02-28"
+    },
+    {
+      "url": "https://databento.com/blog/quants-worth-following-david-lariviere-part-1",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "quant_dev"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Quants worth following: David Lariviere, part 1",
+      "published_date": "2025-08-29"
+    },
+    {
+      "url": "https://databento.com/blog/rust-vs-cpp",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "quant_dev"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Rust vs C++ for trading systems: lessons from building market data and trading products",
+      "published_date": "2025-08-22"
+    },
+    {
+      "url": "https://databento.com/microstructure/tick-to-trade",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "quant_dev"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "What is tick-to-trade latency?"
+    },
+    {
+      "url": "https://interviewing.io/bloomberg-interview-questions",
+      "expected_type": "interview_postmortem",
+      "track_tags": [
+        "quant_dev",
+        "swe"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Bloomberg's Interview Process and Questions"
+    },
+    {
+      "url": "https://interviewing.io/jane-street-interview-questions",
+      "expected_type": "interview_postmortem",
+      "track_tags": [
+        "quant_dev"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Jane Street's Interview Process and Questions in 2024"
+    },
+    {
+      "url": "https://jspauld.com/post/35126549635/how-i-made-500k-with-machine-learning-and-hft/",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "quant_dev"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "How I made $500k with machine learning and HFT (high frequency trading)",
+      "published_date": "2012-11-06"
+    },
+    {
+      "url": "https://mechanicalmarkets.wordpress.com/2016/10/04/high-speed-trading-networks-and-societal-value/",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "quant_dev"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "High-speed Trading Networks and Societal Value",
+      "published_date": "2016-10-04"
+    },
+    {
+      "url": "https://mechanicalmarkets.wordpress.com/2016/10/24/chx-and-four-types-of-speed-bump/",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "quant_dev"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "CHX and Four Types of Speed Bump",
+      "published_date": "2016-10-24"
+    },
+    {
+      "url": "https://www.chrisstucchio.com/blog/2012/hft_apology.html",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "quant_dev"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "A High Frequency Trader's Apology, Pt 1",
+      "published_date": "2012-04-16"
+    },
+    {
+      "url": "https://www.hudsonrivertrading.com/hrtbeat/distributed-filesystem-for-scalable-research/",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "quant_dev",
+        "swe"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Building a Distributed Filesystem for Scalable Research",
+      "published_date": "2025-08-19"
+    },
+    {
+      "url": "https://www.hudsonrivertrading.com/hrtbeat/engineering-and-interviewing-at-hrt/",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "quant_dev"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Answers to Questions I Often Get: Engineering and Interviewing at HRT",
+      "published_date": "2025-10-02"
+    },
+    {
+      "url": "https://www.hudsonrivertrading.com/hrtbeat/inside-hrts-python-fork/",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "quant_dev"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Inside HRT's Python Fork: Leveraging PEP 690 for Faster Imports",
+      "published_date": "2025-08-08"
+    },
+    {
+      "url": "https://www.hudsonrivertrading.com/hrtbeat/low-latency-optimization-part-1/",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "quant_dev"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Low Latency Optimization: Understanding Huge Pages (Part 1)",
+      "published_date": "2022-11-28"
+    },
+    {
+      "url": "https://www.hudsonrivertrading.com/hrtbeat/verify-custom-hardware/",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "quant_dev"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "How We Verify Custom Hardware",
+      "published_date": "2021-10-27"
+    },
+    {
+      "url": "https://www.imc.com/ap/articles/combining-both-hardware-and-software-at-imc",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "quant_dev"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Combining both hardware and software at IMC"
+    },
+    {
+      "url": "https://www.imc.com/us/articles/how-are-fpgas-used-in-trading",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "quant_dev"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "How are FPGAs used in trading?"
+    },
+    {
+      "url": "https://www.levels.fyi/2025/",
+      "expected_type": "role_taxonomy",
+      "track_tags": [
+        "quant_dev",
+        "swe"
+      ],
+      "license_note": "Public levels.fyi taxonomy page; snapshot held for research reference; volatile data, refresh per axiom-08 expiry.",
+      "title": "End of Year Pay Report 2025"
+    },
+    {
+      "url": "https://www.levels.fyi/blog/ultimate-negotiation-guide.html",
+      "expected_type": "role_taxonomy",
+      "track_tags": [
+        "quant_dev",
+        "swe"
+      ],
+      "license_note": "Public levels.fyi taxonomy page; snapshot held for research reference; volatile data, refresh per axiom-08 expiry.",
+      "title": "Levels.fyi Ultimate Negotiation Guide",
+      "published_date": "2025-09-26"
+    },
+    {
+      "url": "https://www.man.com/technology/improving-python",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "quant_dev",
+        "swe"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Improving Python: How we made pip install twice as fast",
+      "published_date": "2025-07-15"
+    },
+    {
+      "url": "https://www.man.com/technology/special-fx-execution-system-on-aeron",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "quant_dev"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Special FX: Is a high-performance, low-latency execution system possible on Aeron?",
+      "published_date": "2020-11-11"
+    },
+    {
+      "url": "https://www.optiver.com/insights/technology-blog/designing-low-latency-cpp-systems/",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "quant_dev"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Low Latency C++ Systems for Trading with David Gross at CppCon",
+      "published_date": "2025-03-31"
+    },
+    {
+      "url": "https://www.optiver.com/insights/technology-blog/machine-learning-opportunities-in-capital-markets/",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "quant_dev",
+        "mle"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Machine learning opportunities in capital markets",
+      "published_date": "2024-04-25"
+    },
+    {
+      "url": "https://www.quantstart.com/articles/A-Day-in-the-Life-of-a-Quantitative-Developer/",
+      "expected_type": "unclassified",
+      "track_tags": [
+        "quant_dev"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "A Day in the Life of a Quantitative Developer"
+    },
+    {
+      "url": "https://www.quantstart.com/articles/Self-Study-Plan-for-Becoming-a-Quantitative-Developer/",
+      "expected_type": "unclassified",
+      "track_tags": [
+        "quant_dev"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Self-Study Plan for Becoming a Quantitative Developer"
+    },
+    {
+      "url": "https://www.quantstart.com/articles/engineering-to-quant-finance-how-to-make-the-transition/",
+      "expected_type": "unclassified",
+      "track_tags": [
+        "quant_dev",
+        "swe"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Engineering To Quant Finance - How To Make The Transition"
+    },
+    {
+      "url": "https://www.twosigma.com/articles/building-a-high-throughput-metrics-system-using-open-source-software/",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "quant_dev",
+        "swe"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Building a High-Throughput Metrics System Using Open Source Software",
+      "published_date": "2019-01-24"
+    },
+    {
+      "url": "https://www.twosigma.com/articles/treating-data-as-code-at-two-sigma/",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "quant_dev",
+        "data_scientist"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Treating Data as Code at Two Sigma",
+      "published_date": "2025-11-13"
+    },
+    {
+      "url": "https://blog.pragmaticengineer.com/the-product-minded-engineer/",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "swe"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "The Product-Minded Software Engineer",
+      "published_date": "2019-09-05"
+    },
+    {
+      "url": "https://dropbox.tech/infrastructure/lessons-learned-in-incident-management",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "swe"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Lessons learned in incident management",
+      "published_date": "2021-01-05"
+    },
+    {
+      "url": "https://github.blog/developer-skills/github/how-to-review-code-effectively-a-github-staff-engineers-philosophy/",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "swe"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "How to review code effectively: A GitHub staff engineer's philosophy",
+      "published_date": "2024-07-23"
+    },
+    {
+      "url": "https://interviewing.io/blog/how-to-negotiate-with-meta",
+      "expected_type": "interview_postmortem",
+      "track_tags": [
+        "swe"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "The unwritten rules (till now) of negotiating with Meta"
+    },
+    {
+      "url": "https://interviewing.io/blog/negotiate-salary-recruiter",
+      "expected_type": "interview_postmortem",
+      "track_tags": [
+        "swe"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Exactly what to say when recruiters ask you to name the first number"
+    },
+    {
+      "url": "https://interviewing.io/blog/never-written-code-but-passed-google-system-design",
+      "expected_type": "interview_postmortem",
+      "track_tags": [
+        "swe"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "I've never written code, but I just passed a Google system design interview."
+    },
+    {
+      "url": "https://interviewing.io/guides/hiring-process/amazon",
+      "expected_type": "interview_postmortem",
+      "track_tags": [
+        "swe"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "A Senior Engineer's Guide to Amazon Interviews + Questions"
+    },
+    {
+      "url": "https://interviewing.io/guides/hiring-process/google",
+      "expected_type": "interview_postmortem",
+      "track_tags": [
+        "swe"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "A Senior Engineer's Guide to Google Interviews + Questions"
+    },
+    {
+      "url": "https://jvns.ca/blog/2022/12/08/a-debugging-manifesto/",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "swe"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "A debugging manifesto",
+      "published_date": "2022-12-08"
+    },
+    {
+      "url": "https://martinfowler.com/articles/practical-test-pyramid.html",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "swe"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "The Practical Test Pyramid",
+      "published_date": "2018-02-26"
+    },
+    {
+      "url": "https://shopify.engineering/building-resilient-payment-systems",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "swe"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "10 Tips for Building Resilient Payment Systems",
+      "published_date": "2022-07-28"
+    },
+    {
+      "url": "https://slack.engineering/slacks-incident-on-2-22-22/",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "swe"
+      ],
+      "license_note": "Public company engineering blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Slack's Incident on 2-22-22",
+      "published_date": "2022-04-26"
+    },
+    {
+      "url": "https://staffeng.com/guides/what-do-staff-engineers-actually-do/",
+      "expected_type": "personal_anecdote",
+      "track_tags": [
+        "swe"
+      ],
+      "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "What do Staff engineers actually do?"
     }
   ]
 }

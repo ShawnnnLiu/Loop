@@ -39,7 +39,7 @@ uv run python -m agentic_calendar.tools.refresh_claims \
     --queries corpus/claim_queries_v2.json \
     --manifest corpus/manifest_v1.json \
     --corpus-db corpus/corpus.db \
-    --snapshot snap_26c44499e582a96a \
+    --snapshot snap_0217291f46e331b9 \
     --dry-run
 ```
 
@@ -50,7 +50,7 @@ uv run python -m agentic_calendar.tools.refresh_claims \
     --queries corpus/claim_queries_v2.json \
     --manifest corpus/manifest_v1.json \
     --corpus-db corpus/corpus.db \
-    --snapshot snap_26c44499e582a96a \
+    --snapshot snap_0217291f46e331b9 \
     --app-db dogfood.db
 ```
 
@@ -61,17 +61,19 @@ fly ssh console -C "uv run python -m agentic_calendar.tools.refresh_claims \
     --queries corpus/claim_queries_v2.json \
     --manifest corpus/manifest_v1.json \
     --corpus-db corpus/corpus.db \
-    --snapshot snap_26c44499e582a96a \
+    --snapshot snap_0217291f46e331b9 \
     --app-db /data/app.db"
 ```
 
-Expected result against `snap_26c44499e582a96a` with `claim-queries-v2`
-(2026-07-14 run, chrome gate active): **85 claims ingested** (36 nav-chrome
-retrieval hits skipped, 12 stale-at-source, 17 duplicates folded), of which
-**37 serve** at the default curation floor (~3.8k prompt tokens): 8
+Expected result against `snap_0217291f46e331b9` with `claim-queries-v2`
+(2026-07-15 run, chrome gate active, fresh store): **73 claims ingested**
+(22 nav-chrome retrieval hits skipped, 51 stale-at-source, 4 duplicates
+folded); on the dogfood store (which already carried the 2026-07-14 claims)
+the same run reported `duplicate=45, ingested=28` for a 113-claim store, of
+which **49 serve** at the default curation floor (~5.0k prompt tokens): 20
 `company_engineering_blog`, 5 `interview_postmortem`, 21 `personal_anecdote`
-(labeled low), 3 `role_taxonomy`. `unclassified` claims (31) never serve
-uncorroborated — by design.
+(labeled low), 3 `role_taxonomy`; the 5-per-host cap prunes 28. `unclassified`
+claims never serve uncorroborated — by design.
 
 ### Verify
 
@@ -105,8 +107,11 @@ never serves; `official_job_posting` at 45d becomes relevant once
   new claims and the expired ones fall out of serving on their own.
 - **`UNDER MINIMUM` / below-target doc floors** (minimum 10, target 30
   docs/track): extend the manifest for that track before expecting its
-  claims to be worth anything. As of 2026-07-14: `data_scientist` (4),
-  `product_manager` (6), `quant_dev` (5) are under minimum.
+  claims to be worth anything. The 2026-07-15 fetch-checkpoint expansion
+  (133 new specific-article sources, host lists grown to 30 engineering /
+  32 personal) cleared every track past the 30-doc target: swe 60, mle 50,
+  ai_engineer 49, product_manager 41, quant_dev 40, data_scientist 39
+  registered docs; no decay flags.
 
 When extending the manifest, three rules earned by this corpus:
 
@@ -122,6 +127,43 @@ When extending the manifest, three rules earned by this corpus:
 3. **Anchor each track on `role_taxonomy`-class documents** (cert syllabi,
    canonical role guides) and layer volatile sources on top — the
    expansion-mechanics doc's source-mix rule, visible in the priors table.
+4. **Pre-verify every new URL with the ingest fetcher itself** before it
+   enters the manifest (fetch + `normalize_fetched_text` + the 200-char
+   thin gate, no registration). The 2026-07-15 expansion caught a UA-blocked
+   host (uber.com, HTTP 406) and a robots-disallowed one (linkedin.com)
+   this way, before they could fail a live run.
+
+### Re-fetch snapshot practice (established 2026-07-15)
+
+A full manifest re-fetch registers a **new version of every changed page**
+(the registry is append-only), so the ingest tool's `--snapshot` — which
+pins over every registered document — doubles previously-fetched URLs and
+bloats retrieval with near-duplicate chunks (the eval's recall denominator
+inflates too). After a re-fetch, pin the serving/eval snapshot by hand over
+the **latest document per source URL**:
+
+```python
+# from backend/: uv run python - <<'EOF' ... EOF
+from datetime import UTC, datetime
+from agentic_calendar.common.sqlite import SqliteDatabase
+from agentic_calendar.retrieval import DEFAULT_CHUNKING_PARAMS, SqliteCorpusRegistry
+
+registry = SqliteCorpusRegistry(SqliteDatabase("corpus/corpus.db"))
+by_url = {}
+for d in registry.list_documents():
+    by_url.setdefault(d.source_url, []).append(d)
+latest = [max(v, key=lambda d: (d.date_collected.isoformat(), d.doc_id)) for v in by_url.values()]
+print(registry.create_snapshot(sorted(d.doc_id for d in latest),
+      created_at=datetime.now(UTC), chunking_params=DEFAULT_CHUNKING_PARAMS).snapshot_id)
+```
+
+Then point `make retrieval-eval` (floors re-measured, not carried over) and
+`refresh_claims` at the new snapshot id. Live-run failures are operator
+decisions per the tool's contract: the 2026-07-15 run pruned three legacy
+sources from the manifest (`engineering.atlassian.com/` DNS-dead,
+`interviewquery.com/` persistent 429, `levels.fyi/t/machine-learning-engineer`
+now a JS shell) — their previously-registered documents remain in the
+registry and snapshots.
 
 ## Serving-floor retune — the dataset behind axiom 08's change record
 

@@ -231,7 +231,7 @@ stops citing.
 | Citation-coverage gate floor 0.6444 | `backend/Makefile` `eval-gate` target (`--min-citation-coverage`) |
 | v1 retrieval metrics (0.9181 / 0.8523 / 0.8380) | `backend/evalsets/retrieval_queries_v1.json` vs snapshot `snap_b0ce947cafdafc8b` (G-D commit) |
 | v1-on-expanded-corpus (0.9006 / 0.8289 / 0.8174) | same query file vs snapshot `snap_26c44499e582a96a` (G-I commit message) |
-| v2 retrieval metrics + floors (0.8978 / 0.8500 / 0.8327) | `backend/evalsets/retrieval_queries_v2.json` vs `snap_26c44499e582a96a`; floors in `backend/Makefile` `retrieval-eval` |
+| v2 retrieval metrics + floors (0.8978 / 0.8500 / 0.8327) | `backend/evalsets/retrieval_queries_v2.json` vs `snap_26c44499e582a96a`; the Makefile floors until 2026-07-15 (superseded by the fetch-checkpoint expansion — see post-publication updates) |
 | Hybrid ablation, 3-track | G-E commit message (measured table; one corpus embed = 197,439 tokens, ~$0.0118) |
 | Hybrid ablation, 6-track | G-I commit message (incremental embed of 242 new chunks + 18 queries: 82,616 measured tokens, ~$0.0050) |
 | Claim-store composition (117 claims; 30 medium; 39 unclassified all stale-window; quant_dev decay flag) | `tools/corpus_stats.py` against the operator databases; assembly counts in the G-I commit message |
@@ -303,3 +303,38 @@ kept as written, the fixes are recorded here.
   copy of publicly available pages, source-attributed in the manifest,
   was judged the honest trade. `make retrieval-eval` now runs anywhere
   the repo is checked out (still not CI-wired).
+
+## Post-publication updates (2026-07-15)
+
+- **"quant_dev / data_scientist coverage remains thin" — resolved by the
+  fetch-checkpoint expansion.** The manifest grew 57 → 187 sources (133 new
+  specific-article URLs across all six tracks, every one pre-verified
+  against the ingest fetcher's robots/thin gates; 2 candidates died in
+  verification, 3 legacy sources were pruned after the live run — a dead
+  DNS, a persistent 429, a JS shell). Classifier host lists grew with it:
+  30 engineering-blog hosts, 32 personal-blog hosts. Every track now
+  clears the 30-doc target (`corpus_stats`: swe 60, mle 50, ai_engineer
+  49, product_manager 41, quant_dev 40, data_scientist 39 registered
+  docs), and no track decays.
+- **Serving snapshot practice: latest document per source URL.** A full
+  re-fetch registers a new version of every changed page (append-only
+  registry), so the ingest tool's own everything-snapshot doubled the
+  labeled URLs and bloated retrieval with near-duplicate chunks. The
+  serving/eval snapshot is now pinned by the operator over the newest
+  version of each URL (`snap_0217291f46e331b9`, 188 documents); the
+  runbook records the snippet.
+- **Retrieval floors re-measured: 0.7644 / 0.7144 / 0.6910** (recall@5 /
+  MRR / nDCG@5, same v2 labels). The drop from 0.8978/0.8500/0.8327 is
+  honest and expected — 3.4× the corpus means more ranking competition —
+  but it is also partly a *label-staleness artifact*: every zero-recall
+  case spot-checked retrieves new on-topic documents the pre-expansion
+  labels cannot credit (the drift query now finds the two dedicated
+  drift articles instead of the labeled rules-of-ml page). A v3 label
+  pass over the expanded corpus is the natural follow-up.
+- **Claim store after refresh** (same 30 claim-queries-v2, chrome gate
+  active, snapshot above): 113 claims in the dogfood store, **49 serving**
+  at the 0.25 floor (~5.0k prompt tokens) — 20 company-blog, 5
+  interview-postmortem, 21 personal-anecdote (labeled low), 3
+  role-taxonomy. The host cap (5/host) now actively prunes 28 claims,
+  and 51 assembly excerpts were skipped stale-at-source — the cost of
+  honestly dating older classics, accepted as designed.

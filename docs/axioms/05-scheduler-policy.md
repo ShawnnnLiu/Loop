@@ -157,6 +157,34 @@ first-fit placement would have scheduled remains schedulable under scored
 placement (the grid strictly adds candidates), and every failure keeps the
 typed `reason_code` produced by the hard checks.
 
+### Bounded polish pass
+
+After the placement loop completes — and before the
+capacity-vs-fragmentation promotion — a bounded deterministic local search
+cleans up greedy artifacts (placements made before later constraints
+materialized). At most **2 sweeps**; each sweep snapshots the placed blocks
+in `(start, task_id)` order and, per block, applies at most the single best
+strictly-improving relocation under the key `(total_after, new_start)`. The
+objective is the **schedule-level total cost** (the `score_schedule`
+definitions), never a sum of the path-dependent per-placement marginals,
+and improvement is strict integer decrease — so the pass terminates and is
+idempotent at its fixed point.
+
+A relocation is feasible only if all of these hold:
+
+- it passes the full hard-check set with the block's own occupancy removed
+  from the state (busy intervals, daily minutes, placed blocks);
+- dependency order holds in both directions: the block starts no earlier
+  than the latest end of its placed dependencies and ends no later than the
+  earliest start of its placed dependents;
+- for a deep block, every same-day consecutive deep-block pair after the
+  move keeps a gap of at least `min_break_between_deep_blocks_min` —
+  checked pairwise against **both** neighbors, not just the previous block.
+
+The pass **moves** placed blocks; it never unschedules a task, never
+reschedules a failed one, and never touches `unscheduled_tasks` — reason
+codes and debug payloads are untouchable by construction.
+
 ### Rollout status
 
 Live. The candidate machinery shipped behavior-identical to first fit
@@ -167,8 +195,10 @@ test expectations while leaving every reason_code, debug payload, and
 Supervisor routing assertion unchanged. The day-balancing increment then
 made insertion order regret-driven, replaced the global daily target with
 the per-day soft-quota map, and added the `earliness` term — again
-re-pinning placement instants only. Weights and knobs serve from
-`PlacementScoringConfig` defaults unless overridden via
+re-pinning placement instants only. The bounded polish pass then landed as
+the final phase-02 increment, relocating placed blocks post-loop under the
+schedule-level objective without touching the failure surface. Weights and
+knobs serve from `PlacementScoringConfig` defaults unless overridden via
 `backend/tuning.toml` `[scheduler_placement]`.
 
 ## Scheduler Output

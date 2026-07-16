@@ -497,6 +497,27 @@ class ScheduleScoreBreakdown:
     band_histogram: dict[str, int]
 
 
+@dataclass(frozen=True)
+class BlockScoreTotals:
+    """Schedule-level term totals over a set of placed blocks.
+
+    The single scoring engine shared by ``score_schedule`` (quality report)
+    and the bounded polish pass (axiom 05 "Bounded polish pass") — the
+    polish objective is these totals by construction, never a re-derivation.
+    """
+
+    daily_balance_total: int
+    back_to_back_total: int
+    fragmentation_total: int
+    deep_window_conservation_total: int
+    earliness_total: int
+    evening_preference_total: int
+    weekend_long_block_total: int
+    total_cost: int
+    per_day_minutes: dict[str, int]
+    band_histogram: dict[str, int]
+
+
 def score_schedule(
     output: SchedulerOutput,
     inp: SchedulerInput,
@@ -518,19 +539,55 @@ def score_schedule(
     target_daily_min = compute_target_daily_min(inp, initial_windows)
     day_quotas = compute_day_quotas(inp, initial_windows)
 
-    blocks = sorted(
-        (
-            PlacedBlock(
-                start=st.start,
-                end=st.end,
-                is_deep=(
-                    tasks_by_id[st.task_id].required_focus_level is FocusLevel.DEEP
-                ),
-            )
-            for st in output.scheduled_tasks
-        ),
-        key=lambda b: b.start,
+    blocks = [
+        PlacedBlock(
+            start=st.start,
+            end=st.end,
+            is_deep=(
+                tasks_by_id[st.task_id].required_focus_level is FocusLevel.DEEP
+            ),
+        )
+        for st in output.scheduled_tasks
+    ]
+    totals = score_blocks(
+        blocks,
+        inp,
+        scoring,
+        initial_windows=initial_windows,
+        day_quotas=day_quotas,
     )
+    return ScheduleScoreBreakdown(
+        daily_balance_total=totals.daily_balance_total,
+        back_to_back_total=totals.back_to_back_total,
+        fragmentation_total=totals.fragmentation_total,
+        deep_window_conservation_total=totals.deep_window_conservation_total,
+        earliness_total=totals.earliness_total,
+        evening_preference_total=totals.evening_preference_total,
+        weekend_long_block_total=totals.weekend_long_block_total,
+        total_cost=totals.total_cost,
+        target_daily_min=target_daily_min,
+        scheduled_count=len(output.scheduled_tasks),
+        unscheduled_count=len(output.unscheduled_tasks),
+        per_day_minutes=totals.per_day_minutes,
+        band_histogram=totals.band_histogram,
+    )
+
+
+def score_blocks(
+    blocks: list[PlacedBlock],
+    inp: SchedulerInput,
+    scoring: PlacementScoringConfig,
+    *,
+    initial_windows: list[FreeWindow],
+    day_quotas: Mapping[str, int],
+) -> BlockScoreTotals:
+    """Schedule-level totals for an arbitrary placed-block set.
+
+    ``initial_windows`` / ``day_quotas`` are passed in (not recomputed) so a
+    caller evaluating many hypothetical block sets — the polish pass — pays
+    the input-only derivations once.
+    """
+    blocks = sorted(blocks, key=lambda b: b.start)
 
     per_day_minutes: dict[str, int] = {}
     band_histogram: dict[str, int] = {}
@@ -613,7 +670,7 @@ def score_schedule(
         - scoring.w_evening_preference * evening_preference_total
         - scoring.w_weekend_long_block * weekend_long_block_total
     )
-    return ScheduleScoreBreakdown(
+    return BlockScoreTotals(
         daily_balance_total=daily_balance_total,
         back_to_back_total=back_to_back_total,
         fragmentation_total=fragmentation_total,
@@ -622,9 +679,6 @@ def score_schedule(
         evening_preference_total=evening_preference_total,
         weekend_long_block_total=weekend_long_block_total,
         total_cost=total_cost,
-        target_daily_min=target_daily_min,
-        scheduled_count=len(output.scheduled_tasks),
-        unscheduled_count=len(output.unscheduled_tasks),
         per_day_minutes=per_day_minutes,
         band_histogram=band_histogram,
     )

@@ -180,3 +180,42 @@ minimal. `_promote_capacity_failures` runs after, unchanged.
   `(start, task_id)` order; per block apply at most the single best
   strictly-improving move, key `(total_after, new_start)`; at most 2
   sweeps; stop early if a sweep makes no move.
+
+### Phase-02 before/after numbers (recorded 2026-07-16, P-G commit)
+
+Corpus: `backend/tests/fixtures/placement_quality/*.json`. Columns follow
+doc 01's convention — "before" is the all-weights-zero config (earliest
+feasible start), "after" is the full spine (P-C scoring + P-E regret order
++ P-F quotas/earliness + P-G polish); both are `score_schedule` totals
+under the **default** weights. Totals differ slightly from the P-C/P-D
+table in doc 01 because the objective itself grew (per-day quotas and the
+`earliness` term now score both columns). Reproduce with
+`tools/show_placement_quality.py` (after) or the zero-weight baseline in
+`test_placement_quality_corpus.py` (before).
+
+| Fixture | total_cost before → after | per-day minutes before → after | headline |
+| --- | --- | --- | --- |
+| `five_tasks_three_days` | 511 → 124 | 240/60 → 120/120/60 | acceptance fixture: even spread within ±1 task per day |
+| `deep_mix_week` | 938 → 267 | 240/135 over 2 days → 90/90/60/60/45/30 over 6 | deep tasks on separate evenings; deep capacity conserved |
+| `evening_preference_week` | 666 → −36 | 240 on day 1 → 90/60/60/30 | band histogram still flips morning×4 → evening×4 |
+| `fragmented_weekend` | 616 → 235 | 210/30 → 60/60/30/90 | weekend long block held; **polish contributes here** (below) |
+
+P-G's isolated contribution (polish disabled vs enabled on the same
+default-weights run): a no-op on three of the four fixtures — greedy with
+regret order already sits at the polish fixed point — and a real repair on
+`fragmented_weekend`: greedy leaves `review_c` (30 min) at Wed 19:00,
+stranding a 30-minute sliver (`fragmentation` 30); polish relocates it to
+Fri 10:30–11:00, filling a busy-bounded 30-minute chunk exactly
+(`fragmentation` 30 → 0, `earliness` +2, total 263 → 235). The artifact
+class polish exists for — a block whose marginal-cheapest slot leaves a
+schedule-level sliver elsewhere — is additionally pinned by the
+constructed fixtures in `tests/scheduler/test_polish.py` (known-optimum
+relocation, dependency floor/ceiling, pairwise deep gaps, idempotence).
+
+Phase acceptance restated against this table: balanced fixtures spread
+within ±1 task per day (`five_tasks_three_days` 120/120/60); the
+stranded-deep-task scenario schedules fully under regret order (pinned by
+`test_regret_order_places_the_stranded_deep_task`); and the whole spine
+landed with **zero** reason_code / debug / routing diffs across the golden
+scenarios and the full suite (3 845 tests green at the P-G commit, no
+existing expectation edited).

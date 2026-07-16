@@ -17,6 +17,9 @@ Algorithm (axiom 05 "Scored Placement" + "Insertion order"):
 3. After every placement the placed range becomes busy, windows are
    re-enumerated, and the next round re-ranks against the new state.
 4. Tasks whose dependencies never place fail ``DEPENDENCY_BLOCKED``.
+5. A bounded polish pass (axiom 05 "Bounded polish pass", ``polish.py``)
+   then relocates placed blocks under the schedule-level objective — moves
+   only; the failure surface is untouchable by construction.
 
 The algorithm is intentionally a greedy heuristic. Phase 3 may swap in
 OR-Tools without changing the public contract
@@ -43,6 +46,7 @@ from . import debug as dbg
 from .errors import SchedulerError
 from .inputs import FreeBusyInterval, SchedulerInput
 from .ordering import sort_key, topological_order
+from .polish import polish_placements
 from .scoring import (
     DEFAULT_PLACEMENT_SCORING_CONFIG,
     PlacedBlock,
@@ -245,6 +249,10 @@ def _schedule_validated(
     # loop whenever placements coincide.
     scheduled.sort(key=lambda st: topo_position[st.task_id])
     unscheduled.sort(key=lambda u: topo_position[u.task_id])
+
+    # Bounded polish (axiom 05): moves placed blocks only, so unscheduled
+    # tasks — and therefore reason codes and debug payloads — are untouched.
+    scheduled = polish_placements(scheduled, inp, scoring)
 
     unscheduled = _promote_capacity_failures(
         unscheduled,

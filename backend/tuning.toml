@@ -58,3 +58,13 @@
 # min_weighted_sample = 5.0
 # multiplier_min = 0.5
 # multiplier_max = 2.0
+
+# [scheduler_placement]
+# w_daily_balance = 3
+# w_back_to_back = 2
+# w_fragmentation = 1
+# w_deep_window_conservation = 2
+# w_evening_preference = 1
+# w_weekend_long_block = 1
+# buffer_min = 15
+# candidate_grid_min = 15

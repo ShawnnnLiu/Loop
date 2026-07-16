@@ -1813,15 +1813,35 @@ def test_propose_passes_completion_projection_to_scheduler(
     env.disposition_store.append(_completed_disposition("dp_001"))
     captured: dict[str, list[str]] = {}
 
-    def _spy(inp: SchedulerInput) -> SchedulerOutput:
+    def _spy(inp: SchedulerInput, **kwargs: object) -> SchedulerOutput:
         captured["completed_task_ids"] = list(inp.completed_task_ids)
-        return schedule(inp)
+        return schedule(inp, **kwargs)  # type: ignore[arg-type]
 
     monkeypatch.setattr("agentic_calendar.app.cycle.schedule", _spy)
     result = service.propose(USER_ID)
 
     assert result.state is S.AWAITING_USER_APPROVAL
     assert "dp_001" in captured["completed_task_ids"]
+
+
+def test_propose_passes_tuned_placement_scoring_to_scheduler(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The scheduler consumes the effective ``[scheduler_placement]`` tuning
+    — the composition wire that makes a tuning.toml weight override change
+    placement (axiom 07 path, P-D acceptance)."""
+    service, env, _clock = make_service()
+    captured: dict[str, object] = {}
+
+    def _spy(inp: SchedulerInput, **kwargs: object) -> SchedulerOutput:
+        captured.update(kwargs)
+        return schedule(inp, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr("agentic_calendar.app.cycle.schedule", _spy)
+    result = service.propose(USER_ID)
+
+    assert result.state is S.AWAITING_USER_APPROVAL
+    assert captured["scoring"] is env.tuning.scheduler_placement
 
 
 def test_ingest_mirrors_completion_into_disposition_store_idempotently() -> None:

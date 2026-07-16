@@ -1,0 +1,138 @@
+{
+  "run_id": "run_pq_deep_mix_week",
+  "plan_version": "plan_pq_deep_mix_week",
+  "plan": {
+    "plan_version": "plan_pq_deep_mix_week",
+    "tasks": [
+      {
+        "task_id": "deep_graphs",
+        "module_id": "dp",
+        "title": "deep graphs",
+        "description": "",
+        "dependencies": [],
+        "estimated_duration_min": 90,
+        "cognitive_load": 5,
+        "category": "concept_review",
+        "required_focus_level": "deep",
+        "splittable": false
+      },
+      {
+        "task_id": "deep_dp",
+        "module_id": "dp",
+        "title": "deep dp",
+        "description": "",
+        "dependencies": [
+          "deep_graphs"
+        ],
+        "estimated_duration_min": 90,
+        "cognitive_load": 5,
+        "category": "practice",
+        "required_focus_level": "deep",
+        "splittable": false
+      },
+      {
+        "task_id": "practice_arrays",
+        "module_id": "dp",
+        "title": "practice arrays",
+        "description": "",
+        "dependencies": [],
+        "estimated_duration_min": 60,
+        "cognitive_load": 3,
+        "category": "practice",
+        "required_focus_level": "medium",
+        "splittable": false
+      },
+      {
+        "task_id": "practice_strings",
+        "module_id": "dp",
+        "title": "practice strings",
+        "description": "",
+        "dependencies": [],
+        "estimated_duration_min": 60,
+        "cognitive_load": 3,
+        "category": "practice",
+        "required_focus_level": "medium",
+        "splittable": false
+      },
+      {
+        "task_id": "review_notes",
+        "module_id": "dp",
+        "title": "review notes",
+        "description": "",
+        "dependencies": [],
+        "estimated_duration_min": 30,
+        "cognitive_load": 2,
+        "category": "review",
+        "required_focus_level": "medium",
+        "splittable": false
+      },
+      {
+        "task_id": "mock_setup",
+        "module_id": "dp",
+        "title": "mock setup",
+        "description": "",
+        "dependencies": [],
+        "estimated_duration_min": 45,
+        "cognitive_load": 2,
+        "category": "project",
+        "required_focus_level": "medium",
+        "splittable": false
+      }
+    ]
+  },
+  "policy": {
+    "no_events_before": "08:00",
+    "no_events_after": "22:30",
+    "allow_weekends": true,
+    "min_break_between_deep_blocks_min": 30,
+    "max_daily_study_min": 240,
+    "respect_deep_work_windows": true,
+    "deep_work_windows": [
+      {
+        "day": "Mon",
+        "start": "18:00",
+        "end": "21:00"
+      },
+      {
+        "day": "Tue",
+        "start": "18:00",
+        "end": "21:00"
+      },
+      {
+        "day": "Thu",
+        "start": "18:00",
+        "end": "21:00"
+      }
+    ],
+    "max_session_length_min": 120,
+    "preferred_session_length_min": 60,
+    "prefer_evening_sessions": false,
+    "prefer_weekend_long_blocks": false,
+    "avoid_back_to_back_deep_work": true
+  },
+  "calendar_free_busy": [
+    {
+      "start": "2026-05-04T09:00:00Z",
+      "end": "2026-05-04T17:00:00Z"
+    },
+    {
+      "start": "2026-05-05T09:00:00Z",
+      "end": "2026-05-05T17:00:00Z"
+    },
+    {
+      "start": "2026-05-06T09:00:00Z",
+      "end": "2026-05-06T17:00:00Z"
+    },
+    {
+      "start": "2026-05-07T09:00:00Z",
+      "end": "2026-05-07T17:00:00Z"
+    },
+    {
+      "start": "2026-05-08T09:00:00Z",
+      "end": "2026-05-08T17:00:00Z"
+    }
+  ],
+  "completed_task_ids": [],
+  "horizon_start": "2026-05-04T00:00:00Z",
+  "horizon_end": "2026-05-11T00:00:00Z"
+}

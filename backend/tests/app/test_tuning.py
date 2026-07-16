@@ -36,6 +36,7 @@ from agentic_calendar.duration_estimation.power_user import (
     DEFAULT_ELIGIBILITY_CONFIG,
     DEFAULT_REFINEMENT_CONFIG,
 )
+from agentic_calendar.scheduler.scoring import DEFAULT_PLACEMENT_SCORING_CONFIG
 from agentic_calendar.telemetry.calibration import DEFAULT_CALIBRATION_CONFIG
 
 _T0 = datetime(2026, 6, 11, 12, 0, 0, tzinfo=UTC)
@@ -78,6 +79,7 @@ def test_no_file_returns_all_defaults_and_touches_nothing() -> None:
     assert tuning.pooled_serving == DEFAULT_POOLED_SERVING_CONFIG
     assert tuning.power_user_eligibility == DEFAULT_ELIGIBILITY_CONFIG
     assert tuning.per_user_refinement == DEFAULT_REFINEMENT_CONFIG
+    assert tuning.scheduler_placement == DEFAULT_PLACEMENT_SCORING_CONFIG
     assert store.list_all() == []
 
 
@@ -174,6 +176,25 @@ def test_int_field_override_and_float_coercion() -> None:
         by_field[("drift_thresholds", "duration_min_sample")].new_value, int
     )
     assert isinstance(by_field[("calibration", "multiplier_max")].new_value, float)
+
+
+def test_scheduler_placement_weight_override_journals_and_serves() -> None:
+    """The placement weights ride the same axiom-07 path as every section:
+    an override serves through ``EffectiveTuning.scheduler_placement`` and
+    journals exactly one entry."""
+    store = InMemoryThresholdChangeLogStore()
+    tuning = _apply({"scheduler_placement": {"w_daily_balance": 5}} | PROSE, store)
+    assert tuning.scheduler_placement.w_daily_balance == 5
+    # Untouched knobs keep their defaults.
+    assert tuning.scheduler_placement.candidate_grid_min == (
+        DEFAULT_PLACEMENT_SCORING_CONFIG.candidate_grid_min
+    )
+    entries = store.list_all()
+    assert len(entries) == 1
+    assert entries[0].config_section == "scheduler_placement"
+    assert entries[0].threshold_field == "w_daily_balance"
+    assert entries[0].prior_value == DEFAULT_PLACEMENT_SCORING_CONFIG.w_daily_balance
+    assert entries[0].new_value == 5
 
 
 def test_replay_effective_reproduces_history() -> None:

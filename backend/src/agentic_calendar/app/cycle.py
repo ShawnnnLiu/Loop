@@ -934,7 +934,8 @@ class CycleService:
                     completed_task_ids=completed_or_dropped,
                     horizon_start=horizon_start,
                     horizon_end=horizon_start + timedelta(days=horizon_days),
-                )
+                ),
+                scoring=env.tuning.scheduler_placement,
             )
             if output.schedule_status is ScheduleStatus.SUCCESS:
                 run = self._transition(run, Sig.SCHEDULER_SUCCESS)

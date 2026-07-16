@@ -1,34 +1,39 @@
-"""Scored-placement machinery tests (axiom 05 "Scored Placement").
+"""Scored-placement tests (axiom 05 "Scored Placement").
 
-The load-bearing test is the first-fit equivalence proof: with
-window-start-only candidates and cost ≡ 0, the scored path must produce
-byte-identical ``SchedulerOutput`` to the original first-fit ``_try_place``
-across every greedy/golden scheduler scenario. ``_first_fit_reference`` is
-a verbatim copy of the pre-refactor ``_try_place`` body and lives only in
-this test module; it is deleted when the scoring terms land (P-C) and the
-equivalence deliberately stops holding.
+Covers the candidate grid, each cost term in isolation (two-window fixtures
+where only that term discriminates), the ``(cost, start)`` tie-break,
+byte-level determinism, and the phase acceptance fixture (5 tasks x 3 free
+days spreads across days instead of stacking day 1).
+
+The P-B first-fit equivalence proof (``_first_fit_reference``) was deleted
+when the scoring terms landed — the equivalence deliberately stopped
+holding. The all-weights-zero test below pins the surviving relationship:
+zero weights reduce scored placement to earliest-feasible-start.
 """
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 
-import pytest
-
-from agentic_calendar.contracts.common_types import FocusLevel, TaskCategory
-from agentic_calendar.contracts.task_plan import Task, TaskPlan
-from agentic_calendar.scheduler import greedy, schedule
-from agentic_calendar.scheduler.greedy import _Placement
-from agentic_calendar.scheduler.inputs import FreeBusyInterval, SchedulerInput
-from agentic_calendar.scheduler.policy import DeepWorkWindowPolicy, SchedulingPolicy
+from agentic_calendar.contracts.task_plan import Task
+from agentic_calendar.scheduler import schedule
+from agentic_calendar.scheduler.policy import SchedulingPolicy
 from agentic_calendar.scheduler.scoring import (
+    DEFAULT_PLACEMENT_SCORING_CONFIG,
+    PlacedBlock,
     PlacementCandidate,
+    PlacementScoringConfig,
     PlacementState,
-    _live_windows,
-    day_key,
+    back_to_back_penalty,
+    compute_target_daily_min,
+    daily_balance_penalty,
+    deep_window_conservation_penalty,
     enumerate_candidates,
+    evening_preference_bonus,
+    fragmentation_penalty,
+    score_schedule,
     select_placement,
+    weekend_long_block_bonus,
 )
 from agentic_calendar.scheduler.windows import FreeWindow
 from tests.scheduler._helpers import (
@@ -40,344 +45,588 @@ from tests.scheduler._helpers import (
     make_task,
 )
 
-# --------------------------------------------------------------------------- #
-# First-fit reference (verbatim pre-refactor ``_try_place`` body)
-# --------------------------------------------------------------------------- #
+MONDAY = datetime(2026, 5, 4, 0, 0, tzinfo=UTC)
+SCORING = DEFAULT_PLACEMENT_SCORING_CONFIG
 
-
-def _first_fit_reference(
-    task: Task,
-    windows: list[FreeWindow],
-    inp: SchedulerInput,
-    state: PlacementState,
-) -> _Placement | None:
-    """Return the first window-aligned placement that satisfies all constraints."""
-    needs_deep = task.required_focus_level is FocusLevel.DEEP
-    duration = task.estimated_duration_min
-    for window in _live_windows(windows, state.busy):
-        if window.duration_min < duration:
-            continue
-        if needs_deep and inp.policy.respect_deep_work_windows and not window.is_deep_work:
-            continue
-        candidate_start = window.start
-        candidate_end = candidate_start + timedelta(minutes=duration)
-        if candidate_end > window.end:
-            continue
-        key = day_key(candidate_start)
-        used_today = state.minutes_per_day.get(key, 0)
-        if used_today + duration > inp.policy.max_daily_study_min:
-            continue
-        if needs_deep:
-            last = state.last_deep_end.get(key)
-            if last is not None:
-                gap = (candidate_start - last).total_seconds() / 60
-                if gap < inp.policy.min_break_between_deep_blocks_min:
-                    continue
-        return _Placement(
-            start=candidate_start, end=candidate_end, window_was_deep=window.is_deep_work
-        )
-    return None
-
-
-# --------------------------------------------------------------------------- #
-# Scenario builders — every ``schedule()`` input exercised by
-# ``tests/scheduler/test_greedy.py`` and
-# ``tests/golden/test_scheduler_scenarios.py``, plus a deep-gap case.
-# --------------------------------------------------------------------------- #
-
-HORIZON_START = datetime(2026, 5, 4, 0, 0, 0, tzinfo=UTC)  # Mon
-
-
-def _case_two_task_chain() -> SchedulerInput:
-    plan = make_plan(
-        make_task(task_id="a", estimated_duration_min=60),
-        make_task(task_id="b", estimated_duration_min=60, dependencies=["a"]),
-    )
-    return make_input(plan)
-
-
-def _case_missing_dependency() -> SchedulerInput:
-    b = Task.model_construct(
-        task_id="b",
-        module_id="dp",
-        title="b",
-        description="",
-        dependencies=["missing_a"],
-        estimated_duration_min=60,
-        cognitive_load=3,
-        category=TaskCategory.PRACTICE,
-        required_focus_level=FocusLevel.MEDIUM,
-        splittable=False,
-    )
-    plan = TaskPlan.model_construct(plan_version="p", tasks=[b])
-    return make_input(plan)
-
-
-def _case_task_too_long_unsplittable() -> SchedulerInput:
-    plan = make_plan(
-        make_task(
-            task_id="huge",
-            estimated_duration_min=DEFAULT_POLICY.max_session_length_min + 30,
-            splittable=False,
-        )
-    )
-    return make_input(plan)
-
-
-def _case_fragmented_short_windows() -> SchedulerInput:
-    plan = make_plan(make_task(task_id="x", estimated_duration_min=90, splittable=True))
-    quiet_only = DEFAULT_POLICY.model_copy(
-        update={"no_events_before": "20:00", "no_events_after": "21:00"}
-    )
-    return make_input(plan, policy=quiet_only, horizon_days=2, horizon_start=HORIZON_START)
-
-
-def _case_deep_required_no_deep_windows() -> SchedulerInput:
-    plan = make_plan(
-        make_task(task_id="deep", estimated_duration_min=60, required_focus_level="deep")
-    )
-    no_deep_windows = DEEP_WORK_POLICY.model_copy(update={"deep_work_windows": []})
-    return make_input(plan, policy=no_deep_windows, horizon_days=1)
-
-
-def _case_deep_task_in_deep_window() -> SchedulerInput:
-    plan = make_plan(
-        make_task(task_id="deep", estimated_duration_min=60, required_focus_level="deep")
-    )
-    return make_input(
-        plan, policy=DEEP_WORK_POLICY, horizon_days=2, horizon_start=HORIZON_START
-    )
-
-
-def _case_two_deep_tasks_break_gap() -> SchedulerInput:
-    """Second deep task must skip the same-day remainder (deep-gap check)."""
-    plan = make_plan(
-        make_task(task_id="deep_1", estimated_duration_min=60, required_focus_level="deep"),
-        make_task(task_id="deep_2", estimated_duration_min=60, required_focus_level="deep"),
-    )
-    return make_input(
-        plan, policy=DEEP_WORK_POLICY, horizon_days=2, horizon_start=HORIZON_START
-    )
-
-
-def _case_partial_failure_mixed() -> SchedulerInput:
-    plan = make_plan(
-        make_task(task_id="ok", estimated_duration_min=60),
-        make_task(
-            task_id="too_big",
-            estimated_duration_min=DEFAULT_POLICY.max_session_length_min + 60,
-            splittable=False,
-        ),
-    )
-    return make_input(plan)
-
-
-def _case_busy_interval_avoided() -> SchedulerInput:
-    plan = make_plan(make_task(task_id="t1", estimated_duration_min=60))
-    block = busy(datetime(2026, 5, 4, 8, 0, 0, tzinfo=UTC), minutes=60)
-    return make_input(
-        plan, free_busy=[block], horizon_start=HORIZON_START, horizon_days=1
-    )
-
-
-def _case_daily_cap_spills_over() -> SchedulerInput:
-    plan = make_plan(
-        *[make_task(task_id=f"t_{i}", estimated_duration_min=60) for i in range(6)]
-    )
-    capped = DEFAULT_POLICY.model_copy(update={"max_daily_study_min": 120})
-    return make_input(plan, policy=capped, horizon_days=2)
-
-
-def _case_unsplittable_999() -> SchedulerInput:
-    plan = make_plan(make_task(task_id="huge", estimated_duration_min=999, splittable=False))
-    return make_input(plan)
-
-
-def _case_dependency_needs_completion() -> SchedulerInput:
-    plan = make_plan(make_task(task_id="b", dependencies=["a"]))
-    return make_input(plan)
-
-
-def _case_dependency_unlocked_by_completion() -> SchedulerInput:
-    plan = make_plan(make_task(task_id="b", dependencies=["a"]))
-    return make_input(plan, completed_task_ids=["a"])
-
-
-def _case_completed_task_still_in_plan() -> SchedulerInput:
-    plan = make_plan(
-        make_task(task_id="a"),
-        make_task(task_id="b", dependencies=["a"]),
-    )
-    return make_input(plan, completed_task_ids=["a"])
-
-
-def _case_golden_limited_capacity() -> SchedulerInput:
-    plan = make_plan(
-        *[
-            make_task(task_id=f"t{i}", estimated_duration_min=120, splittable=True)
-            for i in range(4)
-        ],
-        plan_version="p_capacity",
-    )
-    capped_policy = DEFAULT_POLICY.model_copy(
-        update={"no_events_before": "20:00", "no_events_after": "21:00"}
-    )
-    return make_input(
-        plan, policy=capped_policy, horizon_days=3, horizon_start=HORIZON_START
-    )
-
-
-def _case_golden_weekend_only() -> SchedulerInput:
-    weekend_friendly = SchedulingPolicy(
-        no_events_before="08:00",
-        no_events_after="22:30",
-        allow_weekends=True,
-        min_break_between_deep_blocks_min=30,
-        max_daily_study_min=240,
-        respect_deep_work_windows=True,
-        deep_work_windows=[DeepWorkWindowPolicy(day="Sat", start="09:00", end="13:00")],
-        max_session_length_min=120,
-        preferred_session_length_min=60,
-    )
-    plan = make_plan(
-        make_task(task_id="deep_one", estimated_duration_min=90, required_focus_level="deep"),
-        plan_version="p_weekend",
-    )
-    weekday_busy = [
-        FreeBusyInterval(
-            start=HORIZON_START + timedelta(days=d, hours=8),
-            end=HORIZON_START + timedelta(days=d, hours=22, minutes=30),
-        )
-        for d in range(5)  # Mon-Fri fully busy
-    ]
-    return make_input(
-        plan,
-        policy=weekend_friendly,
-        free_busy=weekday_busy,
-        horizon_days=7,
-        horizon_start=HORIZON_START,
-    )
-
-
-def _case_golden_timeline_infeasible() -> SchedulerInput:
-    plan = make_plan(
-        *[
-            make_task(task_id=f"t{i}", estimated_duration_min=60, splittable=True)
-            for i in range(20)
-        ],
-        plan_version="p_timeline",
-    )
-    return make_input(plan, horizon_days=1, horizon_start=HORIZON_START)
-
-
-def _case_golden_success_single() -> SchedulerInput:
-    plan = make_plan(make_task(task_id="t1", estimated_duration_min=60), plan_version="p_ok")
-    return make_input(plan, horizon_days=7, horizon_start=HORIZON_START)
-
-
-CASES: list[tuple[str, Callable[[], SchedulerInput]]] = [
-    ("two_task_chain", _case_two_task_chain),
-    ("missing_dependency", _case_missing_dependency),
-    ("task_too_long_unsplittable", _case_task_too_long_unsplittable),
-    ("fragmented_short_windows", _case_fragmented_short_windows),
-    ("deep_required_no_deep_windows", _case_deep_required_no_deep_windows),
-    ("deep_task_in_deep_window", _case_deep_task_in_deep_window),
-    ("two_deep_tasks_break_gap", _case_two_deep_tasks_break_gap),
-    ("partial_failure_mixed", _case_partial_failure_mixed),
-    ("busy_interval_avoided", _case_busy_interval_avoided),
-    ("daily_cap_spills_over", _case_daily_cap_spills_over),
-    ("unsplittable_999", _case_unsplittable_999),
-    ("dependency_needs_completion", _case_dependency_needs_completion),
-    ("dependency_unlocked_by_completion", _case_dependency_unlocked_by_completion),
-    ("completed_task_still_in_plan", _case_completed_task_still_in_plan),
-    ("golden_limited_capacity", _case_golden_limited_capacity),
-    ("golden_weekend_only", _case_golden_weekend_only),
-    ("golden_timeline_infeasible", _case_golden_timeline_infeasible),
-    ("golden_success_single", _case_golden_success_single),
-]
-
-
-@pytest.mark.parametrize(("name", "build"), CASES, ids=[name for name, _ in CASES])
-def test_scored_path_is_output_identical_to_first_fit(
-    name: str,
-    build: Callable[[], SchedulerInput],
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """P-B equivalence proof: old and new placement paths agree byte-for-byte."""
-    del name
-    inp = build()
-    scored = schedule(inp)
-    monkeypatch.setattr(greedy, "_try_place", _first_fit_reference)
-    first_fit = schedule(inp)
-    assert scored.model_dump() == first_fit.model_dump()
-    assert scored.model_dump_json() == first_fit.model_dump_json()
-
-
-# --------------------------------------------------------------------------- #
-# Unit tests for the candidate machinery
-# --------------------------------------------------------------------------- #
+ZERO_WEIGHTS = PlacementScoringConfig(
+    w_daily_balance=0,
+    w_back_to_back=0,
+    w_fragmentation=0,
+    w_deep_window_conservation=0,
+    w_evening_preference=0,
+    w_weekend_long_block=0,
+)
 
 
 def _window(start: datetime, minutes: int, *, deep: bool = False) -> FreeWindow:
-    return FreeWindow(start=start, end=start + timedelta(minutes=minutes), is_deep_work=deep)
+    return FreeWindow(
+        start=start, end=start + timedelta(minutes=minutes), is_deep_work=deep
+    )
+
+
+def _candidate(
+    window: FreeWindow, *, offset_min: int = 0, duration_min: int = 60
+) -> PlacementCandidate:
+    start = window.start + timedelta(minutes=offset_min)
+    return PlacementCandidate(
+        start=start, end=start + timedelta(minutes=duration_min), window=window
+    )
 
 
 def _fresh_state() -> PlacementState:
-    return PlacementState(busy=[], minutes_per_day={}, last_deep_end={})
+    return PlacementState(busy=[], minutes_per_day={}, last_deep_end={}, placed=[])
+
+
+def _task(**overrides: object) -> Task:
+    return Task.model_validate(make_task(**overrides))  # type: ignore[arg-type]
+
+
+def _select(
+    candidates: list[PlacementCandidate],
+    *,
+    task: Task,
+    state: PlacementState | None = None,
+    policy: SchedulingPolicy = DEFAULT_POLICY,
+    scoring: PlacementScoringConfig = SCORING,
+    target_daily_min: int = 240,
+) -> PlacementCandidate | None:
+    return select_placement(
+        candidates,
+        task=task,
+        state=state if state is not None else _fresh_state(),
+        policy=policy,
+        scoring=scoring,
+        target_daily_min=target_daily_min,
+    )
+
+
+# --------------------------------------------------------------------------- #
+# Candidate enumeration — grid + hard checks
+# --------------------------------------------------------------------------- #
+
+
+def test_enumerate_candidates_walks_the_intra_window_grid() -> None:
+    """A 90-min window yields grid starts at +0/+15/+30 for a 60-min task."""
+    task = _task(task_id="t", estimated_duration_min=60)
+    w_short = _window(MONDAY.replace(hour=8), 30)  # too small — no candidates
+    w_fit = _window(MONDAY.replace(hour=9), 90)
+    candidates = enumerate_candidates(
+        task, [w_short, w_fit], _fresh_state(), DEFAULT_POLICY, SCORING
+    )
+    assert [(c.start, c.window) for c in candidates] == [
+        (w_fit.start, w_fit),
+        (w_fit.start + timedelta(minutes=15), w_fit),
+        (w_fit.start + timedelta(minutes=30), w_fit),
+    ]
+    assert all(c.end - c.start == timedelta(minutes=60) for c in candidates)
+    assert all(c.end <= w_fit.end for c in candidates)
+
+
+def test_enumerate_candidates_grid_step_follows_config() -> None:
+    task = _task(task_id="t", estimated_duration_min=60)
+    w = _window(MONDAY.replace(hour=9), 120)
+    wide_grid = PlacementScoringConfig(candidate_grid_min=30)
+    candidates = enumerate_candidates(
+        task, [w], _fresh_state(), DEFAULT_POLICY, wide_grid
+    )
+    assert [c.start for c in candidates] == [
+        w.start,
+        w.start + timedelta(minutes=30),
+        w.start + timedelta(minutes=60),
+    ]
+
+
+def test_enumerate_candidates_applies_daily_cap_per_window() -> None:
+    """A day at the study cap yields no candidates anywhere in that day."""
+    capped = DEFAULT_POLICY.model_copy(update={"max_daily_study_min": 120})
+    task = _task(task_id="t", estimated_duration_min=60)
+    monday = _window(MONDAY.replace(hour=9), 120)
+    tuesday = _window(MONDAY.replace(hour=9) + timedelta(days=1), 120)
+    over_cap = PlacementState(
+        busy=[], minutes_per_day={"2026-05-04": 90}, last_deep_end={}, placed=[]
+    )
+    candidates = enumerate_candidates(task, [monday, tuesday], over_cap, capped, SCORING)
+    assert {day for day in (c.start.date().isoformat() for c in candidates)} == {
+        "2026-05-05"
+    }
+
+
+def test_enumerate_candidates_deep_gap_admits_later_grid_starts() -> None:
+    """The grid fixes the first-fit blind spot: a deep task rejected at the
+    window start (break-between-deep-blocks) is admitted at the first grid
+    start that satisfies the gap, instead of losing the whole window."""
+    task = _task(task_id="d", estimated_duration_min=60, required_focus_level="deep")
+    monday_deep = _window(MONDAY.replace(hour=19), 120, deep=True)
+    state = PlacementState(
+        busy=[],
+        minutes_per_day={"2026-05-04": 60},
+        last_deep_end={"2026-05-04": MONDAY.replace(hour=19)},
+        placed=[],
+    )
+    candidates = enumerate_candidates(
+        task, [monday_deep], state, DEEP_WORK_POLICY, SCORING
+    )
+    # min_break_between_deep_blocks_min=30 → 19:00 and 19:15 fail, 19:30+ pass.
+    assert [c.start for c in candidates] == [
+        MONDAY.replace(hour=19, minute=30),
+        MONDAY.replace(hour=19, minute=45),
+        MONDAY.replace(hour=20),
+    ]
+
+
+def test_enumerate_candidates_deep_task_needs_deep_window() -> None:
+    task = _task(task_id="d", estimated_duration_min=60, required_focus_level="deep")
+    shallow = _window(MONDAY.replace(hour=9), 120)
+    deep = _window(MONDAY.replace(hour=19), 120, deep=True)
+    candidates = enumerate_candidates(
+        task, [shallow, deep], _fresh_state(), DEEP_WORK_POLICY, SCORING
+    )
+    assert all(c.window is deep for c in candidates)
+
+
+# --------------------------------------------------------------------------- #
+# Selection — argmin under (cost, start)
+# --------------------------------------------------------------------------- #
 
 
 def test_select_placement_empty_returns_none() -> None:
-    assert select_placement([]) is None
+    assert _select([], task=_task(task_id="t")) is None
 
 
 def test_select_placement_breaks_cost_ties_by_earliest_start() -> None:
-    early = _window(datetime(2026, 5, 4, 9, 0, tzinfo=UTC), 60)
-    late = _window(datetime(2026, 5, 4, 12, 0, tzinfo=UTC), 60)
-    candidates = [
-        PlacementCandidate(start=late.start, end=late.end, window=late),
-        PlacementCandidate(start=early.start, end=early.end, window=early),
-    ]
-    chosen = select_placement(candidates)
+    """Two exact-fit windows on empty days score identically → earliest wins."""
+    task = _task(task_id="t", estimated_duration_min=60)
+    early = _window(MONDAY.replace(hour=9), 60)
+    late = _window(MONDAY.replace(hour=9) + timedelta(days=1), 60)
+    chosen = _select(
+        [_candidate(late), _candidate(early)],
+        task=task,
+    )
     assert chosen is not None
     assert chosen.start == early.start
 
 
-def test_enumerate_candidates_returns_every_feasible_window_start() -> None:
-    """All feasible windows yield a candidate (not just the first), starts only."""
-    task = Task.model_validate(make_task(task_id="t", estimated_duration_min=60))
-    w_short = _window(datetime(2026, 5, 4, 8, 0, tzinfo=UTC), 30)  # too small
-    w_fit_1 = _window(datetime(2026, 5, 4, 9, 0, tzinfo=UTC), 90)
-    w_fit_2 = _window(datetime(2026, 5, 5, 9, 0, tzinfo=UTC), 60)
-    candidates = enumerate_candidates(
-        task, [w_short, w_fit_1, w_fit_2], _fresh_state(), DEFAULT_POLICY
+def test_all_zero_weights_reduce_to_earliest_feasible_start() -> None:
+    """With every weight zero the argmin over (0, start) is first fit."""
+    plan = make_plan(
+        *[make_task(task_id=f"t_{i}", estimated_duration_min=60) for i in range(5)]
     )
-    assert [(c.start, c.window) for c in candidates] == [
-        (w_fit_1.start, w_fit_1),
-        (w_fit_2.start, w_fit_2),
+    out = schedule(make_input(plan, horizon_days=3), scoring=ZERO_WEIGHTS)
+    starts = [st.start for st in out.scheduled_tasks]
+    # Back-to-back from 08:00 until the 240-min daily cap, then next day.
+    assert starts == [
+        MONDAY.replace(hour=8),
+        MONDAY.replace(hour=9),
+        MONDAY.replace(hour=10),
+        MONDAY.replace(hour=11),
+        MONDAY.replace(hour=8) + timedelta(days=1),
     ]
-    assert all(c.end - c.start == timedelta(minutes=60) for c in candidates)
 
 
-def test_enumerate_candidates_applies_daily_cap_and_deep_gap() -> None:
-    """The daily-cap and break-between-deep-blocks hard checks filter candidates."""
-    deep_policy = DEEP_WORK_POLICY.model_copy(update={"max_daily_study_min": 120})
-    task = Task.model_validate(
-        make_task(task_id="d", estimated_duration_min=60, required_focus_level="deep")
-    )
-    monday_deep = _window(datetime(2026, 5, 4, 19, 0, tzinfo=UTC), 120, deep=True)
-    tuesday_deep = _window(datetime(2026, 5, 5, 18, 0, tzinfo=UTC), 120, deep=True)
-    state = PlacementState(
-        busy=[],
-        minutes_per_day={"2026-05-04": 60},
-        last_deep_end={"2026-05-04": datetime(2026, 5, 4, 19, 0, tzinfo=UTC)},
-    )
-    # Monday start 19:00 passes the cap (60+60 <= 120) but fails the deep gap
-    # (0 < 30 min since the last deep end); Tuesday remains feasible.
-    candidates = enumerate_candidates(task, [monday_deep, tuesday_deep], state, deep_policy)
-    assert [c.start for c in candidates] == [tuesday_deep.start]
+# --------------------------------------------------------------------------- #
+# Per-term unit tests — fixtures where only that term discriminates
+# --------------------------------------------------------------------------- #
 
-    over_cap = PlacementState(
-        busy=[], minutes_per_day={"2026-05-04": 90}, last_deep_end={}
+
+def test_daily_balance_penalty_values() -> None:
+    task = _task(task_id="t", estimated_duration_min=60)
+    w = _window(MONDAY.replace(hour=9), 60)
+    state = _fresh_state()
+    assert daily_balance_penalty(_candidate(w), task, state, 100) == 0
+    state.minutes_per_day["2026-05-04"] = 80
+    assert daily_balance_penalty(_candidate(w), task, state, 100) == 40
+
+
+def test_daily_balance_steers_to_the_lighter_day() -> None:
+    task = _task(task_id="t", estimated_duration_min=60)
+    loaded_day = _window(MONDAY.replace(hour=9), 60)
+    empty_day = _window(MONDAY.replace(hour=9) + timedelta(days=1), 60)
+    state = _fresh_state()
+    state.minutes_per_day["2026-05-04"] = 60
+    chosen = _select(
+        [_candidate(loaded_day), _candidate(empty_day)],
+        task=task,
+        state=state,
+        target_daily_min=60,
     )
-    candidates = enumerate_candidates(task, [monday_deep, tuesday_deep], over_cap, deep_policy)
-    assert [c.start for c in candidates] == [tuesday_deep.start]
+    assert chosen is not None
+    assert chosen.start == empty_day.start
+
+
+def test_back_to_back_penalty_shortfall_and_sides() -> None:
+    task = _task(task_id="t", estimated_duration_min=60)
+    w = _window(MONDAY.replace(hour=10), 60)
+    state = _fresh_state()
+    state.placed.append(
+        PlacedBlock(
+            start=MONDAY.replace(hour=9), end=MONDAY.replace(hour=10), is_deep=False
+        )
+    )
+    # gap 0 → full buffer shortfall
+    assert back_to_back_penalty(_candidate(w), task, state, DEFAULT_POLICY, SCORING) == 15
+    # gap 10 → shortfall 5
+    w_gap10 = _window(MONDAY.replace(hour=10, minute=10), 60)
+    assert (
+        back_to_back_penalty(_candidate(w_gap10), task, state, DEFAULT_POLICY, SCORING)
+        == 5
+    )
+    # gap ≥ buffer → 0
+    w_clear = _window(MONDAY.replace(hour=10, minute=15), 60)
+    assert (
+        back_to_back_penalty(_candidate(w_clear), task, state, DEFAULT_POLICY, SCORING)
+        == 0
+    )
+    # both sides accumulate
+    state.placed.append(
+        PlacedBlock(
+            start=MONDAY.replace(hour=11, minute=5),
+            end=MONDAY.replace(hour=12),
+            is_deep=False,
+        )
+    )
+    assert (
+        back_to_back_penalty(_candidate(w), task, state, DEFAULT_POLICY, SCORING)
+        == 15 + 10
+    )
+
+
+def test_back_to_back_doubles_for_adjacent_deep_blocks_when_avoided() -> None:
+    avoid = DEFAULT_POLICY.model_copy(update={"avoid_back_to_back_deep_work": True})
+    deep_task = _task(
+        task_id="d", estimated_duration_min=60, required_focus_level="deep"
+    )
+    w = _window(MONDAY.replace(hour=10), 60, deep=True)
+    state = _fresh_state()
+    state.placed.append(
+        PlacedBlock(
+            start=MONDAY.replace(hour=9), end=MONDAY.replace(hour=10), is_deep=True
+        )
+    )
+    assert back_to_back_penalty(_candidate(w), deep_task, state, avoid, SCORING) == 30
+    # Without the preference the same adjacency costs the plain shortfall.
+    assert (
+        back_to_back_penalty(_candidate(w), deep_task, state, DEFAULT_POLICY, SCORING)
+        == 15
+    )
+    # A non-deep neighbor never doubles, even with the preference on.
+    state.placed[0] = PlacedBlock(
+        start=MONDAY.replace(hour=9), end=MONDAY.replace(hour=10), is_deep=False
+    )
+    assert back_to_back_penalty(_candidate(w), deep_task, state, avoid, SCORING) == 15
+
+
+def test_back_to_back_ignores_external_calendar_busy() -> None:
+    """Only blocks this run placed count — external busy is not a study block."""
+    task = _task(task_id="t", estimated_duration_min=60)
+    w = _window(MONDAY.replace(hour=10), 60)
+    state = _fresh_state()
+    state.busy.append(busy(MONDAY.replace(hour=9), minutes=60))
+    assert back_to_back_penalty(_candidate(w), task, state, DEFAULT_POLICY, SCORING) == 0
+
+
+def test_back_to_back_steers_away_from_adjacency() -> None:
+    task = _task(task_id="t", estimated_duration_min=60)
+    state = _fresh_state()
+    state.placed.append(
+        PlacedBlock(
+            start=MONDAY.replace(hour=9), end=MONDAY.replace(hour=10), is_deep=False
+        )
+    )
+    adjacent = _window(MONDAY.replace(hour=10), 60)
+    buffered = _window(MONDAY.replace(hour=11, minute=30), 60)
+    chosen = _select(
+        [_candidate(adjacent), _candidate(buffered)], task=task, state=state
+    )
+    assert chosen is not None
+    assert chosen.start == buffered.start
+
+
+def test_fragmentation_penalty_counts_both_slivers() -> None:
+    task_duration = 60
+    w = _window(MONDAY.replace(hour=9), 120)
+    assert fragmentation_penalty(
+        _candidate(w, offset_min=0, duration_min=task_duration), DEFAULT_POLICY
+    ) == 0  # lead 0, trail 60 (usable)
+    assert fragmentation_penalty(
+        _candidate(w, offset_min=15, duration_min=task_duration), DEFAULT_POLICY
+    ) == 15 + 45  # lead sliver + trail sliver
+    assert fragmentation_penalty(
+        _candidate(w, offset_min=60, duration_min=task_duration), DEFAULT_POLICY
+    ) == 0  # lead 60 (usable), trail 0
+
+
+def test_fragmentation_steers_to_the_exact_fit_window() -> None:
+    """A 60-min task prefers the exact-fit window over stranding a sliver."""
+    task = _task(task_id="t", estimated_duration_min=60)
+    slivered = _window(MONDAY.replace(hour=9), 90)  # any placement strands 30
+    exact = _window(MONDAY.replace(hour=12), 60)
+    candidates = enumerate_candidates(
+        task, [slivered, exact], _fresh_state(), DEFAULT_POLICY, SCORING
+    )
+    chosen = _select(candidates, task=task)
+    assert chosen is not None
+    assert chosen.window == exact
+
+
+def test_deep_window_conservation_penalty_and_steering() -> None:
+    shallow_task = _task(task_id="t", estimated_duration_min=60)
+    deep_w = _window(MONDAY.replace(hour=9), 60, deep=True)
+    plain_w = _window(MONDAY.replace(hour=12), 60)
+    assert deep_window_conservation_penalty(_candidate(deep_w), shallow_task) == 60
+    assert deep_window_conservation_penalty(_candidate(plain_w), shallow_task) == 0
+    deep_task = _task(
+        task_id="d", estimated_duration_min=60, required_focus_level="deep"
+    )
+    assert deep_window_conservation_penalty(_candidate(deep_w), deep_task) == 0
+    chosen = _select(
+        [_candidate(deep_w), _candidate(plain_w)],
+        task=shallow_task,
+        policy=DEEP_WORK_POLICY,
+    )
+    assert chosen is not None
+    assert chosen.window == plain_w
+
+
+def test_evening_preference_bonus_and_steering() -> None:
+    evening_policy = DEFAULT_POLICY.model_copy(
+        update={"prefer_evening_sessions": True}
+    )
+    task = _task(task_id="t", estimated_duration_min=60)
+    morning = _window(MONDAY.replace(hour=9), 60)
+    evening = _window(MONDAY.replace(hour=18), 60)
+    assert evening_preference_bonus(_candidate(morning), task, evening_policy) == 0
+    assert evening_preference_bonus(_candidate(evening), task, evening_policy) == 60
+    assert evening_preference_bonus(_candidate(evening), task, DEFAULT_POLICY) == 0
+    chosen = _select(
+        [_candidate(morning), _candidate(evening)], task=task, policy=evening_policy
+    )
+    assert chosen is not None
+    assert chosen.start == evening.start
+
+
+def test_weekend_long_block_bonus_and_steering() -> None:
+    weekend_policy = DEFAULT_POLICY.model_copy(
+        update={"prefer_weekend_long_blocks": True}
+    )
+    long_task = _task(task_id="t", estimated_duration_min=90)
+    short_task = _task(task_id="s", estimated_duration_min=60)
+    friday = _window(MONDAY.replace(hour=9) + timedelta(days=4), 90)
+    saturday = _window(MONDAY.replace(hour=9) + timedelta(days=5), 90)
+    assert (
+        weekend_long_block_bonus(
+            _candidate(saturday, duration_min=90), long_task, weekend_policy
+        )
+        == 90
+    )
+    assert (
+        weekend_long_block_bonus(
+            _candidate(friday, duration_min=90), long_task, weekend_policy
+        )
+        == 0
+    )
+    # Not longer than preferred_session_length_min → no bonus.
+    assert (
+        weekend_long_block_bonus(_candidate(saturday), short_task, weekend_policy) == 0
+    )
+    # Weekends disallowed → no bonus even when preferred.
+    no_weekends = weekend_policy.model_copy(update={"allow_weekends": False})
+    assert (
+        weekend_long_block_bonus(
+            _candidate(saturday, duration_min=90), long_task, no_weekends
+        )
+        == 0
+    )
+    chosen = _select(
+        [
+            _candidate(friday, duration_min=90),
+            _candidate(saturday, duration_min=90),
+        ],
+        task=long_task,
+        policy=weekend_policy,
+    )
+    assert chosen is not None
+    assert chosen.start == saturday.start
+
+
+def test_compute_target_daily_min() -> None:
+    plan = make_plan(
+        make_task(task_id="a", estimated_duration_min=100),
+        make_task(task_id="b", estimated_duration_min=100),
+        make_task(task_id="c", estimated_duration_min=100),
+    )
+    inp = make_input(plan)
+    windows = [
+        _window(MONDAY.replace(hour=9), 120),
+        _window(MONDAY.replace(hour=14), 60),  # same day — one working day
+        _window(MONDAY.replace(hour=9) + timedelta(days=1), 120),
+    ]
+    # ceil(300 / 2 days) = 150 < max_daily_study_min 240.
+    assert compute_target_daily_min(inp, windows) == 150
+    # Completed tasks leave the numerator.
+    done = make_input(plan, completed_task_ids=["a"])
+    assert compute_target_daily_min(done, windows) == 100
+    # The daily cap floors the target.
+    capped = make_input(plan, policy=DEFAULT_POLICY.model_copy(update={"max_daily_study_min": 120}))
+    assert compute_target_daily_min(capped, windows) == 120
+    # No working days → the cap stands in (nothing places anyway).
+    assert compute_target_daily_min(inp, []) == 240
+
+
+# --------------------------------------------------------------------------- #
+# End-to-end: acceptance fixture, override sensitivity, determinism
+# --------------------------------------------------------------------------- #
+
+
+def test_five_tasks_three_days_spread_instead_of_stacking_day_one() -> None:
+    """Phase acceptance: 5 x 60-min tasks over 3 free days no longer pile up
+    at day 1 ``no_events_before`` — daily balance spreads them 120/120/60."""
+    plan = make_plan(
+        *[make_task(task_id=f"t_{i}", estimated_duration_min=60) for i in range(5)]
+    )
+    out = schedule(make_input(plan, horizon_days=3))
+    starts = {st.task_id: st.start for st in out.scheduled_tasks}
+    assert starts == {
+        "t_0": MONDAY.replace(hour=8),
+        "t_1": MONDAY.replace(hour=8) + timedelta(days=1),
+        "t_2": MONDAY.replace(hour=8) + timedelta(days=2),
+        "t_3": MONDAY.replace(hour=10),
+        "t_4": MONDAY.replace(hour=10) + timedelta(days=1),
+    }
+    per_day: dict[str, int] = {}
+    for st in out.scheduled_tasks:
+        key = st.start.date().isoformat()
+        per_day[key] = per_day.get(key, 0) + 60
+    assert per_day == {"2026-05-04": 120, "2026-05-05": 120, "2026-05-06": 60}
+
+
+def test_scoring_override_changes_placement() -> None:
+    """P-D acceptance: a different weight vector produces a different draft."""
+    plan = make_plan(
+        *[make_task(task_id=f"t_{i}", estimated_duration_min=60) for i in range(5)]
+    )
+    default_out = schedule(make_input(plan, horizon_days=3))
+    zeroed = schedule(make_input(plan, horizon_days=3), scoring=ZERO_WEIGHTS)
+    assert default_out.model_dump() != zeroed.model_dump()
+
+
+def test_schedule_is_deterministic_byte_for_byte() -> None:
+    def build() -> tuple:
+        plan = make_plan(
+            make_task(task_id="deep_a", estimated_duration_min=60, required_focus_level="deep"),
+            make_task(
+                task_id="read_b", estimated_duration_min=90, category="concept_review"
+            ),
+            make_task(task_id="prac_c", estimated_duration_min=60, dependencies=["deep_a"]),
+            make_task(task_id="rev_d", estimated_duration_min=30, category="review"),
+        )
+        policy = DEEP_WORK_POLICY.model_copy(
+            update={
+                "prefer_evening_sessions": True,
+                "avoid_back_to_back_deep_work": True,
+            }
+        )
+        inp = make_input(
+            plan,
+            policy=policy,
+            free_busy=[busy(MONDAY.replace(hour=10), minutes=90)],
+            horizon_days=7,
+        )
+        return plan, inp
+
+    _, inp_one = build()
+    _, inp_two = build()
+    assert schedule(inp_one).model_dump_json() == schedule(inp_two).model_dump_json()
+
+
+# --------------------------------------------------------------------------- #
+# score_schedule — schedule-level totals (the report / polish objective)
+# --------------------------------------------------------------------------- #
+
+
+def test_score_schedule_zero_cost_day() -> None:
+    """Two tasks on one day, buffered and target-fitting → every total 0."""
+    plan = make_plan(
+        make_task(task_id="a", estimated_duration_min=60),
+        make_task(task_id="b", estimated_duration_min=60),
+    )
+    inp = make_input(plan, horizon_days=1)
+    out = schedule(inp)
+    breakdown = score_schedule(out, inp)
+    assert out.scheduled_tasks[0].start == MONDAY.replace(hour=8)
+    assert out.scheduled_tasks[1].start == MONDAY.replace(hour=10)  # buffered
+    assert breakdown.target_daily_min == 120
+    assert breakdown.daily_balance_total == 0
+    assert breakdown.back_to_back_total == 0
+    assert breakdown.fragmentation_total == 0
+    assert breakdown.total_cost == 0
+    assert breakdown.per_day_minutes == {"2026-05-04": 120}
+    assert breakdown.band_histogram == {"morning": 2}
+    assert (breakdown.scheduled_count, breakdown.unscheduled_count) == (2, 0)
+
+
+def test_score_schedule_totals_on_a_stacked_schedule() -> None:
+    """Hand-checked totals for the zero-weight stacking of the acceptance
+    fixture: Mon 08/09/10/11 + Tue 08 → daily overflow 140, three adjacent
+    Mon pairs at gap 0 → 45, no slivers."""
+    plan = make_plan(
+        *[make_task(task_id=f"t_{i}", estimated_duration_min=60) for i in range(5)]
+    )
+    inp = make_input(plan, horizon_days=3)
+    stacked = schedule(inp, scoring=ZERO_WEIGHTS)
+    breakdown = score_schedule(stacked, inp)
+    assert breakdown.target_daily_min == 100
+    assert breakdown.per_day_minutes == {"2026-05-04": 240, "2026-05-05": 60}
+    assert breakdown.daily_balance_total == 140
+    assert breakdown.back_to_back_total == 45
+    assert breakdown.fragmentation_total == 0
+    assert breakdown.total_cost == 3 * 140 + 2 * 45
+
+
+def test_score_schedule_deep_conservation_and_pair_doubling() -> None:
+    """Non-deep minutes inside deep windows count; adjacent deep pairs double
+    only under ``avoid_back_to_back_deep_work``."""
+    from agentic_calendar.contracts.scheduler_output import (
+        CalendarEventStatus,
+        ScheduledTask,
+        SchedulerOutput,
+        ScheduleStatus,
+    )
+
+    plan = make_plan(
+        make_task(task_id="d1", estimated_duration_min=60, required_focus_level="deep"),
+        make_task(task_id="d2", estimated_duration_min=60, required_focus_level="deep"),
+        make_task(task_id="shallow", estimated_duration_min=60),
+    )
+    avoid = DEEP_WORK_POLICY.model_copy(
+        update={"avoid_back_to_back_deep_work": True}
+    )
+    inp = make_input(plan, policy=avoid, horizon_days=2)
+    monday_deep = MONDAY.replace(hour=18)  # Mon deep window 18:00-21:00
+
+    def placed(task_id: str, start: datetime) -> ScheduledTask:
+        return ScheduledTask(
+            task_id=task_id,
+            start=start,
+            end=start + timedelta(minutes=60),
+            calendar_event_status=CalendarEventStatus.DRAFT_ONLY,
+        )
+
+    output = SchedulerOutput(
+        run_id=inp.run_id,
+        plan_version=inp.plan_version,
+        schedule_status=ScheduleStatus.SUCCESS,
+        scheduled_tasks=[
+            placed("d1", monday_deep),
+            placed("d2", monday_deep + timedelta(minutes=60)),  # gap 0, both deep
+            placed("shallow", monday_deep + timedelta(minutes=120)),  # in deep window
+        ],
+        unscheduled_tasks=[],
+        available_capacity_min=0,
+        largest_available_block_min=0,
+        repair_options=[],
+    )
+    breakdown = score_schedule(output, inp)
+    # d1→d2 doubles (15 x 2); d2→shallow is a plain adjacency (15).
+    assert breakdown.back_to_back_total == 30 + 15
+    # The shallow hour sits entirely inside Monday's deep window.
+    assert breakdown.deep_window_conservation_total == 60

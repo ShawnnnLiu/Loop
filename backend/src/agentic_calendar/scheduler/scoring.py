@@ -1,28 +1,73 @@
 """Placement-candidate machinery for the greedy scheduler.
 
-Axiom 05 "Scored Placement": enumerate every feasible candidate start, then
-pick the deterministic argmin of an integer cost under the ``(cost, start)``
-total-order tie-break.
+Axiom 05 "Scored Placement": enumerate every feasible candidate start
+(window starts plus a fixed intra-window grid), then pick the deterministic
+argmin of an integer cost under the ``(cost, start)`` total-order tie-break.
 
-Current increment: candidates are window starts only and the cost is
-constant 0, so argmin with the earliest-start tie-break selects exactly the
-first feasible window — behavior-identical to the original first-fit loop
-(proven output-identical in ``tests/scheduler/test_scoring.py``). The
-intra-window candidate grid and the cost terms activate in the
-scoring-terms increment (axiom 05 "Rollout status").
+All arithmetic is integer minutes. Soft terms reorder feasible candidates
+and never reject one — every hard check the first-fit loop applied is still
+applied here, so any task first fit would have placed remains placeable
+(the grid strictly adds candidates).
+
+``score_schedule`` re-derives the *schedule-level* term totals from a
+finished ``SchedulerOutput`` for the quality report and the polish
+objective. Those totals are deliberately not the sum of the marginal
+per-placement values (marginals are path-dependent); only the
+schedule-level definitions are the audit surface.
 """
 
 from __future__ import annotations
 
+import itertools
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 from agentic_calendar.contracts.common_types import FocusLevel
+from agentic_calendar.contracts.pooled_duration_model import TimeOfDayBand
+from agentic_calendar.contracts.scheduler_output import SchedulerOutput
 from agentic_calendar.contracts.task_plan import Task
+from agentic_calendar.duration_estimation.pooled import derive_time_of_day_band
 
-from .inputs import FreeBusyInterval
+from .inputs import FreeBusyInterval, SchedulerInput
 from .policy import SchedulingPolicy
-from .windows import FreeWindow
+from .windows import FreeWindow, enumerate_free_windows
+
+_WEEKEND_WEEKDAYS = (5, 6)  # Sat, Sun under datetime.weekday()
+
+
+@dataclass(frozen=True)
+class PlacementScoringConfig:
+    """Weights and knobs for scored placement (axiom 05).
+
+    Every value is an integer heuristic prior, journaled as such; the only
+    supported override path is ``tuning.toml`` ``[scheduler_placement]``
+    (axiom 07).
+    """
+
+    w_daily_balance: int = 3
+    w_back_to_back: int = 2
+    w_fragmentation: int = 1
+    w_deep_window_conservation: int = 2
+    w_evening_preference: int = 1
+    w_weekend_long_block: int = 1
+    buffer_min: int = 15
+    candidate_grid_min: int = 15
+
+
+DEFAULT_PLACEMENT_SCORING_CONFIG = PlacementScoringConfig()
+
+
+@dataclass(frozen=True, slots=True)
+class PlacedBlock:
+    """A study block this run has already placed (adjacency bookkeeping).
+
+    Only blocks the scheduler placed count for the ``back_to_back`` term —
+    external calendar busy does not.
+    """
+
+    start: datetime
+    end: datetime
+    is_deep: bool
 
 
 @dataclass(slots=True)
@@ -32,6 +77,7 @@ class PlacementState:
     busy: list[FreeBusyInterval]
     minutes_per_day: dict[str, int]
     last_deep_end: dict[str, datetime]
+    placed: list[PlacedBlock]
 
 
 @dataclass(frozen=True, slots=True)
@@ -53,70 +99,258 @@ def day_key(dt: datetime) -> str:
     return dt.date().isoformat()
 
 
+def ceil_div(a: int, b: int) -> int:
+    """Integer ceiling division (axiom 05: no floats in placement math)."""
+    return -(-a // b)
+
+
+def compute_target_daily_min(inp: SchedulerInput, windows: list[FreeWindow]) -> int:
+    """Even-spread daily target for the ``daily_balance`` term.
+
+    ``working_days`` counts distinct local dates carrying at least one free
+    window in the *initial* enumeration (before any placement);
+    ``total_plan_min`` sums the not-yet-completed plan tasks. With no
+    working days nothing places anyway, so the cap stands in.
+    """
+    working_days = len({w.start.date() for w in windows})
+    if working_days == 0:
+        return inp.policy.max_daily_study_min
+    completed = set(inp.completed_task_ids)
+    total_plan_min = sum(
+        t.estimated_duration_min
+        for t in inp.plan.tasks
+        if t.task_id not in completed
+    )
+    return min(
+        inp.policy.max_daily_study_min, ceil_div(total_plan_min, working_days)
+    )
+
+
 def enumerate_candidates(
     task: Task,
     windows: list[FreeWindow],
     state: PlacementState,
     policy: SchedulingPolicy,
+    scoring: PlacementScoringConfig,
 ) -> list[PlacementCandidate]:
     """Return every feasible candidate placement for ``task``.
 
-    Candidates are window starts only. Each candidate must pass the same
-    five hard checks the first-fit loop applied, in the same order: window
-    size, deep-window requirement, window-end bound, daily study cap, and
-    the break-between-deep-blocks gap. Scoring never relaxes a hard check
-    (axiom 05).
+    Candidate starts are ``window.start + k x candidate_grid_min`` for every
+    ``k ≥ 0`` with ``start + duration ≤ window.end`` (the ``k = 0`` element
+    is the window start). Each candidate must pass the same five hard checks
+    the first-fit loop applied: window size, deep-window requirement,
+    window-end bound, daily study cap, and the break-between-deep-blocks
+    gap. Scoring never relaxes a hard check (axiom 05). Because a window
+    never spans midnight, the size / deep-requirement / daily-cap checks are
+    per-window; only the deep-gap check varies with the start — a later
+    grid start can satisfy it where the window start does not.
     """
     needs_deep = task.required_focus_level is FocusLevel.DEEP
     duration = task.estimated_duration_min
+    grid = timedelta(minutes=scoring.candidate_grid_min)
     candidates: list[PlacementCandidate] = []
     for window in _live_windows(windows, state.busy):
         if window.duration_min < duration:
             continue
         if needs_deep and policy.respect_deep_work_windows and not window.is_deep_work:
             continue
-        candidate_start = window.start
-        candidate_end = candidate_start + timedelta(minutes=duration)
-        if candidate_end > window.end:
-            continue
-        key = day_key(candidate_start)
+        key = day_key(window.start)
         used_today = state.minutes_per_day.get(key, 0)
         if used_today + duration > policy.max_daily_study_min:
             continue
-        if needs_deep:
-            last = state.last_deep_end.get(key)
-            if last is not None:
-                gap = (candidate_start - last).total_seconds() / 60
-                if gap < policy.min_break_between_deep_blocks_min:
-                    continue
-        candidates.append(
-            PlacementCandidate(start=candidate_start, end=candidate_end, window=window)
-        )
+        last_deep = state.last_deep_end.get(key) if needs_deep else None
+        candidate_start = window.start
+        while candidate_start + timedelta(minutes=duration) <= window.end:
+            if last_deep is None or _gap_min(last_deep, candidate_start) >= (
+                policy.min_break_between_deep_blocks_min
+            ):
+                candidates.append(
+                    PlacementCandidate(
+                        start=candidate_start,
+                        end=candidate_start + timedelta(minutes=duration),
+                        window=window,
+                    )
+                )
+            candidate_start += grid
     return candidates
 
 
-def candidate_cost(candidate: PlacementCandidate) -> int:
+def _gap_min(earlier: datetime, later: datetime) -> int:
+    """Whole minutes from ``earlier`` to ``later`` (non-negative by caller)."""
+    return int((later - earlier).total_seconds() // 60)
+
+
+# --------------------------------------------------------------------------- #
+# Cost terms — exact formulas pinned in
+# docs/implementation-plans/scheduler-placement-quality/01-scored-placement.md
+# --------------------------------------------------------------------------- #
+
+
+def daily_balance_penalty(
+    candidate: PlacementCandidate,
+    task: Task,
+    state: PlacementState,
+    target_daily_min: int,
+) -> int:
+    """Minutes the candidate pushes its day past the even-spread target."""
+    used_today = state.minutes_per_day.get(day_key(candidate.start), 0)
+    return max(0, used_today + task.estimated_duration_min - target_daily_min)
+
+
+def back_to_back_penalty(
+    candidate: PlacementCandidate,
+    task: Task,
+    state: PlacementState,
+    policy: SchedulingPolicy,
+    scoring: PlacementScoringConfig,
+) -> int:
+    """Buffer shortfall against the nearest placed study block on each side.
+
+    Per side: if the nearest same-day placed block sits closer than
+    ``buffer_min``, add ``buffer_min - gap``; the side's contribution doubles
+    iff ``avoid_back_to_back_deep_work``, the candidate task is deep, and
+    that adjacent block is deep. External calendar busy never counts.
+    """
+    key = day_key(candidate.start)
+    task_is_deep = task.required_focus_level is FocusLevel.DEEP
+    before: PlacedBlock | None = None
+    after: PlacedBlock | None = None
+    for block in state.placed:
+        if day_key(block.start) != key:
+            continue
+        if block.end <= candidate.start and (before is None or block.end > before.end):
+            before = block
+        elif block.start >= candidate.end and (
+            after is None or block.start < after.start
+        ):
+            after = block
+    total = 0
+    for neighbor, gap in (
+        (before, _gap_min(before.end, candidate.start) if before else 0),
+        (after, _gap_min(candidate.end, after.start) if after else 0),
+    ):
+        if neighbor is None or gap >= scoring.buffer_min:
+            continue
+        side = scoring.buffer_min - gap
+        if policy.avoid_back_to_back_deep_work and task_is_deep and neighbor.is_deep:
+            side *= 2
+        total += side
+    return total
+
+
+def fragmentation_penalty(
+    candidate: PlacementCandidate, policy: SchedulingPolicy
+) -> int:
+    """Sliver minutes the placement strands on either side of its window."""
+
+    def sliver(minutes: int) -> int:
+        return minutes if 0 < minutes < policy.preferred_session_length_min else 0
+
+    lead = _gap_min(candidate.window.start, candidate.start)
+    trail = _gap_min(candidate.end, candidate.window.end)
+    return sliver(lead) + sliver(trail)
+
+
+def deep_window_conservation_penalty(
+    candidate: PlacementCandidate, task: Task
+) -> int:
+    """Opportunity cost of a non-deep task consuming scarce deep capacity."""
+    if candidate.window.is_deep_work and task.required_focus_level is not FocusLevel.DEEP:
+        return task.estimated_duration_min
+    return 0
+
+
+def evening_preference_bonus(
+    candidate: PlacementCandidate, task: Task, policy: SchedulingPolicy
+) -> int:
+    """Evening-band start when the user prefers evening sessions.
+
+    Scheduler datetimes are already user-local wall-clock, so the band comes
+    straight from the start hour (shared band definition — never a second
+    one).
+    """
+    if (
+        policy.prefer_evening_sessions
+        and derive_time_of_day_band(candidate.start.hour) is TimeOfDayBand.EVENING
+    ):
+        return task.estimated_duration_min
+    return 0
+
+
+def weekend_long_block_bonus(
+    candidate: PlacementCandidate, task: Task, policy: SchedulingPolicy
+) -> int:
+    """Weekend placement of a longer-than-preferred block, when preferred."""
+    if (
+        policy.prefer_weekend_long_blocks
+        and policy.allow_weekends
+        and candidate.start.date().weekday() in _WEEKEND_WEEKDAYS
+        and task.estimated_duration_min > policy.preferred_session_length_min
+    ):
+        return task.estimated_duration_min
+    return 0
+
+
+def candidate_cost(
+    candidate: PlacementCandidate,
+    *,
+    task: Task,
+    state: PlacementState,
+    policy: SchedulingPolicy,
+    scoring: PlacementScoringConfig,
+    target_daily_min: int,
+) -> int:
     """Integer cost of a candidate (axiom 05 scored placement).
 
-    Constant 0 until the scoring terms land; argmin with the earliest-start
-    tie-break therefore reproduces first fit exactly.
+    ``cost = Σ w·penalty - Σ w·bonus``; every term is a non-negative
+    minutes-scaled int and every weight an int.
     """
-    del candidate
-    return 0
+    return (
+        scoring.w_daily_balance
+        * daily_balance_penalty(candidate, task, state, target_daily_min)
+        + scoring.w_back_to_back
+        * back_to_back_penalty(candidate, task, state, policy, scoring)
+        + scoring.w_fragmentation * fragmentation_penalty(candidate, policy)
+        + scoring.w_deep_window_conservation
+        * deep_window_conservation_penalty(candidate, task)
+        - scoring.w_evening_preference
+        * evening_preference_bonus(candidate, task, policy)
+        - scoring.w_weekend_long_block
+        * weekend_long_block_bonus(candidate, task, policy)
+    )
 
 
 def select_placement(
     candidates: list[PlacementCandidate],
+    *,
+    task: Task,
+    state: PlacementState,
+    policy: SchedulingPolicy,
+    scoring: PlacementScoringConfig,
+    target_daily_min: int,
 ) -> PlacementCandidate | None:
     """Deterministic argmin under the total-order key ``(cost, start)``.
 
-    Free windows are disjoint and starts within a window are distinct, so no
-    two candidates share a ``start`` — the key is a total order and the
-    selection is unique.
+    Free windows are disjoint and grid starts within a window are distinct,
+    so no two candidates share a ``start`` — the key is a total order and
+    the selection is unique.
     """
     if not candidates:
         return None
-    return min(candidates, key=lambda c: (candidate_cost(c), c.start))
+    return min(
+        candidates,
+        key=lambda c: (
+            candidate_cost(
+                c,
+                task=task,
+                state=state,
+                policy=policy,
+                scoring=scoring,
+                target_daily_min=target_daily_min,
+            ),
+            c.start,
+        ),
+    )
 
 
 def _live_windows(
@@ -131,3 +365,166 @@ def _live_windows(
         if not overlaps:
             live.append(w)
     return live
+
+
+# --------------------------------------------------------------------------- #
+# Schedule-level scoring — the quality-report / polish objective
+# --------------------------------------------------------------------------- #
+
+
+@dataclass(frozen=True)
+class ScheduleScoreBreakdown:
+    """Schedule-level term totals re-derived from a finished schedule.
+
+    ``total_cost`` follows the same sign convention as placement
+    (``Σ w·penalty - Σ w·bonus``) but over the schedule-level definitions —
+    deliberately not the sum of the path-dependent marginal values.
+    """
+
+    daily_balance_total: int
+    back_to_back_total: int
+    fragmentation_total: int
+    deep_window_conservation_total: int
+    evening_preference_total: int
+    weekend_long_block_total: int
+    total_cost: int
+    target_daily_min: int
+    scheduled_count: int
+    unscheduled_count: int
+    per_day_minutes: dict[str, int]
+    band_histogram: dict[str, int]
+
+
+def score_schedule(
+    output: SchedulerOutput,
+    inp: SchedulerInput,
+    scoring: PlacementScoringConfig = DEFAULT_PLACEMENT_SCORING_CONFIG,
+) -> ScheduleScoreBreakdown:
+    """Compute the schedule-level totals for a finished ``SchedulerOutput``.
+
+    Pure and read-only: re-enumerates windows from the input, never mutates
+    either artifact, and works for any output produced from ``inp``
+    (including partial failures — unscheduled tasks simply carry no blocks).
+    """
+    tasks_by_id = {t.task_id: t for t in inp.plan.tasks}
+    initial_windows = enumerate_free_windows(
+        horizon_start=inp.horizon_start,
+        horizon_end=inp.horizon_end,
+        free_busy=list(inp.calendar_free_busy),
+        policy=inp.policy,
+    )
+    target_daily_min = compute_target_daily_min(inp, initial_windows)
+
+    blocks = sorted(
+        (
+            PlacedBlock(
+                start=st.start,
+                end=st.end,
+                is_deep=(
+                    tasks_by_id[st.task_id].required_focus_level is FocusLevel.DEEP
+                ),
+            )
+            for st in output.scheduled_tasks
+        ),
+        key=lambda b: b.start,
+    )
+
+    per_day_minutes: dict[str, int] = {}
+    band_histogram: dict[str, int] = {}
+    for block in blocks:
+        key = day_key(block.start)
+        per_day_minutes[key] = per_day_minutes.get(key, 0) + _gap_min(
+            block.start, block.end
+        )
+        band = derive_time_of_day_band(block.start.hour).value
+        band_histogram[band] = band_histogram.get(band, 0) + 1
+
+    daily_balance_total = sum(
+        max(0, minutes - target_daily_min) for minutes in per_day_minutes.values()
+    )
+
+    back_to_back_total = 0
+    for earlier, later in itertools.pairwise(blocks):
+        if day_key(earlier.start) != day_key(later.start):
+            continue
+        gap = _gap_min(earlier.end, later.start)
+        if gap >= scoring.buffer_min:
+            continue
+        pair = scoring.buffer_min - gap
+        if (
+            inp.policy.avoid_back_to_back_deep_work
+            and earlier.is_deep
+            and later.is_deep
+        ):
+            pair *= 2
+        back_to_back_total += pair
+
+    final_busy = list(inp.calendar_free_busy) + [
+        FreeBusyInterval(start=b.start, end=b.end) for b in blocks
+    ]
+    final_windows = enumerate_free_windows(
+        horizon_start=inp.horizon_start,
+        horizon_end=inp.horizon_end,
+        free_busy=final_busy,
+        policy=inp.policy,
+    )
+    fragmentation_total = sum(
+        w.duration_min
+        for w in final_windows
+        if 0 < w.duration_min < inp.policy.preferred_session_length_min
+    )
+
+    deep_windows = [w for w in initial_windows if w.is_deep_work]
+    deep_window_conservation_total = 0
+    evening_preference_total = 0
+    weekend_long_block_total = 0
+    for block in blocks:
+        duration = _gap_min(block.start, block.end)
+        if not block.is_deep:
+            deep_window_conservation_total += sum(
+                _overlap_min(block, w) for w in deep_windows
+            )
+        if (
+            inp.policy.prefer_evening_sessions
+            and derive_time_of_day_band(block.start.hour) is TimeOfDayBand.EVENING
+        ):
+            evening_preference_total += duration
+        if (
+            inp.policy.prefer_weekend_long_blocks
+            and inp.policy.allow_weekends
+            and block.start.date().weekday() in _WEEKEND_WEEKDAYS
+            and duration > inp.policy.preferred_session_length_min
+        ):
+            weekend_long_block_total += duration
+
+    total_cost = (
+        scoring.w_daily_balance * daily_balance_total
+        + scoring.w_back_to_back * back_to_back_total
+        + scoring.w_fragmentation * fragmentation_total
+        + scoring.w_deep_window_conservation * deep_window_conservation_total
+        - scoring.w_evening_preference * evening_preference_total
+        - scoring.w_weekend_long_block * weekend_long_block_total
+    )
+    return ScheduleScoreBreakdown(
+        daily_balance_total=daily_balance_total,
+        back_to_back_total=back_to_back_total,
+        fragmentation_total=fragmentation_total,
+        deep_window_conservation_total=deep_window_conservation_total,
+        evening_preference_total=evening_preference_total,
+        weekend_long_block_total=weekend_long_block_total,
+        total_cost=total_cost,
+        target_daily_min=target_daily_min,
+        scheduled_count=len(output.scheduled_tasks),
+        unscheduled_count=len(output.unscheduled_tasks),
+        per_day_minutes=per_day_minutes,
+        band_histogram=band_histogram,
+    )
+
+
+def _overlap_min(block: PlacedBlock, window: FreeWindow) -> int:
+    """Whole minutes of overlap between a placed block and a window."""
+    start = max(block.start, window.start)
+    end = min(block.end, window.end)
+    if end <= start:
+        return 0
+    return _gap_min(start, end)

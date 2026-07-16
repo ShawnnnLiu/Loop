@@ -128,13 +128,14 @@ typed `reason_code` produced by the hard checks.
 
 ### Rollout status
 
-The candidate machinery ships behavior-identical to first fit first
-(window-start candidates only, cost ≡ 0) with an output-equivalence proof.
-The intra-window grid and the cost terms activate in the scoring-terms
-increment, which deliberately re-pins placement-instant test expectations;
-the weights land in `tuning.toml` in the same project. Until that
-increment lands, this section describes the target policy, not live
-behavior.
+Live. The candidate machinery shipped behavior-identical to first fit
+first (window-start candidates only, cost ≡ 0) with an output-equivalence
+proof; the scoring-terms increment then activated the intra-window grid
+and the six cost terms above, deliberately re-pinning placement-instant
+test expectations while leaving every reason_code, debug payload, and
+Supervisor routing assertion unchanged. Weights and knobs serve from
+`PlacementScoringConfig` defaults unless overridden via
+`backend/tuning.toml` `[scheduler_placement]`.
 
 ## Scheduler Output
 

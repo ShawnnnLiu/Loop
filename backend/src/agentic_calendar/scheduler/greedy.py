@@ -7,9 +7,10 @@ Algorithm:
    ``splittable=False`` → ``TASK_TOO_LONG_UNSPLITTABLE``.
 3. For each remaining task in topo + priority order, place it via the
    scored-candidate machinery (``scoring.py``): enumerate feasible
-   candidates (deep-work / daily-load / break-between-deep checks), pick
-   the ``(cost, start)`` argmin. With the current constant-0 cost this
-   selects the first window that fits (axiom 05 "Rollout status").
+   candidates (window starts plus the intra-window grid, under the
+   deep-work / daily-load / break-between-deep hard checks), pick the
+   ``(cost, start)`` argmin of the six-term integer cost (axiom 05
+   "Scored Placement").
 4. If no candidate is feasible, emit a typed reason with debug payload.
 5. After every placement, mark the placed range busy so subsequent tasks see it.
 
@@ -40,7 +41,11 @@ from .errors import SchedulerError
 from .inputs import FreeBusyInterval, SchedulerInput
 from .ordering import topological_order
 from .scoring import (
+    DEFAULT_PLACEMENT_SCORING_CONFIG,
+    PlacedBlock,
+    PlacementScoringConfig,
     PlacementState,
+    compute_target_daily_min,
     day_key,
     enumerate_candidates,
     select_placement,
@@ -52,15 +57,25 @@ def schedule(
     inp: SchedulerInput,
     *,
     module_priority: Mapping[str, Priority] | None = None,
+    scoring: PlacementScoringConfig | None = None,
 ) -> SchedulerOutput:
     """Public entry point. Always returns a ``SchedulerOutput`` (never raises).
+
+    ``scoring`` carries the operator-tunable placement weights and knobs
+    (``None`` means the journaled defaults) — a keyword-only argument like
+    ``module_priority`` so ``SchedulingPolicy`` stays a pure mirror of the
+    user profile.
 
     Any internal :class:`SchedulerError` is caught here and translated into a
     schema-valid ``schedule_status="failed"`` output carrying the exception's
     typed ``reason_code`` (axiom 16) — no raw exception leaves the region.
     """
     try:
-        return _schedule_validated(inp, module_priority=module_priority)
+        return _schedule_validated(
+            inp,
+            module_priority=module_priority,
+            scoring=scoring if scoring is not None else DEFAULT_PLACEMENT_SCORING_CONFIG,
+        )
     except SchedulerError as exc:
         return _scheduler_error_output(inp, exc)
 
@@ -100,6 +115,7 @@ def _schedule_validated(
     inp: SchedulerInput,
     *,
     module_priority: Mapping[str, Priority] | None = None,
+    scoring: PlacementScoringConfig,
 ) -> SchedulerOutput:
     """Run the greedy placement loop on contract-valid input."""
     ordered_tasks = topological_order(inp.plan, module_priority=module_priority)
@@ -111,11 +127,13 @@ def _schedule_validated(
     )
     available_capacity_min = sum(w.duration_min for w in free_windows)
     largest_block_min = max((w.duration_min for w in free_windows), default=0)
+    target_daily_min = compute_target_daily_min(inp, free_windows)
 
     state = PlacementState(
         busy=list(inp.calendar_free_busy),
         minutes_per_day={},
         last_deep_end={},
+        placed=[],
     )
 
     scheduled: list[ScheduledTask] = []
@@ -158,7 +176,14 @@ def _schedule_validated(
             )
             continue
 
-        placement = _try_place(task, free_windows, inp, state)
+        placement = _try_place(
+            task,
+            free_windows,
+            inp,
+            state,
+            scoring=scoring,
+            target_daily_min=target_daily_min,
+        )
         if placement is None:
             unscheduled.append(_failure_for(task, free_windows, inp))
             continue
@@ -242,10 +267,20 @@ def _try_place(
     windows: list[FreeWindow],
     inp: SchedulerInput,
     state: PlacementState,
+    *,
+    scoring: PlacementScoringConfig,
+    target_daily_min: int,
 ) -> _Placement | None:
     """Select a placement via the scored-candidate machinery (axiom 05)."""
-    candidates = enumerate_candidates(task, windows, state, inp.policy)
-    chosen = select_placement(candidates)
+    candidates = enumerate_candidates(task, windows, state, inp.policy, scoring)
+    chosen = select_placement(
+        candidates,
+        task=task,
+        state=state,
+        policy=inp.policy,
+        scoring=scoring,
+        target_daily_min=target_daily_min,
+    )
     if chosen is None:
         return None
     return _Placement(
@@ -266,8 +301,12 @@ def _record_placement(
     state.minutes_per_day[key] = (
         state.minutes_per_day.get(key, 0) + task.estimated_duration_min
     )
-    if task.required_focus_level is FocusLevel.DEEP:
+    is_deep = task.required_focus_level is FocusLevel.DEEP
+    if is_deep:
         state.last_deep_end[key] = placement.end
+    state.placed.append(
+        PlacedBlock(start=placement.start, end=placement.end, is_deep=is_deep)
+    )
     # Re-enumerate after busy list update
     fresh = enumerate_free_windows(
         horizon_start=inp.horizon_start,

@@ -35,6 +35,8 @@ from agentic_calendar.source_claims.priors import DEFAULT_CONFIDENCE_PRIORS
 from agentic_calendar.source_claims.sqlite_store import SqliteSourceClaimStore
 from agentic_calendar.tools.corpus_stats import (
     DECAY_STALE_SHARE_THRESHOLD,
+    MIN_DOCS_PER_TRACK,
+    TARGET_DOCS_PER_TRACK,
     build_claims_report,
     build_corpus_report,
     document_url_of,
@@ -258,6 +260,42 @@ def test_corpus_report_ages_per_track_and_snapshot_ages(tmp_path: Path) -> None:
     assert swe.published_age is not None and swe.published_age.count == 1
     assert by_track["mle"].published_age is not None
     assert by_track["mle"].published_age.min_days == 100
+    # Two docs (swe) and one (mle): both under the 10-doc minimum.
+    assert swe.under_minimum and swe.below_target
+    assert by_track["mle"].under_minimum
+
+
+def test_doc_floor_boundaries_are_inclusive_of_the_floor_values(tmp_path: Path) -> None:
+    """`>= minimum` clears the minimum flag; `>= target` clears both — the
+    floors are report-only heuristic priors mirroring the expansion
+    mechanics doc's 30-60 docs/track calibration."""
+    corpus_db = tmp_path / "corpus.db"
+    registry = SqliteCorpusRegistry(SqliteDatabase(corpus_db))
+    for i in range(TARGET_DOCS_PER_TRACK):
+        tracks = [CareerTrack.SWE]
+        if i < MIN_DOCS_PER_TRACK:
+            tracks.append(CareerTrack.MLE)
+        _register(
+            registry,
+            f"https://x.example/doc-{i}",
+            collected=_TODAY,
+            published=None,
+            tracks=tracks,
+        )
+    report = build_corpus_report(registry, today=_TODAY)
+    by_track = {row.track: row for row in report.by_track}
+    swe = by_track["swe"]  # exactly at target
+    mle = by_track["mle"]  # exactly at minimum
+    assert (swe.documents, swe.under_minimum, swe.below_target) == (
+        TARGET_DOCS_PER_TRACK,
+        False,
+        False,
+    )
+    assert (mle.documents, mle.under_minimum, mle.below_target) == (
+        MIN_DOCS_PER_TRACK,
+        False,
+        True,
+    )
 
 
 def test_corpus_report_with_no_snapshots_has_no_ages(tmp_path: Path) -> None:
@@ -314,6 +352,8 @@ def test_cli_reports_both_sides_with_the_track_join(tmp_path: Path, capsys: Any)
     assert exit_code == 0
     out = capsys.readouterr().out
     assert "corpus: 2 documents, 2 snapshot(s)" in out
+    assert "UNDER MINIMUM" in out
+    assert "mle, swe under minimum" in out
     assert "claims: 3 claims" in out
     assert "claims by track" in out
     assert "unmapped: 1 claim(s)" in out
@@ -340,7 +380,10 @@ def test_cli_json_output_is_machine_readable(tmp_path: Path, capsys: Any) -> Non
     assert payload["as_of"] == _TODAY.isoformat()
     assert payload["stale_window_days"] == _RAMP
     assert payload["decay_stale_share_threshold"] == DECAY_STALE_SHARE_THRESHOLD
+    assert payload["min_docs_per_track"] == MIN_DOCS_PER_TRACK
+    assert payload["target_docs_per_track"] == TARGET_DOCS_PER_TRACK
     assert payload["corpus"]["documents"] == 2
+    assert payload["corpus"]["by_track"][0]["under_minimum"] is True
     assert payload["claims"]["overall"]["total"] == 3
     # claim_a (x.example, expired) counts in both of the doc's tracks.
     swe = next(row for row in payload["claims"]["by_track"] if row["track"] == "swe")

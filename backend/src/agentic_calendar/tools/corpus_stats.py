@@ -61,6 +61,16 @@ from agentic_calendar.source_claims.sqlite_store import SqliteSourceClaimStore
 #: Heuristic prior (axiom 08 "Freshness Monitoring"), not a tuned value.
 DECAY_STALE_SHARE_THRESHOLD = 0.50
 
+#: Per-track document-count floors — heuristic priors, report-only (no track
+#: is blocked from serving; a thin track simply retrieves and proves less).
+#: Below the minimum, the track's evidence loop is effectively inert: too few
+#: documents for meaningful retrieval, claim assembly, or RI-F enrichment.
+#: The target mirrors the career-track-expansion mechanics doc's calibration
+#: ("30-60 documents per track" — enough for real retrieval metrics, small
+#: enough to eyeball).
+MIN_DOCS_PER_TRACK = 10
+TARGET_DOCS_PER_TRACK = 30
+
 
 # --------------------------------------------------------------------------- #
 # Report shapes (dataclasses so ``--json`` is one ``asdict`` away).
@@ -115,10 +125,12 @@ class AgeDistribution:
 
 @dataclass(frozen=True)
 class TrackCorpusStats:
-    """One track's document count and age distributions."""
+    """One track's document count, doc-floor verdicts, and age distributions."""
 
     track: str
     documents: int
+    under_minimum: bool
+    below_target: bool
     collected_age: AgeDistribution
     published_age: AgeDistribution | None
 
@@ -242,6 +254,8 @@ def build_corpus_report(registry: SqliteCorpusRegistry, *, today: date) -> Corpu
             TrackCorpusStats(
                 track=track,
                 documents=len(collected),
+                under_minimum=len(collected) < MIN_DOCS_PER_TRACK,
+                below_target=len(collected) < TARGET_DOCS_PER_TRACK,
                 collected_age=_age_distribution(collected, today=today),
                 published_age=(
                     _age_distribution(published, today=today) if published else None
@@ -298,10 +312,25 @@ def _print_corpus(report: CorpusReport) -> None:
             if row.published_age is not None
             else f"published date unknown for all {row.documents}"
         )
+        if row.under_minimum:
+            floor_flag = (
+                f"  UNDER MINIMUM (<{MIN_DOCS_PER_TRACK} docs) — evidence "
+                "loop effectively inert; extend the manifest"
+            )
+        elif row.below_target:
+            floor_flag = f"  below the {TARGET_DOCS_PER_TRACK}-doc target"
+        else:
+            floor_flag = ""
         print(
             f"  {row.track}: {row.documents} docs — collected age "
-            f"{_age_line(row.collected_age)}; {published}"
+            f"{_age_line(row.collected_age)}; {published}{floor_flag}"
         )
+    under = [row.track for row in report.by_track if row.under_minimum]
+    print(
+        f"doc floor (heuristic priors: minimum {MIN_DOCS_PER_TRACK}, target "
+        f"{TARGET_DOCS_PER_TRACK} docs/track): "
+        f"{', '.join(under) + ' under minimum' if under else 'no track under minimum'}"
+    )
 
 
 def _print_claims(report: ClaimsReport) -> None:
@@ -389,6 +418,8 @@ def main(argv: list[str] | None = None, *, clock: Clock | None = None) -> int:
             "as_of": today.isoformat(),
             "stale_window_days": DEFAULT_CONFIDENCE_PRIORS.stale_ramp_days,
             "decay_stale_share_threshold": DECAY_STALE_SHARE_THRESHOLD,
+            "min_docs_per_track": MIN_DOCS_PER_TRACK,
+            "target_docs_per_track": TARGET_DOCS_PER_TRACK,
             "corpus": dataclasses.asdict(corpus_report) if corpus_report else None,
             "claims": dataclasses.asdict(claims_report) if claims_report else None,
         }
@@ -400,8 +431,9 @@ def main(argv: list[str] | None = None, *, clock: Clock | None = None) -> int:
     if claims_report is not None:
         _print_claims(claims_report)
     print(
-        "note: the stale window and the decay threshold are heuristic priors "
-        "(axiom 08), uncalibrated until the calibration pass"
+        "note: the stale window, the decay threshold, and the per-track doc "
+        "floors are heuristic priors (axiom 08), uncalibrated until the "
+        "calibration pass"
     )
     return 0
 

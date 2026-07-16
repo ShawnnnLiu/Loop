@@ -59,6 +59,7 @@ from .scoring import (
     enumerate_candidates,
     evidence_lookup,
     rank_placement,
+    revealed_lookup,
 )
 from .windows import FreeWindow, enumerate_free_windows
 
@@ -140,6 +141,7 @@ def _schedule_validated(
     largest_block_min = max((w.duration_min for w in free_windows), default=0)
     day_quotas = compute_day_quotas(inp, free_windows)
     evidence = evidence_lookup(inp.placement_evidence)
+    revealed = revealed_lookup(inp.placement_evidence)
 
     state = PlacementState(
         busy=list(inp.calendar_free_busy),
@@ -198,6 +200,7 @@ def _schedule_validated(
                 day_quotas=day_quotas,
                 horizon_start=inp.horizon_start,
                 evidence=evidence,
+                revealed=revealed,
             )
             if ranking is None:
                 # Fail-fast: a ready task with zero candidates fails this

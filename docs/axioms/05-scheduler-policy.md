@@ -143,6 +143,33 @@ pipeline produced (axiom 17); placement never re-estimates durations.
 Composition rules — consent gating for pooled cells (ADR-0007), the
 serving-floor discipline, and the tier derivations — live in the spec.
 
+### Revealed-preference term (placement evidence)
+
+`revealed` evidence cells carry no multiplier — they state where the user
+**moves work by hand**, not how fast the user is there — so they score as
+a flat bonus, separate from the multiplier term:
+
+- A candidate whose `(task.category, band(candidate_start))` matches a
+  `revealed` cell subtracts `w_revealed_affinity × duration` from its
+  cost. No match — or no revealed cells — contributes exactly 0.
+- Default `w_revealed_affinity = 2`, deliberately stronger than the
+  generic preference bonuses: it is the user's own explicit behavior.
+- The term stacks with the evidence-affinity term when a
+  multiplier-bearing cell and a revealed cell match the same key —
+  independent tiers, independent statements.
+
+Revealed cells are aggregated by the app layer from
+`PlacementPreferenceObservation` rows
+(`docs/specs/placement-preference.schema.md`): drag-to-adjust moves and
+inbound reconciliation adoptions — the only two producers, recorded only
+when the move is actually applied/adopted, never for rejected moves or
+external deletions. A `(category, band)` group emits a cell when it has
+at least `revealed_min_observations` observations within the last
+`revealed_window_days` days (defaults 3 and 90 — heuristic priors in
+`[scheduler_placement]`, axiom 07). Per-user data only: no cross-user
+pooling, no decay functions, no learned weights (ADR-0004). The clock is
+read in the app layer; the scheduler stays pure and sees only cells.
+
 ### Selection and tie-break
 
 The chosen candidate is the argmin under the total-order key
@@ -229,11 +256,16 @@ knobs serve from `PlacementScoringConfig` defaults unless overridden via
 
 The evidence-affinity term is live in the scheduler but **dormant in
 production**: no pooled-artifact store exists in the solo MVP and the
-power-user refinement tier has no runtime producer, so composed evidence
-is empty and every production schedule is byte-identical to an
-evidence-free run. The term is exercised end-to-end by tests and fixtures;
-nothing user-facing may describe pooled-evidence placement as live until
-an artifact actually flows in production.
+power-user refinement tier has no runtime producer, so those tiers
+compose zero cells and the term is exercised end-to-end by tests and
+fixtures only. Nothing user-facing may describe pooled-evidence placement
+as live until an artifact actually flows in production.
+
+The revealed-preference term is live end-to-end: its observations are
+produced by drag-to-adjust and reconciliation adoptions, which run in the
+solo MVP today. Until a user accumulates `revealed_min_observations`
+qualifying moves, composed evidence is empty and schedules remain
+byte-identical to evidence-free runs.
 
 ## Scheduler Output
 

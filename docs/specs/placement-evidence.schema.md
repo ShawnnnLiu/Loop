@@ -34,9 +34,9 @@ no evidence means placement scoring runs exactly as before).
 | --- | --- | --- |
 | `category` | `TaskCategory` | task-plan category vocabulary (`contracts/common_types.py`) |
 | `time_of_day_band` | `TimeOfDayBand` | the pooled-duration band vocabulary (`contracts/pooled_duration_model.py`) — one band definition in the codebase, ever |
-| `multiplier` | `float \| null` | bounded `[0.5, 2.0]` (the calibration clamp band); REQUIRED for `pooled` / `per_user_refined` cells |
-| `weighted_sample` | `float` | > 0; the evidence mass behind the cell |
-| `source` | enum | `pooled` \| `per_user_refined` (the revealed-preference tier adds `revealed` in its own increment, with `multiplier` FORBIDDEN there) |
+| `multiplier` | `float \| null` | bounded `[0.5, 2.0]` (the calibration clamp band); REQUIRED for `pooled` / `per_user_refined` cells, FORBIDDEN for `revealed` cells |
+| `weighted_sample` | `float` | > 0; the evidence mass behind the cell (for `revealed` cells: the observation count) |
+| `source` | enum | `pooled` \| `per_user_refined` \| `revealed` |
 
 Uniqueness invariant: no two cells share `(category, time_of_day_band,
 source)`. The key deliberately includes `source` — a `(category, band)`
@@ -62,16 +62,25 @@ consumers resolve precedence, not the contract.
 - **Refined cells** map `PerUserRefinement` entries 1:1; the refinement
   tier is the user's own data and is not consent-gated (mirroring
   `resolve_duration_multiplier`).
+- **Revealed cells** aggregate `PlacementPreferenceObservation` rows
+  (`placement-preference.schema.md`): observations within the last
+  `revealed_window_days` days, grouped by `(category, band)`, emit one
+  `revealed` cell when the group's count reaches
+  `revealed_min_observations` — `weighted_sample = float(count)`, no
+  multiplier. The user's own behavior: not consent-gated, and governed by
+  its own count threshold, not the pooled `serving_floor`.
 - Multipliers are clamped into `[0.5, 2.0]` at composition; the contract
   enforces the same bounds.
 - Cells are emitted in canonical `(category, time_of_day_band, source)`
   sort order.
 
 Production reality: no pooled-artifact store exists in the solo MVP and
-the power-user refinement tier has no runtime producer, so both tiers are
-dormant — composed evidence is empty and the scheduler runs evidence-free.
-Nothing user-facing may describe pooled-evidence placement as live until
-an artifact actually flows in production.
+the power-user refinement tier has no runtime producer, so those two
+tiers are dormant — nothing user-facing may describe pooled-evidence
+placement as live until an artifact actually flows in production. The
+**revealed tier is the live tier**: its observations are produced by the
+user's own drag-adjust and reconciliation-adoption actions, which exist
+in the solo MVP today.
 
 ## Scoring Semantics (scheduler)
 
@@ -87,6 +96,13 @@ Exact integer form (axiom 05 "Evidence-affinity term"):
   `(category, band)`, `per_user_refined` wins — the more specific tier.
 - Missing cell — or empty evidence — contributes exactly 0: schedules are
   byte-identical to evidence-free runs.
+
+Revealed cells score separately (axiom 05 "Revealed-preference term") —
+they carry no multiplier, so the percent form cannot apply. A candidate
+whose `(task.category, band(candidate_start))` matches a `revealed` cell
+gets a flat bonus: `cost -= w_revealed_affinity × duration`. The term is
+independent of — and stacks with — the multiplier term when both a
+multiplier-bearing cell and a revealed cell match the same key.
 
 ## JSON Example
 
@@ -113,6 +129,13 @@ Exact integer form (axiom 05 "Evidence-affinity term"):
       "multiplier": 0.8,
       "weighted_sample": 6.0,
       "source": "per_user_refined"
+    },
+    {
+      "category": "practice",
+      "time_of_day_band": "evening",
+      "multiplier": null,
+      "weighted_sample": 3.0,
+      "source": "revealed"
     }
   ]
 }
@@ -124,7 +147,7 @@ Exact integer form (axiom 05 "Evidence-affinity term"):
   vocabularies.
 - `multiplier`, when present, must lie in `[0.5, 2.0]`.
 - `multiplier` is required for `pooled` and `per_user_refined` cells and
-  forbidden for any other source.
+  forbidden for `revealed` cells.
 - `weighted_sample` > 0.
 - `(category, time_of_day_band, source)` triples are unique.
 
@@ -143,6 +166,13 @@ Reason: unknown time-of-day band.
 Reason: a pooled cell requires a multiplier.
 
 ```json
+{ "cells": [ { "category": "practice", "time_of_day_band": "evening", "multiplier": 0.9, "weighted_sample": 3.0, "source": "revealed" } ] }
+```
+
+Reason: a revealed cell must not carry a multiplier — it states a location
+preference, never a duration claim.
+
+```json
 { "cells": [ { "multiplier": 2.5, "...": "..." } ] }
 ```
 
@@ -156,6 +186,7 @@ Reason: duplicate `(category, time_of_day_band, source)` cell.
 
 ## Related Docs
 
+- `placement-preference.schema.md`
 - `pooled-duration-model.schema.md`
 - `power-user-eligibility.schema.md`
 - `consent-record.schema.md`

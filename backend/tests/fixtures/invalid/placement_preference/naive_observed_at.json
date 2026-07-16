@@ -1,0 +1,9 @@
+{
+  "observation_id": "prefobs_003",
+  "user_id": "user_123",
+  "task_id": "dp_001",
+  "category": "practice",
+  "time_of_day_band": "evening",
+  "observed_at": "2026-07-16T18:05:00",
+  "source": "drag_adjust"
+}

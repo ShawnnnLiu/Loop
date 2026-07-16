@@ -31,16 +31,19 @@ EVIDENCE_MULTIPLIER_MAX = 2.0
 class EvidenceSource(StrEnum):
     """Which evidence tier produced a cell.
 
-    The revealed-preference tier adds a ``REVEALED`` member in its own
-    increment (multiplier-free cells; see the spec).
+    ``REVEALED`` cells aggregate the user's own drag-adjust /
+    reconciliation-adoption observations
+    (``docs/specs/placement-preference.schema.md``) — they state a location
+    preference, never a duration claim, so they are multiplier-free.
     """
 
     POOLED = "pooled"
     PER_USER_REFINED = "per_user_refined"
+    REVEALED = "revealed"
 
 
 #: Sources whose cells state a duration multiplier for the band; any other
-#: source (the future revealed tier) must not carry one.
+#: source (the revealed tier) must not carry one.
 MULTIPLIER_SOURCES = frozenset(
     {EvidenceSource.POOLED, EvidenceSource.PER_USER_REFINED}
 )

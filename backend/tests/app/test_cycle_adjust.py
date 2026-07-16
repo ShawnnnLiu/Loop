@@ -13,6 +13,9 @@ from datetime import UTC, datetime
 import pytest
 
 from agentic_calendar.app.cycle import CycleError
+from agentic_calendar.contracts.common_types import TaskCategory
+from agentic_calendar.contracts.placement_preference import PlacementPreferenceSource
+from agentic_calendar.contracts.pooled_duration_model import TimeOfDayBand
 from agentic_calendar.contracts.reason_codes import ReasonCode
 from agentic_calendar.scheduler.adjustment import DraftAdjustment
 from agentic_calendar.supervisor.state import SupervisorState as S
@@ -150,3 +153,52 @@ def test_adjust_before_propose_refused() -> None:
     # No run exists yet.
     with pytest.raises(CycleError, match="no run found"):
         service.adjust(USER_ID, [_move("dp_001", datetime(2026, 5, 4, 16, 0, tzinfo=UTC))])
+
+
+def test_adjust_records_one_revealed_observation_per_adjusted_task() -> None:
+    """An applied drag journals a DRAG_ADJUST observation per moved task,
+    with the band of the new local start and the category from the plan
+    (axiom 05 "Revealed-preference term")."""
+    service, env, clock = make_service()
+    service.propose(USER_ID)
+
+    result = service.adjust(
+        USER_ID,
+        [
+            _move("dp_001", datetime(2026, 5, 4, 16, 0, tzinfo=UTC)),
+            _move("dp_002", datetime(2026, 5, 6, 18, 0, tzinfo=UTC)),
+        ],
+    )
+
+    assert result.applied is True
+    observations = env.placement_preference_store.list_for_user(USER_ID)
+    assert [
+        (o.task_id, o.category, o.time_of_day_band, o.source) for o in observations
+    ] == [
+        (
+            "dp_001",
+            TaskCategory.CONCEPT_REVIEW,
+            TimeOfDayBand.AFTERNOON,
+            PlacementPreferenceSource.DRAG_ADJUST,
+        ),
+        (
+            "dp_002",
+            TaskCategory.PRACTICE,
+            TimeOfDayBand.EVENING,
+            PlacementPreferenceSource.DRAG_ADJUST,
+        ),
+    ]
+    assert all(o.observed_at == clock.now() for o in observations)
+
+
+def test_adjust_rejected_move_records_no_observation() -> None:
+    """A refused drag persists nothing — including no revealed preference."""
+    service, env, _clock = make_service()
+    service.propose(USER_ID)
+
+    result = service.adjust(
+        USER_ID, [_move("dp_001", datetime(2026, 5, 4, 7, 0, tzinfo=UTC))]
+    )
+
+    assert result.applied is False
+    assert env.placement_preference_store.list_for_user(USER_ID) == []

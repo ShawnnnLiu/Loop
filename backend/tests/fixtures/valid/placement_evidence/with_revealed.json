@@ -1,0 +1,25 @@
+{
+  "cells": [
+    {
+      "category": "practice",
+      "time_of_day_band": "evening",
+      "multiplier": 0.85,
+      "weighted_sample": 12.0,
+      "source": "pooled"
+    },
+    {
+      "category": "practice",
+      "time_of_day_band": "evening",
+      "multiplier": null,
+      "weighted_sample": 3.0,
+      "source": "revealed"
+    },
+    {
+      "category": "review",
+      "time_of_day_band": "morning",
+      "multiplier": null,
+      "weighted_sample": 5.0,
+      "source": "revealed"
+    }
+  ]
+}

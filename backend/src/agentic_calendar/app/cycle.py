@@ -84,6 +84,10 @@ from agentic_calendar.contracts.placement_evidence import (
     EvidenceSource,
     PlacementEvidence,
 )
+from agentic_calendar.contracts.placement_preference import (
+    PlacementPreferenceObservation,
+    PlacementPreferenceSource,
+)
 from agentic_calendar.contracts.plan_diff import PlanDiff
 from agentic_calendar.contracts.pooled_duration_model import (
     PooledBucket,
@@ -114,7 +118,10 @@ from agentic_calendar.drift.classifier import (
     FragmentationSignal,
     WeeklyCapacity,
 )
-from agentic_calendar.duration_estimation.pooled import resolve_effective_multipliers
+from agentic_calendar.duration_estimation.pooled import (
+    derive_time_of_day_band,
+    resolve_effective_multipliers,
+)
 from agentic_calendar.llm_nodes.base import LLMNodeError
 from agentic_calendar.llm_nodes.prose_attachment import (
     ProseAttachmentKind,
@@ -781,13 +788,17 @@ class CycleService:
     ) -> PlacementEvidence:
         """Compose the scheduler's placement evidence (axiom 05 evidence term).
 
-        Dormant in production: no pooled-artifact store exists in the solo
-        MVP and the power-user refinement tier has no runtime producer, so
-        the pipeline calls this with both params ``None`` and the scheduler
-        runs evidence-free — these parameters are the seam a future artifact
-        store plugs into, exercised end-to-end by tests only. Nothing
-        user-facing may describe pooled-evidence placement as live until an
-        artifact actually flows here.
+        The pooled/refined tiers are dormant in production: no
+        pooled-artifact store exists in the solo MVP and the power-user
+        refinement tier has no runtime producer, so the pipeline calls this
+        with both params ``None`` — these parameters are the seam a future
+        artifact store plugs into, exercised end-to-end by tests only.
+        Nothing user-facing may describe pooled-evidence placement as live
+        until an artifact actually flows here. The REVEALED tier is the live
+        tier: it aggregates this user's own drag-adjust / reconcile-adopt
+        observations from the placement-preference store (axiom 05
+        "Revealed-preference term") — with none recorded yet, composed
+        evidence stays empty and the scheduler runs evidence-free.
 
         Pooled cells are consent-gated (ADR-0007) exactly like pooled
         duration serving; the gate is consulted — and its audit entry
@@ -798,7 +809,11 @@ class CycleService:
         ``experience_level`` and marginalize the remaining non-(category,
         band) bucket features; a cell whose combined ``weighted_sample``
         falls below ``pooled_serving.serving_floor`` is not emitted
-        (serving-floor discipline, for both tiers).
+        (serving-floor discipline, for both tiers). Revealed cells are
+        governed by their own count threshold instead
+        (``revealed_min_observations`` within ``revealed_window_days``, both
+        journaled in ``[scheduler_placement]``); the clock is read here in
+        the app layer, never in the scheduler.
         """
         env = self._env
         floor = env.tuning.pooled_serving.serving_floor
@@ -857,10 +872,64 @@ class CycleService:
                         source=EvidenceSource.PER_USER_REFINED,
                     )
                 )
+        observations = env.placement_preference_store.list_for_user(
+            onboarding.user_id
+        )
+        if observations:
+            placement_cfg = env.tuning.scheduler_placement
+            cutoff = env.clock.now() - timedelta(
+                days=placement_cfg.revealed_window_days
+            )
+            counts: dict[tuple[TaskCategory, TimeOfDayBand], int] = {}
+            for observation in observations:
+                if observation.observed_at < cutoff:
+                    continue
+                key = (observation.category, observation.time_of_day_band)
+                counts[key] = counts.get(key, 0) + 1
+            for (category, band), count in counts.items():
+                if count < placement_cfg.revealed_min_observations:
+                    continue
+                cells.append(
+                    EvidenceCell(
+                        category=category,
+                        time_of_day_band=band,
+                        multiplier=None,
+                        weighted_sample=float(count),
+                        source=EvidenceSource.REVEALED,
+                    )
+                )
         cells.sort(
             key=lambda c: (c.category.value, c.time_of_day_band.value, c.source.value)
         )
         return PlacementEvidence(cells=cells)
+
+    def _record_placement_observation(
+        self,
+        *,
+        user_id: str,
+        task_id: str,
+        category: TaskCategory,
+        local_start: datetime,
+        source: PlacementPreferenceSource,
+    ) -> None:
+        """Journal one revealed-preference observation (placement-preference spec).
+
+        ``local_start`` must already carry the user's wall clock — the band
+        is the hour the user moved the task *into*. Task ids and enums only;
+        never raw event titles (axiom 06).
+        """
+        env = self._env
+        env.placement_preference_store.append(
+            PlacementPreferenceObservation(
+                observation_id=env.id_generator.new_id("prefobs"),
+                user_id=user_id,
+                task_id=task_id,
+                category=category,
+                time_of_day_band=derive_time_of_day_band(local_start.hour),
+                observed_at=env.clock.now(),
+                source=source,
+            )
+        )
 
     def _completed_or_dropped_ids(self, user_id: str) -> set[str]:
         """Task ids the user has completed or dropped, across all plan versions.
@@ -1047,9 +1116,9 @@ class CycleService:
                         FreeBusyInterval.model_validate(dict(fb)) for fb in free_busy
                     ],
                     completed_task_ids=completed_or_dropped,
-                    # Dormant in prod: no pooled artifact / refinement exists
-                    # to pass, so composed evidence is empty (see
-                    # _placement_evidence).
+                    # Pooled/refined tiers are dormant in prod (no artifact
+                    # to pass); the REVEALED tier serves live from the
+                    # user's own observations (see _placement_evidence).
                     placement_evidence=self._placement_evidence(onboarding),
                     horizon_start=horizon_start,
                     horizon_end=horizon_start + timedelta(days=horizon_days),
@@ -1402,6 +1471,21 @@ class CycleService:
         # An advisory (DEPENDENCY_ADVISORY) does not block: the move is applied
         # and the heads-up rides in ``warnings`` (ADR-0008).
         run = self._save_run(run, draft_schedule_id=candidate.draft_schedule_id)
+        # Each applied drag is a revealed statement of preferred time-of-day
+        # for the task's category (axiom 05 "Revealed-preference term");
+        # rejected moves recorded nothing — they returned above.
+        category_by_task = {t.task_id: t.category for t in plan_version.plan.tasks}
+        for task_id in sorted(new_starts):
+            category = category_by_task.get(task_id)
+            if category is None:  # draft entry outside the plan; defensive
+                continue
+            self._record_placement_observation(
+                user_id=user_id,
+                task_id=task_id,
+                category=category,
+                local_start=new_starts[task_id],
+                source=PlacementPreferenceSource.DRAG_ADJUST,
+            )
         return AdjustResult(
             run_id=run.run_id,
             user_id=user_id,
@@ -1626,6 +1710,7 @@ class CycleService:
                 advisory_code[w.task_id] = w.reason_code
 
         deltas: list[CalendarEventDelta] = []
+        category_by_task = {t.task_id: t.category for t in active.plan.tasks}
         for task_id, (kind, seen_start, seen_end) in sorted(change_by_task.items()):
             mapping = mappings[task_id]
             disposition = ReconciliationDisposition.UNCHANGED
@@ -1651,6 +1736,18 @@ class CycleService:
                     # DAILY_LOAD_ADVISORY (ADR-0010), DEPENDENCY_ADVISORY
                     # (ADR-0008), or OVERLAP_ADVISORY (ADR-0009); otherwise null.
                     code = advisory_code.get(task_id)
+                    # An adopted external move is a revealed statement of
+                    # preferred time-of-day (axiom 05); rejected moves and
+                    # deletions never record one. ``seen_start`` was already
+                    # restamped into the user's wall clock at classification.
+                    if seen_start is not None:
+                        self._record_placement_observation(
+                            user_id=user_id,
+                            task_id=task_id,
+                            category=category_by_task[task_id],
+                            local_start=seen_start,
+                            source=PlacementPreferenceSource.RECONCILE_ADOPT,
+                        )
                 else:
                     env.mapping_store.record_external_edit(mapping.run_id, task_id, now=now)
                     disposition = ReconciliationDisposition.REJECTED

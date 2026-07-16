@@ -43,10 +43,11 @@
       "type": "object"
     },
     "EvidenceSource": {
-      "description": "Which evidence tier produced a cell.\n\nThe revealed-preference tier adds a ``REVEALED`` member in its own\nincrement (multiplier-free cells; see the spec).",
+      "description": "Which evidence tier produced a cell.\n\n``REVEALED`` cells aggregate the user's own drag-adjust /\nreconciliation-adoption observations\n(``docs/specs/placement-preference.schema.md``) \u2014 they state a location\npreference, never a duration claim, so they are multiplier-free.",
       "enum": [
         "pooled",
-        "per_user_refined"
+        "per_user_refined",
+        "revealed"
       ],
       "title": "EvidenceSource",
       "type": "string"

@@ -29,6 +29,7 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from agentic_calendar.common.errors import AgenticCalendarError
+from agentic_calendar.contracts.placement_evidence import PlacementEvidence
 from agentic_calendar.scheduler import schedule
 from agentic_calendar.scheduler.inputs import SchedulerInput
 from agentic_calendar.scheduler.scoring import (
@@ -52,7 +53,18 @@ _TERM_FIELDS = (
 )
 
 
-def _print_human(fixture: Path, breakdown: ScheduleScoreBreakdown, status: str) -> None:
+def _evidence_applied(evidence: PlacementEvidence) -> list[dict[str, object]]:
+    """The input's evidence cells, JSON-shaped — the audit surface that
+    makes every band shift explainable by a printed cell (axiom 05)."""
+    return [cell.model_dump(mode="json") for cell in evidence.cells]
+
+
+def _print_human(
+    fixture: Path,
+    breakdown: ScheduleScoreBreakdown,
+    status: str,
+    evidence: PlacementEvidence,
+) -> None:
     print(f"fixture: {fixture}")
     print(f"schedule_status: {status}")
     print(
@@ -66,6 +78,16 @@ def _print_human(fixture: Path, breakdown: ScheduleScoreBreakdown, status: str) 
     print("band histogram (placed starts):")
     for band, count in sorted(breakdown.band_histogram.items()):
         print(f"  {band}  {count}")
+    print("evidence applied (input cells; any band shift traces to one):")
+    if not evidence.cells:
+        print("  (none)")
+    for cell in evidence.cells:
+        multiplier = "-" if cell.multiplier is None else f"{cell.multiplier}"
+        print(
+            f"  {cell.category.value}  {cell.time_of_day_band.value}"
+            f"  source={cell.source.value}  multiplier={multiplier}"
+            f"  weighted_sample={cell.weighted_sample}"
+        )
     print("term totals (schedule-level):")
     for field in _TERM_FIELDS:
         print(f"  {field}  {getattr(breakdown, field)}")
@@ -104,12 +126,15 @@ def main(argv: Sequence[str] | None = None) -> int:
                     "fixture": str(args.fixture),
                     "schedule_status": output.schedule_status.value,
                     "breakdown": dataclasses.asdict(breakdown),
+                    "evidence_applied": _evidence_applied(inp.placement_evidence),
                 },
                 indent=2,
             )
         )
         return 0
-    _print_human(args.fixture, breakdown, output.schedule_status.value)
+    _print_human(
+        args.fixture, breakdown, output.schedule_status.value, inp.placement_evidence
+    )
     return 0
 
 

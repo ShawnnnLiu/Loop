@@ -45,6 +45,9 @@ from agentic_calendar.contracts.motivation_profile import MotivationProfile
 from agentic_calendar.contracts.notification_log import NotificationLog
 from agentic_calendar.contracts.nudge import NudgeRecord
 from agentic_calendar.contracts.placement_evidence import PlacementEvidence
+from agentic_calendar.contracts.placement_preference import (
+    PlacementPreferenceObservation,
+)
 from agentic_calendar.contracts.plan_diff import PlanDiff
 from agentic_calendar.contracts.pooled_duration_model import PooledDurationModel
 from agentic_calendar.contracts.power_user import (
@@ -129,6 +132,7 @@ CONTRACTS: dict[str, type[BaseModel]] = {
     "power_user_eligibility": PowerUserEligibility,
     "per_user_refinement": PerUserRefinement,
     "placement_evidence": PlacementEvidence,
+    "placement_preference": PlacementPreferenceObservation,
     "llm_call_log": LlmCallLog,
     "prose_attachment": ProseAttachmentRecord,
     "threshold_change_log": ThresholdChange,

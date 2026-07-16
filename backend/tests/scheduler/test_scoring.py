@@ -45,6 +45,8 @@ from agentic_calendar.scheduler.scoring import (
     evidence_lookup,
     fragmentation_penalty,
     rank_placement,
+    revealed_affinity_bonus,
+    revealed_lookup,
     score_schedule,
     select_placement,
     weekend_long_block_bonus,
@@ -963,6 +965,150 @@ def test_evidence_runs_are_deterministic_byte_for_byte() -> None:
                         category=TaskCategory.REVIEW,
                         band=TimeOfDayBand.MORNING,
                         multiplier=1.4,
+                    ),
+                ]
+            ),
+        )
+        return schedule(inp).model_dump_json()
+
+    assert run() == run()
+
+
+# --------------------------------------------------------------------------- #
+# revealed-preference term (axiom 05 "Revealed-preference term")
+# --------------------------------------------------------------------------- #
+
+
+def _revealed_cell(
+    *,
+    band: TimeOfDayBand = TimeOfDayBand.EVENING,
+    category: TaskCategory = TaskCategory.PRACTICE,
+    weighted_sample: float = 3.0,
+) -> EvidenceCell:
+    return EvidenceCell(
+        category=category,
+        time_of_day_band=band,
+        multiplier=None,
+        weighted_sample=weighted_sample,
+        source=EvidenceSource.REVEALED,
+    )
+
+
+def test_revealed_lookup_collects_only_revealed_keys() -> None:
+    """Multiplier-bearing cells never enter the revealed key set — and
+    revealed cells never enter the multiplier map (they ride its
+    multiplier-is-None skip)."""
+    evidence = PlacementEvidence(
+        cells=[
+            _evidence_cell(),  # POOLED, evening
+            _revealed_cell(category=TaskCategory.REVIEW, band=TimeOfDayBand.MORNING),
+        ]
+    )
+    assert revealed_lookup(evidence) == frozenset(
+        {(TaskCategory.REVIEW, TimeOfDayBand.MORNING)}
+    )
+    assert (TaskCategory.REVIEW, TimeOfDayBand.MORNING) not in evidence_lookup(
+        evidence
+    )
+
+
+def test_revealed_affinity_bonus_flat_and_missing() -> None:
+    """A matching (category, band) earns the flat duration bonus regardless
+    of observation count; wrong category/band, empty, and None are 0."""
+    window = _window(MONDAY.replace(hour=18), 60)
+    candidate = _candidate(window)  # starts 18:00 -> evening band
+    task = _task(category="practice", estimated_duration_min=60)
+
+    match = frozenset({(TaskCategory.PRACTICE, TimeOfDayBand.EVENING)})
+    other_band = frozenset({(TaskCategory.PRACTICE, TimeOfDayBand.MORNING)})
+    other_category = frozenset({(TaskCategory.REVIEW, TimeOfDayBand.EVENING)})
+
+    assert revealed_affinity_bonus(candidate, task, match) == 60
+    assert revealed_affinity_bonus(candidate, task, other_band) == 0
+    assert revealed_affinity_bonus(candidate, task, other_category) == 0
+    assert revealed_affinity_bonus(candidate, task, frozenset()) == 0
+    assert revealed_affinity_bonus(candidate, task, None) == 0
+
+
+def test_revealed_cell_shifts_placement_into_the_revealed_band() -> None:
+    """The P-I acceptance fixture: with no evidence the two-band tie breaks
+    to the earliest start (09:00); a revealed evening cell moves the practice
+    task to 18:00 deterministically."""
+    plan = make_plan(make_task(task_id="t1", estimated_duration_min=60))
+
+    baseline = schedule(make_input(plan, free_busy=TWO_BAND_BUSY, horizon_days=1))
+    assert [st.start.hour for st in baseline.scheduled_tasks] == [9]
+
+    revealed = schedule(
+        make_input(
+            plan,
+            free_busy=TWO_BAND_BUSY,
+            horizon_days=1,
+            placement_evidence=PlacementEvidence(cells=[_revealed_cell()]),
+        )
+    )
+    assert [st.start.hour for st in revealed.scheduled_tasks] == [18]
+
+
+def test_revealed_bonus_stacks_with_and_outweighs_a_mild_multiplier_repel() -> None:
+    """Independent tiers stack: a slower POOLED evening cell alone repels the
+    task to 09:00, but adding the user's own revealed evening preference
+    (w_revealed_affinity = 2, flat minutes) wins the band back."""
+    plan = make_plan(make_task(task_id="t1", estimated_duration_min=60))
+    pooled_slower = PlacementEvidence(cells=[_evidence_cell(multiplier=1.2)])
+    both = PlacementEvidence(
+        cells=[_evidence_cell(multiplier=1.2), _revealed_cell()]
+    )
+
+    repelled = schedule(
+        make_input(
+            plan,
+            free_busy=TWO_BAND_BUSY,
+            horizon_days=1,
+            placement_evidence=pooled_slower,
+        )
+    )
+    assert [st.start.hour for st in repelled.scheduled_tasks] == [9]
+
+    attracted = schedule(
+        make_input(
+            plan, free_busy=TWO_BAND_BUSY, horizon_days=1, placement_evidence=both
+        )
+    )
+    assert [st.start.hour for st in attracted.scheduled_tasks] == [18]
+
+
+def test_zero_weights_ignore_revealed_cells() -> None:
+    """With w_revealed_affinity zeroed the cell contributes nothing and the
+    two-band tie breaks to the earliest start again."""
+    plan = make_plan(make_task(task_id="t1", estimated_duration_min=60))
+    output = schedule(
+        make_input(
+            plan,
+            free_busy=TWO_BAND_BUSY,
+            horizon_days=1,
+            placement_evidence=PlacementEvidence(cells=[_revealed_cell()]),
+        ),
+        scoring=ZERO_WEIGHTS,
+    )
+    assert [st.start.hour for st in output.scheduled_tasks] == [9]
+
+
+def test_revealed_runs_are_deterministic_byte_for_byte() -> None:
+    def run() -> str:
+        plan = make_plan(
+            make_task(task_id="t1", estimated_duration_min=60),
+            make_task(task_id="t2", estimated_duration_min=60, category="review"),
+        )
+        inp = make_input(
+            plan,
+            free_busy=TWO_BAND_BUSY,
+            horizon_days=2,
+            placement_evidence=PlacementEvidence(
+                cells=[
+                    _revealed_cell(),
+                    _revealed_cell(
+                        category=TaskCategory.REVIEW, band=TimeOfDayBand.MORNING
                     ),
                 ]
             ),

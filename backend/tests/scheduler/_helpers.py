@@ -28,6 +28,7 @@ ZERO_WEIGHTS = PlacementScoringConfig(
     w_weekend_long_block=0,
     w_earliness=0,
     w_evidence_affinity=0,
+    w_revealed_affinity=0,
 )
 
 

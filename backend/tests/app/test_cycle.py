@@ -78,6 +78,10 @@ from agentic_calendar.contracts.draft_schedule import DraftSchedule, DraftSchedu
 from agentic_calendar.contracts.drift_event import DriftEvent, DriftType
 from agentic_calendar.contracts.hashing import canonical_payload_hash
 from agentic_calendar.contracts.placement_evidence import EvidenceSource
+from agentic_calendar.contracts.placement_preference import (
+    PlacementPreferenceObservation,
+    PlacementPreferenceSource,
+)
 from agentic_calendar.contracts.pooled_duration_model import (
     PooledDurationModel,
     TimeOfDayBand,
@@ -100,6 +104,7 @@ from agentic_calendar.contracts.validation_result import ValidationResult
 from agentic_calendar.contracts.violation_types import ViolationType
 from agentic_calendar.duration_estimation.pooled import (
     PooledTrainingInput,
+    derive_time_of_day_band,
     train_pooled_model,
 )
 from agentic_calendar.llm_nodes.planner import FixturePlanner
@@ -2524,3 +2529,226 @@ def test_placement_evidence_refinement_floor_clamp_and_canonical_order() -> None
         (TaskCategory.PRACTICE, TimeOfDayBand.EVENING, EvidenceSource.POOLED),
     ]
     assert evidence.cells[0].multiplier == 2.0
+
+
+# --------------------------------------------------------------------------- #
+# revealed preferences (P-I): producers, aggregation, end to end
+# --------------------------------------------------------------------------- #
+
+
+def _preference_observation(
+    observation_id: str,
+    *,
+    category: TaskCategory = TaskCategory.PRACTICE,
+    band: TimeOfDayBand = TimeOfDayBand.EVENING,
+    observed_at: datetime | None = None,
+    source: PlacementPreferenceSource = PlacementPreferenceSource.DRAG_ADJUST,
+) -> PlacementPreferenceObservation:
+    return PlacementPreferenceObservation(
+        observation_id=observation_id,
+        user_id=USER_ID,
+        task_id="dp_002",
+        category=category,
+        time_of_day_band=band,
+        observed_at=observed_at if observed_at is not None else HAPPY_NOW,
+        source=source,
+    )
+
+
+def test_placement_evidence_folds_qualifying_revealed_observations() -> None:
+    """Three in-window observations of one (category, band) fold into one
+    multiplier-free REVEALED cell carrying the count; a group below
+    revealed_min_observations emits nothing. The user's own data: composing
+    revealed cells never consults the consent gate (zero audit rows)."""
+    service, env, _clock = make_service()
+    for i in range(3):
+        env.placement_preference_store.append(_preference_observation(f"prefobs_{i}"))
+    for i in range(2):
+        env.placement_preference_store.append(
+            _preference_observation(
+                f"prefobs_below_{i}",
+                category=TaskCategory.REVIEW,
+                band=TimeOfDayBand.MORNING,
+            )
+        )
+
+    evidence = service._placement_evidence(_onboarding_record(env))
+
+    assert [(c.category, c.time_of_day_band, c.source) for c in evidence.cells] == [
+        (TaskCategory.PRACTICE, TimeOfDayBand.EVENING, EvidenceSource.REVEALED)
+    ]
+    assert evidence.cells[0].multiplier is None
+    assert evidence.cells[0].weighted_sample == 3.0
+    assert _pooled_serving_audits(env) == []
+
+
+def test_placement_evidence_revealed_window_excludes_stale_observations() -> None:
+    """An observation older than revealed_window_days never counts toward the
+    threshold — recency is a pure read-time computation over the rows."""
+    service, env, clock = make_service()
+    env.placement_preference_store.append(
+        _preference_observation(
+            "prefobs_stale", observed_at=clock.now() - timedelta(days=91)
+        )
+    )
+    for i in range(2):
+        env.placement_preference_store.append(_preference_observation(f"prefobs_{i}"))
+
+    evidence = service._placement_evidence(_onboarding_record(env))
+    assert evidence.cells == []
+
+
+def test_placement_evidence_revealed_cells_sort_with_other_tiers() -> None:
+    """Revealed cells join the canonical (category, band, source) order
+    alongside the multiplier tiers — the same (category, band) legitimately
+    carries both."""
+    service, env, _clock = make_service()
+    for i in range(3):
+        env.placement_preference_store.append(_preference_observation(f"prefobs_{i}"))
+
+    evidence = service._placement_evidence(
+        _onboarding_record(env),
+        refinement=_refinement(
+            RefinementEntry(
+                category=TaskCategory.PRACTICE,
+                time_of_day_band=TimeOfDayBand.EVENING,
+                multiplier=0.8,
+                sample_size=7,
+                weighted_sample=6.0,
+                observed_ratio=0.8,
+            )
+        ),
+    )
+    assert [c.source for c in evidence.cells] == [
+        EvidenceSource.PER_USER_REFINED,
+        EvidenceSource.REVEALED,
+    ]
+
+
+def test_reconcile_adoption_records_a_revealed_preference_observation() -> None:
+    """An ADOPTED external move journals one RECONCILE_ADOPT observation with
+    the band of the adopted start in the user's timezone."""
+    service, env, adapter = _reconcilable()
+    events = _events_by_task(adapter)
+    leaf = _a_scheduled_leaf(env, set(events))
+    rec = events[leaf]
+    new_start = rec.scheduled_start + timedelta(days=7)
+    new_end = rec.scheduled_end + timedelta(days=7)
+    adapter.simulate_external_move(
+        rec.calendar_event_id, scheduled_start=new_start, scheduled_end=new_end
+    )
+
+    result = service.reconcile(
+        USER_ID, target_calendar_id=DEFAULT_TARGET_CALENDAR_ID, enabled=True
+    )
+
+    assert result.outcome is ReconciliationOutcome.ADOPTED
+    observations = env.placement_preference_store.list_for_user(USER_ID)
+    assert len(observations) == 1
+    observation = observations[0]
+    assert observation.task_id == leaf
+    assert observation.source is PlacementPreferenceSource.RECONCILE_ADOPT
+    # Onboarded in UTC, so the observed band is the UTC wall-clock hour.
+    assert observation.time_of_day_band is derive_time_of_day_band(
+        new_start.astimezone(UTC).hour
+    )
+    active = env.plan_store.get_active(USER_ID)
+    assert active is not None
+    assert observation.category is {
+        t.task_id: t.category for t in active.plan.tasks
+    }[leaf]
+
+
+def test_reconcile_rejected_move_records_no_observation() -> None:
+    """A rejected external move is flagged, never learned from."""
+    service, env, adapter = _reconcilable()
+    events = _events_by_task(adapter)
+    leaf = _a_scheduled_leaf(env, set(events))
+    rec = events[leaf]
+    duration = rec.scheduled_end - rec.scheduled_start
+    bad_start = rec.scheduled_start.replace(hour=7, minute=0)  # before 08:00
+    adapter.simulate_external_move(
+        rec.calendar_event_id,
+        scheduled_start=bad_start,
+        scheduled_end=bad_start + duration,
+    )
+
+    result = service.reconcile(
+        USER_ID, target_calendar_id=DEFAULT_TARGET_CALENDAR_ID, enabled=True
+    )
+
+    assert result.outcome is ReconciliationOutcome.FLAGGED
+    assert env.placement_preference_store.list_for_user(USER_ID) == []
+
+
+def test_reconcile_deletion_records_no_observation() -> None:
+    """A deletion is event memory, never a placement preference — the
+    event_deleted disposition path stays observation-free."""
+    service, env, adapter = _reconcilable()
+    events = _events_by_task(adapter)
+    leaf = _a_scheduled_leaf(env, set(events))
+    adapter.delete_event(
+        target_calendar_id=DEFAULT_TARGET_CALENDAR_ID,
+        calendar_event_id=events[leaf].calendar_event_id,
+    )
+
+    result = service.reconcile(
+        USER_ID, target_calendar_id=DEFAULT_TARGET_CALENDAR_ID, enabled=True
+    )
+
+    assert result.outcome is ReconciliationOutcome.FLAGGED
+    assert env.placement_preference_store.list_for_user(USER_ID) == []
+
+
+def test_three_evening_drags_pull_practice_into_the_evening_band() -> None:
+    """The P-I acceptance fixture, end to end through the service: with an
+    evening-neutral profile the baseline replan places the practice task
+    outside the evening band; after three applied evening drags the next
+    replan's practice placement lands in the evening band, driven by the
+    composed REVEALED cell."""
+    plan = _canonical_plan()
+    # The canonical dp tasks are deep-focus and would be confined to the
+    # profile's evening deep windows either way; medium focus frees placement
+    # so the band shift is attributable to the revealed cell alone.
+    shallow = TaskPlan.model_validate(
+        plan.model_dump()
+        | {
+            "tasks": [
+                t.model_dump() | {"required_focus_level": "medium"}
+                for t in plan.tasks
+            ]
+        }
+    )
+    service, env, _clock = make_service(
+        planner_fixtures={_canonical_syllabus().syllabus_version: shallow}
+    )
+    profile = _canonical_profile().model_dump(mode="json")
+    profile["preferences"]["prefer_evening_sessions"] = False
+    service.onboard({"user_profile": profile, "timezone": "UTC"})
+
+    baseline = service.propose(USER_ID)
+    assert baseline.state is S.AWAITING_USER_APPROVAL
+    assert baseline.draft_schedule_id is not None
+    draft = env.state.get_draft(baseline.draft_schedule_id)
+    assert draft is not None
+    practice = next(e for e in draft.entries if e.task_id == "dp_002")
+    assert derive_time_of_day_band(practice.start.hour) is not TimeOfDayBand.EVENING
+
+    for day in (6, 7, 8):  # Wed/Thu/Fri evenings
+        moved = service.adjust(
+            USER_ID,
+            [
+                DraftAdjustment(
+                    task_id="dp_002", start=datetime(2026, 5, day, 18, 0, tzinfo=UTC)
+                )
+            ],
+        )
+        assert moved.applied is True
+
+    replan = service.propose(USER_ID)
+    assert replan.state is S.AWAITING_USER_APPROVAL
+    assert replan.draft_schedule_id is not None
+    new_draft = env.state.get_draft(replan.draft_schedule_id)
+    assert new_draft is not None
+    new_practice = next(e for e in new_draft.entries if e.task_id == "dp_002")
+    assert derive_time_of_day_band(new_practice.start.hour) is TimeOfDayBand.EVENING

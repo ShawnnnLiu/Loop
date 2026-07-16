@@ -60,8 +60,15 @@ class PlacementScoringConfig:
     w_weekend_long_block: int = 1
     w_earliness: int = 1
     w_evidence_affinity: int = 1
+    w_revealed_affinity: int = 2
     buffer_min: int = 15
     candidate_grid_min: int = 15
+    # Revealed-preference aggregation knobs (axiom 05 "Revealed-preference
+    # term"). Read by the app layer's evidence composition, never by the
+    # scheduler itself — they live here so ``[scheduler_placement]`` stays
+    # the one tuning section for placement behavior.
+    revealed_min_observations: int = 3
+    revealed_window_days: int = 90
 
 
 DEFAULT_PLACEMENT_SCORING_CONFIG = PlacementScoringConfig()
@@ -359,6 +366,44 @@ def evidence_lookup(
     return lookup
 
 
+#: ``(category, band)`` keys carrying a REVEALED cell, precomputed once per
+#: run from the input's ``placement_evidence``.
+RevealedLookup = frozenset[tuple[TaskCategory, TimeOfDayBand]]
+
+
+def revealed_lookup(evidence: PlacementEvidence) -> RevealedLookup:
+    """Precompute the REVEALED ``(category, band)`` key set for the loop.
+
+    Revealed cells carry no multiplier (contract-forbidden), so the only
+    fact placement needs is key membership — the cell's ``weighted_sample``
+    (its observation count) already cleared the app layer's
+    ``revealed_min_observations`` threshold and does not scale the bonus.
+    """
+    return frozenset(
+        (cell.category, cell.time_of_day_band)
+        for cell in evidence.cells
+        if cell.source is EvidenceSource.REVEALED
+    )
+
+
+def revealed_affinity_bonus(
+    candidate: PlacementCandidate, task: Task, revealed: RevealedLookup | None
+) -> int:
+    """Flat minutes bonus for a band the user has revealed a preference for.
+
+    ``duration`` when ``(task.category, band(start))`` carries a REVEALED
+    cell, else 0 (axiom 05 "Revealed-preference term": the caller subtracts
+    ``w_revealed_affinity x duration``). Independent of — and stacking
+    with — the multiplier-based evidence-affinity term.
+    """
+    if not revealed:
+        return 0
+    band = derive_time_of_day_band(candidate.start.hour)
+    if (task.category, band) in revealed:
+        return task.estimated_duration_min
+    return 0
+
+
 def evidence_affinity_adjustment(
     candidate: PlacementCandidate, task: Task, evidence: EvidenceLookup | None
 ) -> int:
@@ -391,6 +436,7 @@ def candidate_cost(
     day_quotas: Mapping[str, int],
     horizon_start: datetime,
     evidence: EvidenceLookup | None = None,
+    revealed: RevealedLookup | None = None,
 ) -> int:
     """Integer cost of a candidate (axiom 05 scored placement).
 
@@ -400,8 +446,9 @@ def candidate_cost(
     evidence-affinity term (axiom 05 "Evidence-affinity term"): weighted
     percent-minutes floor-divided by 100, negative when the candidate's
     band is evidenced faster. ``evidence`` is the precomputed
-    :func:`evidence_lookup` map; ``None`` (or empty) means no evidence and
-    contributes exactly 0.
+    :func:`evidence_lookup` map and ``revealed`` the precomputed
+    :func:`revealed_lookup` key set; ``None`` (or empty) means no evidence
+    and contributes exactly 0.
     """
     return (
         scoring.w_daily_balance
@@ -419,6 +466,8 @@ def candidate_cost(
         * evening_preference_bonus(candidate, task, policy)
         - scoring.w_weekend_long_block
         * weekend_long_block_bonus(candidate, task, policy)
+        - scoring.w_revealed_affinity
+        * revealed_affinity_bonus(candidate, task, revealed)
     )
 
 
@@ -457,6 +506,7 @@ def rank_placement(
     day_quotas: Mapping[str, int],
     horizon_start: datetime,
     evidence: EvidenceLookup | None = None,
+    revealed: RevealedLookup | None = None,
 ) -> PlacementRanking | None:
     """Rank a task's candidates: the ``(cost, start)`` argmin plus regret.
 
@@ -476,6 +526,7 @@ def rank_placement(
                 day_quotas=day_quotas,
                 horizon_start=horizon_start,
                 evidence=evidence,
+                revealed=revealed,
             ),
             c,
         )
@@ -500,6 +551,7 @@ def select_placement(
     day_quotas: Mapping[str, int],
     horizon_start: datetime,
     evidence: EvidenceLookup | None = None,
+    revealed: RevealedLookup | None = None,
 ) -> PlacementCandidate | None:
     """Deterministic argmin under the total-order key ``(cost, start)``.
 
@@ -516,6 +568,7 @@ def select_placement(
         day_quotas=day_quotas,
         horizon_start=horizon_start,
         evidence=evidence,
+        revealed=revealed,
     )
     return None if ranking is None else ranking.candidate
 

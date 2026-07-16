@@ -12,6 +12,13 @@ backend disagree, the backend (contracts/axioms) wins; surface the mismatch.
 - `design-loop/` — **current source of truth** (hi-fi React/JSX prototypes):
   `onboarding.jsx`, `schedule.jsx` (the drag-review loop), `calendar.jsx`,
   `agent.jsx`, `accountability.jsx`, `generation.jsx`, `app.css`.
+- `Loop - Pathway Map.html` — **visual source of truth for the Knowledge
+  Map** (the per-pathway mastery tree; the design canvas calls it "Pathway
+  Map" — same feature). Self-contained hi-fi page: desktop 1240 + mobile 396
+  frames, five tiers, hover lineage, detail drawer, empty states. Semantics
+  are normative in
+  `docs/implementation-plans/narrative-pathways/06-knowledge-tree.md`; this
+  page is normative for the visuals.
 - `claude_code_handoff/` — the designer's own handoff: `DESIGN-SYSTEM.md`,
   `DATA-MODEL.md`, `SPEC-*.md`, and `reference/` (jsx + `app.css`).
 - `design/`, `v2/`, `*.html`, `landing/` — older / canvas / marketing variants.

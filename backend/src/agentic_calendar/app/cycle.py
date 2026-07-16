@@ -67,6 +67,7 @@ from agentic_calendar.contracts.calendar_reconciliation import (
     ReconciliationOutcome,
 )
 from agentic_calendar.contracts.checkin_event import CheckinEvent, RecoveryAction
+from agentic_calendar.contracts.common_types import TaskCategory
 from agentic_calendar.contracts.data_access_audit import (
     DataAccessor,
     DataAccessPurpose,
@@ -76,7 +77,20 @@ from agentic_calendar.contracts.drift_event import DriftEvent, RecommendedPolicy
 from agentic_calendar.contracts.hashing import canonical_payload_hash
 from agentic_calendar.contracts.motivation_profile import RecoveryPreference
 from agentic_calendar.contracts.notification_log import NotificationStatus
+from agentic_calendar.contracts.placement_evidence import (
+    EVIDENCE_MULTIPLIER_MAX,
+    EVIDENCE_MULTIPLIER_MIN,
+    EvidenceCell,
+    EvidenceSource,
+    PlacementEvidence,
+)
 from agentic_calendar.contracts.plan_diff import PlanDiff
+from agentic_calendar.contracts.pooled_duration_model import (
+    PooledBucket,
+    PooledDurationModel,
+    TimeOfDayBand,
+)
+from agentic_calendar.contracts.power_user import PerUserRefinement
 from agentic_calendar.contracts.reason_codes import ReasonCode
 from agentic_calendar.contracts.recommitment import RecommitmentChoice, RecommitmentRequest
 from agentic_calendar.contracts.resume_intake_input import ResumeIntakeInput
@@ -221,6 +235,17 @@ DRIFT_ACTION_TO_RECOVERY_MODE: Mapping[
     RecommendedPolicyAction.REVISE_ACCOUNTABILITY_CONTRACT: None,
     RecommendedPolicyAction.SWITCH_TO_PRIVATE_RECOVERY: None,
 }
+
+
+def _clamp_evidence_multiplier(value: float) -> float:
+    """Clamp a composed multiplier into the contract's calibration band.
+
+    Pooled aggregation is a convex combination of in-band bucket values, so
+    this only bites when an artifact's own clamp band is wider than the
+    evidence contract's ``[0.5, 2.0]`` — clamping keeps composition total
+    (never raises) and deterministic.
+    """
+    return min(EVIDENCE_MULTIPLIER_MAX, max(EVIDENCE_MULTIPLIER_MIN, value))
 
 
 class CycleError(AgenticCalendarError):
@@ -747,6 +772,96 @@ class CycleService:
         )
         return None if proposal is None else proposal.draft.plan
 
+    def _placement_evidence(
+        self,
+        onboarding: OnboardingRecord,
+        *,
+        pooled_model: PooledDurationModel | None = None,
+        refinement: PerUserRefinement | None = None,
+    ) -> PlacementEvidence:
+        """Compose the scheduler's placement evidence (axiom 05 evidence term).
+
+        Dormant in production: no pooled-artifact store exists in the solo
+        MVP and the power-user refinement tier has no runtime producer, so
+        the pipeline calls this with both params ``None`` and the scheduler
+        runs evidence-free — these parameters are the seam a future artifact
+        store plugs into, exercised end-to-end by tests only. Nothing
+        user-facing may describe pooled-evidence placement as live until an
+        artifact actually flows here.
+
+        Pooled cells are consent-gated (ADR-0007) exactly like pooled
+        duration serving; the gate is consulted — and its audit entry
+        written — only when a pooled artifact is actually offered, so the
+        dormant path adds zero audit rows. The refinement tier is the user's
+        own data and is not consent-gated (mirroring
+        ``resolve_duration_multiplier``). Cells condition on the user's
+        ``experience_level`` and marginalize the remaining non-(category,
+        band) bucket features; a cell whose combined ``weighted_sample``
+        falls below ``pooled_serving.serving_floor`` is not emitted
+        (serving-floor discipline, for both tiers).
+        """
+        env = self._env
+        floor = env.tuning.pooled_serving.serving_floor
+        cells: list[EvidenceCell] = []
+        if pooled_model is not None:
+            gate_decision = env.consent_gate.check(
+                onboarding.user_id,
+                DataAccessPurpose.POOLED_SERVING,
+                DataAccessor.SERVING_PIPELINE,
+            )
+            if gate_decision.allowed:
+                grouped: dict[
+                    tuple[TaskCategory, TimeOfDayBand], list[PooledBucket]
+                ] = {}
+                for bucket in pooled_model.buckets:
+                    if (
+                        bucket.experience_level
+                        is not onboarding.user_profile.experience_level
+                    ):
+                        continue
+                    grouped.setdefault(
+                        (bucket.category, bucket.time_of_day_band), []
+                    ).append(bucket)
+                for (category, band), buckets in grouped.items():
+                    combined = sum(b.weighted_sample for b in buckets)
+                    if combined < floor:
+                        continue
+                    if len(buckets) == 1:
+                        # No aggregation needed; avoids float drift vs the
+                        # bucket value (pooled-serving precedent).
+                        multiplier = buckets[0].multiplier
+                    else:
+                        multiplier = (
+                            sum(b.multiplier * b.weighted_sample for b in buckets)
+                            / combined
+                        )
+                    cells.append(
+                        EvidenceCell(
+                            category=category,
+                            time_of_day_band=band,
+                            multiplier=_clamp_evidence_multiplier(multiplier),
+                            weighted_sample=combined,
+                            source=EvidenceSource.POOLED,
+                        )
+                    )
+        if refinement is not None:
+            for entry in refinement.entries:
+                if entry.weighted_sample < floor:
+                    continue
+                cells.append(
+                    EvidenceCell(
+                        category=entry.category,
+                        time_of_day_band=entry.time_of_day_band,
+                        multiplier=_clamp_evidence_multiplier(entry.multiplier),
+                        weighted_sample=entry.weighted_sample,
+                        source=EvidenceSource.PER_USER_REFINED,
+                    )
+                )
+        cells.sort(
+            key=lambda c: (c.category.value, c.time_of_day_band.value, c.source.value)
+        )
+        return PlacementEvidence(cells=cells)
+
     def _completed_or_dropped_ids(self, user_id: str) -> set[str]:
         """Task ids the user has completed or dropped, across all plan versions.
 
@@ -932,6 +1047,10 @@ class CycleService:
                         FreeBusyInterval.model_validate(dict(fb)) for fb in free_busy
                     ],
                     completed_task_ids=completed_or_dropped,
+                    # Dormant in prod: no pooled artifact / refinement exists
+                    # to pass, so composed evidence is empty (see
+                    # _placement_evidence).
+                    placement_evidence=self._placement_evidence(onboarding),
                     horizon_start=horizon_start,
                     horizon_end=horizon_start + timedelta(days=horizon_days),
                 ),

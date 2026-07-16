@@ -151,6 +151,32 @@ DataAccessPurpose.POOLED_SERVING, DataAccessor.SERVING_PIPELINE)`; gate
 impl `consent/gate.py:77-106`, decision fields `.allowed` /
 `.reason_code`.
 
+### P-H landed (2026-07-16) — surfaces P-I builds on
+
+- Contract: `contracts/placement_evidence.py` (`PlacementEvidence`,
+  `EvidenceCell`, `EvidenceSource`, `MULTIPLIER_SOURCES`,
+  `EVIDENCE_MULTIPLIER_MIN/MAX`); registered in `export_schemas.py`.
+- Scheduler: `SchedulerInput.placement_evidence` (default empty);
+  `scoring.evidence_lookup` (dict `(category, band) → mult_pct`,
+  REFINED overwrites POOLED, multiplier-less cells skipped — REVEALED
+  rides that skip for free) + `scoring.evidence_affinity_adjustment`
+  (signed percent-minutes; caller does `w × adj // 100`), threaded as an
+  optional `evidence=` kwarg through `candidate_cost` / `rank_placement`
+  / `select_placement`; wired in `greedy._schedule_validated`.
+  `w_evidence_affinity = 1` on `PlacementScoringConfig`;
+  `ZERO_WEIGHTS` zeroes it; `make_input` in `tests/scheduler/_helpers.py`
+  grew a `placement_evidence` kwarg. The polish objective (`score_blocks`)
+  deliberately does NOT carry the term — `PlacedBlock` has no category;
+  band-symmetric moves are not strict improvements, so polish cannot
+  undo an evidence shift on the two-band fixtures.
+- Composition: `CycleService._placement_evidence(onboarding, *,
+  pooled_model=None, refinement=None)` in `app/cycle.py` — P-I's
+  aggregation folds REVEALED cells in here. Consent gate consulted only
+  when an artifact is offered (dormant path writes zero audit rows);
+  floor applies to both tiers; cells sorted `(category, band, source)`.
+- Axiom 05 gained "Evidence-affinity term" + a dormant-in-production
+  rollout paragraph.
+
 ### P-H contract + scoring specifics
 
 - `EvidenceCell` shape decisions:

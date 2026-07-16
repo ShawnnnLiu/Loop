@@ -67,5 +67,6 @@
 # w_evening_preference = 1
 # w_weekend_long_block = 1
 # w_earliness = 1
+# w_evidence_affinity = 1
 # buffer_min = 15
 # candidate_grid_min = 15

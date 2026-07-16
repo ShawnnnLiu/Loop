@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+from agentic_calendar.contracts.placement_evidence import PlacementEvidence
 from agentic_calendar.contracts.task_plan import TaskPlan
 from agentic_calendar.scheduler.inputs import FreeBusyInterval, SchedulerInput
 from agentic_calendar.scheduler.policy import (
@@ -26,6 +27,7 @@ ZERO_WEIGHTS = PlacementScoringConfig(
     w_evening_preference=0,
     w_weekend_long_block=0,
     w_earliness=0,
+    w_evidence_affinity=0,
 )
 
 
@@ -95,6 +97,7 @@ def make_input(
     policy: SchedulingPolicy | None = None,
     free_busy: list[FreeBusyInterval] | None = None,
     completed_task_ids: list[str] | None = None,
+    placement_evidence: PlacementEvidence | None = None,
     horizon_days: int = 3,
     horizon_start: datetime | None = None,
     run_id: str = "run_test",
@@ -109,6 +112,7 @@ def make_input(
         policy=policy or DEFAULT_POLICY,
         calendar_free_busy=free_busy or [],
         completed_task_ids=completed_task_ids or [],
+        placement_evidence=placement_evidence or PlacementEvidence(),
         horizon_start=start,
         horizon_end=end,
     )

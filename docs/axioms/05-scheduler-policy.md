@@ -117,6 +117,32 @@ never eliminate feasibility — in a crunch week tasks still place past
 quota, and the capacity-vs-fragmentation promotion fires on exactly the
 same inputs as before.
 
+### Evidence-affinity term (placement evidence)
+
+`SchedulerInput.placement_evidence`
+(`docs/specs/placement-evidence.schema.md`) carries per-user
+`(category, time_of_day_band)` evidence cells composed by the app layer —
+the scheduler itself never reads stores or clocks. The term is the one
+**signed** addition to the cost function above:
+
+- `mult_pct = round(multiplier × 100)` (an int in `[50, 200]`; the one
+  float-to-int conversion, done once per run).
+- A candidate whose `(task.category, band(candidate_start))` matches a
+  cell adds `w_evidence_affinity × (mult_pct − 100) × duration // 100` to
+  its cost — negative (a bonus) when the user is historically faster in
+  that band, positive when slower. Integer floor division; determinism,
+  not symmetry, is the requirement.
+- When both a `pooled` and a `per_user_refined` cell match the same
+  `(category, band)`, `per_user_refined` wins — the more specific tier.
+- A missing cell — or empty evidence — contributes exactly 0, so an
+  evidence-free run is byte-identical to the pre-evidence scheduler.
+
+Scope guard: evidence biases **where** a task goes, never **how long it
+is**. `estimated_duration_min` stays whatever the Planner + calibration
+pipeline produced (axiom 17); placement never re-estimates durations.
+Composition rules — consent gating for pooled cells (ADR-0007), the
+serving-floor discipline, and the tier derivations — live in the spec.
+
 ### Selection and tie-break
 
 The chosen candidate is the argmin under the total-order key
@@ -200,6 +226,14 @@ the final phase-02 increment, relocating placed blocks post-loop under the
 schedule-level objective without touching the failure surface. Weights and
 knobs serve from `PlacementScoringConfig` defaults unless overridden via
 `backend/tuning.toml` `[scheduler_placement]`.
+
+The evidence-affinity term is live in the scheduler but **dormant in
+production**: no pooled-artifact store exists in the solo MVP and the
+power-user refinement tier has no runtime producer, so composed evidence
+is empty and every production schedule is byte-identical to an
+evidence-free run. The term is exercised end-to-end by tests and fixtures;
+nothing user-facing may describe pooled-evidence placement as live until
+an artifact actually flows in production.
 
 ## Scheduler Output
 

@@ -1,0 +1,25 @@
+{
+  "cells": [
+    {
+      "category": "concept_review",
+      "time_of_day_band": "morning",
+      "multiplier": 1.2,
+      "weighted_sample": 7.5,
+      "source": "pooled"
+    },
+    {
+      "category": "practice",
+      "time_of_day_band": "evening",
+      "multiplier": 0.85,
+      "weighted_sample": 12.0,
+      "source": "pooled"
+    },
+    {
+      "category": "practice",
+      "time_of_day_band": "evening",
+      "multiplier": 0.8,
+      "weighted_sample": 6.0,
+      "source": "per_user_refined"
+    }
+  ]
+}

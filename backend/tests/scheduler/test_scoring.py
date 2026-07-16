@@ -17,6 +17,13 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
+from agentic_calendar.contracts.common_types import TaskCategory
+from agentic_calendar.contracts.placement_evidence import (
+    EvidenceCell,
+    EvidenceSource,
+    PlacementEvidence,
+)
+from agentic_calendar.contracts.pooled_duration_model import TimeOfDayBand
 from agentic_calendar.contracts.task_plan import Task
 from agentic_calendar.scheduler import schedule
 from agentic_calendar.scheduler.policy import SchedulingPolicy
@@ -34,6 +41,8 @@ from agentic_calendar.scheduler.scoring import (
     earliness_penalty,
     enumerate_candidates,
     evening_preference_bonus,
+    evidence_affinity_adjustment,
+    evidence_lookup,
     fragmentation_penalty,
     rank_placement,
     score_schedule,
@@ -788,3 +797,176 @@ def test_score_schedule_deep_conservation_and_pair_doubling() -> None:
     assert breakdown.back_to_back_total == 30 + 15
     # The shallow hour sits entirely inside Monday's deep window.
     assert breakdown.deep_window_conservation_total == 60
+
+
+# --------------------------------------------------------------------------- #
+# evidence-affinity term (axiom 05 "Evidence-affinity term")
+# --------------------------------------------------------------------------- #
+
+#: Two 60-minute windows on the golden Monday under DEFAULT_POLICY
+#: (08:00-22:30): 09:00-10:00 (morning band) and 18:00-19:00 (evening band).
+#: Every other cost term ties across the pair — window sizes equal the task
+#: duration (no fragmentation), same day (no earliness/balance difference),
+#: nothing placed (no adjacency) — so the evidence term alone discriminates.
+TWO_BAND_BUSY = [
+    busy(MONDAY.replace(hour=8), minutes=60),
+    busy(MONDAY.replace(hour=10), minutes=480),
+    busy(MONDAY.replace(hour=19), minutes=210),
+]
+
+
+def _evidence_cell(
+    *,
+    band: TimeOfDayBand = TimeOfDayBand.EVENING,
+    category: TaskCategory = TaskCategory.PRACTICE,
+    multiplier: float = 0.8,
+    weighted_sample: float = 6.0,
+    source: EvidenceSource = EvidenceSource.POOLED,
+) -> EvidenceCell:
+    return EvidenceCell(
+        category=category,
+        time_of_day_band=band,
+        multiplier=multiplier,
+        weighted_sample=weighted_sample,
+        source=source,
+    )
+
+
+def test_evidence_lookup_refined_wins_and_converts_once() -> None:
+    """PER_USER_REFINED overwrites POOLED for the same (category, band);
+    mult_pct is round(multiplier x 100)."""
+    lookup = evidence_lookup(
+        PlacementEvidence(
+            cells=[
+                _evidence_cell(multiplier=1.2),
+                _evidence_cell(multiplier=0.8, source=EvidenceSource.PER_USER_REFINED),
+                _evidence_cell(band=TimeOfDayBand.MORNING, multiplier=0.85),
+            ]
+        )
+    )
+    assert lookup == {
+        (TaskCategory.PRACTICE, TimeOfDayBand.EVENING): 80,
+        (TaskCategory.PRACTICE, TimeOfDayBand.MORNING): 85,
+    }
+
+
+def test_evidence_affinity_adjustment_sign_and_missing_cell() -> None:
+    """Faster band -> negative percent-minutes; slower -> positive; a missing
+    cell (wrong category or band) and empty/None evidence are exactly 0."""
+    window = _window(MONDAY.replace(hour=18), 60)
+    candidate = _candidate(window)  # starts 18:00 -> evening band
+    task = _task(category="practice", estimated_duration_min=60)
+
+    faster = {(TaskCategory.PRACTICE, TimeOfDayBand.EVENING): 80}
+    slower = {(TaskCategory.PRACTICE, TimeOfDayBand.EVENING): 120}
+    other_category = {(TaskCategory.REVIEW, TimeOfDayBand.EVENING): 80}
+
+    assert evidence_affinity_adjustment(candidate, task, faster) == -1200
+    assert evidence_affinity_adjustment(candidate, task, slower) == 1200
+    assert evidence_affinity_adjustment(candidate, task, other_category) == 0
+    assert evidence_affinity_adjustment(candidate, task, {}) == 0
+    assert evidence_affinity_adjustment(candidate, task, None) == 0
+
+
+def test_evidence_shifts_placement_into_the_evidenced_band() -> None:
+    """The P-H acceptance fixture: with no evidence the two-band tie breaks
+    to the earliest start (09:00); a faster-evening cell moves the practice
+    task to 18:00 deterministically."""
+    plan = make_plan(make_task(task_id="t1", estimated_duration_min=60))
+
+    baseline = schedule(make_input(plan, free_busy=TWO_BAND_BUSY, horizon_days=1))
+    assert [st.start.hour for st in baseline.scheduled_tasks] == [9]
+
+    evidenced = schedule(
+        make_input(
+            plan,
+            free_busy=TWO_BAND_BUSY,
+            horizon_days=1,
+            placement_evidence=PlacementEvidence(cells=[_evidence_cell()]),
+        )
+    )
+    assert [st.start.hour for st in evidenced.scheduled_tasks] == [18]
+
+
+def test_refined_evidence_overrides_pooled_at_schedule_level() -> None:
+    """A slower POOLED evening cell alone repels the task; adding a faster
+    PER_USER_REFINED cell for the same (category, band) wins it back."""
+    plan = make_plan(make_task(task_id="t1", estimated_duration_min=60))
+    pooled_slower = PlacementEvidence(cells=[_evidence_cell(multiplier=1.2)])
+    both = PlacementEvidence(
+        cells=[
+            _evidence_cell(multiplier=1.2),
+            _evidence_cell(multiplier=0.8, source=EvidenceSource.PER_USER_REFINED),
+        ]
+    )
+
+    repelled = schedule(
+        make_input(
+            plan,
+            free_busy=TWO_BAND_BUSY,
+            horizon_days=1,
+            placement_evidence=pooled_slower,
+        )
+    )
+    assert [st.start.hour for st in repelled.scheduled_tasks] == [9]
+
+    attracted = schedule(
+        make_input(
+            plan, free_busy=TWO_BAND_BUSY, horizon_days=1, placement_evidence=both
+        )
+    )
+    assert [st.start.hour for st in attracted.scheduled_tasks] == [18]
+
+
+def test_unmatched_evidence_is_byte_identical_to_no_evidence() -> None:
+    """A cell no candidate can match (different category) contributes exactly
+    0 everywhere: output is byte-identical to the evidence-free run — the
+    consent-off / dormant-production guarantee."""
+    plan = make_plan(make_task(task_id="t1", estimated_duration_min=60))
+    without = schedule(make_input(plan, free_busy=TWO_BAND_BUSY, horizon_days=1))
+    unmatched = schedule(
+        make_input(
+            plan,
+            free_busy=TWO_BAND_BUSY,
+            horizon_days=1,
+            placement_evidence=PlacementEvidence(
+                cells=[_evidence_cell(category=TaskCategory.MOCK_INTERVIEW)]
+            ),
+        )
+    )
+    empty = schedule(
+        make_input(
+            plan,
+            free_busy=TWO_BAND_BUSY,
+            horizon_days=1,
+            placement_evidence=PlacementEvidence(),
+        )
+    )
+    assert without.model_dump_json() == unmatched.model_dump_json()
+    assert without.model_dump_json() == empty.model_dump_json()
+
+
+def test_evidence_runs_are_deterministic_byte_for_byte() -> None:
+    def run() -> str:
+        plan = make_plan(
+            make_task(task_id="t1", estimated_duration_min=60),
+            make_task(task_id="t2", estimated_duration_min=60, category="review"),
+        )
+        inp = make_input(
+            plan,
+            free_busy=TWO_BAND_BUSY,
+            horizon_days=2,
+            placement_evidence=PlacementEvidence(
+                cells=[
+                    _evidence_cell(),
+                    _evidence_cell(
+                        category=TaskCategory.REVIEW,
+                        band=TimeOfDayBand.MORNING,
+                        multiplier=1.4,
+                    ),
+                ]
+            ),
+        )
+        return schedule(inp).model_dump_json()
+
+    assert run() == run()

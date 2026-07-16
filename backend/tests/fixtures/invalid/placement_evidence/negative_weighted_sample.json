@@ -1,0 +1,11 @@
+{
+  "cells": [
+    {
+      "category": "practice",
+      "time_of_day_band": "evening",
+      "multiplier": 0.85,
+      "weighted_sample": -1.0,
+      "source": "pooled"
+    }
+  ]
+}

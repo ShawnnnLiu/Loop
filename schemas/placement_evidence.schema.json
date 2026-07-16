@@ -1,0 +1,92 @@
+{
+  "$defs": {
+    "EvidenceCell": {
+      "additionalProperties": false,
+      "description": "One ``(category, time_of_day_band)`` statement of band affinity.",
+      "properties": {
+        "category": {
+          "$ref": "#/$defs/TaskCategory"
+        },
+        "multiplier": {
+          "anyOf": [
+            {
+              "maximum": 2.0,
+              "minimum": 0.5,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Multiplier"
+        },
+        "source": {
+          "$ref": "#/$defs/EvidenceSource"
+        },
+        "time_of_day_band": {
+          "$ref": "#/$defs/TimeOfDayBand"
+        },
+        "weighted_sample": {
+          "exclusiveMinimum": 0.0,
+          "title": "Weighted Sample",
+          "type": "number"
+        }
+      },
+      "required": [
+        "category",
+        "time_of_day_band",
+        "weighted_sample",
+        "source"
+      ],
+      "title": "EvidenceCell",
+      "type": "object"
+    },
+    "EvidenceSource": {
+      "description": "Which evidence tier produced a cell.\n\nThe revealed-preference tier adds a ``REVEALED`` member in its own\nincrement (multiplier-free cells; see the spec).",
+      "enum": [
+        "pooled",
+        "per_user_refined"
+      ],
+      "title": "EvidenceSource",
+      "type": "string"
+    },
+    "TaskCategory": {
+      "description": "Allowed values for ``task.category`` (see task-plan spec).",
+      "enum": [
+        "concept_review",
+        "practice",
+        "mock_interview",
+        "project",
+        "reflection",
+        "review"
+      ],
+      "title": "TaskCategory",
+      "type": "string"
+    },
+    "TimeOfDayBand": {
+      "description": "Local-time band of the completion timestamp (spec feature table).",
+      "enum": [
+        "morning",
+        "afternoon",
+        "evening",
+        "night"
+      ],
+      "title": "TimeOfDayBand",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Per-user time-of-day evidence read by placement scoring (axiom 05).\n\nEmpty by default: no evidence means placement scoring runs exactly as\nbefore \u2014 the evidence-affinity term is 0 for every candidate.",
+  "properties": {
+    "cells": {
+      "items": {
+        "$ref": "#/$defs/EvidenceCell"
+      },
+      "title": "Cells",
+      "type": "array"
+    }
+  },
+  "title": "PlacementEvidence",
+  "type": "object"
+}

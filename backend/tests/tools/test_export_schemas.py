@@ -91,6 +91,8 @@ def test_every_contract_registered() -> None:
         "resume_extraction",
         "resume_intake_input",
         "skill_taxonomy",
+        # Scheduler placement quality (P-H evidence-driven placement)
+        "placement_evidence",
     }
     assert set(CONTRACTS.keys()) == expected
 

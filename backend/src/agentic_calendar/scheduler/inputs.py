@@ -10,6 +10,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from agentic_calendar.contracts.placement_evidence import PlacementEvidence
 from agentic_calendar.contracts.task_plan import TaskPlan
 
 from .policy import SchedulingPolicy
@@ -43,6 +44,7 @@ class SchedulerInput(BaseModel):
     policy: SchedulingPolicy
     calendar_free_busy: list[FreeBusyInterval] = Field(default_factory=list)
     completed_task_ids: list[str] = Field(default_factory=list)
+    placement_evidence: PlacementEvidence = Field(default_factory=PlacementEvidence)
     horizon_start: datetime
     horizon_end: datetime
 

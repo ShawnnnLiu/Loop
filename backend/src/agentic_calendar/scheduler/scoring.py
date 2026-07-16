@@ -26,7 +26,11 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
-from agentic_calendar.contracts.common_types import FocusLevel
+from agentic_calendar.contracts.common_types import FocusLevel, TaskCategory
+from agentic_calendar.contracts.placement_evidence import (
+    EvidenceSource,
+    PlacementEvidence,
+)
 from agentic_calendar.contracts.pooled_duration_model import TimeOfDayBand
 from agentic_calendar.contracts.scheduler_output import SchedulerOutput
 from agentic_calendar.contracts.task_plan import Task
@@ -55,6 +59,7 @@ class PlacementScoringConfig:
     w_evening_preference: int = 1
     w_weekend_long_block: int = 1
     w_earliness: int = 1
+    w_evidence_affinity: int = 1
     buffer_min: int = 15
     candidate_grid_min: int = 15
 
@@ -328,6 +333,54 @@ def weekend_long_block_bonus(
     return 0
 
 
+#: ``(category, band) → mult_pct`` precomputed once per run from the input's
+#: ``placement_evidence`` — the placement loop's evidence view.
+EvidenceLookup = Mapping[tuple[TaskCategory, TimeOfDayBand], int]
+
+
+def evidence_lookup(
+    evidence: PlacementEvidence,
+) -> dict[tuple[TaskCategory, TimeOfDayBand], int]:
+    """Precompute ``(category, band) → mult_pct`` for the placement loop.
+
+    ``mult_pct = round(multiplier x 100)`` (an int in ``[50, 200]``) — the
+    one float-to-int conversion, done once per run (axiom 05
+    "Evidence-affinity term"). ``PER_USER_REFINED`` overwrites ``POOLED``
+    for the same key: the more specific tier wins. Cells without a
+    multiplier (the future revealed tier) never enter this map.
+    """
+    lookup: dict[tuple[TaskCategory, TimeOfDayBand], int] = {}
+    for source in (EvidenceSource.POOLED, EvidenceSource.PER_USER_REFINED):
+        for cell in evidence.cells:
+            if cell.source is source and cell.multiplier is not None:
+                lookup[(cell.category, cell.time_of_day_band)] = round(
+                    cell.multiplier * 100
+                )
+    return lookup
+
+
+def evidence_affinity_adjustment(
+    candidate: PlacementCandidate, task: Task, evidence: EvidenceLookup | None
+) -> int:
+    """Signed percent-minutes toward or away from an evidenced band.
+
+    ``(mult_pct - 100) x duration`` for the ``(task.category, band(start))``
+    cell — negative (a bonus) when the user is historically faster in the
+    band, positive when slower. The caller weights first and floor-divides
+    by 100 after (axiom 05: the exact form is
+    ``w x (mult_pct - 100) x duration // 100``). A missing cell — or no
+    evidence at all — is exactly 0, so evidence-free runs are byte-identical
+    to the pre-evidence scheduler.
+    """
+    if not evidence:
+        return 0
+    band = derive_time_of_day_band(candidate.start.hour)
+    mult_pct = evidence.get((task.category, band))
+    if mult_pct is None:
+        return 0
+    return (mult_pct - 100) * task.estimated_duration_min
+
+
 def candidate_cost(
     candidate: PlacementCandidate,
     *,
@@ -337,12 +390,18 @@ def candidate_cost(
     scoring: PlacementScoringConfig,
     day_quotas: Mapping[str, int],
     horizon_start: datetime,
+    evidence: EvidenceLookup | None = None,
 ) -> int:
     """Integer cost of a candidate (axiom 05 scored placement).
 
     ``cost = Σ w·penalty - Σ w·bonus``; every penalty/bonus is a
     non-negative int (minutes-scaled except the day-scaled ``earliness``)
-    and every weight an int.
+    and every weight an int. The one signed exception is the
+    evidence-affinity term (axiom 05 "Evidence-affinity term"): weighted
+    percent-minutes floor-divided by 100, negative when the candidate's
+    band is evidenced faster. ``evidence`` is the precomputed
+    :func:`evidence_lookup` map; ``None`` (or empty) means no evidence and
+    contributes exactly 0.
     """
     return (
         scoring.w_daily_balance
@@ -353,6 +412,9 @@ def candidate_cost(
         + scoring.w_deep_window_conservation
         * deep_window_conservation_penalty(candidate, task)
         + scoring.w_earliness * earliness_penalty(candidate, horizon_start)
+        + scoring.w_evidence_affinity
+        * evidence_affinity_adjustment(candidate, task, evidence)
+        // 100
         - scoring.w_evening_preference
         * evening_preference_bonus(candidate, task, policy)
         - scoring.w_weekend_long_block
@@ -394,6 +456,7 @@ def rank_placement(
     scoring: PlacementScoringConfig,
     day_quotas: Mapping[str, int],
     horizon_start: datetime,
+    evidence: EvidenceLookup | None = None,
 ) -> PlacementRanking | None:
     """Rank a task's candidates: the ``(cost, start)`` argmin plus regret.
 
@@ -412,6 +475,7 @@ def rank_placement(
                 scoring=scoring,
                 day_quotas=day_quotas,
                 horizon_start=horizon_start,
+                evidence=evidence,
             ),
             c,
         )
@@ -435,6 +499,7 @@ def select_placement(
     scoring: PlacementScoringConfig,
     day_quotas: Mapping[str, int],
     horizon_start: datetime,
+    evidence: EvidenceLookup | None = None,
 ) -> PlacementCandidate | None:
     """Deterministic argmin under the total-order key ``(cost, start)``.
 
@@ -450,6 +515,7 @@ def select_placement(
         scoring=scoring,
         day_quotas=day_quotas,
         horizon_start=horizon_start,
+        evidence=evidence,
     )
     return None if ranking is None else ranking.candidate
 

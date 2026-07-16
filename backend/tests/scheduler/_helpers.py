@@ -53,6 +53,7 @@ DEFAULT_POLICY = SchedulingPolicy(
     respect_deep_work_windows=False,
     deep_work_windows=[],
     max_session_length_min=120,
+    preferred_session_length_min=60,
 )
 
 
@@ -68,6 +69,7 @@ DEEP_WORK_POLICY = SchedulingPolicy(
         DeepWorkWindowPolicy(day="Tue", start="18:00", end="21:00"),
     ],
     max_session_length_min=120,
+    preferred_session_length_min=60,
 )
 
 

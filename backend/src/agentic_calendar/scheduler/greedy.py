@@ -5,9 +5,12 @@ Algorithm:
 1. Filter out tasks whose prerequisites are not met → ``DEPENDENCY_BLOCKED``.
 2. Reject tasks where ``estimated_duration_min > max_session_length_min`` and
    ``splittable=False`` → ``TASK_TOO_LONG_UNSPLITTABLE``.
-3. For each remaining task in topo + priority order, find the first window
-   that fits (with deep-work / daily-load / break-between-deep checks).
-4. If no window fits, emit a typed reason with debug payload.
+3. For each remaining task in topo + priority order, place it via the
+   scored-candidate machinery (``scoring.py``): enumerate feasible
+   candidates (deep-work / daily-load / break-between-deep checks), pick
+   the ``(cost, start)`` argmin. With the current constant-0 cost this
+   selects the first window that fits (axiom 05 "Rollout status").
+4. If no candidate is feasible, emit a typed reason with debug payload.
 5. After every placement, mark the placed range busy so subsequent tasks see it.
 
 The algorithm is intentionally naïve. Phase 3 may swap in OR-Tools without
@@ -18,7 +21,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from agentic_calendar.contracts.common_types import FocusLevel, Priority
 from agentic_calendar.contracts.reason_codes import ReasonCode
@@ -36,16 +39,13 @@ from . import debug as dbg
 from .errors import SchedulerError
 from .inputs import FreeBusyInterval, SchedulerInput
 from .ordering import topological_order
+from .scoring import (
+    PlacementState,
+    day_key,
+    enumerate_candidates,
+    select_placement,
+)
 from .windows import FreeWindow, enumerate_free_windows
-
-
-@dataclass(slots=True)
-class _PlacementState:
-    """Mutable state threaded through the placement loop."""
-
-    busy: list[FreeBusyInterval]
-    minutes_per_day: dict[str, int]
-    last_deep_end: dict[str, datetime]
 
 
 def schedule(
@@ -112,7 +112,7 @@ def _schedule_validated(
     available_capacity_min = sum(w.duration_min for w in free_windows)
     largest_block_min = max((w.duration_min for w in free_windows), default=0)
 
-    state = _PlacementState(
+    state = PlacementState(
         busy=list(inp.calendar_free_busy),
         minutes_per_day={},
         last_deep_end={},
@@ -241,51 +241,33 @@ def _try_place(
     task: Task,
     windows: list[FreeWindow],
     inp: SchedulerInput,
-    state: _PlacementState,
+    state: PlacementState,
 ) -> _Placement | None:
-    """Return the first window-aligned placement that satisfies all constraints."""
-    needs_deep = task.required_focus_level is FocusLevel.DEEP
-    duration = task.estimated_duration_min
-    for window in _live_windows(windows, state.busy):
-        if window.duration_min < duration:
-            continue
-        if needs_deep and inp.policy.respect_deep_work_windows and not window.is_deep_work:
-            continue
-        candidate_start = window.start
-        candidate_end = candidate_start + timedelta(minutes=duration)
-        if candidate_end > window.end:
-            continue
-        day_key = _day_key(candidate_start)
-        used_today = state.minutes_per_day.get(day_key, 0)
-        if used_today + duration > inp.policy.max_daily_study_min:
-            continue
-        if needs_deep:
-            last = state.last_deep_end.get(day_key)
-            if last is not None:
-                gap = (candidate_start - last).total_seconds() / 60
-                if gap < inp.policy.min_break_between_deep_blocks_min:
-                    continue
-        return _Placement(
-            start=candidate_start, end=candidate_end, window_was_deep=window.is_deep_work
-        )
-    return None
+    """Select a placement via the scored-candidate machinery (axiom 05)."""
+    candidates = enumerate_candidates(task, windows, state, inp.policy)
+    chosen = select_placement(candidates)
+    if chosen is None:
+        return None
+    return _Placement(
+        start=chosen.start, end=chosen.end, window_was_deep=chosen.window.is_deep_work
+    )
 
 
 def _record_placement(
     task: Task,
     placement: _Placement,
-    state: _PlacementState,
+    state: PlacementState,
     windows: list[FreeWindow],
     inp: SchedulerInput,
 ) -> None:
     state.busy.append(FreeBusyInterval(start=placement.start, end=placement.end))
     state.busy.sort(key=lambda i: i.start)
-    day_key = _day_key(placement.start)
-    state.minutes_per_day[day_key] = (
-        state.minutes_per_day.get(day_key, 0) + task.estimated_duration_min
+    key = day_key(placement.start)
+    state.minutes_per_day[key] = (
+        state.minutes_per_day.get(key, 0) + task.estimated_duration_min
     )
     if task.required_focus_level is FocusLevel.DEEP:
-        state.last_deep_end[day_key] = placement.end
+        state.last_deep_end[key] = placement.end
     # Re-enumerate after busy list update
     fresh = enumerate_free_windows(
         horizon_start=inp.horizon_start,
@@ -295,20 +277,6 @@ def _record_placement(
     )
     windows.clear()
     windows.extend(fresh)
-
-
-def _live_windows(
-    windows: list[FreeWindow], busy: list[FreeBusyInterval]
-) -> list[FreeWindow]:
-    """Return windows untouched by ``busy`` (defensive — windows are recomputed)."""
-    if not busy:
-        return windows
-    live: list[FreeWindow] = []
-    for w in windows:
-        overlaps = any(b.start < w.end and b.end > w.start for b in busy)
-        if not overlaps:
-            live.append(w)
-    return live
 
 
 def _failure_for(
@@ -376,10 +344,6 @@ def _to_time(hhmm: str):  # type: ignore[no-untyped-def]
 
     hh, mm = hhmm.split(":")
     return time(int(hh), int(mm))
-
-
-def _day_key(dt: datetime) -> str:
-    return dt.date().isoformat()
 
 
 def _status_for(

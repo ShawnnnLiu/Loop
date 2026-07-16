@@ -19,13 +19,29 @@ The Scheduler is pure deterministic code. It consumes validated tasks and calend
   "scheduling_policy": {
     "no_events_before": "08:00",
     "no_events_after": "22:30",
-    "max_contiguous_study_min": 120,
+    "allow_weekends": true,
     "min_break_between_deep_blocks_min": 30,
     "max_daily_study_min": 180,
-    "respect_deep_work_windows": true
+    "respect_deep_work_windows": true,
+    "deep_work_windows": [
+      { "day": "Mon", "start": "18:00", "end": "21:00" }
+    ],
+    "max_session_length_min": 120,
+    "preferred_session_length_min": 60,
+    "prefer_evening_sessions": false,
+    "prefer_weekend_long_blocks": false,
+    "avoid_back_to_back_deep_work": false
   }
 }
 ```
+
+This block is the spec for the region-local `SchedulingPolicy` model
+(`backend/src/agentic_calendar/scheduler/policy.py`). There is no separate
+`max_contiguous_study_min`; the scheduler uses `max_session_length_min` as
+the per-task cap. The three `prefer_*`/`avoid_*` booleans and
+`preferred_session_length_min` mirror the user profile's soft preferences
+and preferred session length; they feed the scored-placement terms below
+and never tighten a hard constraint.
 
 The Scheduler also receives `run_id`, `plan_version`, and current completion state.
 
@@ -52,6 +68,73 @@ The Scheduler must respect:
 5. Review tasks may be placed in shorter gaps.
 6. Mock interviews require contiguous blocks.
 7. Filter tasks whose dependencies are not yet complete.
+
+## Scored Placement
+
+Within the ordered task loop, placement is a deterministic argmin over
+enumerated feasible candidates — not "first window's start wins."
+
+### Candidate enumeration
+
+- For each free window, candidate starts are the window start plus a fixed
+  15-minute intra-window grid: `window.start + k × candidate_grid_min`
+  for every integer `k ≥ 0` with `candidate_start + duration ≤ window.end`
+  (the `k = 0` element is the window start itself).
+- Every candidate must pass all hard checks — window size, deep-window
+  requirement, window-end bound, daily study cap, break-between-deep-blocks
+  gap. Scoring never relaxes a hard constraint.
+
+### Integer cost function
+
+```
+cost(candidate) = Σ w_term × penalty_term − Σ w_term × bonus_term
+```
+
+Each `penalty_term` / `bonus_term` is a non-negative minutes-scaled
+integer; every weight is an integer. Placement uses integer arithmetic
+only. The term list (exact formulas live in
+`../implementation-plans/scheduler-placement-quality/01-scored-placement.md`):
+
+| Term | Sign | Intent |
+| --- | --- | --- |
+| `daily_balance` | penalty | placement pushing a day past its even-spread daily target |
+| `back_to_back` | penalty | gap to an adjacent placed study block below the buffer; doubled for a deep block adjacent to another deep block when `avoid_back_to_back_deep_work` |
+| `fragmentation` | penalty | leaving an unusable sliver (`0 < leftover < preferred_session_length_min`) in the window |
+| `deep_window_conservation` | penalty | a non-deep task consuming scarce deep-window capacity |
+| `evening_preference` | bonus | evening-band start when `prefer_evening_sessions` |
+| `weekend_long_block` | bonus | weekend placement of a task longer than `preferred_session_length_min` when `prefer_weekend_long_blocks` and weekends are allowed |
+
+### Selection and tie-break
+
+The chosen candidate is the argmin under the total-order key
+`(cost, candidate_start)`. Free windows are disjoint and grid starts within
+a window are distinct, so no two candidates share a start — the order is
+total and placement is fully deterministic.
+
+### Weights are heuristic priors
+
+Term weights and placement knobs (`buffer_min`, `candidate_grid_min`) are
+tunable only via `backend/tuning.toml` (`[scheduler_placement]`); overrides
+are journaled through the threshold change log, following axiom 07's
+pattern. Until calibrated against real usage they are heuristic priors and
+must be described as such.
+
+### Soft terms never eliminate feasibility
+
+Scoring reorders feasible candidates; it never rejects one. Any task that
+first-fit placement would have scheduled remains schedulable under scored
+placement (the grid strictly adds candidates), and every failure keeps the
+typed `reason_code` produced by the hard checks.
+
+### Rollout status
+
+The candidate machinery ships behavior-identical to first fit first
+(window-start candidates only, cost ≡ 0) with an output-equivalence proof.
+The intra-window grid and the cost terms activate in the scoring-terms
+increment, which deliberately re-pins placement-instant test expectations;
+the weights land in `tuning.toml` in the same project. Until that
+increment lands, this section describes the target policy, not live
+behavior.
 
 ## Scheduler Output
 

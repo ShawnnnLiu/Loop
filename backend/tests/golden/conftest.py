@@ -87,6 +87,7 @@ def relaxed_policy() -> SchedulingPolicy:
         respect_deep_work_windows=False,
         deep_work_windows=[],
         max_session_length_min=120,
+        preferred_session_length_min=60,
     )
 
 
@@ -105,6 +106,7 @@ def deep_only_policy() -> SchedulingPolicy:
             DeepWorkWindowPolicy(day="Tue", start="18:00", end="21:00"),
         ],
         max_session_length_min=120,
+        preferred_session_length_min=60,
     )
 
 

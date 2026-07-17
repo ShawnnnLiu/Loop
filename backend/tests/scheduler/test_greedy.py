@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+import pytest
+
 from agentic_calendar.contracts.reason_codes import ReasonCode
 from agentic_calendar.contracts.scheduler_output import (
     CalendarEventStatus,
@@ -15,6 +17,7 @@ from agentic_calendar.contracts.scheduler_output import (
     ScheduleStatus,
 )
 from agentic_calendar.scheduler import schedule
+from agentic_calendar.scheduler.scoring import PlacementScoringConfig
 from tests.scheduler._helpers import (
     DEEP_WORK_POLICY,
     DEFAULT_POLICY,
@@ -304,3 +307,90 @@ def test_completed_tasks_in_plan_are_still_placed() -> None:
     out = schedule(make_input(plan, completed_task_ids=["a"]))
     assert out.schedule_status is ScheduleStatus.SUCCESS
     assert {st.task_id for st in out.scheduled_tasks} == {"a", "b"}
+
+
+@pytest.mark.parametrize(
+    "scoring", [None, ZERO_WEIGHTS], ids=["default_weights", "zero_weights"]
+)
+def test_dependent_fails_typed_instead_of_starting_before_dependency_ends(
+    scoring: PlacementScoringConfig | None,
+) -> None:
+    """Dependency temporal floor: the inversion repro now fails typed.
+
+    Free windows on Mon 2026-05-04 under DEFAULT_POLICY hours (08:00-22:30):
+    09:00-10:00 (60 min) and 18:00-20:00 (120 min). ``dep`` (120 min) fits
+    only the evening window; ``child`` (60 min, depends on ``dep``) then has
+    exactly one remaining slot — the 09:00 morning window, before its
+    dependency even starts. Pre-floor, the greedy loop silently placed the
+    inverted pair and reported SUCCESS (axiom 05 hard-rule violation,
+    recorded in commit 2c00064). The floor discards the morning candidate,
+    so ``child`` fails ``NO_VALID_CONTIGUOUS_BLOCK`` with the fully-floored
+    window marked ``before_dependency_end``. Both tasks are
+    single-candidate, so the scenario is weight-independent (parametrized to
+    prove it).
+    """
+    plan = make_plan(
+        make_task(task_id="dep", estimated_duration_min=120),
+        make_task(task_id="child", estimated_duration_min=60, dependencies=["dep"]),
+    )
+    free_busy = [
+        busy(datetime(2026, 5, 4, 8, 0, tzinfo=UTC), minutes=60),  # 08:00-09:00
+        busy(datetime(2026, 5, 4, 10, 0, tzinfo=UTC), minutes=480),  # 10:00-18:00
+        busy(datetime(2026, 5, 4, 20, 0, tzinfo=UTC), minutes=150),  # 20:00-22:30
+    ]
+    out = schedule(
+        make_input(
+            plan,
+            free_busy=free_busy,
+            horizon_days=1,
+            horizon_start=datetime(2026, 5, 4, 0, 0, 0, tzinfo=UTC),
+        ),
+        scoring=scoring,
+    )
+    assert out.schedule_status is ScheduleStatus.PARTIAL_FAILURE
+    placed = {st.task_id: st for st in out.scheduled_tasks}
+    assert set(placed) == {"dep"}
+    assert placed["dep"].start == datetime(2026, 5, 4, 18, 0, tzinfo=UTC)
+    (unsched,) = out.unscheduled_tasks
+    assert unsched.task_id == "child"
+    assert unsched.reason_code is ReasonCode.NO_VALID_CONTIGUOUS_BLOCK
+    reasons = {
+        w["rejection_reason"] for w in unsched.debug["rejected_windows"]
+    }
+    assert reasons == {"before_dependency_end"}
+
+
+@pytest.mark.parametrize(
+    "scoring", [None, ZERO_WEIGHTS], ids=["default_weights", "zero_weights"]
+)
+def test_dependency_floor_shifts_dependent_to_post_dependency_slot(
+    scoring: PlacementScoringConfig | None,
+) -> None:
+    """Same shape plus a 20:30-21:30 window: instead of failing, ``child``
+    lands in the first slot after its dependency ends. The morning slot
+    (which earliest-feasible placement would otherwise pick under
+    ZERO_WEIGHTS) is discarded by the floor, not by feasibility."""
+    plan = make_plan(
+        make_task(task_id="dep", estimated_duration_min=120),
+        make_task(task_id="child", estimated_duration_min=60, dependencies=["dep"]),
+    )
+    free_busy = [
+        busy(datetime(2026, 5, 4, 8, 0, tzinfo=UTC), minutes=60),  # 08:00-09:00
+        busy(datetime(2026, 5, 4, 10, 0, tzinfo=UTC), minutes=480),  # 10:00-18:00
+        busy(datetime(2026, 5, 4, 20, 0, tzinfo=UTC), minutes=30),  # 20:00-20:30
+        busy(datetime(2026, 5, 4, 21, 30, tzinfo=UTC), minutes=150),  # 21:30-24:00
+    ]
+    out = schedule(
+        make_input(
+            plan,
+            free_busy=free_busy,
+            horizon_days=1,
+            horizon_start=datetime(2026, 5, 4, 0, 0, 0, tzinfo=UTC),
+        ),
+        scoring=scoring,
+    )
+    assert out.schedule_status is ScheduleStatus.SUCCESS
+    placed = {st.task_id: st for st in out.scheduled_tasks}
+    assert placed["dep"].start == datetime(2026, 5, 4, 18, 0, tzinfo=UTC)
+    assert placed["child"].start == datetime(2026, 5, 4, 20, 30, tzinfo=UTC)
+    assert placed["child"].start >= placed["dep"].end

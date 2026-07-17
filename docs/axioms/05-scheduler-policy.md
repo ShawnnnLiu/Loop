@@ -88,6 +88,14 @@ enumerated feasible candidates — not "first window's start wins."
 - Every candidate must pass all hard checks — window size, deep-window
   requirement, window-end bound, daily study cap, break-between-deep-blocks
   gap. Scoring never relaxes a hard constraint.
+- A task's candidates are additionally floored by its placed dependencies:
+  a candidate starting before the latest end of the task's dependencies
+  placed this run is infeasible — the temporal counterpart of the ready-set
+  gate, and the same `dep_floor` rule the polish pass applies to its moves.
+  Dependencies satisfied by the completion set impose no floor. A ready
+  task whose every candidate is floored away fails
+  `NO_VALID_CONTIGUOUS_BLOCK`, with fully-floored windows marked
+  `before_dependency_end` in the rejected-windows debug payload.
 
 ### Integer cost function
 
@@ -189,7 +197,10 @@ exactly one feasible candidate outranks any regret. Ties break by the
 ascending Task Ordering sort key. A ready task with zero feasible
 candidates (or too long and unsplittable) fails in that round with its
 typed `reason_code`; a task whose dependency never places fails
-`DEPENDENCY_BLOCKED` exactly as under linear order. Output ordering —
+`DEPENDENCY_BLOCKED` exactly as under linear order. Candidate feasibility
+includes the dependency floor above, so auto-placement can never start a
+dependent before a blocker ends — the "before its blockers" hard rule
+holds temporally, not just in insertion order. Output ordering —
 `scheduled_tasks` and `unscheduled_tasks` alike — remains the task's
 position in the topological order, so insertion order never changes the
 output shape. Complexity is O(rounds × ready × candidates), fine at MVP

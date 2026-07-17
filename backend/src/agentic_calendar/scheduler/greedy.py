@@ -8,7 +8,8 @@ Algorithm (axiom 05 "Scored Placement" + "Insertion order"):
 2. Maintain the ready set: tasks whose dependencies are completed or
    already placed this run. Each round, rank every ready task's feasible
    candidates (window starts plus the intra-window grid, under the
-   deep-work / daily-load / break-between-deep hard checks) by the
+   deep-work / daily-load / break-between-deep hard checks, floored at
+   the latest end of the task's placed dependencies) by the
    integer cost terms, and place the task with the most to lose:
    single-candidate tasks first, then largest regret (second-best -
    best cost), ties by the ordering sort key. Ready tasks that are too
@@ -29,6 +30,7 @@ OR-Tools without changing the public contract
 from __future__ import annotations
 
 from collections.abc import Mapping
+from datetime import datetime, timedelta
 
 from agentic_calendar.contracts.common_types import FocusLevel, Priority
 from agentic_calendar.contracts.reason_codes import ReasonCode
@@ -158,6 +160,7 @@ def _schedule_validated(
     # enters the ready set only when every dependency is in this set, so
     # topology stays a hard gate no matter which ready task wins a round.
     completed_or_placed: set[str] = set(inp.completed_task_ids)
+    placed_end: dict[str, datetime] = {}
 
     remaining = list(ordered_tasks)
     while remaining:
@@ -188,9 +191,20 @@ def _schedule_validated(
                 )
                 resolved.add(task.task_id)
                 continue
+            # Temporal counterpart of the ready-set gate (axiom 05 hard
+            # rule): a dependent may not start before a placed dependency
+            # ends — the same dep_floor rule the polish pass applies to its
+            # moves. Dependencies satisfied by completed_task_ids have no
+            # placed block and impose no floor.
+            dep_floor = max(
+                (placed_end[dep] for dep in task.dependencies if dep in placed_end),
+                default=None,
+            )
             candidates = enumerate_candidates(
                 task, free_windows, state, inp.policy, scoring
             )
+            if dep_floor is not None:
+                candidates = [c for c in candidates if c.start >= dep_floor]
             ranking = rank_placement(
                 candidates,
                 task=task,
@@ -206,7 +220,9 @@ def _schedule_validated(
                 # Fail-fast: a ready task with zero candidates fails this
                 # round (axiom 05 "Insertion order") — its dependents never
                 # become ready and fall out as DEPENDENCY_BLOCKED below.
-                unscheduled.append(_failure_for(task, free_windows, inp))
+                unscheduled.append(
+                    _failure_for(task, free_windows, inp, dep_floor=dep_floor)
+                )
                 resolved.add(task.task_id)
                 continue
             ranked.append((task, ranking))
@@ -231,6 +247,7 @@ def _schedule_validated(
             )
             _record_placement(task, chosen, state, free_windows, inp)
             completed_or_placed.add(task.task_id)
+            placed_end[task.task_id] = chosen.end
             resolved.add(task.task_id)
 
         remaining = [t for t in remaining if t.task_id not in resolved]
@@ -350,6 +367,8 @@ def _failure_for(
     task: Task,
     windows: list[FreeWindow],
     inp: SchedulerInput,
+    *,
+    dep_floor: datetime | None = None,
 ) -> UnscheduledTask:
     """Build the right typed failure for a task that nothing accepted."""
     needs_deep = task.required_focus_level is FocusLevel.DEEP
@@ -370,7 +389,7 @@ def _failure_for(
         dbg.rejected_window(
             start=w.start,
             duration_min=w.duration_min,
-            rejection_reason=_rejection_reason(w, task, inp),
+            rejection_reason=_rejection_reason(w, task, inp, dep_floor),
         )
         for w in windows
     ]
@@ -392,9 +411,17 @@ def _failure_for(
     )
 
 
-def _rejection_reason(window: FreeWindow, task: Task, inp: SchedulerInput) -> str:
+def _rejection_reason(
+    window: FreeWindow,
+    task: Task,
+    inp: SchedulerInput,
+    dep_floor: datetime | None = None,
+) -> str:
     if window.duration_min < task.estimated_duration_min:
         return "too_short"
+    latest_start = window.end - timedelta(minutes=task.estimated_duration_min)
+    if dep_floor is not None and latest_start < dep_floor:
+        return "before_dependency_end"
     if (
         task.required_focus_level is FocusLevel.DEEP
         and inp.policy.respect_deep_work_windows

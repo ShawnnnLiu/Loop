@@ -46,6 +46,12 @@ client_secret*.json
 *.db-wal
 *.db-shm
 dogfood_profile.json
+# Exception (2026-07-14): the retrieval corpus holds only public-web text
+# (axiom 08 — no user data ever enters the corpus) and is the sole copy of
+# the pinned snapshot behind the committed retrieval-eval floors and RI-F
+# enrichment; committed for reproducibility since re-fetching does not
+# reproduce the bytes. Its -wal/-shm stay ignored.
+!/backend/corpus/corpus.db
 
 # Local-only artifacts (not part of the project)
 /Admissions Agentic Scheduler.zip

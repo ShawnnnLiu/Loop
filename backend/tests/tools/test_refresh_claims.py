@@ -63,6 +63,7 @@ from agentic_calendar.tools.refresh_claims import (
     derive_claim_id,
     excerpt_key,
     ingest_assembled,
+    is_navigation_chrome,
     load_claim_queries,
     main,
 )
@@ -112,6 +113,14 @@ _DOCS: dict[str, tuple[str, date, date | None]] = {
     ),
     # Shorter than the excerpt floor → skipped (nav-chrome guard).
     "https://example.org/stub": ("System design.", _COLLECTED, None),
+    # Long enough, but Title-Case anchor soup with no sentence structure →
+    # skipped by the navigation-chrome gate, counted, never a claim.
+    "https://example.org/nav": (
+        "System Design Interview Guide Company Engineering Blog Careers "
+        "About Team Values Press Kit All Guides Hiring Process Login",
+        _COLLECTED,
+        None,
+    ),
 }
 
 _MANIFEST = CorpusManifest.model_validate(
@@ -217,6 +226,61 @@ def test_build_excerpt_rejects_fragments_below_the_floor() -> None:
 
 
 # --------------------------------------------------------------------------- #
+# navigation-chrome gate
+# --------------------------------------------------------------------------- #
+
+
+def test_navigation_chrome_flags_measured_real_chrome() -> None:
+    """Verbatim heads of claims that were stored (and partly *serving*) on
+    2026-07-14 — the strings the gate's thresholds were measured against."""
+    # levels.fyi salary-page menu: a Title-Case run far past the hard bound.
+    assert is_navigation_chrome(
+        "Software Engineer Salary Download AppChange LoginSign Up All Data "
+        "By Location By Company By Title Salary Calculator Verified Salaries "
+        "Internships Negotiate Salary For Employers"
+    )
+    # Pipe-separated title breadcrumb plus a curated nav phrase.
+    assert is_navigation_chrome(
+        "The HRT Beat | Tech Blog | Hudson River Trading Skip navigation "
+        "and jump to content Who We Are Trade"
+    )
+    # Anchors glued by HTML flattening ("PrinciplesSystem"): flagged even
+    # when a real sentence follows.
+    assert is_navigation_chrome(
+        "Interview Guides and Blog Posts Amazon Leadership PrinciplesSystem "
+        "Design Interview GuideFAANG Hiring Process Guide. We wrote this."
+    )
+    # Page furniture caught by the curated phrase list.
+    assert is_navigation_chrome(
+        "next post Subscribe to Email Updates Signals & Threads Podcast "
+        "Listen to the latest episode Featured"
+    )
+
+
+def test_navigation_chrome_passes_real_prose_and_terse_tables() -> None:
+    """Known-good stored claims that must survive: terse reference tables,
+    Title-Case headlines with prose, and short camelCase product names."""
+    # Latency-numbers table: no terminators, but no Title-Case run either.
+    assert not is_navigation_chrome(
+        "Read 1 MB sequentially from memory 250,000 ns 250 us Round trip "
+        "within same datacenter 500,000 ns 500 us"
+    )
+    # Date + Title-Case headline + real sentences (run stays under the
+    # hard bound; sentence evidence disables the soft bound).
+    assert not is_navigation_chrome(
+        "Mar 28, 2023 Finetuning Large Language Models On A Single GPU Using "
+        "Gradient Accumulation Previously, I shared an article using less "
+        "memory. This post covers gradient accumulation."
+    )
+    # Punctuation is stripped before the camel-joint length bound, so a
+    # trailing comma cannot push a product name over it.
+    assert not is_navigation_chrome(
+        "VibeThinker-3B, a 3B model based on Qwen, shows what careful "
+        "post-training can do. Short note on the release."
+    )
+
+
+# --------------------------------------------------------------------------- #
 # assembly
 # --------------------------------------------------------------------------- #
 
@@ -225,8 +289,14 @@ def test_assembly_is_deterministic(tmp_path: Path) -> None:
     first = _assemble(tmp_path / "a")
     second = _assemble(tmp_path / "b")
     assert first.claims == second.claims
-    assert (first.skipped_short, first.skipped_stale, first.duplicates_folded) == (
+    assert (
+        first.skipped_short,
+        first.skipped_chrome,
+        first.skipped_stale,
+        first.duplicates_folded,
+    ) == (
         second.skipped_short,
+        second.skipped_chrome,
         second.skipped_stale,
         second.duplicates_folded,
     )
@@ -241,9 +311,11 @@ def test_assembly_skips_short_and_stale_and_folds_duplicates(tmp_path: Path) -> 
         "https://example.org/variant",
         "https://plain.example.com/old-notes",
     }
-    # The stub and the stale personal-blog doc match both queries but never
-    # become claims; the second query re-hits every kept chunk → folded.
+    # The stub, the nav-chrome page, and the stale personal-blog doc match
+    # both queries but never become claims; the second query re-hits every
+    # kept chunk → folded.
     assert report.skipped_short == 2
+    assert report.skipped_chrome == 2
     assert report.skipped_stale == 2
     assert report.duplicates_folded == 4
     assert len(report.claims) == 4

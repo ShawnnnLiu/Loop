@@ -61,21 +61,48 @@ def test_confidence_floor_drops_strictly_below_and_keeps_at_floor() -> None:
     assert result.dropped_below_floor == ("c_below",)
 
 
-def test_anecdote_base_score_survives_the_default_floor() -> None:
-    """Axiom 08 admits anecdotes 'labeled low confidence'; the default floor
-    (0.30) must not silently ban the 0.35 personal-anecdote base score."""
+def test_ingested_anecdote_score_survives_the_default_floor() -> None:
+    """Axiom 08 admits anecdotes 'labeled low confidence'. A real ingested
+    anecdote lands at 0.25 (0.35 base - 0.10 anecdotal penalty) — the exact
+    score every anecdote in the first real store carried. The original 0.30
+    floor was derived from the *base* and silently banned all of them; the
+    2026-07-14 retune pins the floor at the post-penalty score."""
     anecdote = SourceClaim(
         claim_id="c_anecdote",
         claim_text="text",
         source_url="https://blog.example.com/my-interview",
         source_type=SourceType.PERSONAL_ANECDOTE,
         date_collected=date(2026, 6, 1),
-        confidence_score=0.35,
-        confidence_bucket=bucket_for_score(0.35),
+        confidence_score=0.25,
+        confidence_bucket=bucket_for_score(0.25),
         expires_at=date(2027, 1, 1),
     )
     result = curate_claims([anecdote], now=_NOW)
     assert [c.claim_id for c in result.kept] == ["c_anecdote"]
+
+
+def test_uncorroborated_unclassified_score_stays_below_the_default_floor() -> None:
+    """The floor's other documented intent: provenance-unknown claims need
+    corroboration to appear. An ingested unclassified claim lands at 0.10
+    (0.20 base - 0.10 penalty) and must not serve; only the saturated
+    corroboration bonus (+0.15 → 0.25) lifts it to the floor."""
+    def _unclassified(claim_id: str, score: float) -> SourceClaim:
+        return SourceClaim(
+            claim_id=claim_id,
+            claim_text="text",
+            source_url="https://plain.example.com/notes",
+            source_type=SourceType.UNCLASSIFIED,
+            date_collected=date(2026, 6, 1),
+            confidence_score=score,
+            confidence_bucket=bucket_for_score(score),
+            expires_at=date(2027, 1, 1),
+        )
+
+    bare = _unclassified("c_bare", 0.10)
+    corroborated = _unclassified("c_corroborated", 0.25)
+    result = curate_claims([bare, corroborated], now=_NOW)
+    assert [c.claim_id for c in result.kept] == ["c_corroborated"]
+    assert result.dropped_below_floor == ("c_bare",)
 
 
 def test_per_host_cap_keeps_highest_confidence_ties_by_claim_id() -> None:

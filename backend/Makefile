@@ -13,7 +13,7 @@ help:
 	@echo "  schemas     regenerate /schemas/*.schema.json from Pydantic contracts"
 	@echo "  schema-check verify committed /schemas match the contracts (no write)"
 	@echo "  eval-gate   strict-grade committed eval recordings (offline; amended axiom 22)"
-	@echo "  retrieval-eval  grade the labeled retrieval query set against the pinned corpus snapshot (LOCAL: needs corpus/corpus.db)"
+	@echo "  retrieval-eval  grade the labeled retrieval query set against the pinned corpus snapshot (corpus/corpus.db, committed)"
 	@echo "  visualize   render the 'success' scheduler scenario to ../schedule.html"
 	@echo "  check       lint + typecheck + schema-check + test (boundaries run inside test)"
 	@echo "  clean       remove caches and build artifacts"
@@ -92,27 +92,33 @@ eval-gate:
 # citations) — a heuristic prior like every seeded floor.
 
 # Retrieval eval gate (grounding-RAG G-D). Deterministic like eval-gate —
-# queries + labels + snapshot pin are all versioned — but the corpus TEXT is
-# deliberately NOT committed: every manifest license_note promises bounded
-# excerpts, so full page text stays out of the public repo. This target is
-# therefore a LOCAL gate: it needs corpus/corpus.db, rebuilt by re-running
-# the ingest CLI (fetch is ask-first; re-fetching on a later date yields new
-# doc_ids, so keep the db). It is not wired into CI or `check`.
-# Floors are the values MEASURED on the v2 labeled run (75 cases, 2026-07-06,
-# snapshot snap_26c44499e582a96a — the G-I six-track expansion): heuristic
-# priors until more labels accumulate. For the record, the v1 floors measured
-# on the 3-track snapshot were 0.9181/0.8523/0.8380; re-measuring the same v1
-# queries against the expanded corpus gave 0.9006/0.8289/0.8174 (more corpus =
-# more ranking competition; the drop is honest, not a regression bug). Floors
+# queries + labels + snapshot pin are all versioned. Since 2026-07-14 the
+# corpus database IS committed (owner decision: corpus/corpus.db holds only
+# public-web text — axiom 08 — and re-fetching does not reproduce the bytes
+# behind the pinned snapshot, so reproducibility of these floors won over
+# keeping page text out of the repo; see the writeup's post-publication
+# updates). This target therefore runs anywhere the repo is checked out.
+# It is not wired into CI or `check` yet — a follow-up decision.
+# Floors are the values MEASURED on the v2 labeled run (75 cases, 2026-07-15,
+# snapshot snap_0217291f46e331b9 — the fetch-checkpoint expansion to 30+ docs
+# per track, curated to the latest document per source URL): heuristic priors
+# until more labels accumulate. Floor history: v1 3-track 0.9181/0.8523/0.8380;
+# v2 six-track (snap_26c44499e582a96a, 55 docs) 0.8978/0.8500/0.8327; this run
+# (188 docs) 0.7644/0.7144/0.6910. The drop is honest, not a regression bug:
+# 3.4x the corpus means more ranking competition, and the v2 labels predate
+# the expansion — every zero-recall case spot-checked retrieves NEW on-topic
+# documents the labels cannot credit (e.g. the drift query now finds the two
+# dedicated drift articles instead of the labeled rules-of-ml page). A v3
+# label pass crediting the expanded corpus is the natural follow-up. Floors
 # equal to measured always pass until the labels, corpus, chunking, or
 # ranking change.
 retrieval-eval:
 	uv run python -m agentic_calendar.tools.run_retrieval_eval --strict \
 		--queries evalsets/retrieval_queries_v2.json \
 		--db corpus/corpus.db \
-		--snapshot snap_26c44499e582a96a \
+		--snapshot snap_0217291f46e331b9 \
 		--k 5 \
-		--min-recall 0.8978 --min-mrr 0.8500 --min-ndcg 0.8327
+		--min-recall 0.7644 --min-mrr 0.7144 --min-ndcg 0.6910
 
 visualize:
 	uv run agentic-calendar-visualize --scenario success --out ../schedule.html

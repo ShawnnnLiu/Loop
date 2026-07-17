@@ -75,11 +75,31 @@ def _manifest(**overrides: object) -> CorpusManifest:
     return CorpusManifest.model_validate(payload)
 
 
+#: Fixture pages are realistically sized: the thin-document gate (default
+#: ``DEFAULT_MIN_DOC_CHARS``) must see them as real pages, and the double
+#: spaces exercise normalization exactly as the old one-line bodies did.
+_GUIDE_NORMALIZED = (
+    "Guide\nAPI design questions reward structured preparation: estimate "
+    "capacity first, partition the data, and name the load-balancer "
+    "trade-offs before drawing boxes. Strong candidates rehearse clarifying "
+    "questions out loud and close every design with its failure modes."
+)
+_NOTES_NORMALIZED = (
+    "Plain notes about feature stores, offline training tables, and the "
+    "online serving skew that appears when the two drift apart. Batch "
+    "features arrive hourly, streaming features arrive in seconds, and a "
+    "daily reconciliation job compares both paths for silent divergence."
+)
+
 _PAGES = {
     "https://engineering.acme.com/interview-guide": _ok(
-        "<!DOCTYPE html><html><body><h1>Guide</h1><p>API   design.</p></body></html>"
+        "<!DOCTYPE html><html><body><h1>Guide</h1><p>"
+        + _GUIDE_NORMALIZED.split("\n", 1)[1].replace("API design", "API   design", 1)
+        + "</p></body></html>"
     ),
-    "https://example.org/notes": _ok("Plain notes about   feature stores."),
+    "https://example.org/notes": _ok(
+        _NOTES_NORMALIZED.replace("about feature", "about   feature", 1)
+    ),
 }
 
 
@@ -95,10 +115,10 @@ def test_run_ingestion_registers_normalized_documents() -> None:
     documents = registry.list_documents()
     assert len(documents) == 2
     guide_id = derive_doc_id("https://engineering.acme.com/interview-guide", _TODAY)
-    assert registry.get_text(guide_id) == "Guide\nAPI design."
+    assert registry.get_text(guide_id) == _GUIDE_NORMALIZED
     assert registry.get_text(
         derive_doc_id("https://example.org/notes", _TODAY)
-    ) == "Plain notes about feature stores."
+    ) == _NOTES_NORMALIZED
     assert registry.list_documents(track=CareerTrack.SWE)[0].doc_id == guide_id
 
 
@@ -132,7 +152,10 @@ def test_changed_page_same_day_is_a_typed_conflict() -> None:
         max_fetches=10,
     )
     changed = dict(_PAGES)
-    changed["https://example.org/notes"] = _ok("The page changed mid-day.")
+    changed["https://example.org/notes"] = _ok(
+        _NOTES_NORMALIZED + " Updated mid-day with a correction to the "
+        "reconciliation cadence and a note on backfill windows."
+    )
     report = run_ingestion(
         _manifest(),
         registry=registry,
@@ -146,7 +169,7 @@ def test_changed_page_same_day_is_a_typed_conflict() -> None:
     # The stored document is unchanged.
     assert registry.get_text(
         derive_doc_id("https://example.org/notes", _TODAY)
-    ) == "Plain notes about feature stores."
+    ) == _NOTES_NORMALIZED
 
 
 def test_fetch_failures_are_typed_and_do_not_stop_the_run() -> None:
@@ -168,6 +191,51 @@ def test_fetch_failures_are_typed_and_do_not_stop_the_run() -> None:
     )
     assert by_url["https://example.org/notes"].status is IngestStatus.REGISTERED
     assert report.failed
+
+
+def test_thin_fetch_is_a_typed_skip_and_fails_the_run() -> None:
+    """A page that fetches but normalizes to (almost) nothing — the levels.fyi
+    0-byte JS shell in the v1 corpus is the motivating case — must not enter
+    the append-only registry."""
+    pages = dict(_PAGES)
+    pages["https://example.org/notes"] = _ok(
+        "<!DOCTYPE html><html><body><script>renderApp()</script></body></html>"
+    )
+    registry = InMemoryCorpusRegistry()
+    report = run_ingestion(
+        _manifest(),
+        registry=registry,
+        fetcher=FakeFetcher(pages),
+        today=_TODAY,
+        max_fetches=10,
+    )
+    by_url = {r.url: r for r in report.results}
+    thin = by_url["https://example.org/notes"]
+    assert thin.status is IngestStatus.SKIPPED_THIN
+    assert thin.error is not None and "0 chars" in thin.error
+    assert report.failed
+    # The good page still registered; the thin one left no trace.
+    assert [d.source_url for d in registry.list_documents()] == [
+        "https://engineering.acme.com/interview-guide"
+    ]
+
+
+def test_min_doc_chars_zero_disables_the_thin_gate() -> None:
+    pages = dict(_PAGES)
+    pages["https://example.org/notes"] = _ok(
+        "<!DOCTYPE html><html><body><script>renderApp()</script></body></html>"
+    )
+    registry = InMemoryCorpusRegistry()
+    report = run_ingestion(
+        _manifest(),
+        registry=registry,
+        fetcher=FakeFetcher(pages),
+        today=_TODAY,
+        max_fetches=10,
+        min_doc_chars=0,
+    )
+    assert [r.status for r in report.results] == [IngestStatus.REGISTERED] * 2
+    assert registry.get_text(derive_doc_id("https://example.org/notes", _TODAY)) == ""
 
 
 def test_per_run_fetch_cap_skips_remaining_sources() -> None:
@@ -205,7 +273,17 @@ def test_company_domain_classifies_through_existing_classifier() -> None:
     report = run_ingestion(
         manifest,
         registry=registry,
-        fetcher=FakeFetcher({"https://acme.com/careers/12345": _ok("Job body.")}),
+        fetcher=FakeFetcher(
+            {
+                "https://acme.com/careers/12345": _ok(
+                    "Backend Engineer, Platform. Acme is hiring a backend "
+                    "engineer to own the ingestion pipeline: Python services, "
+                    "Postgres, and a queue that moves a few billion events a "
+                    "day. You will design APIs, review capacity plans, and "
+                    "carry the pager one week in six. Hybrid, Toronto."
+                )
+            }
+        ),
         today=_TODAY,
         max_fetches=10,
     )

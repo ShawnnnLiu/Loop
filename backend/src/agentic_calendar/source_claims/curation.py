@@ -39,12 +39,23 @@ from .classification import _host
 class ClaimCurationConfig:
     """Curation knobs (heuristic, uncalibrated — see module docstring)."""
 
-    min_confidence: float = 0.30
-    """Floor on the stored ``confidence_score``. Set below the
-    ``personal_anecdote`` base (0.35) so labeled low-confidence anecdotes
-    still reach the prompt — axiom 08 admits them "only when labeled low
-    confidence", not never — and above the ``unclassified`` base (0.20) so
-    provenance-unknown claims need corroboration to appear."""
+    min_confidence: float = 0.25
+    """Floor on the stored ``confidence_score``.
+
+    Set at the score a real ingested ``personal_anecdote`` actually lands on
+    (0.35 base - 0.10 anecdotal penalty = 0.25), so labeled low-confidence
+    anecdotes reach the prompt — axiom 08 admits them "only when labeled low
+    confidence", not never — while ``unclassified`` claims (0.20 - 0.10 =
+    0.10) need the full corroboration bonus (+0.15, three corroborators) to
+    appear. The original D1b value (0.30) was derived from the anecdote
+    *base* score and overlooked the penalty, silently banning every
+    anecdote; retuned 2026-07-14 against the first real claim store (117
+    claims: anecdotes uniformly 0.25, unclassified uniformly 0.10 — no
+    published dates, no corroboration groups). Retuning the *penalty*
+    instead was rejected: at 0.05 a maxed-out anecdote reaches 0.55, the
+    ``medium`` bucket boundary, violating axiom 08's anecdotes-stay-``low``
+    ceiling. Still a heuristic prior — the floor tracks today's uniform
+    scores, not calibrated ground truth."""
 
     max_per_host: int = 5
     """Cap on claims sharing one source host, kept highest-confidence-first

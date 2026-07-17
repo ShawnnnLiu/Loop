@@ -73,3 +73,6 @@
 # candidate_grid_min = 15
 # revealed_min_observations = 3
 # revealed_window_days = 90
+# [claim_curation]
+# min_confidence = 0.25
+# max_per_host = 5

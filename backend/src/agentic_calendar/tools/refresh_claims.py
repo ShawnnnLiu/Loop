@@ -29,6 +29,13 @@ node class and therefore needs an axiom 01 amendment first):
   ``max_excerpt_chars``. Excerpts shorter than ``min_excerpt_chars`` (nav
   chrome, bare headings) are skipped and reported. Both bounds are heuristic
   priors, not tuned values.
+* Excerpts that read as **navigation chrome** — menu/anchor soup from blog
+  index pages rather than prose — are skipped and reported
+  (``is_navigation_chrome``; signals and thresholds measured against the
+  2026-07-14 claim store, where 10 of the 27 then-servable claims were
+  chrome). The gate is deliberately conservative: title-list teasers that
+  contain real sentences pass, and coherent-but-vacuous prose (marketing
+  copy) is out of scope for a deterministic filter.
 * Provenance: ``source_url`` is the document URL plus the chunk's section
   breadcrumb as a ``#fragment`` (the host — classification, curation cap —
   is unaffected); ``date_collected`` / ``source_published_date`` come from
@@ -108,6 +115,102 @@ DEFAULT_MIN_EXCERPT_CHARS = 40
 _SENTENCE_BREAK = re.compile(r"(?<=[.!?])\s+")
 
 _NON_SLUG = re.compile(r"[^a-z0-9]+")
+
+
+# --------------------------------------------------------------------------- #
+# Navigation-chrome gate (deterministic; thresholds are heuristic priors,
+# chosen by measuring every candidate signal against the real 117-claim store
+# on 2026-07-14 and inspecting both sides of each cut).
+# --------------------------------------------------------------------------- #
+
+#: A sentence terminator followed by (optional closing quote/bracket and)
+#: whitespace or end-of-text. Distinct from ``_SENTENCE_BREAK``: this one
+#: also matches at the end of the excerpt, so a single trailing sentence
+#: counts as sentence evidence.
+#: (The character class includes the curly closing quotes real fetched
+#: prose uses.)
+_TERMINATOR = re.compile("[.!?][\"'”’)\\]]?(?:\\s|$)")  # noqa: RUF001 — real curly quotes
+
+#: A lowercase→uppercase joint inside one token — HTML→text flattening glues
+#: adjacent nav anchors into tokens like ``PrinciplesSystem``. Real camelCase
+#: tech names (``JavaScript``, ``SystemVerilog``) stay under the length bound.
+_CAMEL_JOINT = re.compile(r"[a-z][A-Z]")
+_CAMEL_JOINT_MIN_TOKEN_CHARS = 15
+_TOKEN_TRIM_CHARS = ".,;:!?\"'()[]“”‘’"  # noqa: RUF001 — real curly quotes
+
+#: Longest Title-Case token run that flags regardless of sentence evidence
+#: (nav menus / concatenated headline lists), and the lower bound that flags
+#: only when the excerpt carries no sentence terminator at all.
+_UPPERCASE_RUN_HARD = 20
+_UPPERCASE_RUN_WITHOUT_SENTENCE = 10
+
+#: Two or more pipes in one excerpt is title/breadcrumb separator territory
+#: ("The HRT Beat | Tech Blog | Hudson River Trading"), not prose.
+_PIPE_LIMIT = 2
+
+#: Verbatim page furniture that only appears in chrome. Casefolded substring
+#: match; keep this list short and unambiguous — every phrase here was seen
+#: in a real stored claim.
+_NAV_PHRASES = (
+    "skip to main content",
+    "skip to content",
+    "skip navigation",
+    "subscribe to email updates",
+    "loginsign up",
+)
+
+
+def _longest_uppercase_run(text: str) -> int:
+    """Longest run of consecutive uppercase-initial tokens.
+
+    Lowercase-initial tokens break the run; digit/symbol-initial tokens are
+    neutral (nav menus interleave counts, dates, and separators with their
+    Title Case anchors) — they neither extend nor break it.
+    """
+    best = run = 0
+    for token in text.split():
+        first = token[0]
+        if first.isupper():
+            run += 1
+            best = max(best, run)
+        elif first.isalpha():
+            run = 0
+    return best
+
+
+def is_navigation_chrome(text: str) -> bool:
+    """True when ``text`` reads as page furniture rather than prose.
+
+    Four independent signals, each deterministic and inspectable:
+
+    1. a curated nav phrase ("skip to main content", …);
+    2. ``>= 2`` pipe separators;
+    3. a Title-Case token run ``>= 20`` (menu / headline-list soup), or
+       ``>= 10`` when the excerpt contains no sentence terminator at all;
+    4. a long token with an internal lowercase→uppercase joint — adjacent
+       anchors glued together by HTML flattening (``PrinciplesSystem``).
+
+    Measured on the 2026-07-14 store (117 claims): flags 20, including all
+    of the levels.fyi salary-page chrome then serving as ``role_taxonomy``
+    evidence; every flagged claim was verified chrome (or a bare citation
+    list) by inspection, and known-good prose — Title-Case headlines,
+    latency-number tables, terse study guides — passes.
+    """
+    lowered = text.casefold()
+    if any(phrase in lowered for phrase in _NAV_PHRASES):
+        return True
+    if text.count("|") >= _PIPE_LIMIT:
+        return True
+    run = _longest_uppercase_run(text)
+    if run >= _UPPERCASE_RUN_HARD:
+        return True
+    if run >= _UPPERCASE_RUN_WITHOUT_SENTENCE and not _TERMINATOR.search(text):
+        return True
+    return any(
+        len(token.strip(_TOKEN_TRIM_CHARS)) >= _CAMEL_JOINT_MIN_TOKEN_CHARS
+        and _CAMEL_JOINT.search(token)
+        for token in text.split()
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -243,6 +346,7 @@ class AssemblyReport:
 
     claims: list[AssembledClaim]
     skipped_short: int
+    skipped_chrome: int
     skipped_stale: int
     duplicates_folded: int
     corroboration_groups: int
@@ -268,6 +372,7 @@ def assemble_claims(
     seen: set[tuple[str, str]] = set()
     claims: list[AssembledClaim] = []
     skipped_short = 0
+    skipped_chrome = 0
     skipped_stale = 0
     duplicates_folded = 0
     for query in query_set.queries:
@@ -286,6 +391,9 @@ def assemble_claims(
             )
             if excerpt is None:
                 skipped_short += 1
+                continue
+            if is_navigation_chrome(excerpt):
+                skipped_chrome += 1
                 continue
             source_type = manifest.classify(document.source_url)
             anchor = document.source_published_date or document.date_collected
@@ -336,6 +444,7 @@ def assemble_claims(
     return AssemblyReport(
         claims=claims,
         skipped_short=skipped_short,
+        skipped_chrome=skipped_chrome,
         skipped_stale=skipped_stale,
         duplicates_folded=duplicates_folded,
         corroboration_groups=corroboration_groups,
@@ -389,7 +498,8 @@ def _print_outcomes(
     print(
         f"assembly: {len(report.claims)} claims from {len(query_set.queries)} "
         f"queries (k={query_set.k}, {query_set.query_set_version}) — skipped "
-        f"{report.skipped_short} short, {report.skipped_stale} stale-at-source; "
+        f"{report.skipped_short} short, {report.skipped_chrome} nav-chrome, "
+        f"{report.skipped_stale} stale-at-source; "
         f"{report.duplicates_folded} duplicates folded; "
         f"{report.corroboration_groups} corroboration group(s)"
     )

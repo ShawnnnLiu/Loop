@@ -59,6 +59,20 @@
 # multiplier_min = 0.5
 # multiplier_max = 2.0
 
+# [scheduler_placement]
+# w_daily_balance = 3
+# w_back_to_back = 2
+# w_fragmentation = 1
+# w_deep_window_conservation = 2
+# w_evening_preference = 1
+# w_weekend_long_block = 1
+# w_earliness = 1
+# w_evidence_affinity = 1
+# w_revealed_affinity = 2
+# buffer_min = 15
+# candidate_grid_min = 15
+# revealed_min_observations = 3
+# revealed_window_days = 90
 # [claim_curation]
 # min_confidence = 0.25
 # max_per_host = 5

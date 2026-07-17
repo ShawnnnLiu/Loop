@@ -75,7 +75,31 @@ def _payload() -> dict:
                         "data_quality": "complete",
                     }
                 ],
-            }
+            },
+            "placement_preferences": {
+                "user_123": [
+                    {
+                        "observation_id": "prefobs_001",
+                        "user_id": "user_123",
+                        "task_id": "task_a1",
+                        "category": "practice",
+                        "time_of_day_band": "evening",
+                        "observed_at": "2026-06-08T18:05:00-07:00",
+                        "source": "drag_adjust",
+                    }
+                ],
+                "user_456": [
+                    {
+                        "observation_id": "prefobs_002",
+                        "user_id": "user_456",
+                        "task_id": "task_b1",
+                        "category": "review",
+                        "time_of_day_band": "morning",
+                        "observed_at": "2026-06-08T08:30:00-07:00",
+                        "source": "reconcile_adopt",
+                    }
+                ],
+            },
         },
     }
 
@@ -96,6 +120,7 @@ def test_view_summarizes_consent_and_counts(tmp_path: Path, capsys) -> None:
     assert code == 0
     assert "consent pooled_training: granted (version 2026-06)" in out
     assert "telemetry: 2 row(s)" in out
+    assert "placement_preferences: 1 row(s)" in out
     assert "data_access_audit: 1 entr(ies)" in out
 
 
@@ -109,6 +134,9 @@ def test_export_emits_all_and_only_the_users_data(tmp_path: Path, capsys) -> Non
         "tel_001",
         "tel_002",
     }
+    assert {
+        r["observation_id"] for r in bundle["stores"]["placement_preferences"]
+    } == {"prefobs_001"}
     assert {r["consent_record_id"] for r in bundle["consent_records"]} == {"consent_001"}
     assert [e["audit_entry_id"] for e in bundle["data_access_audit"]] == ["audit_prior_001"]
 
@@ -119,6 +147,7 @@ def test_delete_reports_counts_and_audit(tmp_path: Path, capsys) -> None:
     out = capsys.readouterr().out
     assert code == 0
     assert "telemetry: 2 row(s) removed" in out
+    assert "placement_preferences: 1 row(s) removed" in out
     assert "consent_records: 1 row(s) removed" in out
     assert "(DATA_DELETED)" in out
 

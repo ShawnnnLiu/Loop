@@ -1,0 +1,104 @@
+{
+  "run_id": "run_pq_fragmented_weekend",
+  "plan_version": "plan_pq_fragmented_weekend",
+  "plan": {
+    "plan_version": "plan_pq_fragmented_weekend",
+    "tasks": [
+      {
+        "task_id": "project_long",
+        "module_id": "dp",
+        "title": "project long",
+        "description": "",
+        "dependencies": [],
+        "estimated_duration_min": 90,
+        "cognitive_load": 3,
+        "category": "project",
+        "required_focus_level": "medium",
+        "splittable": false
+      },
+      {
+        "task_id": "practice_a",
+        "module_id": "dp",
+        "title": "practice a",
+        "description": "",
+        "dependencies": [],
+        "estimated_duration_min": 60,
+        "cognitive_load": 3,
+        "category": "practice",
+        "required_focus_level": "medium",
+        "splittable": false
+      },
+      {
+        "task_id": "practice_b",
+        "module_id": "dp",
+        "title": "practice b",
+        "description": "",
+        "dependencies": [],
+        "estimated_duration_min": 60,
+        "cognitive_load": 3,
+        "category": "practice",
+        "required_focus_level": "medium",
+        "splittable": false
+      },
+      {
+        "task_id": "review_c",
+        "module_id": "dp",
+        "title": "review c",
+        "description": "",
+        "dependencies": [],
+        "estimated_duration_min": 30,
+        "cognitive_load": 2,
+        "category": "review",
+        "required_focus_level": "medium",
+        "splittable": false
+      }
+    ]
+  },
+  "policy": {
+    "no_events_before": "08:00",
+    "no_events_after": "22:30",
+    "allow_weekends": true,
+    "min_break_between_deep_blocks_min": 30,
+    "max_daily_study_min": 240,
+    "respect_deep_work_windows": false,
+    "deep_work_windows": [],
+    "max_session_length_min": 120,
+    "preferred_session_length_min": 60,
+    "prefer_evening_sessions": false,
+    "prefer_weekend_long_blocks": true,
+    "avoid_back_to_back_deep_work": false
+  },
+  "calendar_free_busy": [
+    {
+      "start": "2026-05-08T08:00:00Z",
+      "end": "2026-05-08T10:30:00Z"
+    },
+    {
+      "start": "2026-05-08T11:00:00Z",
+      "end": "2026-05-08T15:00:00Z"
+    },
+    {
+      "start": "2026-05-08T16:00:00Z",
+      "end": "2026-05-08T20:00:00Z"
+    },
+    {
+      "start": "2026-05-04T08:00:00Z",
+      "end": "2026-05-04T19:00:00Z"
+    },
+    {
+      "start": "2026-05-05T08:00:00Z",
+      "end": "2026-05-05T19:00:00Z"
+    },
+    {
+      "start": "2026-05-06T08:00:00Z",
+      "end": "2026-05-06T19:00:00Z"
+    },
+    {
+      "start": "2026-05-07T08:00:00Z",
+      "end": "2026-05-07T19:00:00Z"
+    }
+  ],
+  "completed_task_ids": [],
+  "horizon_start": "2026-05-04T00:00:00Z",
+  "horizon_end": "2026-05-11T00:00:00Z"
+}

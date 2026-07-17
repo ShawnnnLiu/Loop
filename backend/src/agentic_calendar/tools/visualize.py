@@ -99,6 +99,7 @@ def _scenario_success() -> SchedulerInput:
             DeepWorkWindowPolicy(day=Day.TUE, start="18:00", end="21:00"),
         ],
         max_session_length_min=120,
+        preferred_session_length_min=60,
     )
     return SchedulerInput(
         run_id="run_success",
@@ -141,6 +142,7 @@ def _scenario_fragmented() -> SchedulerInput:
         respect_deep_work_windows=False,
         deep_work_windows=[],
         max_session_length_min=120,
+        preferred_session_length_min=60,
     )
     return SchedulerInput(
         run_id="run_fragmented",
@@ -184,6 +186,7 @@ def _scenario_over_capacity() -> SchedulerInput:
         respect_deep_work_windows=False,
         deep_work_windows=[],
         max_session_length_min=120,
+        preferred_session_length_min=60,
     )
     return SchedulerInput(
         run_id="run_over_capacity",
@@ -226,6 +229,7 @@ def _scenario_task_too_long() -> SchedulerInput:
         respect_deep_work_windows=False,
         deep_work_windows=[],
         max_session_length_min=120,
+        preferred_session_length_min=60,
     )
     return SchedulerInput(
         run_id="run_too_long",
@@ -268,6 +272,7 @@ def _scenario_deep_work_blocked() -> SchedulerInput:
         respect_deep_work_windows=True,
         deep_work_windows=[],
         max_session_length_min=120,
+        preferred_session_length_min=60,
     )
     return SchedulerInput(
         run_id="run_deep_blocked",
@@ -321,6 +326,7 @@ def _scenario_partial_failure() -> SchedulerInput:
         respect_deep_work_windows=False,
         deep_work_windows=[],
         max_session_length_min=120,
+        preferred_session_length_min=60,
     )
     return SchedulerInput(
         run_id="run_partial",

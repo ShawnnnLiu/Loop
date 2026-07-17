@@ -19,13 +19,29 @@ The Scheduler is pure deterministic code. It consumes validated tasks and calend
   "scheduling_policy": {
     "no_events_before": "08:00",
     "no_events_after": "22:30",
-    "max_contiguous_study_min": 120,
+    "allow_weekends": true,
     "min_break_between_deep_blocks_min": 30,
     "max_daily_study_min": 180,
-    "respect_deep_work_windows": true
+    "respect_deep_work_windows": true,
+    "deep_work_windows": [
+      { "day": "Mon", "start": "18:00", "end": "21:00" }
+    ],
+    "max_session_length_min": 120,
+    "preferred_session_length_min": 60,
+    "prefer_evening_sessions": false,
+    "prefer_weekend_long_blocks": false,
+    "avoid_back_to_back_deep_work": false
   }
 }
 ```
+
+This block is the spec for the region-local `SchedulingPolicy` model
+(`backend/src/agentic_calendar/scheduler/policy.py`). There is no separate
+`max_contiguous_study_min`; the scheduler uses `max_session_length_min` as
+the per-task cap. The three `prefer_*`/`avoid_*` booleans and
+`preferred_session_length_min` mirror the user profile's soft preferences
+and preferred session length; they feed the scored-placement terms below
+and never tighten a hard constraint.
 
 The Scheduler also receives `run_id`, `plan_version`, and current completion state.
 
@@ -52,6 +68,215 @@ The Scheduler must respect:
 5. Review tasks may be placed in shorter gaps.
 6. Mock interviews require contiguous blocks.
 7. Filter tasks whose dependencies are not yet complete.
+
+This list defines the deterministic sort key (priority rank, cognitive
+load, task id) and the output ordering. *Placement* order within
+topological readiness is regret-driven — see "Insertion order" under
+Scored Placement below.
+
+## Scored Placement
+
+Within the ordered task loop, placement is a deterministic argmin over
+enumerated feasible candidates — not "first window's start wins."
+
+### Candidate enumeration
+
+- For each free window, candidate starts are the window start plus a fixed
+  15-minute intra-window grid: `window.start + k × candidate_grid_min`
+  for every integer `k ≥ 0` with `candidate_start + duration ≤ window.end`
+  (the `k = 0` element is the window start itself).
+- Every candidate must pass all hard checks — window size, deep-window
+  requirement, window-end bound, daily study cap, break-between-deep-blocks
+  gap. Scoring never relaxes a hard constraint.
+- A task's candidates are additionally floored by its placed dependencies:
+  a candidate starting before the latest end of the task's dependencies
+  placed this run is infeasible — the temporal counterpart of the ready-set
+  gate, and the same `dep_floor` rule the polish pass applies to its moves.
+  Dependencies satisfied by the completion set impose no floor. A ready
+  task whose every candidate is floored away fails
+  `NO_VALID_CONTIGUOUS_BLOCK`, with fully-floored windows marked
+  `before_dependency_end` in the rejected-windows debug payload.
+
+### Integer cost function
+
+```
+cost(candidate) = Σ w_term × penalty_term − Σ w_term × bonus_term
+```
+
+Each `penalty_term` / `bonus_term` is a non-negative minutes-scaled
+integer; every weight is an integer. Placement uses integer arithmetic
+only. The term list (exact formulas live in
+`../implementation-plans/scheduler-placement-quality/01-scored-placement.md`):
+
+| Term | Sign | Intent |
+| --- | --- | --- |
+| `daily_balance` | penalty | placement pushing a day past its per-day soft quota (the even-spread daily target, precomputed once per run as a day → quota map) |
+| `back_to_back` | penalty | gap to an adjacent placed study block below the buffer; doubled for a deep block adjacent to another deep block when `avoid_back_to_back_deep_work` |
+| `fragmentation` | penalty | leaving an unusable sliver (`0 < leftover < preferred_session_length_min`) in the window |
+| `deep_window_conservation` | penalty | a non-deep task consuming scarce deep-window capacity |
+| `earliness` | penalty | days from horizon start to the candidate's day — deliberately tiny (unit = days, not minutes) so it only acts as fill-earlier tie pressure; without it a pure balance objective scatters work arbitrarily late |
+| `evening_preference` | bonus | evening-band start when `prefer_evening_sessions` |
+| `weekend_long_block` | bonus | weekend placement of a task longer than `preferred_session_length_min` when `prefer_weekend_long_blocks` and weekends are allowed |
+
+Per-day quotas are soft: `quota(day) = min(max_daily_study_min,
+ceil(total_plan_min / working_days))`, computed once per run over the
+days carrying at least one initially-enumerated free window. Quotas
+never eliminate feasibility — in a crunch week tasks still place past
+quota, and the capacity-vs-fragmentation promotion fires on exactly the
+same inputs as before.
+
+### Evidence-affinity term (placement evidence)
+
+`SchedulerInput.placement_evidence`
+(`docs/specs/placement-evidence.schema.md`) carries per-user
+`(category, time_of_day_band)` evidence cells composed by the app layer —
+the scheduler itself never reads stores or clocks. The term is the one
+**signed** addition to the cost function above:
+
+- `mult_pct = round(multiplier × 100)` (an int in `[50, 200]`; the one
+  float-to-int conversion, done once per run).
+- A candidate whose `(task.category, band(candidate_start))` matches a
+  cell adds `w_evidence_affinity × (mult_pct − 100) × duration // 100` to
+  its cost — negative (a bonus) when the user is historically faster in
+  that band, positive when slower. Integer floor division; determinism,
+  not symmetry, is the requirement.
+- When both a `pooled` and a `per_user_refined` cell match the same
+  `(category, band)`, `per_user_refined` wins — the more specific tier.
+- A missing cell — or empty evidence — contributes exactly 0, so an
+  evidence-free run is byte-identical to the pre-evidence scheduler.
+
+Scope guard: evidence biases **where** a task goes, never **how long it
+is**. `estimated_duration_min` stays whatever the Planner + calibration
+pipeline produced (axiom 17); placement never re-estimates durations.
+Composition rules — consent gating for pooled cells (ADR-0007), the
+serving-floor discipline, and the tier derivations — live in the spec.
+
+### Revealed-preference term (placement evidence)
+
+`revealed` evidence cells carry no multiplier — they state where the user
+**moves work by hand**, not how fast the user is there — so they score as
+a flat bonus, separate from the multiplier term:
+
+- A candidate whose `(task.category, band(candidate_start))` matches a
+  `revealed` cell subtracts `w_revealed_affinity × duration` from its
+  cost. No match — or no revealed cells — contributes exactly 0.
+- Default `w_revealed_affinity = 2`, deliberately stronger than the
+  generic preference bonuses: it is the user's own explicit behavior.
+- The term stacks with the evidence-affinity term when a
+  multiplier-bearing cell and a revealed cell match the same key —
+  independent tiers, independent statements.
+
+Revealed cells are aggregated by the app layer from
+`PlacementPreferenceObservation` rows
+(`docs/specs/placement-preference.schema.md`): drag-to-adjust moves and
+inbound reconciliation adoptions — the only two producers, recorded only
+when the move is actually applied/adopted, never for rejected moves or
+external deletions. A `(category, band)` group emits a cell when it has
+at least `revealed_min_observations` observations within the last
+`revealed_window_days` days (defaults 3 and 90 — heuristic priors in
+`[scheduler_placement]`, axiom 07). Per-user data only: no cross-user
+pooling, no decay functions, no learned weights (ADR-0004). The clock is
+read in the app layer; the scheduler stays pure and sees only cells.
+
+### Selection and tie-break
+
+The chosen candidate is the argmin under the total-order key
+`(cost, candidate_start)`. Free windows are disjoint and grid starts within
+a window are distinct, so no two candidates share a start — the order is
+total and placement is fully deterministic.
+
+### Insertion order (regret)
+
+Which task places next is itself deterministic. Each round, over the
+ready set (tasks whose dependencies are completed or already placed this
+run), the scheduler computes every ready task's best and second-best
+candidate cost and places exactly one task: the one maximizing
+`(single_candidate_flag, regret)` where `regret = second_best_cost −
+best_cost` (0 when the two cheapest candidates tie) and a task with
+exactly one feasible candidate outranks any regret. Ties break by the
+ascending Task Ordering sort key. A ready task with zero feasible
+candidates (or too long and unsplittable) fails in that round with its
+typed `reason_code`; a task whose dependency never places fails
+`DEPENDENCY_BLOCKED` exactly as under linear order. Candidate feasibility
+includes the dependency floor above, so auto-placement can never start a
+dependent before a blocker ends — the "before its blockers" hard rule
+holds temporally, not just in insertion order. Output ordering —
+`scheduled_tasks` and `unscheduled_tasks` alike — remains the task's
+position in the topological order, so insertion order never changes the
+output shape. Complexity is O(rounds × ready × candidates), fine at MVP
+plan sizes (tens of tasks).
+
+### Weights are heuristic priors
+
+Term weights and placement knobs (`buffer_min`, `candidate_grid_min`) are
+tunable only via `backend/tuning.toml` (`[scheduler_placement]`); overrides
+are journaled through the threshold change log, following axiom 07's
+pattern. Until calibrated against real usage they are heuristic priors and
+must be described as such.
+
+### Soft terms never eliminate feasibility
+
+Scoring reorders feasible candidates; it never rejects one. Any task that
+first-fit placement would have scheduled remains schedulable under scored
+placement (the grid strictly adds candidates), and every failure keeps the
+typed `reason_code` produced by the hard checks.
+
+### Bounded polish pass
+
+After the placement loop completes — and before the
+capacity-vs-fragmentation promotion — a bounded deterministic local search
+cleans up greedy artifacts (placements made before later constraints
+materialized). At most **2 sweeps**; each sweep snapshots the placed blocks
+in `(start, task_id)` order and, per block, applies at most the single best
+strictly-improving relocation under the key `(total_after, new_start)`. The
+objective is the **schedule-level total cost** (the `score_schedule`
+definitions), never a sum of the path-dependent per-placement marginals,
+and improvement is strict integer decrease — so the pass terminates and is
+idempotent at its fixed point.
+
+A relocation is feasible only if all of these hold:
+
+- it passes the full hard-check set with the block's own occupancy removed
+  from the state (busy intervals, daily minutes, placed blocks);
+- dependency order holds in both directions: the block starts no earlier
+  than the latest end of its placed dependencies and ends no later than the
+  earliest start of its placed dependents;
+- for a deep block, every same-day consecutive deep-block pair after the
+  move keeps a gap of at least `min_break_between_deep_blocks_min` —
+  checked pairwise against **both** neighbors, not just the previous block.
+
+The pass **moves** placed blocks; it never unschedules a task, never
+reschedules a failed one, and never touches `unscheduled_tasks` — reason
+codes and debug payloads are untouchable by construction.
+
+### Rollout status
+
+Live. The candidate machinery shipped behavior-identical to first fit
+first (window-start candidates only, cost ≡ 0) with an output-equivalence
+proof; the scoring-terms increment then activated the intra-window grid
+and the six cost terms above, deliberately re-pinning placement-instant
+test expectations while leaving every reason_code, debug payload, and
+Supervisor routing assertion unchanged. The day-balancing increment then
+made insertion order regret-driven, replaced the global daily target with
+the per-day soft-quota map, and added the `earliness` term — again
+re-pinning placement instants only. The bounded polish pass then landed as
+the final phase-02 increment, relocating placed blocks post-loop under the
+schedule-level objective without touching the failure surface. Weights and
+knobs serve from `PlacementScoringConfig` defaults unless overridden via
+`backend/tuning.toml` `[scheduler_placement]`.
+
+The evidence-affinity term is live in the scheduler but **dormant in
+production**: no pooled-artifact store exists in the solo MVP and the
+power-user refinement tier has no runtime producer, so those tiers
+compose zero cells and the term is exercised end-to-end by tests and
+fixtures only. Nothing user-facing may describe pooled-evidence placement
+as live until an artifact actually flows in production.
+
+The revealed-preference term is live end-to-end: its observations are
+produced by drag-to-adjust and reconciliation adoptions, which run in the
+solo MVP today. Until a user accumulates `revealed_min_observations`
+qualifying moves, composed evidence is empty and schedules remain
+byte-identical to evidence-free runs.
 
 ## Scheduler Output
 

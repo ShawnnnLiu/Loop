@@ -1,0 +1,81 @@
+{
+  "$defs": {
+    "PlacementPreferenceSource": {
+      "description": "Which user action produced the observation.",
+      "enum": [
+        "drag_adjust",
+        "reconcile_adopt"
+      ],
+      "title": "PlacementPreferenceSource",
+      "type": "string"
+    },
+    "TaskCategory": {
+      "description": "Allowed values for ``task.category`` (see task-plan spec).",
+      "enum": [
+        "concept_review",
+        "practice",
+        "mock_interview",
+        "project",
+        "reflection",
+        "review"
+      ],
+      "title": "TaskCategory",
+      "type": "string"
+    },
+    "TimeOfDayBand": {
+      "description": "Local-time band of the completion timestamp (spec feature table).",
+      "enum": [
+        "morning",
+        "afternoon",
+        "evening",
+        "night"
+      ],
+      "title": "TimeOfDayBand",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "One user repositioning of a task into a time-of-day band.",
+  "properties": {
+    "category": {
+      "$ref": "#/$defs/TaskCategory"
+    },
+    "observation_id": {
+      "minLength": 1,
+      "title": "Observation Id",
+      "type": "string"
+    },
+    "observed_at": {
+      "format": "date-time",
+      "title": "Observed At",
+      "type": "string"
+    },
+    "source": {
+      "$ref": "#/$defs/PlacementPreferenceSource"
+    },
+    "task_id": {
+      "minLength": 1,
+      "title": "Task Id",
+      "type": "string"
+    },
+    "time_of_day_band": {
+      "$ref": "#/$defs/TimeOfDayBand"
+    },
+    "user_id": {
+      "minLength": 1,
+      "title": "User Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "observation_id",
+    "user_id",
+    "task_id",
+    "category",
+    "time_of_day_band",
+    "observed_at",
+    "source"
+  ],
+  "title": "PlacementPreferenceObservation",
+  "type": "object"
+}

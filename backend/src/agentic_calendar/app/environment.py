@@ -116,6 +116,11 @@ from agentic_calendar.telemetry.event_store import (
 from agentic_calendar.telemetry.ingestion import TelemetryIngestor
 from agentic_calendar.telemetry.sqlite_event_store import SqliteTelemetryEventStore
 
+from .placement_preference import (
+    InMemoryPlacementPreferenceStore,
+    PlacementPreferenceStore,
+    SqlitePlacementPreferenceStore,
+)
 from .state import AppStateStore, InMemoryAppStateStore, SqliteAppStateStore
 from .threshold_log import (
     InMemoryThresholdChangeLogStore,
@@ -247,6 +252,7 @@ class AppEnvironment:
     mapping_store: CalendarEventMappingStore
     telemetry_store: TelemetryEventStore
     disposition_store: TaskDispositionStore
+    placement_preference_store: PlacementPreferenceStore
     consent_store: ConsentStore
     audit_store: DataAccessAuditStore
     checkin_store: CheckinEventStore
@@ -304,6 +310,9 @@ def build_environment(
         mapping_store: CalendarEventMappingStore = InMemoryCalendarEventMappingStore()
         telemetry_store: TelemetryEventStore = InMemoryTelemetryEventStore()
         disposition_store: TaskDispositionStore = InMemoryTaskDispositionStore()
+        placement_preference_store: PlacementPreferenceStore = (
+            InMemoryPlacementPreferenceStore()
+        )
         consent_store: ConsentStore = InMemoryConsentStore(clock)
         audit_store: DataAccessAuditStore = InMemoryDataAccessAuditStore()
         checkin_store: CheckinEventStore = InMemoryCheckinEventStore()
@@ -326,6 +335,7 @@ def build_environment(
         mapping_store = SqliteCalendarEventMappingStore(db)
         telemetry_store = SqliteTelemetryEventStore(db)
         disposition_store = SqliteTaskDispositionStore(db)
+        placement_preference_store = SqlitePlacementPreferenceStore(db)
         consent_store = SqliteConsentStore(db, clock)
         audit_store = SqliteDataAccessAuditStore(db)
         checkin_store = SqliteCheckinEventStore(db)
@@ -373,6 +383,7 @@ def build_environment(
         mapping_store=mapping_store,
         telemetry_store=telemetry_store,
         disposition_store=disposition_store,
+        placement_preference_store=placement_preference_store,
         consent_store=consent_store,
         audit_store=audit_store,
         checkin_store=checkin_store,

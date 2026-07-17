@@ -1,7 +1,9 @@
 # Scheduler Placement Quality — Deterministic Best-Fit Placement
 
-Status: **planned, not started.** Runs after `ux-quality-pass` merges (see
-Sequencing). Branch: `scheduler-placement-quality` from `main`.
+Status: **core spine implemented** (phases 01–03, increments P-A…P-I, on
+branch `scheduler-placement-quality`, 2026-07-15/16). Phases 04 (task
+splitting) and 05 (CP-SAT) remain gated on post-spine evidence and are not
+started.
 
 Provenance: brainstorm session 2026-07-05, grounded in a code exploration of
 the scheduler region and a signal inventory across the codebase. All file

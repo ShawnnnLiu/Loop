@@ -151,6 +151,67 @@ DataAccessPurpose.POOLED_SERVING, DataAccessor.SERVING_PIPELINE)`; gate
 impl `consent/gate.py:77-106`, decision fields `.allowed` /
 `.reason_code`.
 
+### P-I landed (2026-07-16) — phase complete
+
+- Spec `placement-preference.schema.md` + contract
+  `contracts/placement_preference.py` (`PlacementPreferenceObservation`,
+  `PlacementPreferenceSource` = DRAG_ADJUST | RECONCILE_ADOPT); registered
+  in `export_schemas.py`; valid + invalid fixtures. `EvidenceSource` gained
+  `REVEALED` (multiplier-forbidden, pre-built validator now exercised; the
+  "revealed cell with a multiplier" invalid fixture exists).
+- Store `app/placement_preference.py` (threshold_log twin pattern:
+  protocol + in-memory + SQLite in one module; `list_for_user` /
+  `delete_for_user` for data controls); registered in `AppEnvironment`
+  (all four spots); parametrized shared suite incl. restart survival.
+- Producers: `CycleService.adjust` (after conflicts-empty + draft saved;
+  one observation per adjusted task, category from the in-scope plan) and
+  `reconcile` (ADOPTED deltas only — never rejected moves, never
+  `event_deleted`). Both via `_record_placement_observation`
+  (`prefobs_`-prefixed ids, band of the user-local target start).
+- Aggregation in `_placement_evidence`: observations within
+  `revealed_window_days` (90), grouped by `(category, band)`, emit a
+  REVEALED cell at `count >= revealed_min_observations` (3);
+  `weighted_sample = float(count)`; clock read in the app layer only.
+- Scoring: `revealed_lookup` (frozen key set) +
+  `revealed_affinity_bonus` (flat `duration` on match); cost gains
+  `- w_revealed_affinity x bonus`; `w_revealed_affinity = 2`; all three
+  knobs on `PlacementScoringConfig` (`[scheduler_placement]`, journaled
+  commented defaults in `tuning.toml`); `ZERO_WEIGHTS` zeroes the weight.
+- Quality report gained the "evidence applied" section (human + `--json`),
+  printing the input's cells; corpus totals stayed byte-identical
+  (124 / 267 / -36 / 235).
+- End-to-end test: three evening drags of the PRACTICE task pull the next
+  replan's PRACTICE placement into the evening band
+  (`test_three_evening_drags_pull_practice_into_the_evening_band`).
+- `tools/user_data.py` docstring + CLI tests cover `placement_preferences`
+  rows in view, export, and delete.
+
+### P-H landed (2026-07-16) — surfaces P-I builds on
+
+- Contract: `contracts/placement_evidence.py` (`PlacementEvidence`,
+  `EvidenceCell`, `EvidenceSource`, `MULTIPLIER_SOURCES`,
+  `EVIDENCE_MULTIPLIER_MIN/MAX`); registered in `export_schemas.py`.
+- Scheduler: `SchedulerInput.placement_evidence` (default empty);
+  `scoring.evidence_lookup` (dict `(category, band) → mult_pct`,
+  REFINED overwrites POOLED, multiplier-less cells skipped — REVEALED
+  rides that skip for free) + `scoring.evidence_affinity_adjustment`
+  (signed percent-minutes; caller does `w × adj // 100`), threaded as an
+  optional `evidence=` kwarg through `candidate_cost` / `rank_placement`
+  / `select_placement`; wired in `greedy._schedule_validated`.
+  `w_evidence_affinity = 1` on `PlacementScoringConfig`;
+  `ZERO_WEIGHTS` zeroes it; `make_input` in `tests/scheduler/_helpers.py`
+  grew a `placement_evidence` kwarg. The polish objective (`score_blocks`)
+  deliberately does NOT carry the term — `PlacedBlock` has no category;
+  band-symmetric moves are not strict improvements, so polish cannot
+  undo an evidence shift on the two-band fixtures.
+- Composition: `CycleService._placement_evidence(onboarding, *,
+  pooled_model=None, refinement=None)` in `app/cycle.py` — P-I's
+  aggregation folds REVEALED cells in here. Consent gate consulted only
+  when an artifact is offered (dormant path writes zero audit rows);
+  floor applies to both tiers; cells sorted `(category, band, source)`.
+- Axiom 05 gained "Evidence-affinity term" + a dormant-in-production
+  rollout paragraph.
+
 ### P-H contract + scoring specifics
 
 - `EvidenceCell` shape decisions:

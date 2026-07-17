@@ -15,6 +15,9 @@ Reads a JSON file shaped as::
         "telemetry": {
           "user_123": [ ...telemetry payloads... ],
           "user_456": [ ...telemetry payloads... ]
+        },
+        "placement_preferences": {
+          "user_123": [ ...placement_preference payloads... ]
         }
       }
     }
@@ -22,6 +25,9 @@ Reads a JSON file shaped as::
 ``stores`` maps store name → user id → that user's rows; the composition
 root owns user attribution (telemetry events carry no ``user_id`` — the
 caller scopes them by the user's task ids before building this file).
+Every per-user store belongs here — placement-preference observations
+(``docs/specs/placement-preference.schema.md``) included — so view,
+export, and delete cover the user's complete footprint.
 
 Usage::
 

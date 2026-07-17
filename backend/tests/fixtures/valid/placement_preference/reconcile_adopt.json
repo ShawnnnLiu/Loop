@@ -1,0 +1,9 @@
+{
+  "observation_id": "prefobs_002",
+  "user_id": "user_123",
+  "task_id": "dp_002",
+  "category": "review",
+  "time_of_day_band": "morning",
+  "observed_at": "2026-07-17T08:30:00+00:00",
+  "source": "reconcile_adopt"
+}

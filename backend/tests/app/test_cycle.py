@@ -69,6 +69,7 @@ from agentic_calendar.contracts.calendar_reconciliation import (
     ReconciliationOutcome,
 )
 from agentic_calendar.contracts.checkin_event import RecoveryAction
+from agentic_calendar.contracts.common_types import ExperienceLevel, TaskCategory
 from agentic_calendar.contracts.data_access_audit import (
     DataAccessOutcome,
     DataAccessPurpose,
@@ -76,6 +77,16 @@ from agentic_calendar.contracts.data_access_audit import (
 from agentic_calendar.contracts.draft_schedule import DraftSchedule, DraftScheduleEntry
 from agentic_calendar.contracts.drift_event import DriftEvent, DriftType
 from agentic_calendar.contracts.hashing import canonical_payload_hash
+from agentic_calendar.contracts.placement_evidence import EvidenceSource
+from agentic_calendar.contracts.placement_preference import (
+    PlacementPreferenceObservation,
+    PlacementPreferenceSource,
+)
+from agentic_calendar.contracts.pooled_duration_model import (
+    PooledDurationModel,
+    TimeOfDayBand,
+)
+from agentic_calendar.contracts.power_user import PerUserRefinement, RefinementEntry
 from agentic_calendar.contracts.reason_codes import ReasonCode
 from agentic_calendar.contracts.scheduler_output import SchedulerOutput
 from agentic_calendar.contracts.source_claim import SourceClaim
@@ -87,9 +98,15 @@ from agentic_calendar.contracts.task_disposition import (
     TaskDispositionType,
 )
 from agentic_calendar.contracts.task_plan import Task, TaskPlan
+from agentic_calendar.contracts.telemetry import TelemetryEvent
 from agentic_calendar.contracts.user_profile import UserProfile
 from agentic_calendar.contracts.validation_result import ValidationResult
 from agentic_calendar.contracts.violation_types import ViolationType
+from agentic_calendar.duration_estimation.pooled import (
+    PooledTrainingInput,
+    derive_time_of_day_band,
+    train_pooled_model,
+)
 from agentic_calendar.llm_nodes.planner import FixturePlanner
 from agentic_calendar.llm_nodes.reflection_summary import (
     DeterministicReflectionSummary,
@@ -107,6 +124,7 @@ from agentic_calendar.scheduler.inputs import SchedulerInput
 from agentic_calendar.skill_taxonomy import load_registry
 from agentic_calendar.supervisor.state import SupervisorState as S
 from tests._fixture_loader import iter_valid
+from tests.consent._builders import build_consent_record
 
 USER_ID = "user_123"
 
@@ -1813,15 +1831,35 @@ def test_propose_passes_completion_projection_to_scheduler(
     env.disposition_store.append(_completed_disposition("dp_001"))
     captured: dict[str, list[str]] = {}
 
-    def _spy(inp: SchedulerInput) -> SchedulerOutput:
+    def _spy(inp: SchedulerInput, **kwargs: object) -> SchedulerOutput:
         captured["completed_task_ids"] = list(inp.completed_task_ids)
-        return schedule(inp)
+        return schedule(inp, **kwargs)  # type: ignore[arg-type]
 
     monkeypatch.setattr("agentic_calendar.app.cycle.schedule", _spy)
     result = service.propose(USER_ID)
 
     assert result.state is S.AWAITING_USER_APPROVAL
     assert "dp_001" in captured["completed_task_ids"]
+
+
+def test_propose_passes_tuned_placement_scoring_to_scheduler(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The scheduler consumes the effective ``[scheduler_placement]`` tuning
+    — the composition wire that makes a tuning.toml weight override change
+    placement (axiom 07 path, P-D acceptance)."""
+    service, env, _clock = make_service()
+    captured: dict[str, object] = {}
+
+    def _spy(inp: SchedulerInput, **kwargs: object) -> SchedulerOutput:
+        captured.update(kwargs)
+        return schedule(inp, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr("agentic_calendar.app.cycle.schedule", _spy)
+    result = service.propose(USER_ID)
+
+    assert result.state is S.AWAITING_USER_APPROVAL
+    assert captured["scoring"] is env.tuning.scheduler_placement
 
 
 def test_ingest_mirrors_completion_into_disposition_store_idempotently() -> None:
@@ -2272,3 +2310,445 @@ def test_regen_threads_drop_projection_to_planner_and_logs_resurrection(
     assert recording.excluded[-1] == ("dp_001",)
     # The planner reproduced the dropped id anyway -> a logged advisory.
     assert "reproduced dropped task" in caplog.text
+
+
+# --------------------------------------------------------------------------- #
+# Z. placement-evidence composition (axiom 05 evidence term; dormant in prod)
+# --------------------------------------------------------------------------- #
+
+EVIDENCE_T0 = datetime(2026, 6, 10, 16, 0, tzinfo=UTC)
+
+
+def _training_event(
+    event_id: str, task_id: str, *, hour: int, actual: int = 84
+) -> TelemetryEvent:
+    """One completed 60-min event whose UTC completion hour picks the band."""
+    return TelemetryEvent.model_validate(
+        {
+            "telemetry_event_id": event_id,
+            "task_id": task_id,
+            "scheduled_duration_min": 60,
+            "actual_duration_min": actual,
+            "completed": True,
+            "completion_timestamp": f"2026-06-09T{hour:02d}:30:00Z",
+            "user_reschedule_count": 0,
+            "data_quality": "complete",
+        }
+    )
+
+
+def _evidence_model(
+    *,
+    experience_level: ExperienceLevel = ExperienceLevel.INTERMEDIATE,
+    evening_events: int = 6,
+    morning_events: int = 0,
+    split_cognitive_loads: bool = False,
+) -> PooledDurationModel:
+    """A pooled artifact with PRACTICE buckets at controlled bands/samples.
+
+    ``split_cognitive_loads`` alternates the evening events across two task
+    ids with different cognitive loads, producing two buckets that share the
+    same ``(category, band)`` — the marginalization fixture.
+    """
+    events = [
+        _training_event(
+            f"tel_ev_{i}",
+            "t2" if split_cognitive_loads and i % 2 else "t1",
+            hour=19,
+        )
+        for i in range(evening_events)
+    ]
+    events += [
+        _training_event(f"tel_mo_{i}", "t1", hour=9) for i in range(morning_events)
+    ]
+    user = PooledTrainingInput(
+        user_id="user_a",
+        events=events,
+        task_categories={"t1": TaskCategory.PRACTICE, "t2": TaskCategory.PRACTICE},
+        task_cognitive_loads={"t1": 4, "t2": 2},
+        experience_level=experience_level,
+        timezone="UTC",
+        recent_completion_rate=0.7,
+    )
+    return train_pooled_model(
+        [user], consented_user_ids={"user_a"}, model_version="v", trained_at=EVIDENCE_T0
+    )
+
+
+def _refinement(*entries: RefinementEntry) -> PerUserRefinement:
+    return PerUserRefinement(
+        user_id=USER_ID, computed_at=EVIDENCE_T0, entries=list(entries)
+    )
+
+
+def _pooled_serving_audits(env: AppEnvironment) -> list[Any]:
+    return [
+        entry
+        for entry in env.audit_store.list_for_user(USER_ID)
+        if entry.purpose is DataAccessPurpose.POOLED_SERVING
+    ]
+
+
+def _onboarding_record(env: AppEnvironment) -> Any:
+    record = env.state.get_onboarding(USER_ID)
+    assert record is not None
+    return record
+
+
+def test_placement_evidence_dormant_path_is_empty_and_never_consults_the_gate() -> None:
+    """Production reality (03 doc): no pooled artifact and no refinement exist
+    in the solo MVP, so composed evidence is empty AND the consent gate is not
+    consulted — the dormant path adds zero audit rows, through propose too."""
+    service, env, _clock = make_service()
+    evidence = service._placement_evidence(_onboarding_record(env))
+    assert evidence.cells == []
+    assert _pooled_serving_audits(env) == []
+
+    proposed = service.propose(USER_ID)
+    assert proposed.state is S.AWAITING_USER_APPROVAL
+    assert _pooled_serving_audits(env) == []
+
+
+def test_placement_evidence_consent_denied_drops_pooled_keeps_refined() -> None:
+    """No consent record: the pooled tier is denied with an audit entry, but
+    the refinement tier — the user's own data — still serves (mirroring the
+    duration-serving chain)."""
+    service, env, _clock = make_service()
+    evidence = service._placement_evidence(
+        _onboarding_record(env),
+        pooled_model=_evidence_model(),
+        refinement=_refinement(
+            RefinementEntry(
+                category=TaskCategory.PRACTICE,
+                time_of_day_band=TimeOfDayBand.EVENING,
+                multiplier=0.8,
+                sample_size=7,
+                weighted_sample=6.0,
+                observed_ratio=0.8,
+            )
+        ),
+    )
+    assert [c.source for c in evidence.cells] == [EvidenceSource.PER_USER_REFINED]
+    audits = _pooled_serving_audits(env)
+    assert len(audits) == 1
+    assert audits[0].outcome is DataAccessOutcome.DENIED
+
+
+def test_placement_evidence_consent_granted_composes_pooled_cells_above_floor() -> None:
+    """With consent, a dense evening bucket becomes one POOLED cell carrying
+    the bucket's exact multiplier; the sparse morning bucket (3.0 < the 5.0
+    serving floor) is not emitted."""
+    service, env, _clock = make_service()
+    env.consent_store.grant(build_consent_record())
+    model = _evidence_model(evening_events=6, morning_events=3)
+
+    evidence = service._placement_evidence(_onboarding_record(env), pooled_model=model)
+
+    assert [(c.category, c.time_of_day_band, c.source) for c in evidence.cells] == [
+        (TaskCategory.PRACTICE, TimeOfDayBand.EVENING, EvidenceSource.POOLED)
+    ]
+    evening_buckets = [
+        b for b in model.buckets if b.time_of_day_band is TimeOfDayBand.EVENING
+    ]
+    assert len(evening_buckets) == 1
+    assert evidence.cells[0].multiplier == evening_buckets[0].multiplier
+    assert evidence.cells[0].weighted_sample == 6.0
+    audits = _pooled_serving_audits(env)
+    assert len(audits) == 1
+    assert audits[0].outcome is DataAccessOutcome.ALLOWED
+
+
+def test_placement_evidence_marginalizes_bucket_features_into_one_cell() -> None:
+    """Two buckets sharing (category, band) but differing on cognitive load
+    fold into ONE cell: weighted-average multiplier, combined sample — and the
+    floor applies to the combined mass (3.0 + 3.0 >= 5.0), not per bucket."""
+    service, env, _clock = make_service()
+    env.consent_store.grant(build_consent_record())
+    model = _evidence_model(evening_events=6, split_cognitive_loads=True)
+    evening_buckets = [
+        b for b in model.buckets if b.time_of_day_band is TimeOfDayBand.EVENING
+    ]
+    assert len(evening_buckets) == 2  # same (category, band), distinct loads
+
+    evidence = service._placement_evidence(_onboarding_record(env), pooled_model=model)
+
+    assert len(evidence.cells) == 1
+    combined = sum(b.weighted_sample for b in evening_buckets)
+    expected = (
+        sum(b.multiplier * b.weighted_sample for b in evening_buckets) / combined
+    )
+    assert evidence.cells[0].weighted_sample == combined == 6.0
+    assert evidence.cells[0].multiplier == expected
+
+
+def test_placement_evidence_conditions_on_the_users_experience_level() -> None:
+    """Buckets from another experience level never become cells (the one
+    user-context feature the composition conditions on)."""
+    service, env, _clock = make_service()
+    env.consent_store.grant(build_consent_record())
+    beginner_model = _evidence_model(experience_level=ExperienceLevel.BEGINNER)
+
+    evidence = service._placement_evidence(
+        _onboarding_record(env), pooled_model=beginner_model
+    )
+    assert evidence.cells == []
+
+
+def test_placement_evidence_refinement_floor_clamp_and_canonical_order() -> None:
+    """Refined entries respect the serving floor, clamp into the contract's
+    [0.5, 2.0] band, and cells emit in canonical (category, band, source)
+    order alongside pooled cells."""
+    service, env, _clock = make_service()
+    env.consent_store.grant(build_consent_record())
+
+    evidence = service._placement_evidence(
+        _onboarding_record(env),
+        pooled_model=_evidence_model(),
+        refinement=_refinement(
+            RefinementEntry(
+                category=TaskCategory.PRACTICE,
+                time_of_day_band=TimeOfDayBand.EVENING,
+                multiplier=2.4,  # out of contract band -> clamped to 2.0
+                sample_size=9,
+                weighted_sample=8.0,
+                observed_ratio=2.4,
+            ),
+            RefinementEntry(
+                category=TaskCategory.REVIEW,
+                time_of_day_band=TimeOfDayBand.MORNING,
+                multiplier=0.9,
+                sample_size=3,
+                weighted_sample=2.0,  # below the 5.0 floor -> dropped
+                observed_ratio=0.9,
+            ),
+        ),
+    )
+
+    assert [(c.category, c.time_of_day_band, c.source) for c in evidence.cells] == [
+        (TaskCategory.PRACTICE, TimeOfDayBand.EVENING, EvidenceSource.PER_USER_REFINED),
+        (TaskCategory.PRACTICE, TimeOfDayBand.EVENING, EvidenceSource.POOLED),
+    ]
+    assert evidence.cells[0].multiplier == 2.0
+
+
+# --------------------------------------------------------------------------- #
+# revealed preferences (P-I): producers, aggregation, end to end
+# --------------------------------------------------------------------------- #
+
+
+def _preference_observation(
+    observation_id: str,
+    *,
+    category: TaskCategory = TaskCategory.PRACTICE,
+    band: TimeOfDayBand = TimeOfDayBand.EVENING,
+    observed_at: datetime | None = None,
+    source: PlacementPreferenceSource = PlacementPreferenceSource.DRAG_ADJUST,
+) -> PlacementPreferenceObservation:
+    return PlacementPreferenceObservation(
+        observation_id=observation_id,
+        user_id=USER_ID,
+        task_id="dp_002",
+        category=category,
+        time_of_day_band=band,
+        observed_at=observed_at if observed_at is not None else HAPPY_NOW,
+        source=source,
+    )
+
+
+def test_placement_evidence_folds_qualifying_revealed_observations() -> None:
+    """Three in-window observations of one (category, band) fold into one
+    multiplier-free REVEALED cell carrying the count; a group below
+    revealed_min_observations emits nothing. The user's own data: composing
+    revealed cells never consults the consent gate (zero audit rows)."""
+    service, env, _clock = make_service()
+    for i in range(3):
+        env.placement_preference_store.append(_preference_observation(f"prefobs_{i}"))
+    for i in range(2):
+        env.placement_preference_store.append(
+            _preference_observation(
+                f"prefobs_below_{i}",
+                category=TaskCategory.REVIEW,
+                band=TimeOfDayBand.MORNING,
+            )
+        )
+
+    evidence = service._placement_evidence(_onboarding_record(env))
+
+    assert [(c.category, c.time_of_day_band, c.source) for c in evidence.cells] == [
+        (TaskCategory.PRACTICE, TimeOfDayBand.EVENING, EvidenceSource.REVEALED)
+    ]
+    assert evidence.cells[0].multiplier is None
+    assert evidence.cells[0].weighted_sample == 3.0
+    assert _pooled_serving_audits(env) == []
+
+
+def test_placement_evidence_revealed_window_excludes_stale_observations() -> None:
+    """An observation older than revealed_window_days never counts toward the
+    threshold — recency is a pure read-time computation over the rows."""
+    service, env, clock = make_service()
+    env.placement_preference_store.append(
+        _preference_observation(
+            "prefobs_stale", observed_at=clock.now() - timedelta(days=91)
+        )
+    )
+    for i in range(2):
+        env.placement_preference_store.append(_preference_observation(f"prefobs_{i}"))
+
+    evidence = service._placement_evidence(_onboarding_record(env))
+    assert evidence.cells == []
+
+
+def test_placement_evidence_revealed_cells_sort_with_other_tiers() -> None:
+    """Revealed cells join the canonical (category, band, source) order
+    alongside the multiplier tiers — the same (category, band) legitimately
+    carries both."""
+    service, env, _clock = make_service()
+    for i in range(3):
+        env.placement_preference_store.append(_preference_observation(f"prefobs_{i}"))
+
+    evidence = service._placement_evidence(
+        _onboarding_record(env),
+        refinement=_refinement(
+            RefinementEntry(
+                category=TaskCategory.PRACTICE,
+                time_of_day_band=TimeOfDayBand.EVENING,
+                multiplier=0.8,
+                sample_size=7,
+                weighted_sample=6.0,
+                observed_ratio=0.8,
+            )
+        ),
+    )
+    assert [c.source for c in evidence.cells] == [
+        EvidenceSource.PER_USER_REFINED,
+        EvidenceSource.REVEALED,
+    ]
+
+
+def test_reconcile_adoption_records_a_revealed_preference_observation() -> None:
+    """An ADOPTED external move journals one RECONCILE_ADOPT observation with
+    the band of the adopted start in the user's timezone."""
+    service, env, adapter = _reconcilable()
+    events = _events_by_task(adapter)
+    leaf = _a_scheduled_leaf(env, set(events))
+    rec = events[leaf]
+    new_start = rec.scheduled_start + timedelta(days=7)
+    new_end = rec.scheduled_end + timedelta(days=7)
+    adapter.simulate_external_move(
+        rec.calendar_event_id, scheduled_start=new_start, scheduled_end=new_end
+    )
+
+    result = service.reconcile(
+        USER_ID, target_calendar_id=DEFAULT_TARGET_CALENDAR_ID, enabled=True
+    )
+
+    assert result.outcome is ReconciliationOutcome.ADOPTED
+    observations = env.placement_preference_store.list_for_user(USER_ID)
+    assert len(observations) == 1
+    observation = observations[0]
+    assert observation.task_id == leaf
+    assert observation.source is PlacementPreferenceSource.RECONCILE_ADOPT
+    # Onboarded in UTC, so the observed band is the UTC wall-clock hour.
+    assert observation.time_of_day_band is derive_time_of_day_band(
+        new_start.astimezone(UTC).hour
+    )
+    active = env.plan_store.get_active(USER_ID)
+    assert active is not None
+    assert observation.category is {
+        t.task_id: t.category for t in active.plan.tasks
+    }[leaf]
+
+
+def test_reconcile_rejected_move_records_no_observation() -> None:
+    """A rejected external move is flagged, never learned from."""
+    service, env, adapter = _reconcilable()
+    events = _events_by_task(adapter)
+    leaf = _a_scheduled_leaf(env, set(events))
+    rec = events[leaf]
+    duration = rec.scheduled_end - rec.scheduled_start
+    bad_start = rec.scheduled_start.replace(hour=7, minute=0)  # before 08:00
+    adapter.simulate_external_move(
+        rec.calendar_event_id,
+        scheduled_start=bad_start,
+        scheduled_end=bad_start + duration,
+    )
+
+    result = service.reconcile(
+        USER_ID, target_calendar_id=DEFAULT_TARGET_CALENDAR_ID, enabled=True
+    )
+
+    assert result.outcome is ReconciliationOutcome.FLAGGED
+    assert env.placement_preference_store.list_for_user(USER_ID) == []
+
+
+def test_reconcile_deletion_records_no_observation() -> None:
+    """A deletion is event memory, never a placement preference — the
+    event_deleted disposition path stays observation-free."""
+    service, env, adapter = _reconcilable()
+    events = _events_by_task(adapter)
+    leaf = _a_scheduled_leaf(env, set(events))
+    adapter.delete_event(
+        target_calendar_id=DEFAULT_TARGET_CALENDAR_ID,
+        calendar_event_id=events[leaf].calendar_event_id,
+    )
+
+    result = service.reconcile(
+        USER_ID, target_calendar_id=DEFAULT_TARGET_CALENDAR_ID, enabled=True
+    )
+
+    assert result.outcome is ReconciliationOutcome.FLAGGED
+    assert env.placement_preference_store.list_for_user(USER_ID) == []
+
+
+def test_three_evening_drags_pull_practice_into_the_evening_band() -> None:
+    """The P-I acceptance fixture, end to end through the service: with an
+    evening-neutral profile the baseline replan places the practice task
+    outside the evening band; after three applied evening drags the next
+    replan's practice placement lands in the evening band, driven by the
+    composed REVEALED cell."""
+    plan = _canonical_plan()
+    # The canonical dp tasks are deep-focus and would be confined to the
+    # profile's evening deep windows either way; medium focus frees placement
+    # so the band shift is attributable to the revealed cell alone.
+    shallow = TaskPlan.model_validate(
+        plan.model_dump()
+        | {
+            "tasks": [
+                t.model_dump() | {"required_focus_level": "medium"}
+                for t in plan.tasks
+            ]
+        }
+    )
+    service, env, _clock = make_service(
+        planner_fixtures={_canonical_syllabus().syllabus_version: shallow}
+    )
+    profile = _canonical_profile().model_dump(mode="json")
+    profile["preferences"]["prefer_evening_sessions"] = False
+    service.onboard({"user_profile": profile, "timezone": "UTC"})
+
+    baseline = service.propose(USER_ID)
+    assert baseline.state is S.AWAITING_USER_APPROVAL
+    assert baseline.draft_schedule_id is not None
+    draft = env.state.get_draft(baseline.draft_schedule_id)
+    assert draft is not None
+    practice = next(e for e in draft.entries if e.task_id == "dp_002")
+    assert derive_time_of_day_band(practice.start.hour) is not TimeOfDayBand.EVENING
+
+    for day in (6, 7, 8):  # Wed/Thu/Fri evenings
+        moved = service.adjust(
+            USER_ID,
+            [
+                DraftAdjustment(
+                    task_id="dp_002", start=datetime(2026, 5, day, 18, 0, tzinfo=UTC)
+                )
+            ],
+        )
+        assert moved.applied is True
+
+    replan = service.propose(USER_ID)
+    assert replan.state is S.AWAITING_USER_APPROVAL
+    assert replan.draft_schedule_id is not None
+    new_draft = env.state.get_draft(replan.draft_schedule_id)
+    assert new_draft is not None
+    new_practice = next(e for e in new_draft.entries if e.task_id == "dp_002")
+    assert derive_time_of_day_band(new_practice.start.hour) is TimeOfDayBand.EVENING

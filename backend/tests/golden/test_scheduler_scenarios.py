@@ -132,6 +132,7 @@ def test_scenario_2_no_weekday_availability_schedules_on_weekend_only() -> None:
             DeepWorkWindowPolicy(day="Sat", start="09:00", end="13:00"),
         ],
         max_session_length_min=120,
+        preferred_session_length_min=60,
     )
     plan = TaskPlan.model_validate({
         "plan_version": "p_weekend",

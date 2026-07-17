@@ -1,0 +1,87 @@
+{
+  "run_id": "run_pq_five_tasks_three_days",
+  "plan_version": "plan_pq_five_tasks_three_days",
+  "plan": {
+    "plan_version": "plan_pq_five_tasks_three_days",
+    "tasks": [
+      {
+        "task_id": "practice_0",
+        "module_id": "dp",
+        "title": "practice 0",
+        "description": "",
+        "dependencies": [],
+        "estimated_duration_min": 60,
+        "cognitive_load": 3,
+        "category": "practice",
+        "required_focus_level": "medium",
+        "splittable": false
+      },
+      {
+        "task_id": "practice_1",
+        "module_id": "dp",
+        "title": "practice 1",
+        "description": "",
+        "dependencies": [],
+        "estimated_duration_min": 60,
+        "cognitive_load": 3,
+        "category": "practice",
+        "required_focus_level": "medium",
+        "splittable": false
+      },
+      {
+        "task_id": "practice_2",
+        "module_id": "dp",
+        "title": "practice 2",
+        "description": "",
+        "dependencies": [],
+        "estimated_duration_min": 60,
+        "cognitive_load": 3,
+        "category": "practice",
+        "required_focus_level": "medium",
+        "splittable": false
+      },
+      {
+        "task_id": "practice_3",
+        "module_id": "dp",
+        "title": "practice 3",
+        "description": "",
+        "dependencies": [],
+        "estimated_duration_min": 60,
+        "cognitive_load": 3,
+        "category": "practice",
+        "required_focus_level": "medium",
+        "splittable": false
+      },
+      {
+        "task_id": "practice_4",
+        "module_id": "dp",
+        "title": "practice 4",
+        "description": "",
+        "dependencies": [],
+        "estimated_duration_min": 60,
+        "cognitive_load": 3,
+        "category": "practice",
+        "required_focus_level": "medium",
+        "splittable": false
+      }
+    ]
+  },
+  "policy": {
+    "no_events_before": "08:00",
+    "no_events_after": "22:30",
+    "allow_weekends": true,
+    "min_break_between_deep_blocks_min": 30,
+    "max_daily_study_min": 240,
+    "respect_deep_work_windows": false,
+    "deep_work_windows": [],
+    "max_session_length_min": 120,
+    "preferred_session_length_min": 60,
+    "prefer_evening_sessions": false,
+    "prefer_weekend_long_blocks": false,
+    "avoid_back_to_back_deep_work": false
+  },
+  "calendar_free_busy": [],
+  "completed_task_ids": [],
+  "horizon_start": "2026-05-04T00:00:00Z",
+  "horizon_end": "2026-05-07T00:00:00Z"
+}

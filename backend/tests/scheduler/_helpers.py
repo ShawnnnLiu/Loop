@@ -5,11 +5,30 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+from agentic_calendar.contracts.placement_evidence import PlacementEvidence
 from agentic_calendar.contracts.task_plan import TaskPlan
 from agentic_calendar.scheduler.inputs import FreeBusyInterval, SchedulerInput
 from agentic_calendar.scheduler.policy import (
     DeepWorkWindowPolicy,
     SchedulingPolicy,
+)
+from agentic_calendar.scheduler.scoring import PlacementScoringConfig
+
+#: Every cost weight zeroed: the argmin over ``(0, start)`` is
+#: earliest-feasible-start placement — the shared "before" baseline for the
+#: corpus and the crunch/override tests. Insertion order is still
+#: regret-driven, but with all costs 0 regret is 0 everywhere and only
+#: single-candidate tasks can jump the queue.
+ZERO_WEIGHTS = PlacementScoringConfig(
+    w_daily_balance=0,
+    w_back_to_back=0,
+    w_fragmentation=0,
+    w_deep_window_conservation=0,
+    w_evening_preference=0,
+    w_weekend_long_block=0,
+    w_earliness=0,
+    w_evidence_affinity=0,
+    w_revealed_affinity=0,
 )
 
 
@@ -53,6 +72,7 @@ DEFAULT_POLICY = SchedulingPolicy(
     respect_deep_work_windows=False,
     deep_work_windows=[],
     max_session_length_min=120,
+    preferred_session_length_min=60,
 )
 
 
@@ -68,6 +88,7 @@ DEEP_WORK_POLICY = SchedulingPolicy(
         DeepWorkWindowPolicy(day="Tue", start="18:00", end="21:00"),
     ],
     max_session_length_min=120,
+    preferred_session_length_min=60,
 )
 
 
@@ -77,6 +98,7 @@ def make_input(
     policy: SchedulingPolicy | None = None,
     free_busy: list[FreeBusyInterval] | None = None,
     completed_task_ids: list[str] | None = None,
+    placement_evidence: PlacementEvidence | None = None,
     horizon_days: int = 3,
     horizon_start: datetime | None = None,
     run_id: str = "run_test",
@@ -91,6 +113,7 @@ def make_input(
         policy=policy or DEFAULT_POLICY,
         calendar_free_busy=free_busy or [],
         completed_task_ids=completed_task_ids or [],
+        placement_evidence=placement_evidence or PlacementEvidence(),
         horizon_start=start,
         horizon_end=end,
     )

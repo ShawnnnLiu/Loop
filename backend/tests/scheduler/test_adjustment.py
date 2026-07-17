@@ -42,6 +42,7 @@ def _policy(**overrides: object) -> SchedulingPolicy:
         "respect_deep_work_windows": True,
         "deep_work_windows": [],
         "max_session_length_min": 120,
+        "preferred_session_length_min": 60,
     }
     base.update(overrides)
     return SchedulingPolicy.model_validate(base)

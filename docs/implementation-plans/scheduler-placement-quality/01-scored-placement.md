@@ -291,3 +291,24 @@ definitions are the audit/report/polish objective.
   `fixtures/valid|invalid` split is for contract fixtures — this corpus is
   input scenarios, so it gets its own subdirectory), shared by the CLI and
   the before/after tests.
+
+### P-C/P-D before/after numbers (recorded 2026-07-15, P-C+P-D commit)
+
+Corpus: `backend/tests/fixtures/placement_quality/*.json`. "Before" is the
+all-weights-zero config (argmin over `(0, start)` = earliest feasible
+start, i.e. the pre-scoring first-fit policy modulo the deep-gap grid
+fix); "after" is `DEFAULT_PLACEMENT_SCORING_CONFIG`. Both columns are
+`score_schedule` totals under the **default** weights so the objective is
+comparable. Reproduce with the CLI (after) or the zero-weight baseline in
+`tests/scheduler/test_placement_quality_corpus.py` (before).
+
+| Fixture | total_cost before → after | per-day minutes before → after | headline |
+| --- | --- | --- | --- |
+| `five_tasks_three_days` | 510 → 120 | 240/60 → 120/120/60 | the acceptance fixture: day-1 pile-up becomes an even spread (`daily_balance` 140→40, `back_to_back` 45→0) |
+| `deep_mix_week` | 936 → 252 | 240/135 over 2 days → 90/90/60/60/45/30 over 6 | deep tasks stay in deep windows on separate evenings; non-deep work stops consuming deep capacity (`deep_window_conservation` 30→0) |
+| `evening_preference_week` | 666 → −42 | 240 on day 1 → 90/60/60/30 | band histogram flips morning×4 → evening×4 (`evening_preference` 0→240) |
+| `fragmented_weekend` | 615 → 255 | 210/30 → 60/60/30/90 | the 90-min project block lands on Saturday (`weekend_long_block` 0→90); spread despite a heavily fragmented week |
+
+Every corpus scenario schedules the same number of tasks in both columns
+(soft terms never eliminate feasibility) and both paths are byte-stable —
+pinned by `test_placement_quality_corpus.py`.

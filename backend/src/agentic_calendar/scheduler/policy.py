@@ -41,6 +41,10 @@ class SchedulingPolicy(BaseModel):
     respect_deep_work_windows: bool = True
     deep_work_windows: list[DeepWorkWindowPolicy] = Field(default_factory=list)
     max_session_length_min: int = Field(gt=0, le=12 * 60)
+    preferred_session_length_min: int = Field(gt=0, le=12 * 60)
+    prefer_evening_sessions: bool = False
+    prefer_weekend_long_blocks: bool = False
+    avoid_back_to_back_deep_work: bool = False
 
 
 def policy_from_user_profile(user: UserProfile) -> SchedulingPolicy:
@@ -59,4 +63,8 @@ def policy_from_user_profile(user: UserProfile) -> SchedulingPolicy:
             for w in user.deep_work_windows
         ],
         max_session_length_min=user.max_session_length_min,
+        preferred_session_length_min=user.preferred_session_length_min,
+        prefer_evening_sessions=user.preferences.prefer_evening_sessions,
+        prefer_weekend_long_blocks=user.preferences.prefer_weekend_long_blocks,
+        avoid_back_to_back_deep_work=user.preferences.avoid_back_to_back_deep_work,
     )

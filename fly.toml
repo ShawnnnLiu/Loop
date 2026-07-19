@@ -34,9 +34,8 @@ primary_region = "lax"            # <-- a region near your testers
 [env]
   SHARED_DB_PATH = "/data/app.db"
   APP_HTTPS_ONLY = "1"
-  OAUTH_REDIRECT_URI = "https://acme-agentic-cal.fly.dev/auth/callback"  # <-- match your app
-  # Custom-domain cutover (docs/implementation-plans/loop-recruiter-readiness/02):
-  # after `fly certs add <domain>` and adding the new redirect URI in the Google
-  # OAuth console, flip OAUTH_REDIRECT_URI above to the new domain and set
-  #   CANONICAL_HOST = "<domain>"   # old fly.dev requests then 301 to it
-  # Keep BOTH redirect URIs registered in the console during the transition.
+  OAUTH_REDIRECT_URI = "https://loop-study.com/auth/callback"
+  CANONICAL_HOST = "loop-study.com"  # old fly.dev / www requests 301 here
+  # Custom-domain cutover (docs/implementation-plans/loop-recruiter-readiness/02)
+  # done 2026-07-19. Keep the old fly.dev redirect URI registered in the Google
+  # OAuth console during the transition; remove it once traffic is clean.

@@ -183,6 +183,35 @@
         font-weight: 700;
       }
 
+      /* ——— Closed-beta strip ——— */
+      .beta-strip {
+        background: var(--gold-soft);
+        border-top: 1px solid var(--line);
+        border-bottom: 1px solid var(--line-2);
+        font-size: 13.5px;
+        color: var(--ink-soft);
+      }
+      .beta-inner {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px 12px;
+        padding-top: 10px;
+        padding-bottom: 10px;
+      }
+      .beta-tag {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #8a5c20;
+        background: #fff;
+        border: 1px solid var(--gold);
+        border-radius: 999px;
+        padding: 2px 9px;
+        white-space: nowrap;
+      }
+
       /* ——— Hero ——— */
       .hero {
         display: grid;
@@ -537,6 +566,18 @@
       <a class="btn btn-ghost" href="/auth/login">Sign in</a>
     </header>
 
+    <div class="beta-strip" role="note">
+      <div class="wrap beta-inner">
+        <span class="beta-tag">Closed beta</span>
+        <span>
+          Loop is awaiting Google’s OAuth verification, so sign-in is limited to approved
+          testers for now. Email
+          <a href="mailto:xl3704@columbia.edu?subject=Loop%20beta%20access">xl3704@columbia.edu</a>
+          to request access.
+        </span>
+      </div>
+    </div>
+
     <main>
       <!-- Hero -->
       <div class="wrap">
@@ -556,9 +597,11 @@
               <a class="btn btn-ghost" href="#how">See how it works</a>
             </div>
             <p class="tester-note">
-              Loop is in limited testing — sign-in is open to a small allowlist of Google accounts
-              (≤100 testers). If yours isn’t on it yet, you’ll be told at sign-in rather than let in
-              halfway.
+              Loop is in closed beta while Google’s OAuth verification is in progress — sign-in
+              works only for allowlisted Google accounts. Email
+              <a href="mailto:xl3704@columbia.edu?subject=Loop%20beta%20access">xl3704@columbia.edu</a>
+              to request access; if your account isn’t on the list yet, you’ll be told at sign-in
+              rather than let in halfway.
             </p>
           </div>
 
@@ -749,7 +792,9 @@
             </a>
           </div>
           <p class="tester-note" style="margin-inline: auto; text-align: center">
-            Limited testing — a small allowlist of Google accounts for now.
+            Closed beta — email
+            <a href="mailto:xl3704@columbia.edu?subject=Loop%20beta%20access">xl3704@columbia.edu</a>
+            to request access while Google’s OAuth verification is in progress.
           </p>
         </div>
       </section>

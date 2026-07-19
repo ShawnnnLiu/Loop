@@ -123,6 +123,24 @@ def test_create_hosted_app_reads_canonical_host(
     assert client.get("/healthz", follow_redirects=False).json() == {"status": "ok"}
 
 
+def test_dockerfile_declares_every_static_page_env_override() -> None:
+    # Inside the Docker image (backend/ → /app, landing/ → /app/landing) the
+    # in-repo path defaults (default_privacy_page() etc.) do NOT resolve; the
+    # image relies on the *_INDEX env vars in the Dockerfile's ENV block. A
+    # page wired in server.py but missing there is silently not registered in
+    # production and falls through to the SPA catch-all (the /privacy → /today
+    # regression). Pin the Dockerfile to the server's static-page env vars.
+    dockerfile = (Path(__file__).resolve().parents[2] / "Dockerfile").read_text()
+    for env_line in (
+        "SPA_DIST_DIR=/app/frontend/dist",
+        "LANDING_INDEX=/app/landing/index.html",
+        "HOW_ITS_BUILT_INDEX=/app/landing/how-its-built.html",
+        "PRIVACY_INDEX=/app/landing/privacy.html",
+        "TERMS_INDEX=/app/landing/terms.html",
+    ):
+        assert env_line in dockerfile, env_line
+
+
 def test_create_hosted_app_requires_db_path(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

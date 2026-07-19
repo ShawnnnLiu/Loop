@@ -26,7 +26,9 @@ ENV PYTHONUNBUFFERED=1 \
     UV_LINK_MODE=copy \
     SPA_DIST_DIR=/app/frontend/dist \
     LANDING_INDEX=/app/landing/index.html \
-    HOW_ITS_BUILT_INDEX=/app/landing/how-its-built.html
+    HOW_ITS_BUILT_INDEX=/app/landing/how-its-built.html \
+    PRIVACY_INDEX=/app/landing/privacy.html \
+    TERMS_INDEX=/app/landing/terms.html
 
 RUN pip install --no-cache-dir uv
 
@@ -36,9 +38,12 @@ COPY backend/ /app
 RUN uv sync --no-dev --frozen
 
 # The static surfaces the hosted server serves: the landing page at "/", the
-# engineering-story page at /how-its-built, and the built SPA (index.html
-# fallback for app routes, hashed bundles under /assets). SPA_DIST_DIR /
-# LANDING_INDEX / HOW_ITS_BUILT_INDEX (above) point the server at these paths.
+# engineering-story page at /how-its-built, the policy pages at /privacy and
+# /terms, and the built SPA (index.html fallback for app routes, hashed
+# bundles under /assets). The *_INDEX / SPA_DIST_DIR env vars (above) point
+# the server at these paths — the in-repo defaults do not resolve in this
+# image layout, and a page missing from that ENV block silently falls through
+# to the SPA catch-all in production.
 COPY landing/ /app/landing
 COPY --from=frontend /fe/dist /app/frontend/dist
 

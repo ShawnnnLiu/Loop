@@ -47,6 +47,8 @@ def _set_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv("SPA_DIST_DIR", str(tmp_path / "no-spa-build"))
     monkeypatch.setenv("LANDING_INDEX", str(tmp_path / "no-landing.html"))
     monkeypatch.setenv("HOW_ITS_BUILT_INDEX", str(tmp_path / "no-built.html"))
+    monkeypatch.setenv("PRIVACY_INDEX", str(tmp_path / "no-privacy.html"))
+    monkeypatch.setenv("TERMS_INDEX", str(tmp_path / "no-terms.html"))
     # No canonical-host redirect unless a test opts in (and never inherit one
     # from the invoking shell).
     monkeypatch.delenv("CANONICAL_HOST", raising=False)
@@ -88,6 +90,24 @@ def test_create_hosted_app_serves_how_its_built_from_env(
     resp = client.get("/how-its-built")
     assert resp.status_code == 200
     assert "BUILT_MARKER" in resp.text
+
+
+def test_create_hosted_app_serves_policy_pages_from_env(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    _set_env(monkeypatch, tmp_path)
+    privacy = tmp_path / "privacy.html"
+    privacy.write_text("<!doctype html><h1>PRIVACY_MARKER</h1>")
+    terms = tmp_path / "terms.html"
+    terms.write_text("<!doctype html><h1>TERMS_MARKER</h1>")
+    monkeypatch.setenv("PRIVACY_INDEX", str(privacy))
+    monkeypatch.setenv("TERMS_INDEX", str(terms))
+    client = TestClient(create_hosted_app())
+    for route, marker in (("/privacy", "PRIVACY_MARKER"), ("/terms", "TERMS_MARKER")):
+        resp = client.get(route)
+        assert resp.status_code == 200, route
+        assert resp.headers["content-type"].startswith("text/html")
+        assert marker in resp.text
 
 
 def test_create_hosted_app_reads_canonical_host(

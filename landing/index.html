@@ -183,6 +183,35 @@
         font-weight: 700;
       }
 
+      /* ——— Closed-beta strip ——— */
+      .beta-strip {
+        background: var(--gold-soft);
+        border-top: 1px solid var(--line);
+        border-bottom: 1px solid var(--line-2);
+        font-size: 13.5px;
+        color: var(--ink-soft);
+      }
+      .beta-inner {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px 12px;
+        padding-top: 10px;
+        padding-bottom: 10px;
+      }
+      .beta-tag {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #8a5c20;
+        background: #fff;
+        border: 1px solid var(--gold);
+        border-radius: 999px;
+        padding: 2px 9px;
+        white-space: nowrap;
+      }
+
       /* ——— Hero ——— */
       .hero {
         display: grid;
@@ -403,6 +432,55 @@
         margin: 6px 0 0;
       }
 
+      /* ——— Google data panel ——— */
+      .gdata {
+        margin-top: 34px;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: var(--r);
+        padding: clamp(20px, 3vw, 30px);
+        box-shadow: var(--shadow-sm);
+      }
+      .gdata h3 {
+        font-size: 20px;
+      }
+      .gdata-rows {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 18px;
+        margin-top: 18px;
+      }
+      .gdata-row h4 {
+        margin: 0;
+        font-family: var(--sans);
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--ink);
+      }
+      .gdata-row .scope {
+        display: inline-block;
+        font-family: var(--mono);
+        font-size: 10.5px;
+        color: var(--muted);
+        background: var(--paper-2);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 2px 7px;
+        margin-top: 6px;
+      }
+      .gdata-row p {
+        font-size: 13.5px;
+        color: var(--ink-soft);
+        margin: 8px 0 0;
+      }
+      .gdata-foot {
+        font-size: 13.5px;
+        color: var(--ink-soft);
+        margin: 20px 0 0;
+        padding-top: 16px;
+        border-top: 1px solid var(--line);
+      }
+
       /* ——— Thesis ——— */
       .thesis {
         text-align: center;
@@ -488,6 +566,18 @@
       <a class="btn btn-ghost" href="/auth/login">Sign in</a>
     </header>
 
+    <div class="beta-strip" role="note">
+      <div class="wrap beta-inner">
+        <span class="beta-tag">Closed beta</span>
+        <span>
+          Loop is awaiting Google’s OAuth verification, so sign-in is limited to approved
+          testers for now. Email
+          <a href="mailto:xl3704@columbia.edu?subject=Loop%20beta%20access">xl3704@columbia.edu</a>
+          to request access.
+        </span>
+      </div>
+    </div>
+
     <main>
       <!-- Hero -->
       <div class="wrap">
@@ -507,9 +597,11 @@
               <a class="btn btn-ghost" href="#how">See how it works</a>
             </div>
             <p class="tester-note">
-              Loop is in limited testing — sign-in is open to a small allowlist of Google accounts
-              (≤100 testers). If yours isn’t on it yet, you’ll be told at sign-in rather than let in
-              halfway.
+              Loop is in closed beta while Google’s OAuth verification is in progress — sign-in
+              works only for allowlisted Google accounts. Email
+              <a href="mailto:xl3704@columbia.edu?subject=Loop%20beta%20access">xl3704@columbia.edu</a>
+              to request access; if your account isn’t on the list yet, you’ll be told at sign-in
+              rather than let in halfway.
             </p>
           </div>
 
@@ -625,6 +717,44 @@
               <p>When it can’t proceed, it says exactly why — and how to recover.</p>
             </div>
           </div>
+
+          <div class="gdata">
+            <h3>What Loop accesses from your Google account — and why</h3>
+            <div class="gdata-rows">
+              <div class="gdata-row">
+                <h4>Who you are</h4>
+                <span class="scope">email · profile</span>
+                <p>
+                  Your email address and display name, used to sign you in and identify your
+                  account. Nothing else from your Google profile.
+                </p>
+              </div>
+              <div class="gdata-row">
+                <h4>When you’re busy</h4>
+                <span class="scope">calendar.freebusy</span>
+                <p>
+                  Busy/free time ranges only, so the scheduler plans study sessions around your
+                  existing commitments. Loop cannot see event titles, descriptions, attendees, or
+                  locations on your calendars — the permission it requests does not allow it.
+                </p>
+              </div>
+              <div class="gdata-row">
+                <h4>One calendar Loop creates</h4>
+                <span class="scope">calendar.app.created</span>
+                <p>
+                  Approved study sessions are written to a dedicated calendar Loop creates in your
+                  account. Loop cannot edit or delete events on any other calendar.
+                </p>
+              </div>
+            </div>
+            <p class="gdata-foot">
+              Your Google data is used only to provide these features. It is never sold, never
+              shared with third parties, never used for advertising, and never used to train AI
+              models. You can revoke Loop’s access at any time from your
+              <a href="https://myaccount.google.com/permissions">Google Account permissions</a>,
+              and it stops working immediately.
+            </p>
+          </div>
         </div>
       </section>
 
@@ -662,7 +792,9 @@
             </a>
           </div>
           <p class="tester-note" style="margin-inline: auto; text-align: center">
-            Limited testing — a small allowlist of Google accounts for now.
+            Closed beta — email
+            <a href="mailto:xl3704@columbia.edu?subject=Loop%20beta%20access">xl3704@columbia.edu</a>
+            to request access while Google’s OAuth verification is in progress.
           </p>
         </div>
       </section>
@@ -678,6 +810,8 @@
         <span class="muted">Built by <a class="muted" href="https://github.com/ShawnnnLiu">Shawn Liu</a></span>
         <span class="spacer"></span>
         <a class="muted" href="/how-its-built">How it’s built</a>
+        <a class="muted" href="/privacy">Privacy</a>
+        <a class="muted" href="/terms">Terms</a>
         <a class="muted" href="/auth/login">Get started →</a>
       </div>
     </footer>

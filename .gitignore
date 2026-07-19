@@ -57,3 +57,5 @@ dogfood_profile.json
 /Admissions Agentic Scheduler.zip
 /backend/smoke_rows.json
 /.claude/agents/
+# Personal interview-prep material — never publish to the public repo
+/docs/interview-prep/

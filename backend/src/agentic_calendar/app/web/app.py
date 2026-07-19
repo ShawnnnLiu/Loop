@@ -69,6 +69,23 @@ def default_how_its_built() -> Path:
     return Path(__file__).resolve().parents[5] / "landing" / "how-its-built.html"
 
 
+def default_privacy_page() -> Path:
+    """The repo's static privacy-policy page (``landing/privacy.html``).
+
+    Served at ``/privacy`` next to the landing — Google's OAuth verification
+    requires it, linked from the homepage. Hosted deploys may override it with
+    ``PRIVACY_INDEX``."""
+    return Path(__file__).resolve().parents[5] / "landing" / "privacy.html"
+
+
+def default_terms_page() -> Path:
+    """The repo's static terms-of-service page (``landing/terms.html``).
+
+    Served at ``/terms`` next to the landing. Hosted deploys may override it
+    with ``TERMS_INDEX``."""
+    return Path(__file__).resolve().parents[5] / "landing" / "terms.html"
+
+
 def _mount_spa(app: FastAPI, dist_dir: Path) -> None:
     """Serve the built SPA: hashed bundles under ``/assets`` and ``index.html``
     as the fallback for every other GET, so the client router owns app routes
@@ -102,6 +119,8 @@ def create_app(
     spa_dist: Path | None = None,
     landing_index: Path | None = None,
     how_its_built: Path | None = None,
+    privacy_page: Path | None = None,
+    terms_page: Path | None = None,
     canonical_host: str | None = None,
 ) -> FastAPI:
     """Build the app over a wired :class:`AppEnvironment`.
@@ -204,6 +223,21 @@ def create_app(
         @app.get("/how-its-built", include_in_schema=False)
         def how_its_built_page() -> FileResponse:
             return FileResponse(how_its_built)
+
+    # The static policy pages (/privacy, /terms), landing siblings. /privacy is
+    # a Google OAuth verification requirement (linked from the homepage). Like
+    # the landing they must be registered before the SPA catch-all.
+    if privacy_page is not None and privacy_page.is_file():
+
+        @app.get("/privacy", include_in_schema=False)
+        def privacy() -> FileResponse:
+            return FileResponse(privacy_page)
+
+    if terms_page is not None and terms_page.is_file():
+
+        @app.get("/terms", include_in_schema=False)
+        def terms() -> FileResponse:
+            return FileResponse(terms_page)
 
     # The SPA fallback is registered LAST so its catch-all never shadows the API,
     # auth, health, or landing routes above. Only mounted when a real build is

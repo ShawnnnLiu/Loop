@@ -66,7 +66,8 @@ narrative:
 | `03-llm-surfaces.md` | What LLMs propose and where: ResumeIntakeNode tag extension, UserFacingExplanationNode story summaries, why **no new node class** is needed in Loop, prompt-exposure table, groundedness posture, cost. |
 | `04-loop-increments.md` | NP-A…NP-F Loop implementation increments (one commit each), seed pathway content for the three live tracks, definition of done. |
 | `05-tandem-vision.md` | The admissions end state: activity-shaped evidence, major-anchored pathways, the essay-editor seam (the future sixth node class), counselor visibility via the existing sponsor layer, staging gates. |
-| `06-knowledge-tree.md` | The per-pathway knowledge tree (added 2026-07-16): curated DAG crowned by the evidence-slot capstones, five deterministic mastery tiers, the illuminated-map UI spec, KT-A…KT-D increments. Display-layer only — never a second prerequisite engine. Hi-fi visual reference: `docs/design-reference/Loop - Pathway Map.html`. |
+| `06-knowledge-tree.md` | The per-pathway knowledge tree (added 2026-07-16): generated DAG (see `07-…`) crowned by the evidence-slot capstones, five deterministic mastery tiers, the illuminated-map UI spec, KT-A…KT-D increments. Display-layer only — never a second prerequisite engine. Hi-fi visual reference: `docs/design-reference/Loop - Pathway Map.html`. |
+| `07-tree-generation.md` | How knowledge trees come to exist (added 2026-07-17): deterministic generation from a curated, versioned **skill graph** (prerequisite edges + minutes prior + blurb per `skill_id`) and per-slot seed skills; build-time `make trees` / `trees-check` tool with committed, byte-identical output; g-series open decisions. Curation moves from per-pathway trees to per-skill graph rows. |
 
 ## How these docs plug into existing plans
 
@@ -122,11 +123,14 @@ narrative:
 5. **Knowledge-tree decisions d1–d4** (tier names, honed threshold basis,
    whether a `locked` display state exists, tree size): see the open
    decisions section of `06-knowledge-tree.md`.
+6. **Tree-generation decisions g1–g3** (transitive reduction on/off,
+   whether hand overrides on generated trees are ever allowed, where
+   blurbs live): see `07-tree-generation.md`.
 
 ## Kickoff prompt (copy-paste into a fresh session, when implementation is approved)
 
 ```
-Read docs/implementation-plans/narrative-pathways/README.md, then the six
+Read docs/implementation-plans/narrative-pathways/README.md, then the seven
 numbered docs in that folder, then docs/specs/milestone-template.schema.md,
 docs/specs/user-profile.schema.md, docs/specs/resume-extraction.schema.md,
 docs/specs/strategy-constraints.schema.md,

@@ -2,14 +2,15 @@
 
 Added 2026-07-16, same status as the rest of the folder: **planning only,
 nothing implemented.** This doc extends `02-…` (registry/contracts) and
-`04-…` (increments) with the per-pathway knowledge tree: a curated DAG of
+`04-…` (increments) with the per-pathway knowledge tree: a DAG of
 knowledge nodes with deterministic mastery tiers, rendered as an RPG-style
-progression map. It is the visual centerpiece of the story layer — the
+progression map. The DAG itself is not hand-drawn — it is generated
+deterministically from a curated skill graph (`07-tree-generation.md`). It is the visual centerpiece of the story layer — the
 screen a user opens to *feel* their progress.
 
 ## What the tree is (and the one rule that keeps it safe)
 
-Each `PathwayTemplate` carries one **knowledge tree**: 20–40 curated nodes
+Each `PathwayTemplate` carries one **knowledge tree**: 20–40 nodes
 arranged in branches, one branch per evidence slot ("constellation" =
 pillar), each branch crowned by a **capstone node that IS the slot**. Study
 progress lights a branch from the roots; a confirmed artifact ("mark
@@ -24,10 +25,12 @@ control plane. A "locked" tree node is a rendering state, not a permission —
 if the Strategist schedules work on it anyway, it simply lights up. This is
 what keeps the tree from becoming a second, competing prerequisite engine.
 
-Like everything in this folder: **curated structure, deterministic state,
-LLM-free rendering.** The tree shape is registry content (human-reviewed
-literals); the user's per-node tier is a pure function of confirmed data;
-no LLM assigns, names, or explains a mastery tier numerically.
+Like everything in this folder: **curated knowledge, deterministic
+structure, LLM-free rendering.** The tree shape is generated registry
+content — a pure function (`07-…`) over the curated skill graph and each
+slot's seed skills, committed and human-reviewed as concrete diffs; the
+user's per-node tier is a pure function of confirmed data; no LLM assigns,
+names, or explains a mastery tier numerically.
 
 ## Contract — `KnowledgeTree` inside `PathwayTemplate`
 
@@ -85,6 +88,12 @@ Invariants (contract + registry tests, invalid fixtures for each):
   islands — guarantees every node visibly serves a pillar).
 - Prestige denylist over all text fields (shared constant).
 
+The tree literal is emitted by the deterministic generator
+(`07-tree-generation.md`), never hand-authored per pathway. The invariants
+above double as the generator's acceptance tests — the invalid fixtures
+stay, because the contract must reject a bad tree no matter who produced
+it.
+
 ## Mastery tiers — deterministic ladder, five states
 
 Proposed names (open decision d1 — flavor without dishonesty):
@@ -130,7 +139,9 @@ function; the API computes it on read (NP-D's coverage payload grows a
 
 New reason codes: `UNKNOWN_KNOWLEDGE_NODE` (validation),
 `KNOWLEDGE_TREE_CYCLE` (contract/registry structured violation). That's the
-complete list — display states are not failures.
+complete runtime list — display states are not failures. The
+generation-time structured violations (`SKILL_GRAPH_CYCLE` and friends)
+live in `07-…` and can never occur at runtime.
 
 ## UI — the Knowledge Map (RPG structure in Loop's skin)
 
@@ -206,14 +217,19 @@ pathway templates); KT-C needs NP-D's strategist plumbing; KT-D needs NP-E's
 screens. Run the KT series after NP-F, or interleave at those seams.
 
 - **KT-A — contracts.** Spec amendments (`pathway-template`,
-  `syllabus-units`), reason codes, Pydantic + fixtures (incl. cycle,
-  dangling-capstone, orphan-island invalids), `make schemas`.
-- **KT-B — trees + kernel.** Curated trees for the seed pathways (content
-  quarry: the career-track-expansion skill lists — most nodes are taxonomy
-  rows the research already named), `tree_state` in `narrative/`,
-  `honed_fraction` prior in `tuning.toml` + threshold-change-log entry,
-  exhaustive tier tests (each transition, precedence, actual-vs-planned
-  minutes).
+  `syllabus-units`) plus the new `skill-graph.schema.md` (`07-…`), reason
+  codes, Pydantic + fixtures (incl. cycle, dangling-capstone,
+  orphan-island, and skill-graph-cycle invalids), `make schemas`.
+- **KT-B — skill graph + generator + kernel.** Curated
+  `skill_graph_v1.json` rows for every skill reachable from the seed
+  pathways' slot seeds (content quarry: the career-track-expansion skill
+  lists and their "typical arc" prose — most nodes are taxonomy rows the
+  research already named), the `tools/` generator + `make trees` /
+  `trees-check` per `07-…`, the committed tree artifact for the seed
+  pathways, `tree_state` in `narrative/`, `honed_fraction` prior in
+  `tuning.toml` + threshold-change-log entry, exhaustive tier tests (each
+  transition, precedence, actual-vs-planned minutes) + generator
+  determinism tests (byte-identical re-run, tie-break fixtures).
 - **KT-C — strategist + API.** Prompt vocabulary + output gate,
   composition-root wiring, `tree` block in the coverage payload,
   validation tests per reason code.
@@ -246,5 +262,9 @@ budget should assume that ceiling now.
   some users; alternative is rendering everything `discovered`. Proposed:
   keep `locked` — the reveal moment is most of the RPG feel — and revisit
   after dogfood.
-- **d4 · Tree size**: 20–40 nodes per Loop pathway (curation cost vs map
-  richness); Tandem ceiling 60.
+- **d4 · Tree size**: 20–40 nodes per Loop pathway, Tandem ceiling 60 —
+  enforced by the generator as a loud failure, never silent pruning
+  (`07-…`); the knob is seed-list size and graph granularity, not
+  per-tree drawing.
+- **g1–g3 · Generation decisions** (transitive reduction, hand-override
+  policy, blurb home): see `07-tree-generation.md`.

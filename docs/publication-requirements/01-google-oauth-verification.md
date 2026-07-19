@@ -45,7 +45,13 @@ to justify.
    redirect URIs — must belong to you and be listed as an authorized domain.
 3. **App homepage** on that domain that genuinely describes what the app
    does. A bare login page gets rejected. `landing/index.html` qualifies
-   once it is served from the verified domain.
+   once it is served from the verified domain. *Status 2026-07-18: content
+   done — the page now also states per-scope Google-data use explicitly
+   ("What Loop accesses from your Google account — and why", one entry per
+   scope, plus revocation via Google Account permissions), which Google's
+   homepage review checks for. One dependency remains: Google requires the
+   homepage to link the privacy policy, so add a footer link to `/privacy`
+   when requirement 4 ships — do not link it before the page exists.*
 4. **Privacy policy URL** on the same verified domain, linked from the
    homepage, describing how Google user data is collected, used, stored,
    and shared — consistent with the

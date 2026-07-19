@@ -16,9 +16,10 @@ All configuration comes from environment variables (never the repo):
 * ``ANTHROPIC_API_KEY``         — required: real testers' plans use the live
   Anthropic nodes (the fixture nodes only handle the sample profile).
 * ``TUNING_PATH``               — optional tuning.toml (journaled overrides).
-* ``SPA_DIST_DIR`` / ``LANDING_INDEX`` / ``HOW_ITS_BUILT_INDEX`` — optional
-  overrides for the built SPA, the static landing, and the static
-  engineering-story page (defaults are the in-repo copies).
+* ``SPA_DIST_DIR`` / ``LANDING_INDEX`` / ``HOW_ITS_BUILT_INDEX`` /
+  ``PRIVACY_INDEX`` / ``TERMS_INDEX`` — optional overrides for the built SPA
+  and the static pages (landing, engineering story, privacy policy, terms);
+  defaults are the in-repo copies.
 * ``CANONICAL_HOST``            — optional bare hostname; requests under any
   other host (e.g. the old ``<app>.fly.dev`` name after a custom-domain
   cutover) are 301-redirected to it. Unset means no redirect.
@@ -37,7 +38,14 @@ from agentic_calendar.app.environment import build_environment
 from agentic_calendar.common.secrets import TokenCipher
 from agentic_calendar.tools.run_cycle import _live_bundle
 
-from .app import create_app, default_how_its_built, default_landing_index, default_spa_dist
+from .app import (
+    create_app,
+    default_how_its_built,
+    default_landing_index,
+    default_privacy_page,
+    default_spa_dist,
+    default_terms_page,
+)
 from .config import WebAuthConfig, WebConfigError
 
 
@@ -64,6 +72,10 @@ def create_hosted_app() -> FastAPI:
     landing_index = Path(landing_override) if landing_override else default_landing_index()
     built_override = os.environ.get("HOW_ITS_BUILT_INDEX")
     how_its_built = Path(built_override) if built_override else default_how_its_built()
+    privacy_override = os.environ.get("PRIVACY_INDEX")
+    privacy_page = Path(privacy_override) if privacy_override else default_privacy_page()
+    terms_override = os.environ.get("TERMS_INDEX")
+    terms_page = Path(terms_override) if terms_override else default_terms_page()
     return create_app(
         env=env,
         auth_config=WebAuthConfig.from_env(),
@@ -71,5 +83,7 @@ def create_hosted_app() -> FastAPI:
         spa_dist=spa_dist,
         landing_index=landing_index,
         how_its_built=how_its_built,
+        privacy_page=privacy_page,
+        terms_page=terms_page,
         canonical_host=os.environ.get("CANONICAL_HOST") or None,
     )

@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Loop's terms of service for the limited beta: what the service is, what to expect during beta, acceptable use, and how the terms can change."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Hanken+Grotesk:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <title>Loop — terms of service</title>
+    <style>
+      /* Design tokens shared with the landing page and the product SPA
+         (frontend/src/styles/tokens.css). Inlined so this page stays a single
+         self-contained static file, like landing/index.html. */
+      :root {
+        --ink: #16212e;
+        --ink-2: #22303f;
+        --ink-soft: #38485a;
+        --muted: #6c7886;
+        --muted-2: #97a0ab;
+        --paper: #fbf8f2;
+        --paper-2: #f4ece0;
+        --paper-3: #ece2d3;
+        --card: #ffffff;
+        --clay: #bd5a39;
+        --clay-deep: #9c4527;
+        --clay-soft: #f1ddd1;
+        --clay-tint: #faeee6;
+        --sage: #5f7a64;
+        --sage-deep: #496650;
+        --sage-soft: #e3ebe2;
+        --gold: #c08a3e;
+        --gold-soft: #f6e6cf;
+        --line: #e9e0d2;
+        --line-2: #ddd2bf;
+        --serif: 'Newsreader', Georgia, serif;
+        --sans: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
+        --mono: 'Spline Sans Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+        --r: 16px;
+        --r-sm: 11px;
+        --shadow-sm: 0 1px 2px rgba(22, 33, 46, 0.05), 0 4px 14px rgba(22, 33, 46, 0.05);
+        --shadow: 0 2px 6px rgba(22, 33, 46, 0.05), 0 18px 44px -18px rgba(22, 33, 46, 0.22);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: var(--sans);
+        font-size: 16px;
+        line-height: 1.55;
+        -webkit-font-smoothing: antialiased;
+      }
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+        font-family: var(--serif);
+        font-weight: 500;
+        letter-spacing: -0.015em;
+        line-height: 1.12;
+      }
+      a {
+        color: inherit;
+      }
+      .muted {
+        color: var(--muted);
+      }
+
+      /* ——— Top nav (same as landing) ——— */
+      .nav {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 18px clamp(20px, 5vw, 48px);
+        max-width: 1080px;
+        margin: 0 auto;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        text-decoration: none;
+      }
+      .glyph {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        background: var(--ink);
+        color: var(--paper);
+        display: grid;
+        place-items: center;
+        font-family: var(--serif);
+        font-size: 19px;
+        font-weight: 600;
+        position: relative;
+      }
+      .glyph::after {
+        content: '✓';
+        position: absolute;
+        right: -4px;
+        bottom: -4px;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--clay);
+        color: #fff;
+        font-size: 9px;
+        font-weight: 800;
+        display: grid;
+        place-items: center;
+        border: 2px solid var(--paper);
+      }
+      .word {
+        font-family: var(--serif);
+        font-size: 20px;
+        font-weight: 600;
+      }
+      .spacer {
+        flex: 1;
+      }
+      .btn-quiet {
+        display: inline-flex;
+        align-items: center;
+        font-family: var(--sans);
+        font-weight: 600;
+        font-size: 15px;
+        padding: 8px 12px;
+        border-radius: 11px;
+        color: var(--ink-soft);
+        text-decoration: none;
+        white-space: nowrap;
+      }
+
+      /* ——— Document layout ——— */
+      .doc {
+        max-width: 760px;
+        margin: 0 auto;
+        padding: clamp(28px, 5vw, 56px) clamp(20px, 5vw, 48px) clamp(48px, 7vw, 88px);
+      }
+      .eyebrow {
+        font-family: var(--sans);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--clay-deep);
+      }
+      .doc h1 {
+        font-size: clamp(32px, 4.6vw, 44px);
+        margin-top: 12px;
+      }
+      .doc-meta {
+        font-size: 14px;
+        color: var(--muted);
+        margin-top: 14px;
+        padding-bottom: 22px;
+        border-bottom: 1px solid var(--line);
+      }
+      .doc-meta .mono {
+        font-family: var(--mono);
+        font-size: 13px;
+      }
+      .doc h2 {
+        font-size: 24px;
+        margin-top: 44px;
+      }
+      .doc p {
+        color: var(--ink-2);
+        margin: 14px 0 0;
+      }
+      .doc ul {
+        margin: 12px 0 0;
+        padding-left: 22px;
+        color: var(--ink-2);
+      }
+      .doc li {
+        margin-top: 8px;
+      }
+      .doc li b,
+      .doc p b {
+        color: var(--ink);
+      }
+
+      /* ——— Footer (same as landing) ——— */
+      footer {
+        border-top: 1px solid var(--line);
+        padding: 28px clamp(20px, 5vw, 48px);
+      }
+      .foot-inner {
+        max-width: 1080px;
+        margin: 0 auto;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 14px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <header class="nav">
+      <a class="brand" href="/">
+        <span class="glyph">L</span>
+        <span class="word">Loop</span>
+      </a>
+      <span class="spacer"></span>
+      <a class="btn-quiet" href="/how-its-built">How it’s built</a>
+      <a class="btn-quiet" href="/privacy">Privacy</a>
+    </header>
+
+    <main class="doc">
+      <span class="eyebrow">Legal</span>
+      <h1>Terms of Service</h1>
+      <p class="doc-meta">
+        Effective <b>July 19, 2026</b> · applies to Loop at
+        <span class="mono">loop-study.com</span> · operated by Shawn Liu, an individual
+        developer · contact
+        <a class="mono" href="mailto:1732003904liu@gmail.com">1732003904liu@gmail.com</a>
+      </p>
+
+      <h2>The service</h2>
+      <p>
+        Loop is a study-planning tool: it turns your interview-prep goal and availability into a
+        study plan and, with your explicit approval, writes study sessions to a dedicated Google
+        Calendar it creates in your account. By using Loop you agree to these terms and to the
+        <a href="/privacy">privacy policy</a>, which describes how your data is handled.
+      </p>
+
+      <h2>Beta status — provided as-is</h2>
+      <p>
+        Loop is in a limited beta, run by one person. It is provided <b>“as is” and “as
+        available”, without warranties of any kind</b>. There is no uptime guarantee; the service
+        may be interrupted, changed, or discontinued. If the beta winds down, reasonable notice
+        will be given where practical, and your data will be handled as the privacy policy
+        describes. Loop is free of charge during the beta.
+      </p>
+      <p>
+        Plans Loop generates are suggestions to help you organize your preparation. They are not
+        professional career advice, and no outcome — an interview, an offer, a skill level — is
+        promised.
+      </p>
+
+      <h2>Your account</h2>
+      <p>
+        Beta sign-in is limited to an allowlist of Google accounts. You are responsible for your
+        Google account and for the accuracy of what you provide to Loop. You can stop using Loop
+        at any time by revoking its access from your
+        <a href="https://myaccount.google.com/permissions">Google Account permissions</a>.
+      </p>
+
+      <h2>Service metrics</h2>
+      <p>
+        Loop measures how the service performs as you use it — for example how many people use
+        it, how long plan generation takes and what it costs, how often plans need repair, and
+        whether proposed sessions are accepted and completed. These measurements are used to
+        operate and improve Loop, and any figures shared publicly are aggregates that cannot
+        identify you. The <a href="/privacy">privacy policy</a> describes exactly what is
+        recorded and never includes your calendar contents or free text.
+      </p>
+
+      <h2>Acceptable use</h2>
+      <p>Keep it simple: use Loop for your own study planning. Do not:</p>
+      <ul>
+        <li>probe, overload, disrupt, or attempt to bypass the service’s security or its approval
+          and validation safeguards;</li>
+        <li>attempt to access another person’s account or data;</li>
+        <li>use automated tools to scrape the service or bulk-trigger plan generation;</li>
+        <li>use the service for anything unlawful.</li>
+      </ul>
+
+      <h2>Termination</h2>
+      <p>
+        You may stop using Loop at any time. Accounts that violate these terms, or abuse the
+        service, may be suspended or terminated; the beta allowlist may also change as the test
+        evolves. On termination, your data is handled as described in the
+        <a href="/privacy">privacy policy</a> — you can always request deletion by email.
+      </p>
+
+      <h2>Changes to these terms</h2>
+      <p>
+        These terms may be updated as Loop evolves. The effective date above will be updated and
+        material changes will be noted on this page; continuing to use Loop after a change means
+        you accept the updated terms.
+      </p>
+
+      <h2>Contact</h2>
+      <p>
+        Questions about these terms:
+        <a href="mailto:1732003904liu@gmail.com">1732003904liu@gmail.com</a>.
+      </p>
+    </main>
+
+    <footer>
+      <div class="foot-inner">
+        <a class="brand" href="/">
+          <span class="glyph">L</span>
+          <span class="word">Loop</span>
+        </a>
+        <span class="muted">Interview prep, scheduled around your real life.</span>
+        <span class="muted">Built by <a class="muted" href="https://github.com/ShawnnnLiu">Shawn Liu</a></span>
+        <span class="spacer"></span>
+        <a class="muted" href="/">Product</a>
+        <a class="muted" href="/how-its-built">How it’s built</a>
+        <a class="muted" href="/privacy">Privacy</a>
+      </div>
+    </footer>
+  </body>
+</html>

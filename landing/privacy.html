@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Loop's privacy policy: what Google data the app accesses, what it stores, what it never reads, and how to revoke access or request deletion."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Hanken+Grotesk:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <title>Loop — privacy policy</title>
+    <style>
+      /* Design tokens shared with the landing page and the product SPA
+         (frontend/src/styles/tokens.css). Inlined so this page stays a single
+         self-contained static file, like landing/index.html. */
+      :root {
+        --ink: #16212e;
+        --ink-2: #22303f;
+        --ink-soft: #38485a;
+        --muted: #6c7886;
+        --muted-2: #97a0ab;
+        --paper: #fbf8f2;
+        --paper-2: #f4ece0;
+        --paper-3: #ece2d3;
+        --card: #ffffff;
+        --clay: #bd5a39;
+        --clay-deep: #9c4527;
+        --clay-soft: #f1ddd1;
+        --clay-tint: #faeee6;
+        --sage: #5f7a64;
+        --sage-deep: #496650;
+        --sage-soft: #e3ebe2;
+        --gold: #c08a3e;
+        --gold-soft: #f6e6cf;
+        --line: #e9e0d2;
+        --line-2: #ddd2bf;
+        --serif: 'Newsreader', Georgia, serif;
+        --sans: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
+        --mono: 'Spline Sans Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+        --r: 16px;
+        --r-sm: 11px;
+        --shadow-sm: 0 1px 2px rgba(22, 33, 46, 0.05), 0 4px 14px rgba(22, 33, 46, 0.05);
+        --shadow: 0 2px 6px rgba(22, 33, 46, 0.05), 0 18px 44px -18px rgba(22, 33, 46, 0.22);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: var(--sans);
+        font-size: 16px;
+        line-height: 1.55;
+        -webkit-font-smoothing: antialiased;
+      }
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+        font-family: var(--serif);
+        font-weight: 500;
+        letter-spacing: -0.015em;
+        line-height: 1.12;
+      }
+      a {
+        color: inherit;
+      }
+      .muted {
+        color: var(--muted);
+      }
+
+      /* ——— Top nav (same as landing) ——— */
+      .nav {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 18px clamp(20px, 5vw, 48px);
+        max-width: 1080px;
+        margin: 0 auto;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        text-decoration: none;
+      }
+      .glyph {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        background: var(--ink);
+        color: var(--paper);
+        display: grid;
+        place-items: center;
+        font-family: var(--serif);
+        font-size: 19px;
+        font-weight: 600;
+        position: relative;
+      }
+      .glyph::after {
+        content: '✓';
+        position: absolute;
+        right: -4px;
+        bottom: -4px;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--clay);
+        color: #fff;
+        font-size: 9px;
+        font-weight: 800;
+        display: grid;
+        place-items: center;
+        border: 2px solid var(--paper);
+      }
+      .word {
+        font-family: var(--serif);
+        font-size: 20px;
+        font-weight: 600;
+      }
+      .spacer {
+        flex: 1;
+      }
+      .btn-quiet {
+        display: inline-flex;
+        align-items: center;
+        font-family: var(--sans);
+        font-weight: 600;
+        font-size: 15px;
+        padding: 8px 12px;
+        border-radius: 11px;
+        color: var(--ink-soft);
+        text-decoration: none;
+        white-space: nowrap;
+      }
+
+      /* ——— Document layout ——— */
+      .doc {
+        max-width: 760px;
+        margin: 0 auto;
+        padding: clamp(28px, 5vw, 56px) clamp(20px, 5vw, 48px) clamp(48px, 7vw, 88px);
+      }
+      .eyebrow {
+        font-family: var(--sans);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--clay-deep);
+      }
+      .doc h1 {
+        font-size: clamp(32px, 4.6vw, 44px);
+        margin-top: 12px;
+      }
+      .doc-meta {
+        font-size: 14px;
+        color: var(--muted);
+        margin-top: 14px;
+        padding-bottom: 22px;
+        border-bottom: 1px solid var(--line);
+      }
+      .doc-meta .mono {
+        font-family: var(--mono);
+        font-size: 13px;
+      }
+      .doc h2 {
+        font-size: 24px;
+        margin-top: 44px;
+      }
+      .doc p {
+        color: var(--ink-2);
+        margin: 14px 0 0;
+      }
+      .doc ul {
+        margin: 12px 0 0;
+        padding-left: 22px;
+        color: var(--ink-2);
+      }
+      .doc li {
+        margin-top: 8px;
+      }
+      .doc li b,
+      .doc p b {
+        color: var(--ink);
+      }
+      .scope {
+        display: inline-block;
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--muted);
+        background: var(--paper-2);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 1px 7px;
+      }
+      .callout {
+        margin-top: 18px;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-left: 3px solid var(--sage);
+        border-radius: 0 var(--r-sm) var(--r-sm) 0;
+        padding: 16px 20px;
+        box-shadow: var(--shadow-sm);
+      }
+      .callout p {
+        margin: 0;
+        font-size: 14.5px;
+      }
+      .callout p + p {
+        margin-top: 10px;
+      }
+
+      /* ——— Footer (same as landing) ——— */
+      footer {
+        border-top: 1px solid var(--line);
+        padding: 28px clamp(20px, 5vw, 48px);
+      }
+      .foot-inner {
+        max-width: 1080px;
+        margin: 0 auto;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 14px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <header class="nav">
+      <a class="brand" href="/">
+        <span class="glyph">L</span>
+        <span class="word">Loop</span>
+      </a>
+      <span class="spacer"></span>
+      <a class="btn-quiet" href="/how-its-built">How it’s built</a>
+      <a class="btn-quiet" href="/terms">Terms</a>
+    </header>
+
+    <main class="doc">
+      <span class="eyebrow">Legal</span>
+      <h1>Privacy Policy</h1>
+      <p class="doc-meta">
+        Effective <b>July 19, 2026</b> · applies to Loop at
+        <span class="mono">loop-study.com</span> · operated by Shawn Liu, an individual
+        developer · contact
+        <a class="mono" href="mailto:1732003904liu@gmail.com">1732003904liu@gmail.com</a>
+      </p>
+
+      <h2>What Loop is</h2>
+      <p>
+        Loop turns your interview-prep goal and your real availability into a study plan, and
+        writes approved study sessions to a dedicated Google Calendar it creates in your account —
+        only after you explicitly approve them. This policy describes, in plain language, what
+        data Loop accesses, what it stores, what it never reads, and the controls you have.
+      </p>
+
+      <h2>Google data Loop accesses</h2>
+      <p>When you connect your Google account, Loop requests three narrow permissions:</p>
+      <ul>
+        <li>
+          <b>Who you are</b> <span class="scope">email · profile</span> — your email address and
+          display name, used to sign you in and identify your account. Nothing else from your
+          Google profile.
+        </li>
+        <li>
+          <b>When you’re busy</b> <span class="scope">calendar.freebusy</span> — busy/free time
+          ranges only, so the scheduler can place study sessions around your existing
+          commitments. Busy ranges are used transiently as scheduling input.
+        </li>
+        <li>
+          <b>One calendar Loop creates</b> <span class="scope">calendar.app.created</span> —
+          Loop creates a dedicated study calendar in your account and writes approved sessions to
+          it. Loop cannot edit or delete events on any other calendar.
+        </li>
+      </ul>
+      <div class="callout">
+        <p>
+          <b>What Loop cannot read:</b> event titles, descriptions, attendees, and locations on
+          your own calendars are <b>not readable</b> with these permissions — the scopes Loop
+          requests do not allow it. Loop never stores raw calendar event text; that is a design
+          rule of the system, enforced in its write path.
+        </p>
+      </div>
+
+      <h2>What Loop stores</h2>
+      <p>Loop keeps, in its own database:</p>
+      <ul>
+        <li>
+          <b>Your account record</b> — email, display name, timezone, and encrypted Google access
+          tokens.
+        </li>
+        <li>
+          <b>What you tell Loop</b> — your goal, availability and session preferences, and, if
+          you choose to paste it, your résumé text. This stays on your own profile record.
+        </li>
+        <li><b>Your study plans</b> — the generated plans and their version history.</li>
+        <li>
+          <b>Progress telemetry</b> — which sessions you marked complete, missed, or rescheduled,
+          used to keep your plan honest and calibrated.
+        </li>
+        <li>
+          <b>Service metrics</b> — operational measurements of how Loop performs: how many
+          people use it, how long plan generation takes and what it costs, how often a generated
+          plan needs automatic repair before it validates, whether proposed plans and sessions
+          are accepted, adjusted, or declined, and overall completion rates. These records are
+          counts, timings, amounts, and typed status codes — never your calendar contents or
+          anything you write in free text. They are used to operate, troubleshoot, and improve
+          Loop; any figures shared publicly (for example, on this site) are
+          aggregates across users that cannot identify you.
+        </li>
+        <li>
+          <b>Calendar event mappings</b> — the IDs of events Loop wrote to its own study
+          calendar, kept so writes can be verified and rolled back. IDs only, never event
+          content.
+        </li>
+      </ul>
+      <p>
+        Busy/free ranges read from Google are transient scheduling input; they are not kept as
+        long-term data and never enter any research or training dataset.
+      </p>
+
+      <h2>What is shared — and what is not</h2>
+      <p>
+        Your data is <b>never sold</b> and <b>never shared with third parties</b> for their own
+        purposes. It is not used for advertising and not used to train AI models.
+      </p>
+      <p>
+        Loop uses Anthropic as its AI provider to generate study plans. What crosses that
+        boundary is the plan structure and the inputs you type into Loop — your goal, profile
+        details, and optional résumé text. <b>Google Calendar data does not:</b> busy/free ranges
+        and anything else read from your Google account are consumed only by Loop’s own
+        deterministic scheduler and are never sent to the AI provider.
+      </p>
+
+      <h2>De-identified skill-progression data (opt-in)</h2>
+      <p>
+        With your explicit consent, we collect de-identified skill-progression data — which
+        pathway skills you work on, how long sessions take, completion and mastery outcomes — to
+        calibrate difficulty and duration estimates for everyone. This is opt-in, revocable at
+        any time, and never includes your calendar contents, résumé text, or anything you write
+        in free text.
+      </p>
+
+      <h2>Google API Services User Data Policy</h2>
+      <p>
+        Loop’s use of information received from Google APIs adheres to the
+        <a href="https://developers.google.com/terms/api-services-user-data-policy"
+          >Google API Services User Data Policy</a
+        >, including the <b>Limited Use</b> requirements. In practice:
+      </p>
+      <ul>
+        <li>
+          Google user data is used only to provide the features described above — scheduling
+          around your busy times and writing approved sessions to the app-created calendar.
+        </li>
+        <li>
+          It is not transferred to third parties except as necessary to provide those features,
+          not used for advertising, and not used to train AI models.
+        </li>
+        <li>
+          Calendar writes are draft-first and approval-gated: every write requires your explicit
+          in-app approval, is checked against exactly what you approved, is verified after
+          writing, and is reversible via the stored event mappings.
+        </li>
+      </ul>
+
+      <h2>Your controls</h2>
+      <ul>
+        <li>
+          <b>Revoke access</b> — disconnect Loop at any time from your
+          <a href="https://myaccount.google.com/permissions">Google Account permissions</a>.
+          Loop stops working with your Google data immediately. The study calendar Loop created
+          remains in your Google account; you can delete it in Google Calendar whenever you like.
+        </li>
+        <li>
+          <b>Delete your account and data</b> — there is no self-serve deletion in the app yet.
+          Email
+          <a href="mailto:1732003904liu@gmail.com">1732003904liu@gmail.com</a> from your account
+          email and we will delete your account record, plans, telemetry, and calendar event
+          mappings.
+        </li>
+      </ul>
+
+      <h2>Retention</h2>
+      <p>
+        Your data is kept while your account is active and deleted when you request deletion.
+        Aggregate statistics that cannot identify you — such as pooled duration estimates across
+        users — may be retained after deletion; everything tied to your identity is removed.
+      </p>
+
+      <h2>Changes to this policy</h2>
+      <p>
+        If this policy changes, the effective date above will be updated and material changes
+        will be noted on this page. Questions about this policy or your data:
+        <a href="mailto:1732003904liu@gmail.com">1732003904liu@gmail.com</a>.
+      </p>
+    </main>
+
+    <footer>
+      <div class="foot-inner">
+        <a class="brand" href="/">
+          <span class="glyph">L</span>
+          <span class="word">Loop</span>
+        </a>
+        <span class="muted">Interview prep, scheduled around your real life.</span>
+        <span class="muted">Built by <a class="muted" href="https://github.com/ShawnnnLiu">Shawn Liu</a></span>
+        <span class="spacer"></span>
+        <a class="muted" href="/">Product</a>
+        <a class="muted" href="/how-its-built">How it’s built</a>
+        <a class="muted" href="/terms">Terms</a>
+      </div>
+    </footer>
+  </body>
+</html>

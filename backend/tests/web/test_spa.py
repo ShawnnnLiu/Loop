@@ -13,13 +13,15 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from agentic_calendar.app.web.app import create_app
+from agentic_calendar.app.web.app import create_app, default_privacy_page, default_terms_page
 from tests.app.test_cycle import USER_ID, make_service
 
 _INDEX_HTML = "<!doctype html><title>Loop</title><div id=root></div>"
 _ASSET_JS = "console.log('loop')"
 _LANDING_HTML = "<!doctype html><title>Loop — landing</title><h1>LANDING_MARKER</h1>"
 _BUILT_HTML = "<!doctype html><title>Loop — how its built</title><h1>BUILT_MARKER</h1>"
+_PRIVACY_HTML = "<!doctype html><title>Loop — privacy</title><h1>PRIVACY_MARKER</h1>"
+_TERMS_HTML = "<!doctype html><title>Loop — terms</title><h1>TERMS_MARKER</h1>"
 
 
 def _dist(tmp_path: Path) -> Path:
@@ -182,3 +184,101 @@ def test_missing_how_its_built_file_leaves_route_to_the_spa(tmp_path: Path) -> N
     resp = client.get("/how-its-built")
     assert resp.status_code == 200
     assert _INDEX_HTML in resp.text
+
+
+# --------------------------------------------------------------------------- #
+# Policy pages (publication-requirements 03 §2): /privacy and /terms, landing
+# siblings registered before the SPA catch-all. /privacy is a Google OAuth
+# verification requirement.
+# --------------------------------------------------------------------------- #
+
+
+def _policy_page(tmp_path: Path, name: str, html: str) -> Path:
+    page = tmp_path / "landing" / name
+    page.parent.mkdir(parents=True, exist_ok=True)
+    page.write_text(html)
+    return page
+
+
+def test_policy_pages_win_over_the_spa_catch_all(tmp_path: Path) -> None:
+    _service, env, _clock = make_service()
+    client = TestClient(
+        create_app(
+            env=env,
+            default_user_id=USER_ID,
+            spa_dist=_dist(tmp_path),
+            landing_index=_landing(tmp_path),
+            privacy_page=_policy_page(tmp_path, "privacy.html", _PRIVACY_HTML),
+            terms_page=_policy_page(tmp_path, "terms.html", _TERMS_HTML),
+        )
+    )
+    for route, marker in (("/privacy", "PRIVACY_MARKER"), ("/terms", "TERMS_MARKER")):
+        resp = client.get(route)
+        assert resp.status_code == 200, route
+        assert marker in resp.text
+        assert _INDEX_HTML not in resp.text
+    # The landing and the SPA are unaffected by the extra static routes.
+    assert "LANDING_MARKER" in client.get("/").text
+    assert _INDEX_HTML in client.get("/today").text
+
+
+def test_missing_policy_files_leave_routes_to_the_spa(tmp_path: Path) -> None:
+    _service, env, _clock = make_service()
+    client = TestClient(
+        create_app(
+            env=env,
+            default_user_id=USER_ID,
+            spa_dist=_dist(tmp_path),
+            privacy_page=tmp_path / "landing" / "missing-privacy.html",
+            terms_page=tmp_path / "landing" / "missing-terms.html",
+        )
+    )
+    for route in ("/privacy", "/terms"):
+        resp = client.get(route)
+        assert resp.status_code == 200, route
+        assert _INDEX_HTML in resp.text
+
+
+def test_in_repo_policy_pages_have_the_required_content() -> None:
+    # Serve the real committed landing/privacy.html + terms.html and check the
+    # content the OAuth-verification spec requires is actually present.
+    _service, env, _clock = make_service()
+    client = TestClient(
+        create_app(
+            env=env,
+            default_user_id=USER_ID,
+            privacy_page=default_privacy_page(),
+            terms_page=default_terms_page(),
+        )
+    )
+    privacy = client.get("/privacy")
+    assert privacy.status_code == 200
+    assert privacy.headers["content-type"].startswith("text/html")
+    for required in (
+        "Privacy Policy",
+        "July 19, 2026",
+        "1732003904liu@gmail.com",
+        # The explicit negative claim about the freebusy scope.
+        "not readable",
+        # The compliance anchor.
+        "Google API Services User Data Policy",
+        "Limited Use",
+        # The LLM boundary, stated accurately (verified against the
+        # prompt-exposure table: no Google calendar data reaches prompts).
+        "Google Calendar data does not",
+        # Revoke + email-to-delete are the only user controls today.
+        "myaccount.google.com/permissions",
+    ):
+        assert required in privacy.text, required
+
+    terms = client.get("/terms")
+    assert terms.status_code == 200
+    assert terms.headers["content-type"].startswith("text/html")
+    for required in (
+        "Terms of Service",
+        "July 19, 2026",
+        "as is",
+        "no uptime guarantee",
+        "1732003904liu@gmail.com",
+    ):
+        assert required in terms.text, required

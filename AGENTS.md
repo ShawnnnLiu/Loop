@@ -67,6 +67,17 @@ LLMs may generate structured candidates and user-facing explanations. Determinis
 - Keep orchestration state explicit. Do not hide workflow state in prompts, chat history, or calendar event text.
 - LLM calls live only inside `StrategistNode`, `PlannerNode`, `ReflectionSummaryNode`, or `UserFacingExplanationNode`.
 
+## Implementation Plan Conventions
+
+When a new feature is proposed and planning docs are written before implementation:
+
+- Plans live in a dedicated folder under `docs/implementation-plans/<feature>/`: numbered docs (`00-overview.md`, `01-…`) plus a `SPLITS.md`.
+- Write plans for a less-capable executor model. Every design decision must be locked in the docs — formulas, weights, thresholds, store and plumbing choices, exact file and symbol references, and hard constraints not to be relitigated. The executor implements; it does not design.
+- `SPLITS.md` must size the work into context-window splits of roughly **300k total session tokens or less** each — reads, edits, test iterations, and gate runs included — at planning time, not at execution time.
+- Each split is one fresh Claude Code session ending in exactly one commit, with a copy-pasteable kickoff prompt naming the docs, source files, and tests to read, the branch to create, the hard constraints, and the gates that must be green before the commit.
+- Budget honestly: account for fixed per-session overhead (`CLAUDE.md`, `AGENTS.md`, the plan folder, and the named source and test files, read before the first edit) and leave deliberate slack — a session dying mid-commit is the real failure mode. Oversized work gets more splits, and multi-phase splits should name an internal fallback commit boundary where the codebase is green and honest on its own.
+- Verify cited line numbers against the target branch at planning time and date-stamp the verification; executors trust named symbols over line numbers when drift appears.
+
 ## Testing Expectations
 
 - State transitions must have tests for valid paths and forbidden paths.

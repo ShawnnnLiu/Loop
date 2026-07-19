@@ -268,6 +268,10 @@ def test_in_repo_policy_pages_have_the_required_content() -> None:
         "Google Calendar data does not",
         # Revoke + email-to-delete are the only user controls today.
         "myaccount.google.com/permissions",
+        # Product/ops metrics collection (users, acceptance, latency, cost,
+        # repair, completion) is disclosed, with the aggregates-only claim.
+        "Service metrics",
+        "aggregates across users",
     ):
         assert required in privacy.text, required
 
@@ -280,5 +284,6 @@ def test_in_repo_policy_pages_have_the_required_content() -> None:
         "as is",
         "no uptime guarantee",
         "1732003904liu@gmail.com",
+        "Service metrics",
     ):
         assert required in terms.text, required

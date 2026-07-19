@@ -239,6 +239,34 @@ def test_missing_policy_files_leave_routes_to_the_spa(tmp_path: Path) -> None:
         assert _INDEX_HTML in resp.text
 
 
+def test_html_documents_are_served_no_cache(tmp_path: Path) -> None:
+    # Every HTML document must carry Cache-Control: no-cache so browsers
+    # revalidate instead of replaying a stale copy. The trap this pins: before
+    # /privacy shipped, the SPA catch-all answered there with index.html;
+    # browsers heuristically cached it and kept client-redirecting /privacy
+    # into the app after the real page went live.
+    _service, env, _clock = make_service()
+    client = TestClient(
+        create_app(
+            env=env,
+            default_user_id=USER_ID,
+            spa_dist=_dist(tmp_path),
+            landing_index=_landing(tmp_path),
+            how_its_built=_how_its_built(tmp_path),
+            privacy_page=_policy_page(tmp_path, "privacy.html", _PRIVACY_HTML),
+            terms_page=_policy_page(tmp_path, "terms.html", _TERMS_HTML),
+        )
+    )
+    for route in ("/", "/how-its-built", "/privacy", "/terms", "/app", "/today"):
+        resp = client.get(route)
+        assert resp.status_code == 200, route
+        assert resp.headers.get("cache-control") == "no-cache", route
+    # Hashed bundles stay cache-friendly: no no-cache header on /assets.
+    asset = client.get("/assets/index-abc123.js")
+    assert asset.status_code == 200
+    assert "cache-control" not in asset.headers
+
+
 def test_in_repo_policy_pages_have_the_required_content() -> None:
     # Serve the real committed landing/privacy.html + terms.html and check the
     # content the OAuth-verification spec requires is actually present.

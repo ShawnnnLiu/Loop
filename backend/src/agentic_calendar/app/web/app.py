@@ -86,6 +86,15 @@ def default_terms_page() -> Path:
     return Path(__file__).resolve().parents[5] / "landing" / "terms.html"
 
 
+# Every HTML document is served ``no-cache`` (store, but revalidate before
+# reuse). Without it, browsers heuristically cache these responses, and a
+# cached SPA shell squats on whatever URL served it: before /privacy shipped,
+# the catch-all answered there with index.html, and browsers kept replaying it
+# — client-redirecting /privacy into the app — long after the real page went
+# live. Hashed ``/assets`` bundles are exempt; their names change per build.
+_HTML_NO_CACHE = {"Cache-Control": "no-cache"}
+
+
 def _mount_spa(app: FastAPI, dist_dir: Path) -> None:
     """Serve the built SPA: hashed bundles under ``/assets`` and ``index.html``
     as the fallback for every other GET, so the client router owns app routes
@@ -103,7 +112,7 @@ def _mount_spa(app: FastAPI, dist_dir: Path) -> None:
         candidate = (dist_dir / spa_path).resolve()
         if spa_path and candidate.is_file() and candidate.is_relative_to(dist_dir.resolve()):
             return FileResponse(candidate)
-        return FileResponse(index)
+        return FileResponse(index, headers=_HTML_NO_CACHE)
 
 
 def _error_body(exc: Exception) -> dict[str, str]:
@@ -213,7 +222,7 @@ def create_app(
 
         @app.get("/", include_in_schema=False)
         def landing() -> FileResponse:
-            return FileResponse(landing_index)
+            return FileResponse(landing_index, headers=_HTML_NO_CACHE)
 
     # The static engineering-story page, a sibling of the landing. Like the
     # landing it must be registered before the SPA catch-all or the catch-all
@@ -222,7 +231,7 @@ def create_app(
 
         @app.get("/how-its-built", include_in_schema=False)
         def how_its_built_page() -> FileResponse:
-            return FileResponse(how_its_built)
+            return FileResponse(how_its_built, headers=_HTML_NO_CACHE)
 
     # The static policy pages (/privacy, /terms), landing siblings. /privacy is
     # a Google OAuth verification requirement (linked from the homepage). Like
@@ -231,13 +240,13 @@ def create_app(
 
         @app.get("/privacy", include_in_schema=False)
         def privacy() -> FileResponse:
-            return FileResponse(privacy_page)
+            return FileResponse(privacy_page, headers=_HTML_NO_CACHE)
 
     if terms_page is not None and terms_page.is_file():
 
         @app.get("/terms", include_in_schema=False)
         def terms() -> FileResponse:
-            return FileResponse(terms_page)
+            return FileResponse(terms_page, headers=_HTML_NO_CACHE)
 
     # The SPA fallback is registered LAST so its catch-all never shadows the API,
     # auth, health, or landing routes above. Only mounted when a real build is

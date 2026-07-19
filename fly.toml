@@ -37,5 +37,6 @@ primary_region = "lax"            # <-- a region near your testers
   OAUTH_REDIRECT_URI = "https://loop-study.com/auth/callback"
   CANONICAL_HOST = "loop-study.com"  # old fly.dev / www requests 301 here
   # Custom-domain cutover (docs/implementation-plans/loop-recruiter-readiness/02)
-  # done 2026-07-19. Keep the old fly.dev redirect URI registered in the Google
-  # OAuth console during the transition; remove it once traffic is clean.
+  # done 2026-07-19. The old fly.dev redirect URI and authorized domain were
+  # removed from the Google OAuth console 2026-07-19 for branding verification;
+  # this loop-study.com URI is the only registered redirect.

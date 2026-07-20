@@ -77,6 +77,7 @@ When a new feature is proposed and planning docs are written before implementati
 - Each split is one fresh Claude Code session ending in exactly one commit, with a copy-pasteable kickoff prompt naming the docs, source files, and tests to read, the branch to create, the hard constraints, and the gates that must be green before the commit.
 - Budget honestly: account for fixed per-session overhead (`CLAUDE.md`, `AGENTS.md`, the plan folder, and the named source and test files, read before the first edit) and leave deliberate slack — a session dying mid-commit is the real failure mode. Oversized work gets more splits, and multi-phase splits should name an internal fallback commit boundary where the codebase is green and honest on its own.
 - Verify cited line numbers against the target branch at planning time and date-stamp the verification; executors trust named symbols over line numbers when drift appears.
+- A session that creates or amends planning docs must not end with them untracked: before wrapping up, surface the uncommitted paths and propose a docs-only commit on an appropriate branch. Plan folders left uncommitted across sessions and machines are a known failure mode (blocked pulls, stale local copies shadowing merged upstream versions).
 
 ## Testing Expectations
 
@@ -87,6 +88,13 @@ When a new feature is proposed and planning docs are written before implementati
 - Telemetry and drift tests must prove deterministic classification from recorded events.
 - LLM-facing code must be tested with fixtures and contract checks, not by trusting prompt wording.
 - The scenarios in `docs/golden-test-cases.md` must be exercised on every commit that touches orchestration.
+
+## Deploy Verification Rules
+
+- A deploy is not done until the smoke checklist in `docs/deploy.md` §5 passes against the live canonical host. Run it, or hand the user the exact commands to run via `!`, before reporting the deploy as complete.
+- Green local tests are not evidence about production. Route registration, Dockerfile ENV, HTTP method handling (HEAD), and cache behavior have all diverged from local checks before.
+- Any change that adds, moves, or re-serves an HTML route must extend the §5 checklist in the same change.
+- Never recommend resubmitting to an external reviewer (e.g. Google OAuth or branding verification) without fresh live-check evidence, and treat a rejection as real only when its findings email exists — console panels can display stale results.
 
 ## Forbidden Shortcuts
 

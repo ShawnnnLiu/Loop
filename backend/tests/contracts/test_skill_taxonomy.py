@@ -23,6 +23,7 @@ CONTRACT = "skill_taxonomy"
 SEED_PATH = Path(__file__).parents[2] / "taxonomy" / "skill_taxonomy_v1.json"
 SEED_V2_PATH = Path(__file__).parents[2] / "taxonomy" / "skill_taxonomy_v2.json"
 SEED_V3_PATH = Path(__file__).parents[2] / "taxonomy" / "skill_taxonomy_v3.json"
+SEED_V4_PATH = Path(__file__).parents[2] / "taxonomy" / "skill_taxonomy_v4.json"
 
 
 @pytest.mark.parametrize(
@@ -197,5 +198,64 @@ class TestSeedTaxonomyV3:
 
     def test_seed_carries_no_corpus_evidence_yet(self, seed: SkillTaxonomy) -> None:
         # RI-F enrichment has not run against v3; evidence must be absent,
+        # not fabricated.
+        assert all(e.corpus_evidence is None for e in seed.entries)
+
+
+class TestSeedTaxonomyV4:
+    """The checked-in v4 seed (data_engineer expansion) is curated data;
+    pin it to the contract and to the append-only versioning discipline."""
+
+    @pytest.fixture(scope="class")
+    def seed_v3(self) -> SkillTaxonomy:
+        payload = json.loads(SEED_V3_PATH.read_text(encoding="utf-8"))
+        return SkillTaxonomy.model_validate(payload)
+
+    @pytest.fixture(scope="class")
+    def seed(self) -> SkillTaxonomy:
+        payload = json.loads(SEED_V4_PATH.read_text(encoding="utf-8"))
+        return SkillTaxonomy.model_validate(payload)
+
+    def test_seed_file_is_contract_valid(self, seed: SkillTaxonomy) -> None:
+        assert seed.taxonomy_version == "skill-taxonomy-v4"
+
+    def test_data_engineer_slice_meets_plan_bounds(self, seed: SkillTaxonomy) -> None:
+        count = sum(
+            1 for e in seed.entries if CareerTrack.DATA_ENGINEER in e.track_tags
+        )
+        # Career profile estimates ~55; the résumé-intake prompt budget caps
+        # any track slice at ~100 display names.
+        assert 30 <= count <= 100
+
+    def test_every_track_slice_stays_inside_prompt_budget(
+        self, seed: SkillTaxonomy
+    ) -> None:
+        # The résumé-intake prompt embeds the resolved track's display names;
+        # RI docs bound that slice at ~100 short strings.
+        for track in CareerTrack:
+            count = sum(1 for e in seed.entries if track in e.track_tags)
+            assert count <= 100, f"{track.value} slice {count} breaches budget"
+
+    def test_v4_is_append_only_over_v3(
+        self, seed: SkillTaxonomy, seed_v3: SkillTaxonomy
+    ) -> None:
+        by_id = {e.skill_id: e for e in seed.entries}
+        v3_alias_home = {
+            alias: e.skill_id for e in seed_v3.entries for alias in e.aliases
+        }
+        for entry in seed_v3.entries:
+            successor = by_id.get(entry.skill_id)
+            assert successor is not None, f"{entry.skill_id} dropped in v4"
+            assert set(entry.aliases) <= set(successor.aliases)
+            assert set(entry.track_tags) <= set(successor.track_tags)
+            assert entry.kind == successor.kind
+        for alias, home in v3_alias_home.items():
+            v4_home = next(
+                e.skill_id for e in seed.entries if alias in e.aliases
+            )
+            assert v4_home == home, f"alias {alias!r} re-homed in v4"
+
+    def test_seed_carries_no_corpus_evidence_yet(self, seed: SkillTaxonomy) -> None:
+        # RI-F enrichment has not run against v4; evidence must be absent,
         # not fabricated.
         assert all(e.corpus_evidence is None for e in seed.entries)

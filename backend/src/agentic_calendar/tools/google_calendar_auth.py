@@ -17,6 +17,13 @@ through :func:`build_calendar_service` and never touches the SDK itself.
 Scope: ``calendar.events`` only — enough to insert/read/delete/list events on
 the dedicated secondary calendar, and nothing else (no calendar management,
 no other Google data).
+
+The Desktop client for this flow must live in a SEPARATE Google Cloud project
+from the hosted web app: Google's Verification Center flags every scope a
+project's clients actually request, so running this CLI against the production
+project re-adds ``calendar.events`` to its verification surface. The
+production project's Desktop client was deleted on 2026-07-19 for this reason;
+create a personal dev project if the CLI is ever needed again.
 """
 
 from __future__ import annotations

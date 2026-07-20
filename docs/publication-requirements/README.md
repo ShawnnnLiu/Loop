@@ -76,12 +76,12 @@ its inputs exist.
    distinct from the recruiter-readiness marketing video; it must show the
    consent screen and scope usage with the URL bar visible.
 8. [ ] **[user]** Respond to Google review feedback until approved.
-9. [ ] **[agent]** After publishing: update `docs/deploy.md` — its §1 scope
-   list is stale (`calendar.events`; the web flow now requests
-   `calendar.app.created` + `calendar.freebusy`, see
-   `backend/src/agentic_calendar/tools/google_oauth_web.py`) and its "no
-   verification needed" framing only holds for the ≤100 closed-dogfood
-   posture.
+9. [x] **[agent]** Done 2026-07-19: `docs/deploy.md` §1 now documents the
+   real web scopes (`calendar.app.created` + `calendar.freebusy`), HTTPS-only
+   redirect URIs (plain-http URIs block adding granular scopes in Data
+   Access), the unverified 100-user lifetime cap, and the rule that the web
+   client stays the project's only OAuth client (the operator CLI's Desktop
+   client was deleted from the production project the same day).
 10. [ ] Service readiness items in [03](03-service-readiness.md) (Anthropic
     billing/limits, grounding stores, backups, pathway-tree polish) — can
     proceed in parallel with 1–8.

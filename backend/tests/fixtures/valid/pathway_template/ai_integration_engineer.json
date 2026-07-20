@@ -1,0 +1,28 @@
+{
+  "pathway_id": "ai-integration-engineer",
+  "pathway_schema_version": "pathway-template-v1",
+  "career_track": "ai_engineer",
+  "display_name": "AI-Integration Engineer",
+  "spine": "Ships LLM-powered features into real products, end to end.",
+  "audience_note": "Product teams adding AI capabilities; applied-AI startups.",
+  "evidence_slots": [
+    {
+      "slot_id": "llm-feature-depth",
+      "title": "LLM feature shipped in a real app",
+      "required_kinds": ["project", "work"],
+      "required_themes_any": ["applied-ml", "llm-integration"],
+      "min_items": 1,
+      "gap_module_hint": "Build and deploy one LLM-backed feature end to end",
+      "branch_skill_ids": ["skill.llm-apis", "skill.rag", "skill.prompt-engineering"]
+    },
+    {
+      "slot_id": "public-artifact",
+      "title": "Public writeup or talk",
+      "required_kinds": ["project", "research"],
+      "required_themes_any": ["technical-writing"],
+      "min_items": 1,
+      "gap_module_hint": "Write up one project as a technical narrative",
+      "branch_skill_ids": ["skill.technical-writing"]
+    }
+  ]
+}

@@ -24,6 +24,11 @@ If pricing changes by more than 25%, the cost tables below must be regenerated a
 
 Change log:
 
+- **2026-07-19**: story-layer (narrative pathways, NP-A) budget lines added.
+  Evidence tagging rides the existing résumé-extraction call (+~300-600 input, +~200 output tokens on the Haiku tier; extraction stays ~$0.01, user-initiated).
+  Pathway fit notes are one batched Haiku-tier call per Your-story visit (~$0.005); story summaries are user-initiated Haiku-tier calls (~$0.005).
+  No background LLM calls anywhere in the feature.
+  Tables NOT regenerated - the "Story Layer" table below is additive and no existing figure moved.
 - **2026-07-06**: embedding line exercised for the first time (grounding
   G-E): provider decision recorded as Voyage `voyage-3.5` at $0.06 per 1M
   tokens, replacing the dormant ~$0.02 assumption (a >25% change, but
@@ -95,6 +100,18 @@ Hard-capped at **2 repair attempts** per cycle. Maximum additional cost: **$0.21
 | Explanation (per call) | Sonnet-tier | 1,000 | 300 | $0.0075 |
 
 Approximately 3–5 explanations per active week → **~$0.030 / week**.
+
+### Story Layer (Narrative Pathways)
+
+| Operation | Model | Input tokens | Output tokens | Cost |
+| --- | --- | --- | --- | --- |
+| Evidence tagging (rides the résumé-extraction call) | Haiku-tier | +500 | +200 | +$0.002 |
+| Pathway fit notes (one batched call per Your-story visit) | Haiku-tier | 1,500 | 400 | $0.005 |
+| Story summary (user-initiated refresh) | Haiku-tier | 1,500 | 400 | $0.005 |
+
+Every story-layer call is user-initiated; the feature makes no background LLM calls.
+Fit, gaps, and slot states are computed deterministically at zero LLM cost (axiom 00).
+These are heuristic priors like every figure here; they are excluded from the monthly totals above, which predate the story layer and were deliberately not regenerated.
 
 ## Per-User Monthly LLM Cost Estimate (Active User)
 

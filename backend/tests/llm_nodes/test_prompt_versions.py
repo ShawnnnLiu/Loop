@@ -84,14 +84,18 @@ _PINNED: list[tuple[str, object, str, str]] = [
         adapter.STRATEGIST_CONFIG,
         # v5 (PD-B): plan-direction translate rule + hedge extension changed
         # the system-prompt bytes; the labeled-block assembly change is
-        # covered by the full-rendered pin below.
-        "strategist-v5-2026-07-19",
+        # covered by the full-rendered pin below. Version date bumped to
+        # 2026-07-20 (NP-A) for the StrategyConstraints story-layer fields —
+        # system-prompt bytes are unchanged, so this hash is unchanged.
+        "strategist-v5-2026-07-20",
         "15910b0550ab2bc28fe45d4761b3ef207762fc6163bac58e61ceeac94e3c0b41",
     ),
     (
         "_PLANNER_SYSTEM",
         adapter.PLANNER_CONFIG,
-        "planner-v5-2026-07-05",
+        # Version date bumped to 2026-07-20 (NP-A) for the SyllabusModule
+        # evidence_slot_id field — system-prompt bytes unchanged, hash same.
+        "planner-v5-2026-07-20",
         "71cb5b40315ec2f2ef0411c03928a27518f1a6df05903f4c5c4a46e9a0626513",
     ),
     (
@@ -341,14 +345,18 @@ _FULL_PROMPT_PINS: list[
     (
         "strategist",
         _strategist_full,
-        "strategist-v5-2026-07-19",
-        "4a20259d39b5e81886a6bde255930ce851da96f31856c89b48217511528f2d1d",
+        # 2026-07-20 (NP-A): StrategyConstraints story-layer default fields now
+        # serialize into the input bundle — rendered bytes changed, rehashed.
+        "strategist-v5-2026-07-20",
+        "0ad3ad9014410150a677a958ce80d8ca8debe1f49a7e42f238e3d781239edb5c",
     ),
     (
         "planner",
         _planner_full,
-        "planner-v5-2026-07-05",
-        "aedc154d046d5f775b053df23f84095b3a93266ed824bdde3142254a5ae8bca7",
+        # 2026-07-20 (NP-A): SyllabusModule evidence_slot_id serializes into the
+        # validated-syllabus block — rendered bytes changed, rehashed.
+        "planner-v5-2026-07-20",
+        "c7097dbd61a824ec973191de62d083e2385d48d520c036e1fc5b8217b8782290",
     ),
     (
         "reflection_summary",

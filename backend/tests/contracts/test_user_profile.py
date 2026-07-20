@@ -73,6 +73,39 @@ def test_experience_and_skills_default_empty() -> None:
     assert profile.skills == []
 
 
+def test_evidence_defaults_and_pathway_selection_optional() -> None:
+    """``kind`` defaults to ``work``, ``theme_tags`` to empty, and
+    ``pathway_selection`` is absent unless the user chose one (NP-A)."""
+    from agentic_calendar.contracts.common_types import EvidenceKind
+
+    payload = {
+        k: v
+        for k, v in next(iter_valid(CONTRACT)).payload.items()
+        if k not in ("experience", "pathway_selection")
+    }
+    payload["experience"] = [{"title": "A thing I did"}]
+    profile = UserProfile.model_validate(payload)
+    assert profile.experience[0].kind is EvidenceKind.WORK
+    assert profile.experience[0].theme_tags == []
+    assert profile.pathway_selection is None
+
+
+def test_pathway_selection_round_trips() -> None:
+    payload = next(iter_valid(CONTRACT)).payload
+    profile = UserProfile.model_validate(
+        {
+            **payload,
+            "pathway_selection": {
+                "pathway_id": "ai-integration-engineer",
+                "pathway_registry_version": "pathway-registry-v1",
+                "selected_at": "2026-07-19T12:00:00-07:00",
+            },
+        }
+    )
+    assert profile.pathway_selection is not None
+    assert profile.pathway_selection.pathway_id == "ai-integration-engineer"
+
+
 def test_plan_direction_defaults_to_none() -> None:
     payload = {
         k: v
@@ -122,6 +155,6 @@ def test_strategist_bundle_exclusion_matches_spec() -> None:
         STRATEGIST_BUNDLE_EXCLUDED_PROFILE_FIELDS,
     )
 
-    assert {"resume_text", "experience", "plan_direction"} == (
+    assert {"resume_text", "experience", "plan_direction", "pathway_selection"} == (
         STRATEGIST_BUNDLE_EXCLUDED_PROFILE_FIELDS
     )

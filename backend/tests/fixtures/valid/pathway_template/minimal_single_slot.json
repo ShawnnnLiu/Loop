@@ -1,0 +1,19 @@
+{
+  "pathway_id": "backend-infrastructure",
+  "pathway_schema_version": "pathway-template-v1",
+  "career_track": "swe",
+  "display_name": "Backend & Infrastructure",
+  "spine": "Builds and operates the services other engineers rely on.",
+  "audience_note": "Backend and platform teams at product companies.",
+  "evidence_slots": [
+    {
+      "slot_id": "depth-services",
+      "title": "Production-grade service depth",
+      "required_kinds": ["work", "project"],
+      "required_themes_any": ["distributed-systems", "backend-services"],
+      "min_items": 2,
+      "gap_module_hint": "Design, build, and document one non-trivial backend service",
+      "branch_skill_ids": ["skill.api-design", "skill.databases"]
+    }
+  ]
+}

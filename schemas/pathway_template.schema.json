@@ -1,0 +1,149 @@
+{
+  "$defs": {
+    "CareerTrack": {
+      "description": "Closed set of supported career-preparation tracks.",
+      "enum": [
+        "swe",
+        "mle",
+        "ai_engineer",
+        "quant_dev",
+        "data_scientist",
+        "product_manager",
+        "data_analyst",
+        "data_engineer"
+      ],
+      "title": "CareerTrack",
+      "type": "string"
+    },
+    "EvidenceKind": {
+      "description": "Closed classification of one confirmed evidence item.\n\nShared by ``ExperienceItem.kind`` (user-profile spec) and\n``EvidenceSlot.required_kinds`` (pathway-template spec). Closed for humans\ntoo: kinds are join keys for the deterministic ``narrative/`` kernel, so\nthe UI offers the same fixed dropdown the LLM proposal is bound to.",
+      "enum": [
+        "work",
+        "project",
+        "volunteering",
+        "leadership",
+        "research",
+        "award",
+        "coursework"
+      ],
+      "title": "EvidenceKind",
+      "type": "string"
+    },
+    "EvidenceSlot": {
+      "additionalProperties": false,
+      "description": "One pillar of a pathway: the evidence a coherent story needs there.\n\nAn evidence item matches a slot iff ``item.kind in required_kinds`` and\n``item.theme_tags`` intersect ``required_themes_any`` (the ``narrative/``\nkernel owns that computation, NP-B). ``gap_module_hint`` and\n``branch_skill_ids`` are display/seed data with no control-plane effect.",
+      "properties": {
+        "branch_skill_ids": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Branch Skill Ids",
+          "type": "array"
+        },
+        "gap_module_hint": {
+          "minLength": 1,
+          "title": "Gap Module Hint",
+          "type": "string"
+        },
+        "min_items": {
+          "default": 1,
+          "maximum": 10,
+          "minimum": 1,
+          "title": "Min Items",
+          "type": "integer"
+        },
+        "required_kinds": {
+          "items": {
+            "$ref": "#/$defs/EvidenceKind"
+          },
+          "minItems": 1,
+          "title": "Required Kinds",
+          "type": "array"
+        },
+        "required_themes_any": {
+          "items": {
+            "maxLength": 60,
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Required Themes Any",
+          "type": "array"
+        },
+        "slot_id": {
+          "minLength": 1,
+          "title": "Slot Id",
+          "type": "string"
+        },
+        "title": {
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "slot_id",
+        "title",
+        "required_kinds",
+        "required_themes_any",
+        "gap_module_hint",
+        "branch_skill_ids"
+      ],
+      "title": "EvidenceSlot",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A curated narrative pathway for one :class:`CareerTrack`.",
+  "properties": {
+    "audience_note": {
+      "minLength": 1,
+      "title": "Audience Note",
+      "type": "string"
+    },
+    "career_track": {
+      "$ref": "#/$defs/CareerTrack"
+    },
+    "display_name": {
+      "minLength": 1,
+      "title": "Display Name",
+      "type": "string"
+    },
+    "evidence_slots": {
+      "items": {
+        "$ref": "#/$defs/EvidenceSlot"
+      },
+      "minItems": 1,
+      "title": "Evidence Slots",
+      "type": "array"
+    },
+    "pathway_id": {
+      "minLength": 1,
+      "title": "Pathway Id",
+      "type": "string"
+    },
+    "pathway_schema_version": {
+      "minLength": 1,
+      "title": "Pathway Schema Version",
+      "type": "string"
+    },
+    "spine": {
+      "minLength": 1,
+      "title": "Spine",
+      "type": "string"
+    }
+  },
+  "required": [
+    "pathway_id",
+    "pathway_schema_version",
+    "career_track",
+    "display_name",
+    "spine",
+    "audience_note",
+    "evidence_slots"
+  ],
+  "title": "PathwayTemplate",
+  "type": "object"
+}

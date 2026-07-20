@@ -59,6 +59,19 @@ vocabulary; this contract imports it):
 | `title` | string | required, 1–120 chars |
 | `organization` | string or null | optional; 1–120 chars when present |
 | `summary` | string or null | optional; 1–280 chars when present |
+| `kind` | enum | default `work`; closed `EvidenceKind` enum (`work · project · volunteering · leadership · research · award · coursework`) |
+| `theme_tags` | `list[str]` | default empty; max 5, each 1–60 chars, case-insensitively unique |
+
+`kind` and `theme_tags` are proposals like every other field here (narrative
+pathways NP-A shape; the intake prompt starts proposing them in NP-C).
+`kind` is the node's classification of grounded evidence - the item itself
+stays groundedness-checked against the résumé text (invariant 1, unchanged);
+a wrong `kind` is a user edit away from correct and routes nothing.
+`theme_tags` must resolve to the `allowed_themes` vocabulary the input bundle
+carries (NP-C; membership enforced in the bounded repair loop like weak
+spots, surfacing as `REPAIR_LIMIT_EXCEEDED` when persistent - never a
+silently coined theme).
+Empty-over-fabrication carries over: no tags is a valid proposal.
 
 ## Provenance Is Structural
 
@@ -141,6 +154,7 @@ Reason: unknown field — confidence values are structurally rejected.
 
 - `../axioms/01-system-boundaries.md`
 - `../axioms/03-data-contracts.md`
+- `pathway-template.schema.md` (theme vocabulary ownership)
 - `resume-intake-input.schema.md`
 - `skill-taxonomy.schema.md`
 - `user-profile.schema.md`

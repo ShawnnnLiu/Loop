@@ -1,0 +1,25 @@
+{
+  "syllabus_version": "syl_010",
+  "goal_summary": "Fill the AI-Integration Engineer pillars over 12 weeks.",
+  "modules": [
+    {
+      "module_id": "artifact",
+      "title": "Public technical writeup",
+      "priority": "medium",
+      "reason": "Builds the Public writeup or talk pillar, which your evidence does not yet carry.",
+      "target_outcomes": ["One published technical writeup of a shipped project"],
+      "estimated_total_min": 240,
+      "difficulty": 2,
+      "evidence_slot_id": "public-artifact"
+    },
+    {
+      "module_id": "system_design",
+      "title": "System Design Foundations",
+      "priority": "high",
+      "reason": "User listed system design as a weakness.",
+      "target_outcomes": ["Explain core distributed-systems tradeoffs"],
+      "estimated_total_min": 480,
+      "difficulty": 4
+    }
+  ]
+}

@@ -10,6 +10,8 @@ The system serves users preparing for interviews, college or graduate applicatio
 
 LLMs are used only at bounded generation points: curriculum generation, task decomposition, reflection summaries, sponsor-safe progress explanations, user-facing explanations, and natural-language clarification. All control boundaries are deterministic: routing, validation, dependency checks, scheduling feasibility, approval gates, drift classification, accountability intervention triggers, sponsor report permissions, source confidence scoring, calendar writes, retry limits, cost limits, and concurrency locks.
 
+Pathway fit, narrative gap computation, and story progress are computed deterministically from confirmed evidence; LLMs do not assign fit.
+
 ## Target User
 
 The target user is a preparation candidate with a concrete goal and timeline. The strongest initial segment is new-grad or early-career software engineers preparing for backend, full-stack, or general software engineering interviews. Adjacent high-stakes segments — college or graduate admissions applicants, career transitioners, certification candidates — follow the same planning-and-accountability pattern and can be onboarded without architectural changes.

@@ -31,9 +31,17 @@ Convert a vague career objective into machine-readable constraints. The profile 
     {
       "title": "Senior Backend Engineer",
       "organization": "Acme Corp",
-      "summary": "Led the billing platform team; Python and Go services."
+      "summary": "Led the billing platform team; Python and Go services.",
+      "kind": "work",
+      "theme_tags": ["distributed-systems"]
     }
   ],
+  "pathway_selection": {
+    "pathway_id": "ai-integration-engineer",
+    "pathway_registry_version": "pathway-registry-v1",
+    "selected_at": "2026-07-19T12:00:00-07:00",
+    "slot_overrides": []
+  },
   "skills": ["Python", "Go", "PostgreSQL"],
   "preferred_session_length_min": 60,
   "max_session_length_min": 120,
@@ -86,7 +94,8 @@ Convert a vague career objective into machine-readable constraints. The profile 
 | `experience_level` | Affects duration estimates and module difficulty |
 | `known_strengths` | Can reduce emphasis on certain modules |
 | `known_weaknesses` | Increases priority and review frequency |
-| `experience` | The user's confirmed work-experience entries (`ExperienceItem` list, max 20, default empty). User-editable profile data; **not** consumed by Strategist/Planner prompts (see Prompt Exposure) |
+| `experience` | The user's confirmed evidence inventory (`ExperienceItem` list, max 20, default empty; the field name predates the story layer and deliberately stays). Each entry carries a `kind` (closed enum, default `work`) and `theme_tags` (closed vocabulary, default empty). User-editable profile data; **not** consumed by Strategist/Planner prompts (see Prompt Exposure) |
+| `pathway_selection` | Optional `PathwaySelection` (`pathway-selection.schema.md`). Absent = the user skipped the Your-story step and all downstream surfaces behave as today. Reaches the Strategist as typed constraints only (see Prompt Exposure) |
 | `skills` | Tools/stack tokens (max 40, default empty), distinct from `known_strengths` (broader capabilities). Stored as display strings: extraction-matched skills are stored under their canonical taxonomy `display_name`, but the user may hand-type anything — the vocabulary constrains the LLM, not the person. Consumers needing canonical ids re-normalize at read time with the deterministic kernel |
 | `preferred_session_length_min` | Helps generate realistic task durations |
 | `max_session_length_min` | Prevents tasks too large for user sessions |
@@ -115,9 +124,11 @@ exclusion set is asserted against this table in tests).
 | `target_companies` | output only (categories) | included (unchanged) | no |
 | `resume_text` | input (labeled raw block) | excluded from the structured bundle, appended as a labeled raw block (unchanged) | no |
 | `plan_direction` | no | excluded from the structured bundle, appended as a labeled raw block | no |
+| `experience[].kind` / `.theme_tags` | output only | **excluded** (rides `experience`, which never reaches the bundle) | no |
+| `pathway_selection` | no | **excluded** - reaches the Strategist as typed constraints only (`pathway_id` + computed `unfilled_slots` in `StrategyConstraints`; never the selection object, never template prose) | no |
 
 The Strategist bundle exclusion set is therefore `{"resume_text",
-"experience", "plan_direction"}`.
+"experience", "plan_direction", "pathway_selection"}`.
 
 Motivation, accountability, sponsor visibility, and pressure tolerance live in a separate `motivation_profile` object so they can change on a different cadence than planning constraints without invalidating the syllabus. See `motivation-profile.schema.md` and `../axioms/21-accountability-layer.md`.
 
@@ -131,7 +142,14 @@ Motivation, accountability, sponsor visibility, and pressure tolerance live in a
 - `experience_level` must be one of `beginner`, `intermediate`, `advanced`.
 - `experience` holds at most 20 `ExperienceItem` entries: `title` required
   (1–120 chars), `organization` optional (max 120 chars), `summary` optional
-  (max 280 chars).
+  (max 280 chars), `kind` one of `work · project · volunteering · leadership ·
+  research · award · coursework` (default `work`), `theme_tags` at most 5
+  entries (each 1–60 chars, case-insensitively unique; membership in the
+  registry theme vocabulary is a service-layer check, not a contract-shape
+  check - the vocabulary constrains the LLM proposal, and the UI offers the
+  same closed dropdowns).
+- `pathway_selection`, when present, is a valid `PathwaySelection`
+  (`pathway-selection.schema.md`).
 - `skills` holds at most 40 non-empty strings (each max 60 chars),
   case-insensitively unique.
 - `plan_direction`, when present, is 1–4,000 characters and contains no
@@ -156,10 +174,17 @@ Motivation, accountability, sponsor visibility, and pressure tolerance live in a
 | Pressure tolerance changed | No | No | No | Maybe |
 | Weekly check-in disabled | No | No | No | Yes |
 | Plan direction changed | No | No | No | No |
+| Pathway selected or changed | Yes | Yes | Yes | No |
+| Evidence item added/edited/marked | No | No | No | No |
 
 Changing `plan_direction` invalidates nothing by itself: it shapes the *next*
 fresh propose only (a rebuild goes through re-onboard → fresh propose; replans
 never re-run the Strategist and are unaffected by design).
+
+Evidence changes recompute slot coverage on read - they never invalidate plans
+by themselves (a filled slot makes a planned module *redundant*, which the
+next regular replan absorbs; auto-replan on evidence change is exactly the
+autonomous replanning the MVP excludes).
 
 See `../axioms/12-edge-case-policy-engine.md` and `../axioms/21-accountability-layer.md`.
 
@@ -204,6 +229,8 @@ Reason: invalid enum.
 - `../axioms/12-edge-case-policy-engine.md`
 - `../axioms/21-accountability-layer.md`
 - `motivation-profile.schema.md`
+- `pathway-selection.schema.md`
+- `pathway-template.schema.md`
 - `resume-extraction.schema.md`
 - `resume-intake-input.schema.md`
 - `skill-taxonomy.schema.md`

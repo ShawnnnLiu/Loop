@@ -11,6 +11,8 @@ The schemas in `../specs/` are the canonical contracts between LLM nodes and det
 - `user_profile` — User goal, role target, constraints, availability, preferences, and capacity. See `../specs/user-profile.schema.md`.
 - `resume_intake_input` — validated bundle handed to the ResumeIntakeNode. See `../specs/resume-intake-input.schema.md`.
 - `resume_extraction` — schema-bound proposal returned by the ResumeIntakeNode. See `../specs/resume-extraction.schema.md`.
+- `pathway_template` - Curated narrative pathway with evidence slots; a deterministic registry literal, never LLM-authored. See `../specs/pathway-template.schema.md`.
+- `pathway_selection` - The user's explicit pathway choice, pinned to a pathway registry version. See `../specs/pathway-selection.schema.md`.
 - `source_claim` — Atomic claim from an external or internal source with provenance, deterministic confidence score, and expiration. See `../specs/source-claim.schema.md`.
 - `syllabus_units` — Structured learning modules with outcomes, priority, difficulty, and source claims. See `../specs/syllabus-units.schema.md`.
 - `task_plan` — Concrete tasks derived from syllabus units. Must not include `prerequisites_met`. See `../specs/task-plan.schema.md`.
@@ -30,6 +32,8 @@ The schemas in `../specs/` are the canonical contracts between LLM nodes and det
 | `user_profile` | Onboarding UI, profile service | StrategistNode, validators, Scheduler, drift classifier |
 | `resume_intake_input` | app layer (extract request) | ResumeIntakeNode |
 | `resume_extraction` | ResumeIntakeNode | onboarding UI (display + edit), tests |
+| `pathway_template` | pathway registry (deterministic literals) | onboarding UI (pathway cards), `narrative/` kernel, Strategist constraints composition |
+| `pathway_selection` | onboarding UI / Tuning via the `POST /api/onboard` confirm gate | profile service, `narrative/` kernel, Strategist constraints composition |
 | `source_claim` | RAG ingestion, claim extractor, deterministic scorer | StrategistNode, syllabus validator, cache, audit views |
 | `syllabus_units` | StrategistNode | syllabus validator, PlannerNode, coverage metrics |
 | `task_plan` | PlannerNode | task validator, Scheduler, approval UI |

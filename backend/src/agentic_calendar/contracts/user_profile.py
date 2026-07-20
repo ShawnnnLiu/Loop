@@ -15,17 +15,26 @@ from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
-from .common_types import HHMM, Day, ExperienceLevel
+from .common_types import HHMM, Day, EvidenceKind, ExperienceLevel
+from .pathway_selection import PathwaySelection
 
 PLAN_DIRECTION_MAX_CHARS = 4_000
 
+THEME_TAGS_MAX_PER_ITEM = 5
+
 
 class ExperienceItem(BaseModel):
-    """One confirmed work-experience entry.
+    """One confirmed evidence entry (work, project, volunteering, ...).
 
     Profile vocabulary: lives here because the profile owns the confirmed
     values; ``resume_extraction`` (the ResumeIntakeNode proposal) imports it
     rather than redeclaring.
+
+    The field name (and the profile's ``experience`` list name) predates the
+    story layer and deliberately stays: ``kind`` / ``theme_tags`` landed as an
+    additive amendment, not a rename/migration (narrative-pathways NP-A).
+    ``theme_tags`` membership in the registry theme vocabulary is a
+    service-layer check, not a contract-shape check.
     """
 
     model_config = ConfigDict(extra="forbid", frozen=True)
@@ -33,6 +42,20 @@ class ExperienceItem(BaseModel):
     title: str = Field(min_length=1, max_length=120)
     organization: str | None = Field(default=None, min_length=1, max_length=120)
     summary: str | None = Field(default=None, min_length=1, max_length=280)
+    kind: EvidenceKind = EvidenceKind.WORK
+    theme_tags: list[Annotated[str, StringConstraints(min_length=1, max_length=60)]] = (
+        Field(default_factory=list, max_length=THEME_TAGS_MAX_PER_ITEM)
+    )
+
+    @model_validator(mode="after")
+    def _theme_tags_unique(self) -> ExperienceItem:
+        lowered = [t.lower() for t in self.theme_tags]
+        if len(set(lowered)) != len(lowered):
+            dupes = sorted({t for t in lowered if lowered.count(t) > 1})
+            raise ValueError(
+                f"theme_tags must be case-insensitively unique; duplicates: {dupes}"
+            )
+        return self
 
 
 class DeepWorkWindow(BaseModel):
@@ -144,6 +167,14 @@ class UserProfile(BaseModel):
     validation. ``None`` when the user skips the box. Stored on the user's
     own profile only, hashed (never raw) in the LLM call log, never used
     for training."""
+    pathway_selection: PathwaySelection | None = None
+    """Optional confirmed pathway choice (``pathway-selection.schema.md``).
+
+    ``None`` = the user skipped the Your-story step; every downstream surface
+    behaves exactly as today. Reaches the Strategist as typed constraints
+    only (``pathway_id`` + computed ``unfilled_slots`` in
+    ``StrategyConstraints``), never through the profile bundle - see the
+    spec's Prompt Exposure table."""
     created_at: datetime
     updated_at: datetime
 

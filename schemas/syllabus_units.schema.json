@@ -29,6 +29,19 @@
           "title": "Estimated Total Min",
           "type": "integer"
         },
+        "evidence_slot_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Evidence Slot Id"
+        },
         "module_id": {
           "minLength": 1,
           "title": "Module Id",

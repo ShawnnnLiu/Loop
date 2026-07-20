@@ -460,6 +460,40 @@ class ReasonCode(StrEnum):
     for the query (band unknown to the artifact, or category not refined).
     The Phase 6b chain proceeds unchanged."""
 
+    # --- Narrative pathways (NP-A; pathway-selection / syllabus-units specs) ---
+    #
+    # Story-layer codes. The syllabus-side validators land in NP-D (existing
+    # validation categories); the registry/service-side checks land with the
+    # registry (NP-B) and API plumbing (NP-D). Defined here first so contracts,
+    # fixtures, and specs speak the same typed vocabulary from the start.
+    PATHWAY_NOT_SELECTED = "PATHWAY_NOT_SELECTED"
+    """A syllabus module carries ``evidence_slot_id`` but the profile has no
+    ``pathway_selection`` (syllabus-units spec). **No NP-A producer** - the
+    deterministic syllabus validator lands in NP-D."""
+
+    UNKNOWN_PATHWAY_ID = "UNKNOWN_PATHWAY_ID"
+    """A ``pathway_selection.pathway_id`` (or constraints ``pathway_id``) is
+    not a member of the pathway registry (pathway-selection spec). **No NP-A
+    producer** - the registry membership check lands with the registry
+    (NP-B) and the onboarding/Tuning plumbing (NP-D)."""
+
+    UNKNOWN_EVIDENCE_SLOT = "UNKNOWN_EVIDENCE_SLOT"
+    """An ``evidence_slot_id`` (module link or slot override) is not a slot of
+    the selected pathway (syllabus-units / pathway-selection specs). **No
+    NP-A producer** - validators land in NP-D."""
+
+    SLOT_MODULE_LIMIT_EXCEEDED = "SLOT_MODULE_LIMIT_EXCEEDED"
+    """A syllabus proposal links more modules to evidence slots than
+    ``strategy_constraints.max_slot_modules`` allows (syllabus-units spec).
+    **No NP-A producer** - the validator lands in NP-D."""
+
+    PATHWAY_REGISTRY_VERSION_MISMATCH = "PATHWAY_REGISTRY_VERSION_MISMATCH"
+    """A stored selection is pinned to a ``pathway_registry_version`` the
+    registry no longer serves. Surfaced to the user for an explicit
+    re-confirm - never silently re-mapped (pathway-selection spec). **No
+    NP-A producer** - the version check lands with the registry (NP-B) and
+    the coverage endpoints (NP-D)."""
+
     # --- LLM generation (axiom 22; Phase 8) ---
     #
     # Generation-side failures are distinct from validation-layer failures:

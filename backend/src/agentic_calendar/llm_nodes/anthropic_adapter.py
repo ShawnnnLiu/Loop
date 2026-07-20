@@ -362,14 +362,23 @@ STRATEGIST_CONFIG = AdapterConfig(
     model_name="claude-opus-4-8",
     # v5 (PD-B): plan_direction — translate rule + hedge extension in the
     # system prompt, labeled raw block + bundle exclusion in the assembly.
-    prompt_version="strategist-v5-2026-07-19",
+    # 2026-07-20 (NP-A): StrategyConstraints gained the story-layer fields
+    # (pathway_id / unfilled_slots / max_slot_modules); they serialize into
+    # the input bundle at their defaults, changing the rendered prompt bytes.
+    # System-prompt template text is unchanged; the pathway instructions land
+    # in NP-D.
+    prompt_version="strategist-v5-2026-07-20",
     max_tokens=16384,
     input_price_per_mtok=5.00,
     output_price_per_mtok=25.00,
 )
 PLANNER_CONFIG = AdapterConfig(
     model_name="claude-sonnet-5",
-    prompt_version="planner-v5-2026-07-05",
+    # 2026-07-20 (NP-A): SyllabusModule gained the optional evidence_slot_id
+    # link; it serializes into the validated-syllabus block (default null,
+    # opaque metadata — the Planner is untouched by design). System-prompt
+    # template text is unchanged.
+    prompt_version="planner-v5-2026-07-20",
     max_tokens=16384,
     input_price_per_mtok=3.00,
     output_price_per_mtok=15.00,
@@ -1108,10 +1117,13 @@ def _scan_prose(summary: str, detail: Sequence[str]) -> None:
 #: the normative Prompt Exposure table in ``docs/specs/user-profile.schema.md``
 #: (asserted against the spec in ``tests/contracts/test_user_profile.py``):
 #: ``resume_text`` and ``plan_direction`` are untrusted raw context handled as
-#: labeled blocks below, and ``experience`` is noise there — the raw résumé
-#: already covers background.
+#: labeled blocks below, ``experience`` is noise there — the raw résumé
+#: already covers background — and ``pathway_selection`` reaches the
+#: Strategist as typed constraints only (``pathway_id`` + computed
+#: ``unfilled_slots`` in ``StrategyConstraints``), never as the selection
+#: object.
 STRATEGIST_BUNDLE_EXCLUDED_PROFILE_FIELDS: frozenset[str] = frozenset(
-    {"resume_text", "experience", "plan_direction"}
+    {"resume_text", "experience", "plan_direction", "pathway_selection"}
 )
 
 

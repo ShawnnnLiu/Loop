@@ -100,7 +100,7 @@ def test_extract_returns_grounded_proposal_with_canonical_skills() -> None:
 
     assert result.status == "ok"
     assert result.user_id == USER_ID
-    assert result.taxonomy_version == "skill-taxonomy-v3"
+    assert result.taxonomy_version == "skill-taxonomy-v4"
     assert result.proposal is not None
     lowered = _RESUME.lower()
     for surface in result.proposal.skills:

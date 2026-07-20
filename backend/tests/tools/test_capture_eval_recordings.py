@@ -24,6 +24,7 @@ _EVAL_SET_PATH = Path(__file__).parents[2] / "evalsets" / "eval_set_v2.json"
 _EVAL_SET_V3_PATH = Path(__file__).parents[2] / "evalsets" / "eval_set_v3.json"
 _EVAL_SET_V5_PATH = Path(__file__).parents[2] / "evalsets" / "eval_set_v5.json"
 _EVAL_SET_V6_PATH = Path(__file__).parents[2] / "evalsets" / "eval_set_v6.json"
+_EVAL_SET_V7_PATH = Path(__file__).parents[2] / "evalsets" / "eval_set_v7.json"
 
 
 def _load_set(path: Path = _EVAL_SET_PATH) -> EvalSet:
@@ -242,6 +243,29 @@ def test_capture_v6_stamps_taxonomy_version_and_haiku_model() -> None:
     assert recording.model_name == "claude-haiku-4-5"
     with pytest.raises(EvalError, match="taxonomy_version"):
         grade_recording(eval_set, recording)
+
+
+def test_capture_v7_stamps_taxonomy_version_and_haiku_model() -> None:
+    """The resume_intake branch: real adapter wiring, one attempt per case,
+    taxonomy pinned on the recording (06-skill-taxonomy discipline). The v7
+    set pins skill-taxonomy-v4, matching the served registry, so a fresh
+    capture grades cleanly."""
+    eval_set = _load_set(_EVAL_SET_V7_PATH)
+    transport = _CannedTransport()
+    recording = capture(
+        eval_set,
+        transport=transport,  # type: ignore[arg-type]
+        store=InMemoryLlmCallLogStore(),
+        label="canned-intake-test",
+    )
+
+    assert set(recording.outputs) == {case.case_id for case in eval_set.cases}
+    assert all(len(attempts) == 1 for attempts in recording.outputs.values())
+    assert recording.taxonomy_version == "skill-taxonomy-v4"
+    assert recording.model_name == "claude-haiku-4-5"
+
+    report = grade_recording(eval_set, recording)
+    assert report.overall.schema_validity_rate == 1.0
 
 
 def test_cli_validate_only_is_offline_and_green() -> None:

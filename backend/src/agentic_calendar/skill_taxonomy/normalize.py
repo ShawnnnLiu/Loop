@@ -66,6 +66,17 @@ _TRACK_MARKERS: tuple[tuple[CareerTrack, tuple[str, ...]], ...] = (
         ("ai engineer", "ai engineering", "llm", "genai", "generative ai", "applied ai"),
     ),
     (
+        # After MLE so "ml scientist"/"machine learning scientist" keep
+        # resolving there; before DATA_ANALYST so mixed titles like "data
+        # science analyst" take the more specific track. "quantitative
+        # analyst" is deliberately absent — quant_dev is an enum track with
+        # no markers yet, so the title stays on the union fallback rather
+        # than being approximated to data_scientist (ruling against the
+        # career profile's draft, 2026-07-19).
+        CareerTrack.DATA_SCIENTIST,
+        ("data scientist", "data science", "decision scientist"),
+    ),
+    (
         # Precedes SWE so BI/analytics titles never fall through to
         # engineering markers. "business analyst" is deliberately absent —
         # it is ruled to the future business_analyst track. Bare

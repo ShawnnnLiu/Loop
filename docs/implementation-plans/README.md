@@ -24,5 +24,6 @@ Merged-to-`main` plans live in [`completed/`](completed/): the numbered
 `phase-1`…`phase-9` roadmap plans, `phase-frontend-mvp`, the Loop MVP
 backend/frontend plans and handoffs, `phase-loop-landing`, the calendar
 reconciliation plan and handoff, and the plan folders
-`calendar-event-titles/`, `calendar-grid-rework/`, `loop-grounding-rag/`,
-`loop-recruiter-readiness/`, `user-plan-direction/`, and `ux-quality-pass/`.
+`animated-landing/`, `calendar-event-titles/`, `calendar-grid-rework/`,
+`loop-grounding-rag/`, `loop-recruiter-readiness/`, `user-plan-direction/`,
+and `ux-quality-pass/`.

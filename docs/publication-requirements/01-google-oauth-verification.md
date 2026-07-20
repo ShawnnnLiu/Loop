@@ -25,11 +25,16 @@ The Console **Verification Center** (APIs & Services → OAuth consent screen)
 shows the authoritative per-scope classification when you prepare the
 submission — trust it over this table.
 
-Note: the operator CLI (`google_calendar_auth.py`) uses `calendar.events`,
-but that is a separate Desktop client used only by you; verification concerns
-the web client's consent screen. Do **not** add `calendar.events` to the web
-consent screen — the narrow scopes are both a better review story and less
-to justify.
+Note: the operator CLI (`google_calendar_auth.py`) used `calendar.events`
+via a Desktop client in the same project. The Verification Center tracks
+scopes *actually requested* by any of the project's clients, so that
+client's token refreshes kept re-adding `calendar.events` to the sensitive
+scopes list even after it was deleted from Data Access. **Resolved
+2026-07-19: the Desktop client was deleted from the production project**
+(its dead `backend/.secrets/` credentials removed locally too); if the CLI
+is ever needed again, recreate its client in a separate personal project.
+Do **not** add `calendar.events` to the web consent screen — the narrow
+scopes are both a better review story and less to justify.
 
 ## 2. What verification requires — the full list
 

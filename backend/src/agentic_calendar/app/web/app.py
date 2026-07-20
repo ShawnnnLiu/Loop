@@ -105,7 +105,7 @@ def _mount_spa(app: FastAPI, dist_dir: Path) -> None:
     if assets.is_dir():
         app.mount("/assets", StaticFiles(directory=assets), name="assets")
 
-    @app.get("/{spa_path:path}", include_in_schema=False)
+    @app.api_route("/{spa_path:path}", methods=["GET", "HEAD"], include_in_schema=False)
     def spa(spa_path: str) -> FileResponse:
         # A real top-level static file (favicon, etc.) is served as-is, confined
         # to the dist dir; anything else is an SPA route -> hand back index.html.
@@ -218,9 +218,14 @@ def create_app(
     # wins there). The app routes belong to the SPA; the OAuth callback lands a
     # signed-in user on "/app", never here, so there is no session-conditional
     # rendering at "/".
+    #
+    # Every public HTML route accepts HEAD alongside GET: FastAPI's ``.get``
+    # alone answers HEAD with 405, and automated link checkers — including
+    # Google's OAuth-verification homepage probe — read that as an unreachable
+    # page. FileResponse natively answers HEAD with headers only.
     if landing_index is not None and landing_index.is_file():
 
-        @app.get("/", include_in_schema=False)
+        @app.api_route("/", methods=["GET", "HEAD"], include_in_schema=False)
         def landing() -> FileResponse:
             return FileResponse(landing_index, headers=_HTML_NO_CACHE)
 
@@ -229,7 +234,7 @@ def create_app(
     # would swallow the route.
     if how_its_built is not None and how_its_built.is_file():
 
-        @app.get("/how-its-built", include_in_schema=False)
+        @app.api_route("/how-its-built", methods=["GET", "HEAD"], include_in_schema=False)
         def how_its_built_page() -> FileResponse:
             return FileResponse(how_its_built, headers=_HTML_NO_CACHE)
 
@@ -238,13 +243,13 @@ def create_app(
     # the landing they must be registered before the SPA catch-all.
     if privacy_page is not None and privacy_page.is_file():
 
-        @app.get("/privacy", include_in_schema=False)
+        @app.api_route("/privacy", methods=["GET", "HEAD"], include_in_schema=False)
         def privacy() -> FileResponse:
             return FileResponse(privacy_page, headers=_HTML_NO_CACHE)
 
     if terms_page is not None and terms_page.is_file():
 
-        @app.get("/terms", include_in_schema=False)
+        @app.api_route("/terms", methods=["GET", "HEAD"], include_in_schema=False)
         def terms() -> FileResponse:
             return FileResponse(terms_page, headers=_HTML_NO_CACHE)
 

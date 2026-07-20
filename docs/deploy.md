@@ -2,9 +2,11 @@
 
 The hosted web app lets a closed group of **≤100 known testers** sign in with
 Google, connect their calendar, and run the propose → approve → write cycle
-through a basic UI. At this scale **no Google app verification/publishing is
-required** — `calendar.events` is a *sensitive* (not *restricted*) scope, so
-there is no security-assessment step.
+through a basic UI. At this scale the app can run **unverified** (warning
+screen + a 100-user lifetime cap — see step 4). The Calendar scopes below are
+*sensitive*, not *restricted*, so even full verification involves no
+security-assessment step; the verification path is documented in
+`docs/publication-requirements/`.
 
 This is a single-instance MVP: one process, one SQLite file. It is the explicit
 superset of the documented single-user Stage 0 (`phase-frontend-mvp.md`); the
@@ -12,17 +14,29 @@ deterministic core and every axiom-06 invariant are unchanged.
 
 ## 1. Google Cloud Console (one-time)
 
-1. Create an **OAuth client of type "Web application"** (the operator CLI's
-   Desktop client cannot do the redirect flow).
-2. **Authorized redirect URI** = `https://<your-domain>/auth/callback`
-   (HTTPS required; `http://localhost:8000/auth/callback` also works for local
-   runs — `localhost` is the only http exception).
-3. On the **OAuth consent screen**, add scopes: `openid`, `email`, `profile`,
-   and `https://www.googleapis.com/auth/calendar.events`.
+1. Create an **OAuth client of type "Web application"**, and keep it the
+   **only** OAuth client in the project. Google's Verification Center flags
+   every scope the project's clients *actually request*, so a stray Desktop
+   client (e.g. for the operator CLI) drags its scopes into the verification
+   surface — the operator CLI belongs in a separate personal project.
+2. **Authorized redirect URI** = `https://<your-domain>/auth/callback`.
+   HTTPS only — do **not** add `http://localhost...` URIs: any plain-http
+   URI or JavaScript origin on a client blocks adding the granular Calendar
+   scopes on the Data Access page ("restricted to projects using HTTPS URLs
+   only"). Local development uses the keyless dev server
+   (`python -m agentic_calendar.app.web`), which never touches Google OAuth.
+3. On the **Data Access** page, add scopes: `openid`, `email`, `profile`,
+   `https://www.googleapis.com/auth/calendar.app.created`, and
+   `https://www.googleapis.com/auth/calendar.freebusy` — exactly the
+   `WEB_SCOPES` in `tools/google_oauth_web.py`. Never add `calendar.events`;
+   the web flow does not request it.
 4. Choose **"In production" (unverified)** so refresh tokens do not expire every
    7 days. Users see a one-time "Google hasn't verified this app" warning they
-   click through. (Alternatively keep **Testing** + add each tester as a test
-   user, accepting weekly re-auth.) Either way: no verification needed at ≤100.
+   click through, and unverified apps carry a **100-user lifetime cap that
+   never resets** (`docs/publication-requirements/02-interim-unverified-beta.md`).
+   (Alternatively keep **Testing** + add each tester as a test user, accepting
+   weekly re-auth.) Dropping the warning and the cap requires sensitive-scope
+   verification (`docs/publication-requirements/01-google-oauth-verification.md`).
 5. Download the web client JSON. Keep it out of the repo (`client_secret*.json`
    is gitignored); place it on the host as a secret file.
 

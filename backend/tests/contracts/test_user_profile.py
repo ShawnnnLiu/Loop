@@ -11,7 +11,10 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from agentic_calendar.contracts.user_profile import UserProfile
+from agentic_calendar.contracts.user_profile import (
+    PLAN_DIRECTION_MAX_CHARS,
+    UserProfile,
+)
 from tests._fixture_loader import iter_invalid, iter_valid
 
 CONTRACT = "user_profile"
@@ -70,6 +73,47 @@ def test_experience_and_skills_default_empty() -> None:
     assert profile.skills == []
 
 
+def test_plan_direction_defaults_to_none() -> None:
+    payload = {
+        k: v
+        for k, v in next(iter_valid(CONTRACT)).payload.items()
+        if k != "plan_direction"
+    }
+    profile = UserProfile.model_validate(payload)
+    assert profile.plan_direction is None
+
+
+def test_plan_direction_length_bounds() -> None:
+    payload = next(iter_valid(CONTRACT)).payload
+    assert UserProfile.model_validate({**payload, "plan_direction": "x"}).plan_direction == "x"
+    at_cap = "x" * PLAN_DIRECTION_MAX_CHARS
+    assert (
+        UserProfile.model_validate({**payload, "plan_direction": at_cap}).plan_direction
+        == at_cap
+    )
+    with pytest.raises(ValidationError):
+        UserProfile.model_validate(
+            {**payload, "plan_direction": "x" * (PLAN_DIRECTION_MAX_CHARS + 1)}
+        )
+    # Absent must be null, never "" — min_length=1 rejects the empty string.
+    with pytest.raises(ValidationError):
+        UserProfile.model_validate({**payload, "plan_direction": ""})
+
+
+def test_plan_direction_rejects_control_chars_but_keeps_whitespace() -> None:
+    payload = next(iter_valid(CONTRACT)).payload
+    ok = UserProfile.model_validate(
+        {**payload, "plan_direction": "line one\nline two\tend\r"}
+    )
+    assert ok.plan_direction == "line one\nline two\tend\r"
+    for bad, codepoint in (("\x00", "U+0000"), ("\x1b", "U+001B")):
+        with pytest.raises(ValidationError) as exc_info:
+            UserProfile.model_validate({**payload, "plan_direction": f"plan {bad} text"})
+        msg = str(exc_info.value)
+        assert "plan_direction contains control characters" in msg
+        assert codepoint in msg
+
+
 def test_strategist_bundle_exclusion_matches_spec() -> None:
     """The spec's normative Prompt Exposure table
     (docs/specs/user-profile.schema.md) fixes the Strategist bundle exclusion
@@ -78,4 +122,6 @@ def test_strategist_bundle_exclusion_matches_spec() -> None:
         STRATEGIST_BUNDLE_EXCLUDED_PROFILE_FIELDS,
     )
 
-    assert {"resume_text", "experience"} == STRATEGIST_BUNDLE_EXCLUDED_PROFILE_FIELDS
+    assert {"resume_text", "experience", "plan_direction"} == (
+        STRATEGIST_BUNDLE_EXCLUDED_PROFILE_FIELDS
+    )

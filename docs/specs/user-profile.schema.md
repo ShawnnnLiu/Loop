@@ -55,6 +55,7 @@ Convert a vague career objective into machine-readable constraints. The profile 
   },
   "motivation_profile_id": "mot_001",
   "resume_text": "Senior backend engineer, 4 yrs Python/Go. Led billing platform...",
+  "plan_direction": "Blind 75 first, then two weeks of system design. Company research last.",
   "created_at": "2026-04-28T12:00:00-07:00",
   "updated_at": "2026-04-28T12:00:00-07:00"
 }
@@ -94,8 +95,11 @@ Convert a vague career objective into machine-readable constraints. The profile 
 | `preferences` | Soft constraints used when multiple schedules are valid |
 | `motivation_profile_id` | Foreign key into `motivation_profiles`; drives accountability intensity, check-in cadence, and sponsor permissions |
 | `resume_text` | Optional free text the user pastes during onboarding. Raw context with exactly two consumers: the `StrategistNode` (appended as a labeled raw block to sharpen the proposed syllabus) and the `ResumeIntakeNode` (input for extract→review→confirm). Never an oracle for routing or validation. Absent for users who skip the step. |
+| `plan_direction` | Optional free text (max 4,000 chars, ~one page) the user pastes during onboarding or a profile edit: their own proposed plan, sequencing, or first steps toward the goal. Raw context with exactly **one** consumer: the `StrategistNode` (appended as a labeled raw block; the Strategist translates it into the syllabus, honoring the user's structure where constraints allow). Never an oracle for routing or validation. Absent when the user skips it. |
 
 `resume_text` is **PII**: it is stored only on the user's own profile record, is not shared cross-user, and is deleted with the profile. It is sent to the LLM provider as prompt context by its two consumers (Strategist raw block; ResumeIntakeNode input — see `resume-intake-input.schema.md`), but is never persisted in the LLM call log (which records hashes and counts only — see `../axioms/22-llm-evaluation-and-observability.md`) and is never used for training. The extract→review→confirm parser is the `ResumeIntakeNode` (`../axioms/01-system-boundaries.md`, added 2026-07-06): it proposes candidates for the fields below; nothing it produces reaches this profile without the user confirming through `POST /api/onboard`.
+
+`plan_direction` is user-authored untrusted input and may contain personal detail: stored only on the user's own profile record, not shared cross-user, deleted with the profile. It is sent to the LLM provider as prompt context by its single consumer (Strategist labeled raw block), is never persisted in the LLM call log (hashes and counts only — see `../axioms/22-llm-evaluation-and-observability.md`), and is never used for training. It never reaches the Planner, ResumeIntake, Reflection, or Explanation prompts, and no deterministic component (routing, validation, prerequisites, scheduling, confidence) reads it.
 
 ## Prompt Exposure (normative)
 
@@ -110,9 +114,10 @@ exclusion set is asserted against this table in tests).
 | `known_strengths` / `known_weaknesses` | output only | included (coverage rule) | weaknesses only (unchanged) |
 | `target_companies` | output only (categories) | included (unchanged) | no |
 | `resume_text` | input (labeled raw block) | excluded from the structured bundle, appended as a labeled raw block (unchanged) | no |
+| `plan_direction` | no | excluded from the structured bundle, appended as a labeled raw block | no |
 
 The Strategist bundle exclusion set is therefore `{"resume_text",
-"experience"}`.
+"experience", "plan_direction"}`.
 
 Motivation, accountability, sponsor visibility, and pressure tolerance live in a separate `motivation_profile` object so they can change on a different cadence than planning constraints without invalidating the syllabus. See `motivation-profile.schema.md` and `../axioms/21-accountability-layer.md`.
 
@@ -129,6 +134,8 @@ Motivation, accountability, sponsor visibility, and pressure tolerance live in a
   (max 280 chars).
 - `skills` holds at most 40 non-empty strings (each max 60 chars),
   case-insensitively unique.
+- `plan_direction`, when present, is 1–4,000 characters and contains no
+  C0 control characters other than `\n`, `\r`, `\t`.
 - `deep_work_windows[*].day` must be a recognized day-of-week token.
 - `deep_work_windows[*]` start must be before end and within allowed hours.
 - All times use the user's timezone in HH:MM (24-hour) format.
@@ -148,6 +155,11 @@ Motivation, accountability, sponsor visibility, and pressure tolerance live in a
 | Sponsor visibility changed | No | No | No | Yes |
 | Pressure tolerance changed | No | No | No | Maybe |
 | Weekly check-in disabled | No | No | No | Yes |
+| Plan direction changed | No | No | No | No |
+
+Changing `plan_direction` invalidates nothing by itself: it shapes the *next*
+fresh propose only (a rebuild goes through re-onboard → fresh propose; replans
+never re-run the Strategist and are unaffected by design).
 
 See `../axioms/12-edge-case-policy-engine.md` and `../axioms/21-accountability-layer.md`.
 

@@ -35,6 +35,10 @@ export function stepFromParam(raw: string | null): number {
 export const RESUME_MIN_CHARS = 50
 export const RESUME_MAX_CHARS = 40_000
 
+/** Mirror of contracts/user_profile.py::PLAN_DIRECTION_MAX_CHARS (the source
+ *  of truth); the textarea's maxLength is UX, the contract is enforcement. */
+export const PLAN_DIRECTION_MAX_CHARS = 4000
+
 /** One experience row as the form edits it — '' where the contract has null,
  *  because controlled inputs want strings. buildPayload converts back. */
 export interface ExperienceRow {
@@ -65,6 +69,7 @@ export interface FormState {
   known_strengths: string[]
   known_weaknesses: string[]
   resume_text: string
+  plan_direction: string
   target_companies: string[]
   target_level: string
   prefer_evening_sessions: boolean
@@ -121,6 +126,7 @@ export function initialForm(me: MeResult): FormState {
     known_strengths: profile?.known_strengths ?? [],
     known_weaknesses: profile?.known_weaknesses ?? [],
     resume_text: profile?.resume_text ?? '',
+    plan_direction: profile?.plan_direction ?? '',
     target_companies: profile?.target_companies ?? [],
     target_level: profile?.target_level ?? '',
   }
@@ -192,6 +198,9 @@ export function buildPayload(form: FormState, timezone: string): OnboardPayload 
         avoid_back_to_back_deep_work: form.avoid_back_to_back_deep_work,
       },
       resume_text: form.resume_text.trim() || null,
+      // Trimmed-empty becomes null, never "" — the contract rejects "" by
+      // design (min_length=1).
+      plan_direction: form.plan_direction.trim() || null,
       created_at: now,
       updated_at: now,
     },

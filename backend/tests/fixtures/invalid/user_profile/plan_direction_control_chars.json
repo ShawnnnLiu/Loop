@@ -1,0 +1,20 @@
+{
+  "user_id": "user_min",
+  "profile_version": "profile_min_001",
+  "goal": "Frontend interview prep",
+  "target_role": "Frontend SWE",
+  "timeline_weeks": 6,
+  "weekly_hours": 5,
+  "experience_level": "beginner",
+  "preferred_session_length_min": 45,
+  "max_session_length_min": 90,
+  "hard_constraints": {
+    "no_events_before": "09:00",
+    "no_events_after": "21:00",
+    "max_daily_study_min": 120,
+    "min_break_between_deep_blocks_min": 15
+  },
+  "created_at": "2026-04-28T12:00:00-07:00",
+  "updated_at": "2026-04-28T12:00:00-07:00",
+  "plan_direction": "Step 1\u0000 then step 2"
+}

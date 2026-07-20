@@ -69,7 +69,7 @@ from tests.llm_nodes.test_anthropic_adapter import (
     FakeTransport,
     _ok,
     _profile,
-    _profile_with_resume,
+    _profile_with_plan_direction,
 )
 from tests.llm_nodes.test_anthropic_resume_intake import (
     _UNGROUNDED_EXTRACTION,
@@ -82,11 +82,11 @@ _PINNED: list[tuple[str, object, str, str]] = [
     (
         "_STRATEGIST_SYSTEM",
         adapter.STRATEGIST_CONFIG,
-        # v4: the RI-B bundle-exclusion change bumped the version; the system
-        # prompt bytes themselves did not change (assembly-only edit — the
-        # full-rendered pin below covers it).
-        "strategist-v4-2026-07-06",
-        "60fa04c32e9f33929f921fdc3c576ed72097b55a9c303d4309d9893175d4c093",
+        # v5 (PD-B): plan-direction translate rule + hedge extension changed
+        # the system-prompt bytes; the labeled-block assembly change is
+        # covered by the full-rendered pin below.
+        "strategist-v5-2026-07-19",
+        "15910b0550ab2bc28fe45d4761b3ef207762fc6163bac58e61ceeac94e3c0b41",
     ),
     (
         "_PLANNER_SYSTEM",
@@ -196,8 +196,9 @@ def _failed_validation_result() -> ValidationResult:
 
 
 def _strategist_full() -> tuple[adapter.AdapterConfig, FakeTransport]:
-    """Optional sections: résumé context block; engine repair suffix (the
-    first response violates max_modules, so round 2 carries the rejection)."""
+    """Optional sections: résumé context block + plan-direction context block;
+    engine repair suffix (the first response violates max_modules, so round 2
+    carries the rejection)."""
     transport = FakeTransport([_ok(_TWO_MODULE_SYLLABUS), _ok(_SYLLABUS)])
     node = AnthropicStrategist(transport=transport, **_node_kwargs())  # type: ignore[arg-type]
     claim_fixture = next(
@@ -205,8 +206,9 @@ def _strategist_full() -> tuple[adapter.AdapterConfig, FakeTransport]:
     )
     node.run(
         run_id="run_pin",
-        user_profile=_profile_with_resume(
-            "PINNED RESUME: 4 yrs Go, distributed systems."
+        user_profile=_profile_with_plan_direction(
+            "PINNED PLAN DIRECTION: Blind 75 first, then system design.",
+            resume_text="PINNED RESUME: 4 yrs Go, distributed systems.",
         ),
         source_claims=[SourceClaim.model_validate(claim_fixture.payload)],
         strategy_constraints=StrategyConstraints(max_modules=1),
@@ -215,6 +217,7 @@ def _strategist_full() -> tuple[adapter.AdapterConfig, FakeTransport]:
     # Guard: the pin must actually cover what it claims (builder-rot check).
     prompt = transport.requests[0]["user_prompt"]
     assert "Candidate résumé" in prompt
+    assert "User-provided plan direction" in prompt
     assert "claim_blog_1" in prompt
     assert transport.requests[1]["repair_suffix"] is not None
     return adapter.STRATEGIST_CONFIG, transport
@@ -338,8 +341,8 @@ _FULL_PROMPT_PINS: list[
     (
         "strategist",
         _strategist_full,
-        "strategist-v4-2026-07-06",
-        "e2770005289c9ee5207ea3a63c812d6e705c062cf6043a265b4a8322fa6ac936",
+        "strategist-v5-2026-07-19",
+        "4a20259d39b5e81886a6bde255930ce851da96f31856c89b48217511528f2d1d",
     ),
     (
         "planner",

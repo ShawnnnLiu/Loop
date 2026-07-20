@@ -94,6 +94,7 @@ const profileFixture = (): UserProfile => ({
   },
   motivation_profile_id: null,
   resume_text: null,
+  plan_direction: null,
   created_at: '2026-04-01T00:00:00Z',
   updated_at: '2026-04-01T00:00:00Z',
 })

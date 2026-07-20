@@ -1,6 +1,15 @@
 # Animated Landing Page Adoption
 
-Status: Planned - not implemented.
+Status: IMPLEMENTED (2026-07-20, branch `design-drop-loop-landing`).
+
+Outcome notes:
+
+- PR #50 (narrative-pathways) confirmed merged before the swap; `origin/main` was merged into the branch first.
+- `landing/index.html` replaced byte-for-byte from the design reference; `how-its-built.html` untouched (already byte-identical).
+- Preservation greps all green: 4x `/auth/login`, 3x beta mailto, 2x `/how-its-built`, privacy/terms/Google-permissions/GitHub links, the three scope chips, closed-beta strip, approve-only copy in meta description + og:description + JSON-LD + body, zero em dashes.
+- `make test-fast`: 4512 passed.
+- CDP browser verification green at 1280px and 375px: scenes 1-5 play once and in order, no user-visible horizontal scroll (`scrollX` pinned at 0; deliberately-offscreen animation content is clipped by `html.anim body{overflow-x:hidden}`), CLS 0, reduced-motion serves static frames without `html.anim`, JS-disabled page fully readable with all OAuth copy present.
+- One repo-side fix on top of the verbatim swap: scene-3 approval overlays (`.okov`) overflowed their blocks where the appended checkmark added a wrap line (4 blocks at 375px, 1 at 1280px); the base title now invisibly reserves the checkmark's width so base and overlay wrap identically.
 
 ## Context
 

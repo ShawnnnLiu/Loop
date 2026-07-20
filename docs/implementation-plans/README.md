@@ -11,10 +11,9 @@ authority; this table is a navigation aid.
 
 | Plan | Status |
 | --- | --- |
-| `calendar-grid-rework/` | Planned, not started — 24h scrollable grid, now line, block popover. |
 | `career-track-expansion/` | Planning docs written, not implemented — 9 career profiles + mechanics checklist. |
 | `narrative-pathways/` | Planning docs written, not implemented — character sheet, pathway registry, knowledge map. |
-| `resume-intake-onboarding/` | Partially complete — RI-A…RI-E merged; RI-F (corpus-evidence enrichment) still open. |
+| `resume-intake-onboarding/` | Implemented — RI-A…RI-F merged; running the enrichment tool and adopting a v5 taxonomy remains an operator action. |
 | `scheduler-placement-quality/` | Partially complete — core spine (phases 01–03) merged; phases 04–05 gated on post-spine evidence. |
 
 `generated-plans-ideas/` holds raw idea documents (.docx), not plans.
@@ -25,5 +24,5 @@ Merged-to-`main` plans live in [`completed/`](completed/): the numbered
 `phase-1`…`phase-9` roadmap plans, `phase-frontend-mvp`, the Loop MVP
 backend/frontend plans and handoffs, `phase-loop-landing`, the calendar
 reconciliation plan and handoff, and the plan folders
-`calendar-event-titles/`, `loop-grounding-rag/`, `loop-recruiter-readiness/`,
-`user-plan-direction/`, and `ux-quality-pass/`.
+`calendar-event-titles/`, `calendar-grid-rework/`, `loop-grounding-rag/`,
+`loop-recruiter-readiness/`, `user-plan-direction/`, and `ux-quality-pass/`.

@@ -1,5 +1,7 @@
 # Calendar Grid Rework — Overview
 
+Status: **complete** — implemented and merged to `main` (PR #43).
+
 Three UX upgrades to the Week hour grid (`frontend/src/screens/ScheduleReview.tsx`),
 frontend-only, no backend/contract/schema change:
 

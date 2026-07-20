@@ -152,6 +152,10 @@ Record this in the user-profile spec's prompt-exposure/semantics section.
 
 ## RI-F · Corpus-evidence enrichment — GATED on grounding-RAG G-A–G-D
 
+**Status: built** (`tools/enrich_taxonomy.py`; the gate was satisfied when
+the grounding-RAG branch merged). Counting semantics are pinned in
+`docs/specs/skill-taxonomy.schema.md` § "Enrichment semantics".
+
 Runs only after the RAG plan's registry, chunking, and FTS5 index exist
 (and lives on whichever branch is current then; it is this project's only
 increment with a cross-plan dependency):

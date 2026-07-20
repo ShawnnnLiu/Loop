@@ -89,7 +89,7 @@ markers) until its own track is curated.
 | `aliases` | `list[str]` | required, non-empty; each already lowercase-normalized (lowercase, single-spaced, trimmed); unique within the entry AND globally unique across the taxonomy |
 | `track_tags` | `list[CareerTrack]` | required, non-empty, unique |
 | `kind` | enum | `language`, `framework`, `tool`, `concept`, `practice` |
-| `corpus_evidence` | `CorpusEvidence` or null | **v1: always `null`**; filled only by the gated RI-F enrichment tool |
+| `corpus_evidence` | `CorpusEvidence` or null | `null` in hand-curated versions; filled only by the RI-F enrichment tool (`tools/enrich_taxonomy.py`), which writes a NEW file version |
 
 ### `CorpusEvidence`
 
@@ -98,6 +98,26 @@ markers) until its own track is curated.
 | `snapshot_id` | string | required, non-empty; the pinned corpus snapshot the counts came from |
 | `occurrence_count` | int | required, `>= 0` |
 | `supporting_doc_ids` | `list[str]` | default empty; unique |
+
+Enrichment semantics (RI-F, `tools/enrich_taxonomy.py`) — how the fields
+are computed, so the numbers are interpretable later:
+
+- Each alias is compiled to an FTS5 **phrase** query (consecutive tokens,
+  e.g. `"power bi"`), never bag-of-words — matching the resolver's
+  exact-alias restraint. Aliases whose tokens vanish under FTS5
+  tokenization (`c++` → `c`) degrade to their surviving tokens; their
+  counts are noisy and the per-alias report breakdown exists precisely to
+  expose that (career-track expansion `01-expansion-mechanics.md`, "Alias
+  design for FTS5 enrichment").
+- Matches are restricted to chunks of documents tagged with **at least one
+  of the entry's `track_tags`** — counts are track-scoped support, not
+  corpus-wide frequency.
+- `occurrence_count` is the number of **distinct chunks** matching any of
+  the entry's aliases (chunk granularity; union, so a chunk matching two
+  aliases counts once). `supporting_doc_ids` are the distinct documents
+  those chunks belong to, sorted.
+- Counts are **advisory priors** (axiom 08 status): evidence informs human
+  curation, it never auto-creates, auto-deletes, or auto-ranks entries.
 
 ### `SkillTaxonomy`
 

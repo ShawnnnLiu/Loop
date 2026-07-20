@@ -27,6 +27,7 @@ from agentic_calendar.retrieval import (
     SqliteChunkIndex,
     SqliteCorpusRegistry,
     compile_match_expression,
+    compile_phrase_expression,
     fts5_available,
 )
 from agentic_calendar.retrieval import index as index_module
@@ -267,6 +268,69 @@ def test_get_chunk_round_trips_provenance(
 def test_compile_match_expression_is_quoted_bag_of_words() -> None:
     assert compile_match_expression("System-design, C++!") == '"system" OR "design" OR "c"'
     assert compile_match_expression("...") == ""
+
+
+def test_compile_phrase_expression_is_one_quoted_phrase() -> None:
+    assert compile_phrase_expression("Power BI") == '"power bi"'
+    # Punctuation-only tokens vanish under tokenization (the documented
+    # ``c++`` → ``c`` noise); no word tokens compiles to the empty expression.
+    assert compile_phrase_expression("c++") == '"c"'
+    assert compile_phrase_expression("...") == ""
+    # FTS5 operators are inside the quotes — literals, never syntax.
+    assert compile_phrase_expression('NEAR(design AND "systems")') == '"near design and systems"'
+
+
+def test_match_phrase_requires_adjacent_tokens(
+    built: tuple[SqliteChunkIndex, SqliteCorpusRegistry, CorpusSnapshot],
+) -> None:
+    index, _, snapshot = built
+    sd_doc = derive_doc_id("https://example.com/system-design", _COLLECTED)
+    matches = index.match_phrase(snapshot.snapshot_id, "system design")
+    assert matches and all(doc_id == sd_doc for _, doc_id in matches)
+    # Both words occur in the document ("System design …", "Capacity
+    # estimation …") but never adjacent — bag-of-words would match, the
+    # phrase must not.
+    assert index.match_phrase(snapshot.snapshot_id, "system estimation") == []
+    assert index.match_phrase(snapshot.snapshot_id, "!!!") == []
+
+
+def test_match_phrase_track_filter_is_any_of(
+    built: tuple[SqliteChunkIndex, SqliteCorpusRegistry, CorpusSnapshot],
+) -> None:
+    index, _, snapshot = built
+    ml_doc = derive_doc_id("https://example.com/ml-pipelines", _COLLECTED)
+    assert index.match_phrase(
+        snapshot.snapshot_id, "machine learning", tracks=[CareerTrack.SWE]
+    ) == []
+    mle = index.match_phrase(
+        snapshot.snapshot_id, "machine learning", tracks=[CareerTrack.MLE]
+    )
+    assert mle and all(doc_id == ml_doc for _, doc_id in mle)
+    # Multi-track scope is an OR: adding an unrelated track loses nothing.
+    assert (
+        index.match_phrase(
+            snapshot.snapshot_id,
+            "machine learning",
+            tracks=[CareerTrack.SWE, CareerTrack.MLE],
+        )
+        == mle
+    )
+
+
+def test_match_phrase_is_deterministic_and_ordered(
+    built: tuple[SqliteChunkIndex, SqliteCorpusRegistry, CorpusSnapshot],
+) -> None:
+    index, _, snapshot = built
+    first = index.match_phrase(snapshot.snapshot_id, "design")
+    second = index.match_phrase(snapshot.snapshot_id, "design")
+    assert first == second
+    assert [c for c, _ in first] == sorted(c for c, _ in first)
+
+
+def test_match_phrase_unbuilt_snapshot_is_typed(tmp_path: Path) -> None:
+    index = SqliteChunkIndex(SqliteDatabase(tmp_path / "index.db"))
+    with pytest.raises(SnapshotNotIndexedError):
+        index.match_phrase("snap_0000000000000000", "anything")
 
 
 def test_two_snapshots_score_independently(tmp_path: Path) -> None:

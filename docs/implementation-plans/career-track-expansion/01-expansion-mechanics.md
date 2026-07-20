@@ -112,12 +112,13 @@ track, which is another reason markers should be generous per career.
 
 ### E · Enrichment run (RI-F, offline)
 
-**Status caveat (2026-07-19):** the enrichment tool does not exist yet —
-`tools/enrich_taxonomy.py` is the résumé-intake plan's open **RI-F**
-increment (`../resume-intake-onboarding/06-skill-taxonomy.md`, gated on
-grounding-RAG G-A–G-D). Careers can land through step D without it —
-enrichment annotates, it never blocks — but this step is a no-op until
-RI-F is built.
+**Status (2026-07-19):** `tools/enrich_taxonomy.py` exists (RI-F,
+`../resume-intake-onboarding/06-skill-taxonomy.md`); counting semantics
+are pinned in `docs/specs/skill-taxonomy.schema.md` § "Enrichment
+semantics" — phrase queries, track-scoped, distinct-chunk union, and the
+per-alias report breakdown recommended below. Careers can still land
+through step D without running it — enrichment annotates, it never
+blocks.
 
 With taxonomy vN+1 and a snapshot containing the new track's documents:
 

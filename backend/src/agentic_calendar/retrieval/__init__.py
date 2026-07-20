@@ -38,7 +38,12 @@ from .errors import (
     UnknownCorpusDocumentError,
 )
 from .fusion import FusionParams, HybridSearcher, reciprocal_rank_fusion
-from .index import SqliteChunkIndex, compile_match_expression, fts5_available
+from .index import (
+    SqliteChunkIndex,
+    compile_match_expression,
+    compile_phrase_expression,
+    fts5_available,
+)
 from .normalize import (
     html_to_text,
     looks_like_html,
@@ -72,6 +77,7 @@ __all__ = [
     "chunk_snapshot",
     "chunk_text",
     "compile_match_expression",
+    "compile_phrase_expression",
     "cosine_similarity",
     "derive_chunk_id",
     "fts5_available",

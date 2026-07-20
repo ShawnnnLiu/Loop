@@ -138,13 +138,53 @@ the Node stage runs `npm ci && npm run build`, then the Python stage copies
 
 ## 5. Smoke-test after deploy
 
+Run this after **every** deploy, against the live canonical host — not
+localhost, and not just `/healthz`. Local tests passing says nothing about
+route registration in the image, Dockerfile ENV overrides, HEAD handling, or
+cache behavior; each of those has silently diverged from green local checks
+before (the `/privacy` SPA fallthrough, the HEAD 405 that bounced Google's
+branding checker).
+
 ```bash
-curl -s https://<your-app>.fly.dev/healthz                 # {"status":"ok"}
-curl -s -o /dev/null -w '%{http_code}\n' https://<your-app>.fly.dev/   # 200 (landing)
-curl -s -o /dev/null -w '%{http_code}\n' https://<your-app>.fly.dev/api/status   # 401 (session-gated)
+HOST=https://loop-study.com   # the canonical host (CANONICAL_HOST)
+
+# Health + API gate
+curl -s $HOST/healthz                                      # {"status":"ok"}
+curl -s -o /dev/null -w '%{http_code}\n' $HOST/api/status  # 401 (session-gated)
+
+# Every HTML page: GET must return the REAL page. Assert content, not status —
+# a 200 can be the SPA shell squatting on the URL after a fallthrough.
+curl -s $HOST/              | grep -c '<title>Loop — interview prep'    # 1
+curl -s $HOST/privacy       | grep -c '<title>Loop — privacy policy'    # 1
+curl -s $HOST/terms         | grep -c '<title>Loop — terms of service'  # 1
+curl -s $HOST/how-its-built | grep -c '<title>Loop — how it'            # 1
+curl -s $HOST/app           | grep -c 'id="root"'                       # 1 (SPA shell)
+
+# Every HTML page: HEAD must be 200. Automated checkers (Google's branding
+# crawler among them) probe with HEAD; a 405 here reads as a broken site.
+for p in / /privacy /terms /how-its-built /app; do
+  curl -sI -o /dev/null -w "HEAD $p -> %{http_code}\n" $HOST$p          # all 200
+done
+
+# HTML responses must force revalidation, or a stale SPA shell stays cached
+# per-URL in visitors' browsers indefinitely.
+curl -sI $HOST/ | grep -ic 'cache-control: no-cache'                    # 1
+
+# Canonical-host redirects (http and www variants both 301 to the apex)
+curl -s -o /dev/null -w '%{http_code} -> %{redirect_url}\n' http://loop-study.com/
+curl -s -o /dev/null -w '%{http_code} -> %{redirect_url}\n' https://www.loop-study.com/
 ```
 
-Then open `https://<your-app>.fly.dev/` in a browser, click **Connect Google
+Maintenance rule: any change that adds, moves, or re-serves an HTML route must
+add its GET-content and HEAD lines here in the same change (see AGENTS.md,
+Deploy Verification Rules).
+
+External reviewers (Google OAuth / branding verification): do not resubmit
+until this checklist passes against the live host, and treat a rejection as
+real only when its findings email exists — the console panel keeps showing the
+previous attempt's findings until a new decision lands.
+
+Then open `https://loop-study.com/` in a browser, click **Connect Google
 Calendar**, sign in with an allowlisted account, and walk the wizard → approve →
 write. A non-allowlisted account is rejected at `/auth/callback` with 403 — add
 it to `TESTER_ALLOWLIST` and restart.

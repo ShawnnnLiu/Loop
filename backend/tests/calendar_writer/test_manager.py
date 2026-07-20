@@ -443,6 +443,114 @@ def test_rollback_with_failing_delete_marks_rollback_failed() -> None:
 
 
 # --------------------------------------------------------------------------- #
+# task titles (display-only, excluded from the approval hash)
+# --------------------------------------------------------------------------- #
+
+
+def test_approve_and_write_passes_task_titles_to_adapter() -> None:
+    """Each created event carries its task's title from the ``task_titles``
+    map; the hash recheck still passes because titles are display-only and
+    excluded from canonicalization."""
+    mgr, adapter, _ms, approval_store, *_ = _make_manager()
+    draft = _draft()
+    approval = _approval_for(draft)
+    approval_store.save(approval)
+
+    titles = {"t1": "Review binary trees", "t2": "Mock interview drills"}
+    result = mgr.approve_and_write(
+        approval_event_id=approval.approval_event_id,
+        draft=draft,
+        target_calendar_id="primary",
+        task_titles=titles,
+    )
+    assert result.status is WriteStatus.SUCCESS
+    summaries = {e.metadata["task_id"]: e.summary for e in adapter.all_events()}
+    assert summaries == titles
+
+
+def test_approve_and_write_without_titles_leaves_summary_unset() -> None:
+    """No map → the manager passes ``title=None`` through, never inventing a
+    fallback of its own — the generic fallback is the Google adapter's job."""
+    mgr, adapter, _ms, approval_store, *_ = _make_manager()
+    draft = _draft()
+    approval = _approval_for(draft)
+    approval_store.save(approval)
+
+    result = mgr.approve_and_write(
+        approval_event_id=approval.approval_event_id,
+        draft=draft,
+        target_calendar_id="primary",
+    )
+    assert result.status is WriteStatus.SUCCESS
+    assert [e.summary for e in adapter.all_events()] == [None, None]
+
+
+def test_reconcile_recreates_verification_failed_event_with_title() -> None:
+    """Mapping-driven reconcile loop: t1's event silently vanished (mapping
+    at VERIFICATION_FAILED), so reconcile recreates it — with its real title."""
+    mgr, adapter, _ms, approval_store, *_ = _make_manager(
+        failure_modes=FailureModes(drop_silently_for_task_ids=frozenset({"t1"}))
+    )
+    draft = _draft()
+    approval = _approval_for(draft)
+    approval_store.save(approval)
+    write_result = mgr.approve_and_write(
+        approval_event_id=approval.approval_event_id,
+        draft=draft,
+        target_calendar_id="primary",
+    )
+    assert write_result.run_id is not None
+    assert write_result.status is WriteStatus.PARTIAL_FAILURE
+
+    adapter.set_failure_modes(FailureModes())
+    result = mgr.reconcile_after_crash(
+        approval_event_id=approval.approval_event_id,
+        draft=draft,
+        run_id=write_result.run_id,
+        target_calendar_id="primary",
+        task_titles={"t1": "Review binary trees", "t2": "Mock interview drills"},
+    )
+    assert result.status is WriteStatus.SUCCESS
+    summaries = {e.metadata["task_id"]: e.summary for e in adapter.all_events()}
+    # The recreated t1 carries its title; t2's ORIGINAL event (written without
+    # a title map) keeps summary None — reconcile never touches intact events.
+    assert summaries == {"t1": "Review binary trees", "t2": None}
+
+
+def test_reconcile_creates_unattempted_draft_entry_with_title() -> None:
+    """Draft-entry-driven reconcile loop: t2's original create raised
+    mid-write, so it has NO mapping; the retry creates it from the draft
+    entry — with its real title."""
+    mgr, adapter, _ms, approval_store, *_ = _make_manager(
+        failure_modes=FailureModes(fail_create_for_task_ids=frozenset({"t2"}))
+    )
+    draft = _draft()
+    approval = _approval_for(draft)
+    approval_store.save(approval)
+    write_result = mgr.approve_and_write(
+        approval_event_id=approval.approval_event_id,
+        draft=draft,
+        target_calendar_id="primary",
+    )
+    assert write_result.run_id is not None
+    assert write_result.status is WriteStatus.PARTIAL_FAILURE
+
+    adapter.set_failure_modes(FailureModes())
+    result = mgr.reconcile_after_crash(
+        approval_event_id=approval.approval_event_id,
+        draft=draft,
+        run_id=write_result.run_id,
+        target_calendar_id="primary",
+        task_titles={"t1": "Review binary trees", "t2": "Mock interview drills"},
+    )
+    assert result.status is WriteStatus.SUCCESS
+    summaries = {e.metadata["task_id"]: e.summary for e in adapter.all_events()}
+    # t1's intact original event keeps summary None; the newly created t2
+    # carries its title.
+    assert summaries == {"t1": None, "t2": "Mock interview drills"}
+
+
+# --------------------------------------------------------------------------- #
 # reconcile_after_crash
 # --------------------------------------------------------------------------- #
 

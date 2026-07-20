@@ -143,6 +143,7 @@ from agentic_calendar.planning.plan_version import (
 )
 from agentic_calendar.planning.recovery import RecoveryRoute, propose_recovery_plan
 from agentic_calendar.planning.replan import propose_recalibrated_plan
+from agentic_calendar.planning.store import PlanVersionNotFoundError
 from agentic_calendar.scheduler import schedule
 from agentic_calendar.scheduler.adjustment import DraftAdjustment, validate_placements
 from agentic_calendar.scheduler.inputs import FreeBusyInterval, SchedulerInput
@@ -1904,6 +1905,32 @@ class CycleService:
     # write
     # ------------------------------------------------------------------ #
 
+    def _task_titles_for(
+        self, user_id: str, plan_version: str | None
+    ) -> dict[str, str]:
+        """``task_id`` → title map for calendar-event summaries (display-only).
+
+        Returns ``{}`` when the plan version is unknown or not found — an
+        approved write must never fail over a display field, so the events
+        fall back to the adapter's generic summary. The fallback is logged so
+        it stays observable.
+        """
+        if plan_version is None:
+            correlated(_log, user_id=user_id).warning(
+                "task titles unavailable (no plan_version); calendar events "
+                "will use the generic fallback summary"
+            )
+            return {}
+        try:
+            plan = self._env.plan_store.get(user_id, plan_version)
+        except PlanVersionNotFoundError:
+            correlated(_log, user_id=user_id, plan_version=plan_version).warning(
+                "task titles unavailable (plan version not found); calendar "
+                "events will use the generic fallback summary"
+            )
+            return {}
+        return {task.task_id: task.title for task in plan.plan.tasks}
+
     def write(
         self,
         user_id: str,
@@ -1970,6 +1997,7 @@ class CycleService:
                     approval_event_id=approval_event_id,
                     draft=draft,
                     target_calendar_id=target_calendar_id,
+                    task_titles=self._task_titles_for(user_id, draft.plan_version),
                 )
         except AgenticCalendarError as exc:
             reason: ReasonCode = (
@@ -2216,6 +2244,9 @@ class CycleService:
         if write_op_id is not None and not env.mapping_store.list_for_run(write_op_id):
             write_op_id = None
         run = self._transition(run, Sig.CALENDAR_WRITE_RETRY_REQUESTED)
+        # Both retry paths carry the title map — a retried write must produce
+        # the same properly-titled events as a first-attempt write.
+        task_titles = self._task_titles_for(user_id, draft.plan_version)
         try:
             if write_op_id is not None:
                 result = env.write_manager.reconcile_after_crash(
@@ -2223,6 +2254,7 @@ class CycleService:
                     draft=draft,
                     run_id=write_op_id,
                     target_calendar_id=target_calendar_id,
+                    task_titles=task_titles,
                 )
             else:
                 # Nothing was ever written: a fresh full write is the honest
@@ -2232,6 +2264,7 @@ class CycleService:
                     approval_event_id=approval_event_id,
                     draft=draft,
                     target_calendar_id=target_calendar_id,
+                    task_titles=task_titles,
                 )
         except AgenticCalendarError as exc:
             reason: ReasonCode = (

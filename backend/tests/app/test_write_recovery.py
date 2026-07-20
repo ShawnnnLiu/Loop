@@ -193,6 +193,57 @@ def test_retry_after_prewrite_abort_falls_back_to_full_write() -> None:
     assert env.plan_store.get_active(USER_ID) is not None
 
 
+def _expected_titles(env) -> dict[str, str]:  # type: ignore[no-untyped-def]
+    """``task_id`` → real title from the run's plan version."""
+    run = env.state.latest_run_for_user(USER_ID)
+    assert run is not None and run.plan_version is not None
+    plan = env.plan_store.get(USER_ID, run.plan_version)
+    assert plan is not None
+    return {task.task_id: task.title for task in plan.plan.tasks}
+
+
+def test_retry_reconcile_recreates_events_with_real_titles() -> None:
+    """The highest-risk silent regression: ``retry_write``'s reconcile path
+    must carry the title map, or recreated events quietly revert to the
+    generic summary with no error signal."""
+    adapter = _failing_adapter(
+        FailureModes(drop_silently_for_task_ids=frozenset({"dp_001"}))
+    )
+    service, env, _clock = make_service(calendar_adapter=adapter)
+    _fail_write(service, adapter)
+
+    result = service.retry_write(USER_ID)
+
+    assert result.state is S.ACTIVE_PLAN
+    titles = _expected_titles(env)
+    events = adapter.all_events()
+    assert sorted(e.metadata["task_id"] for e in events) == sorted(PLAN_TASK_IDS)
+    for event in events:
+        assert event.summary == titles[event.metadata["task_id"]]
+        assert event.summary
+
+
+def test_retry_fallback_full_write_carries_real_titles() -> None:
+    """``retry_write``'s pre-write-abort fallback (fresh ``approve_and_write``)
+    must carry the title map too — missing either call site regresses retried
+    writes to the generic title."""
+    adapter = _failing_adapter(
+        FailureModes(fail_create_for_task_ids=frozenset({"dp_001"}))
+    )
+    service, env, _clock = make_service(calendar_adapter=adapter)
+    _fail_write(service, adapter)
+
+    result = service.retry_write(USER_ID)
+
+    assert result.state is S.ACTIVE_PLAN
+    titles = _expected_titles(env)
+    events = adapter.all_events()
+    assert sorted(e.metadata["task_id"] for e in events) == sorted(PLAN_TASK_IDS)
+    for event in events:
+        assert event.summary == titles[event.metadata["task_id"]]
+        assert event.summary
+
+
 def test_retry_write_requires_the_failure_state() -> None:
     service, _env, _clock = make_service()
     service.propose(USER_ID)

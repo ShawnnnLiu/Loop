@@ -191,8 +191,15 @@ class CalendarWriteManager:
         approval_event_id: str,
         draft: DraftSchedule,
         target_calendar_id: str,
+        task_titles: Mapping[str, str] | None = None,
     ) -> WriteResult:
         """Execute the full approved-write flow.
+
+        ``task_titles`` (``task_id`` → title) supplies each created event's
+        display summary; a missing/absent entry falls back to the adapter's
+        generic summary. Titles are display-only and deliberately excluded
+        from the approval hash — the approved artifact locks placement, and
+        titles come from the immutable approved plan version.
 
         Algorithm (axiom 06 lines 97-108 + 181-189):
 
@@ -251,6 +258,7 @@ class CalendarWriteManager:
                 run_id=run_id,
                 target_calendar_id=target_calendar_id,
                 token=token,
+                task_titles=task_titles,
             )
 
             # --- Step 6: verify -----------------------------------------
@@ -494,8 +502,15 @@ class CalendarWriteManager:
         draft: DraftSchedule,
         run_id: str,
         target_calendar_id: str,
+        task_titles: Mapping[str, str] | None = None,
     ) -> WriteResult:
         """Manual-retry path: write only confirmed-missing tasks, then verify.
+
+        ``task_titles`` (``task_id`` → title) supplies each recreated event's
+        display summary, with the adapter's generic fallback for absent
+        entries. Titles are display-only and deliberately excluded from the
+        approval hash — the approved artifact locks placement; titles come
+        from the immutable approved plan version.
 
         Called by the operator/UI after a partial-failure run. Per axiom 06
         lines 181-189 the hash recheck is mandatory on every write path, so
@@ -559,6 +574,7 @@ class CalendarWriteManager:
                         scheduled_start=mapping.scheduled_start,
                         scheduled_end=mapping.scheduled_end,
                         metadata=metadata,
+                        title=(task_titles or {}).get(mapping.task_id),
                     )
                 except Exception as create_exc:
                     correlated(
@@ -621,6 +637,7 @@ class CalendarWriteManager:
                         scheduled_start=entry.start,
                         scheduled_end=entry.end,
                         metadata=metadata,
+                        title=(task_titles or {}).get(entry.task_id),
                     )
                 except Exception as create_exc:
                     correlated(
@@ -766,6 +783,7 @@ class CalendarWriteManager:
         run_id: str,
         target_calendar_id: str,
         token: LockToken,
+        task_titles: Mapping[str, str] | None = None,
     ) -> list[CalendarEventMapping]:
         """Per-task create + persist loop.
 
@@ -788,6 +806,7 @@ class CalendarWriteManager:
                     scheduled_start=entry.start,
                     scheduled_end=entry.end,
                     metadata=metadata,
+                    title=(task_titles or {}).get(entry.task_id),
                 )
             except Exception as create_exc:
                 correlated(

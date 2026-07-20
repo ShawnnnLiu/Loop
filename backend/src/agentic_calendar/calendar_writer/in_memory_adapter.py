@@ -99,6 +99,7 @@ class InMemoryCalendarAdapter:
         scheduled_start: datetime,
         scheduled_end: datetime,
         metadata: Mapping[str, str],
+        title: str | None = None,
     ) -> ExternalEventHandle:
         missing = [k for k in _REQUIRED_METADATA_KEYS if k not in metadata]
         if missing:
@@ -121,12 +122,16 @@ class InMemoryCalendarAdapter:
             )
             if task_id in self._failure_modes.drop_silently_for_task_ids:
                 return handle
+            # ``summary`` records the title VERBATIM (no fallback) so tests can
+            # distinguish "no title passed" (None) from "fallback applied" —
+            # only the Google adapter applies EVENT_SUMMARY.
             record = ExternalEventRecord(
                 calendar_event_id=calendar_event_id,
                 target_calendar_id=target_calendar_id,
                 scheduled_start=scheduled_start,
                 scheduled_end=scheduled_end,
                 metadata=stored_metadata,
+                summary=title,
             )
             self._by_id[calendar_event_id] = record
             self._order.append(calendar_event_id)

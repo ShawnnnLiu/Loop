@@ -33,7 +33,8 @@ there is no plan, no run context. The service mints a `run_id` with prefix
     "timeline_weeks": 10,
     "weekly_hours": 8
   },
-  "allowed_weak_spots": ["System design", "Dynamic programming", "SQL"]
+  "allowed_weak_spots": ["System design", "Dynamic programming", "SQL"],
+  "allowed_themes": ["distributed-systems", "developer-experience", "applied-ml"]
 }
 ```
 
@@ -45,6 +46,7 @@ there is no plan, no run context. The service mints a `run_id` with prefix
 | `resume_text` | string | required, **50–40,000 chars** |
 | `draft_context` | `DraftProfileContext` | defaults to all-empty |
 | `allowed_weak_spots` | `list[str]` | default empty; each item non-empty, max 60 chars; case-insensitively unique |
+| `allowed_themes` | `list[str]` | default empty; each item non-empty, max 60 chars; case-insensitively unique (via `casefold_key`) |
 
 `resume_text` bounds: a 3-char paste is a deterministic 422, not an LLM
 call; 40,000 chars is a generous multi-page ceiling.
@@ -67,6 +69,18 @@ contract, and the extraction's `inferred_weak_spots` must resolve to
 members of it (membership enforced in the repair loop). Empty means "no
 vocabulary restriction was resolvable"; the service fills it whenever the
 taxonomy is available.
+
+`allowed_themes` is the parallel closed vocabulary for evidence tagging: the
+service fills it from the **pathway-registry theme vocabulary**
+(`pathway-template.schema.md`) for the track resolved from the draft
+`target_role`, and each proposed `ExperienceItem.theme_tags` entry must be a
+member of it (case-insensitively via `casefold_key`; membership enforced in
+the repair loop, resume-extraction invariant 6). The registry, not the skill
+taxonomy, owns themes — they are broader than skills and deliberately do not
+join the taxonomy slice. Empty means "no theme vocabulary was resolvable"
+(no track, or the track seeds no themes); the check is then skipped, and the
+node proposes no tags. The node never imports the registry — the vocabulary
+arrives as plain data on this contract.
 
 ## Privacy and Injection Posture
 
@@ -103,5 +117,6 @@ Reason: `weekly_hours` above 40.
 - `../axioms/03-data-contracts.md`
 - `resume-extraction.schema.md`
 - `skill-taxonomy.schema.md`
+- `pathway-template.schema.md`
 - `llm-call-log.schema.md`
 - `user-profile.schema.md`

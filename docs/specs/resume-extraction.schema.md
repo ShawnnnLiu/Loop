@@ -107,8 +107,17 @@ spec cannot drift):
    input's `allowed_weak_spots` (see `resume-intake-input.schema.md` and
    `skill-taxonomy.schema.md`). Membership is enforced in the repair loop;
    persistent violation surfaces as `REPAIR_LIMIT_EXCEEDED`.
+6. **Closed theme vocabulary.** Every `ExperienceItem.theme_tags` entry must
+   be a member (compared case-insensitively via `casefold_key`) of the
+   input's `allowed_themes` list — the pathway-registry theme vocabulary the
+   service resolved for the track (see `resume-intake-input.schema.md` and
+   `pathway-template.schema.md`). Empty `theme_tags` is always valid
+   (empty-over-fabrication). When `allowed_themes` is empty (no vocabulary
+   resolved) the check is skipped, exactly like invariant 5. Membership is
+   enforced in the repair loop; persistent violation surfaces as
+   `REPAIR_LIMIT_EXCEEDED` — never a silently coined theme.
 
-Invariants 1, 2, and 5 need the résumé text / allowed vocabulary and are
+Invariants 1, 2, 5, and 6 need the résumé text / allowed vocabulary and are
 checked by the adapter's post-validator inside the bounded repair loop
 (never silently dropped — typed `reason_code` on failure). Invariants 3 and
 4 are enforced by the Pydantic contract itself.

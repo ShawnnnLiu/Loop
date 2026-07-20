@@ -476,6 +476,29 @@ def test_v7_fixture_recording_rates_exact() -> None:
     assert report.overall.rubric_pass_rate == 1.0
 
 
+def test_v8_fixture_recording_rates_exact() -> None:
+    """The v8 set carries the thirteen v7 cases forward and adds three
+    evidence-tagging cases (NP-C): a project/volunteering split, a sparse
+    résumé whose tags stay empty, and an off-vocabulary theme attempt that the
+    deterministic theme-membership check rejects on attempt 0 and the repair
+    attempt fixes — the one recovered-by-repair case in the twin."""
+    eval_set = EvalSet.model_validate(_load(EVALSETS / "eval_set_v8.json"))
+    recording = EvalRecording.model_validate(
+        _load(EVALSETS / "recordings" / "fixture_resume_intake_v8.json")
+    )
+    assert recording.taxonomy_version == "skill-taxonomy-v4"
+    report = grade_recording(eval_set, recording)
+    assert report.overall.cases == 16
+    # Fifteen valid on the first attempt; the off-vocabulary-theme case needs
+    # one repair, so validity is 15/16 and nothing stays invalid after repair.
+    assert report.overall.schema_valid_first_attempt == 15
+    assert report.overall.recovered_by_repair == 1
+    assert report.overall.repair_recovery_rate == 1.0
+    assert report.overall.post_repair_invalid_rate == 0.0
+    assert report.overall.rubric_graded == 4
+    assert report.overall.rubric_pass_rate == 1.0
+
+
 def test_grade_recording_rejects_judge_scores_for_unknown_cases() -> None:
     from agentic_calendar.llm_nodes.call_log import LlmNodeName
     from agentic_calendar.llm_nodes.eval import (

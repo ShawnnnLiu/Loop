@@ -8,5 +8,6 @@
     "timeline_weeks": 10,
     "weekly_hours": 8
   },
-  "allowed_weak_spots": ["System design", "Dynamic programming", "SQL"]
+  "allowed_weak_spots": ["System design", "Dynamic programming", "SQL"],
+  "allowed_themes": ["distributed-systems", "api-design", "developer-experience"]
 }

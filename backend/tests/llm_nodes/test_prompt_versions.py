@@ -72,6 +72,7 @@ from tests.llm_nodes.test_anthropic_adapter import (
     _profile_with_plan_direction,
 )
 from tests.llm_nodes.test_anthropic_resume_intake import (
+    _ALLOWED_THEMES,
     _UNGROUNDED_EXTRACTION,
     _VALID_EXTRACTION,
     _intake,
@@ -113,8 +114,10 @@ _PINNED: list[tuple[str, object, str, str]] = [
     (
         "_RESUME_INTAKE_SYSTEM",
         adapter.RESUME_INTAKE_CONFIG,
-        "resume-intake-v1-2026-07-06",
-        "b66507979c492488688bb77c0860518e7ade3e8de91eb65f6d88326971aa4076",
+        # v2 (NP-C): rule 7 (evidence `kind` + closed-vocabulary `theme_tags`)
+        # and the exemplar's two new fields changed the system-prompt bytes.
+        "resume-intake-v2-2026-07-20",
+        "b525603a35121c1c98dff419c3b34f90b0967abb30614804a4c963f849690fc5",
     ),
 ]
 
@@ -323,15 +326,17 @@ def _explanation_full() -> tuple[adapter.AdapterConfig, FakeTransport]:
 
 
 def _resume_intake_full() -> tuple[adapter.AdapterConfig, FakeTransport]:
-    """Optional sections: allowed weak-spot vocabulary block + labeled résumé
-    block; engine repair suffix (the first response carries an ungrounded
-    skill, so round 2 carries the typed groundedness rejection)."""
+    """Optional sections: allowed weak-spot vocabulary block + allowed-themes
+    block (NP-C) + labeled résumé block; engine repair suffix (the first
+    response carries an ungrounded skill, so round 2 carries the typed
+    groundedness rejection)."""
     transport = FakeTransport([_ok(_UNGROUNDED_EXTRACTION), _ok(_VALID_EXTRACTION)])
     node = AnthropicResumeIntake(transport=transport, **_node_kwargs())  # type: ignore[arg-type]
-    node.run(run_id="intake-pin", intake=_intake())
+    node.run(run_id="intake-pin", intake=_intake(allowed_themes=_ALLOWED_THEMES))
     # Guard: the pin must actually cover what it claims (builder-rot check).
     prompt = transport.requests[0]["user_prompt"]
     assert "Allowed weak-spot vocabulary (choose only from this list):" in prompt
+    assert "Allowed evidence themes for theme_tags" in prompt
     assert "Candidate résumé" in prompt
     assert '"resume_text"' not in prompt
     assert transport.requests[1]["repair_suffix"] is not None
@@ -373,8 +378,11 @@ _FULL_PROMPT_PINS: list[
     (
         "resume_intake",
         _resume_intake_full,
-        "resume-intake-v1-2026-07-06",
-        "2cba92a5bddaa29fe09302742003418026f579e69f415656a5de2da0fa1865dc",
+        # v2 (NP-C): system-prompt rule 7, plus the rendered bundle now carries
+        # allowed_themes and a labeled allowed-evidence-themes block — bytes
+        # changed, rehashed.
+        "resume-intake-v2-2026-07-20",
+        "19134eacda83dd8b88677c8885e09ba11fc58520c97fcbfa0c68311ac757d1ed",
     ),
 ]
 

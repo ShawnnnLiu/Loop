@@ -160,6 +160,7 @@ from agentic_calendar.supervisor.state import SupervisorSignal as Sig
 from agentic_calendar.supervisor.state import SupervisorState as S
 from agentic_calendar.telemetry.calibration import calibrate
 from agentic_calendar.telemetry.metrics import completion_rate
+from agentic_calendar.templates import theme_vocabulary
 from agentic_calendar.validation import validate_syllabus_units, validate_task_plan
 
 from .environment import AppEnvironment
@@ -400,9 +401,17 @@ class CycleService:
         entries = (
             registry.entries_for_track(track) if track is not None else registry.entries
         )
+        # Evidence-theme vocabulary is the pathway registry's per-track slice
+        # (NP-C); empty when no track resolved or the track seeds no themes,
+        # which the node treats as "propose no tags." Registry literals, not
+        # client input — the node never imports the registry.
+        allowed_themes = list(theme_vocabulary(track)) if track is not None else []
         intake = ResumeIntakeInput.model_validate(
             base.model_dump(mode="json")
-            | {"allowed_weak_spots": [entry.display_name for entry in entries]}
+            | {
+                "allowed_weak_spots": [entry.display_name for entry in entries],
+                "allowed_themes": allowed_themes,
+            }
         )
 
         run_id = f"intake-{env.id_generator.new_id('run')}"

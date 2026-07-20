@@ -25,6 +25,7 @@ _EVAL_SET_V3_PATH = Path(__file__).parents[2] / "evalsets" / "eval_set_v3.json"
 _EVAL_SET_V5_PATH = Path(__file__).parents[2] / "evalsets" / "eval_set_v5.json"
 _EVAL_SET_V6_PATH = Path(__file__).parents[2] / "evalsets" / "eval_set_v6.json"
 _EVAL_SET_V7_PATH = Path(__file__).parents[2] / "evalsets" / "eval_set_v7.json"
+_EVAL_SET_V8_PATH = Path(__file__).parents[2] / "evalsets" / "eval_set_v8.json"
 
 
 def _load_set(path: Path = _EVAL_SET_PATH) -> EvalSet:
@@ -268,9 +269,33 @@ def test_capture_v7_stamps_taxonomy_version_and_haiku_model() -> None:
     assert report.overall.schema_validity_rate == 1.0
 
 
+def test_capture_v8_tagging_cases_parse_and_grade_cleanly() -> None:
+    """NP-C re-registration: the v8 set adds the evidence-tagging cases (which
+    carry allowed_themes on their intake bundle). Every case parses into typed
+    node inputs and a fresh canned capture grades cleanly — the allowed_themes
+    field flows through the capture path with no special handling."""
+    eval_set = _load_set(_EVAL_SET_V8_PATH)
+    by_id = {case.case_id: case for case in eval_set.cases}
+    for case in eval_set.cases:
+        assert parse_case_inputs(case, by_id)
+
+    transport = _CannedTransport()
+    recording = capture(
+        eval_set,
+        transport=transport,  # type: ignore[arg-type]
+        store=InMemoryLlmCallLogStore(),
+        label="canned-intake-v8",
+    )
+    assert set(recording.outputs) == {case.case_id for case in eval_set.cases}
+    assert recording.taxonomy_version == "skill-taxonomy-v4"
+    report = grade_recording(eval_set, recording)
+    assert report.overall.schema_validity_rate == 1.0
+
+
 def test_cli_validate_only_is_offline_and_green() -> None:
     assert main(["--eval-set", str(_EVAL_SET_PATH), "--validate-only"]) == 0
     assert main(["--eval-set", str(_EVAL_SET_V3_PATH), "--validate-only"]) == 0
+    assert main(["--eval-set", str(_EVAL_SET_V8_PATH), "--validate-only"]) == 0
 
 
 def test_cli_refuses_live_without_flag_and_key(monkeypatch) -> None:  # type: ignore[no-untyped-def]

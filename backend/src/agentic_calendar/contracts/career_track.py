@@ -27,3 +27,4 @@ class CareerTrack(StrEnum):
     DATA_SCIENTIST = "data_scientist"
     PRODUCT_MANAGER = "product_manager"
     DATA_ANALYST = "data_analyst"
+    DATA_ENGINEER = "data_engineer"

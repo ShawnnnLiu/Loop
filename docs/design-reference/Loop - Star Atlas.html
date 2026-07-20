@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Loop — Knowledge Map · Star Atlas</title>
+<style>
+:root{
+--ink:#16212e; --ink-2:#22303f; --ink-soft:#38485a; --muted:#6c7886; --muted-2:#97a0ab;
+--paper:#fbf8f2; --paper-2:#f4ece0; --paper-3:#ece2d3; --card:#ffffff;
+--clay:#bd5a39; --clay-deep:#9c4527; --clay-soft:#f1ddd1; --clay-tint:#faeee6;
+--sage:#5f7a64; --sage-deep:#496650; --sage-soft:#e3ebe2; --gold:#c08a3e; --gold-deep:#9a6d2f; --gold-soft:#f6e6cf;
+--line:#e9e0d2; --line-2:#ddd2bf; --line-3:#cdbfa8;
+--sky:#0b1420; --sky-2:#142333; --chalk:#cfdae2; --chalk-dim:#8ea1b5; --star-gold:#e8c07a; --magma:#e0764a; --ocean:#3f8f88; --brass:#8a6f3f; --brass-dim:rgba(138,111,63,.45);
+--serif:'Newsreader','Noto Serif SC',Georgia,serif;
+--sans:'Hanken Grotesk','Noto Sans SC',system-ui,-apple-system,sans-serif;
+--mono:'Spline Sans Mono',ui-monospace,'SF Mono',Menlo,monospace;
+--r:16px; --r-sm:11px;
+--shadow-sm:0 1px 2px rgba(22,33,46,.05),0 4px 14px rgba(22,33,46,.05);
+--shadow:0 2px 6px rgba(22,33,46,.05),0 18px 44px -18px rgba(22,33,46,.22);
+--shadow-lg:0 30px 70px -28px rgba(22,33,46,.4);
+}
+*{box-sizing:border-box}
+body{margin:0;padding:34px 30px 70px;background:var(--paper-3);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+a{color:var(--clay-deep);text-decoration:none}
+a:hover{color:var(--clay);text-decoration:underline}
+.serif{font-family:var(--serif)}.mono{font-family:var(--mono)}.muted{color:var(--muted)}
+.row{display:flex;align-items:center;gap:10px}.spacer{flex:1}
+.eyebrow{font-size:11.5px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--clay-deep)}
+.label{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line-2);border-radius:999px;padding:5px 12px;font-size:13px;font-weight:500;background:var(--card);color:var(--ink-soft);white-space:nowrap;cursor:pointer}
+.chip.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.chip.sm{padding:3px 9px;font-size:12px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;font-family:var(--sans);font-weight:600;font-size:14px;padding:9px 16px;border-radius:10px;border:1px solid transparent;cursor:pointer;white-space:nowrap;line-height:1}
+.btn.sm{padding:7px 12px;font-size:13px;border-radius:8px}
+.btn-primary{background:var(--clay);color:#fff;box-shadow:0 1px 2px rgba(157,69,39,.25),0 10px 22px -12px rgba(189,90,57,.7)}
+.btn-ink{background:var(--ink);color:var(--paper)}
+.btn-ghost{background:var(--card);color:var(--ink);border-color:var(--line-2);box-shadow:var(--shadow-sm)}
+.btn-soft{background:var(--paper-2);color:var(--ink-soft);border-color:var(--line-2)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow-sm)}
+.card.soft{background:var(--paper-2);border-color:var(--line-2);box-shadow:none}
+.icon-btn{width:30px;height:30px;border-radius:9px;border:1px solid var(--line-2);background:var(--card);display:grid;place-items:center;color:var(--ink-soft);font-size:12px;font-family:var(--mono);cursor:pointer}
+.guard{display:flex;gap:9px;align-items:flex-start;font-size:11.5px;color:var(--muted);line-height:1.5}
+.guard .lk{color:var(--sage);font-size:12px;flex:none;margin-top:1px}
+/* ---- demo scaffold ---- */
+.demo-strip{max-width:1240px;margin:0 auto 16px;position:sticky;left:30px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-family:var(--mono);font-size:11px;color:var(--muted)}
+.demo-strip .tag{letter-spacing:.1em;text-transform:uppercase;font-weight:600}
+.stage{display:flex;gap:34px;align-items:flex-start;flex-wrap:wrap;width:max-content;margin:0 auto}
+.frame-cap{font-family:var(--mono);font-size:11px;color:var(--muted);margin:12px 2px 0;max-width:1240px}
+/* ---- app frame ---- */
+.app{width:1240px;background:var(--paper);border:1px solid var(--line-2);border-radius:var(--r);box-shadow:var(--shadow-lg);position:relative;overflow:hidden;flex:none}
+.tb{display:flex;align-items:center;gap:16px;padding:0 24px;height:60px;background:color-mix(in srgb,var(--paper) 88%,#fff);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:11px}
+.brand .glyph{width:32px;height:32px;border-radius:10px;background:var(--ink);color:var(--paper);display:grid;place-items:center;font-family:var(--serif);font-size:18px;font-weight:600;position:relative;flex:none}
+.brand .glyph::after{content:"✓";position:absolute;right:-4px;bottom:-4px;width:15px;height:15px;border-radius:50%;background:var(--clay);color:#fff;font-size:8px;font-weight:800;display:grid;place-items:center;border:2px solid var(--paper)}
+.brand .word{font-family:var(--serif);font-size:19px;font-weight:600;letter-spacing:-.01em}
+.tb-nav{display:flex;gap:2px;margin-left:10px}
+.tb-nav a{padding:6px 12px;border-radius:9px;font-size:13.5px;font-weight:600;color:var(--ink-soft);cursor:default}
+.tb-nav a:hover{color:var(--ink-soft);text-decoration:none}
+.tb-nav a.on{background:var(--ink);color:var(--paper)}
+.sync{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line-2);border-radius:999px;padding:5px 12px 5px 10px;background:var(--card);font-size:12px;font-weight:500;color:var(--ink-soft)}
+.sync .dot{width:7px;height:7px;border-radius:50%;background:var(--sage);flex:none;box-shadow:0 0 0 3px var(--sage-soft)}
+.avatar{width:33px;height:33px;border-radius:50%;background:linear-gradient(150deg,var(--clay),var(--clay-deep));color:#fff;display:grid;place-items:center;font-family:var(--serif);font-size:15px;font-weight:600;flex:none}
+.ph{display:flex;align-items:flex-end;gap:22px;padding:18px 26px 14px}
+.ph h1{margin:0;font-family:var(--serif);font-weight:500;font-size:30px;letter-spacing:-.015em;line-height:1.06}
+.ph .tagline{font-family:var(--serif);font-style:italic;font-size:14.5px;color:var(--muted);margin-top:3px}
+.counts{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.counts .chip{font-family:var(--mono);font-size:11.5px;cursor:default;padding:5px 11px}
+.counts .chip b{font-weight:700;color:var(--ink)}
+.counts .chip .cdot{width:7px;height:7px;border-radius:50%;flex:none}
+/* ---- the observatory canvas ---- */
+.chart-wrap{position:relative;padding:4px 24px 24px}
+.bezel{background:linear-gradient(160deg,#2b333f,#171f2a 42%,#232b37);border:1px solid #3a4553;border-radius:16px;padding:11px;box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 14px 34px -16px rgba(22,33,46,.55)}
+.rim{border-radius:8px;border:1px solid var(--brass);box-shadow:inset 0 0 0 1px rgba(138,111,63,.22),inset 0 0 46px rgba(0,0,0,.55);overflow:hidden;position:relative;background:var(--sky)}
+.rim svg{display:block;width:100%;height:auto}
+svg text{font-family:var(--sans)}
+.rlabel{font-family:var(--serif);font-style:italic;font-size:15px;letter-spacing:.12em;fill:rgba(213,197,168,.6)}
+.rlabel.lit{fill:rgba(240,208,146,.85)}
+.caplab{font-family:var(--mono);font-size:9px;letter-spacing:.14em;fill:var(--chalk-dim)}
+.caplab.lit{fill:var(--star-gold)}
+.slab{font-family:var(--serif);font-size:13.5px;fill:#dbe4ea;paint-order:stroke;stroke:rgba(11,20,32,.85);stroke-width:3.5px;stroke-linejoin:round}
+.scount{font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;fill:var(--chalk-dim);paint-order:stroke;stroke:rgba(11,20,32,.85);stroke-width:3px}
+.scount.warm{fill:var(--star-gold)}
+.plab{font-size:10.5px;font-weight:600;fill:#c6d2dc;paint-order:stroke;stroke:rgba(11,20,32,.88);stroke-width:3.2px;stroke-linejoin:round}
+.plab.dim{fill:#7f92a5}
+.yourshdr{font-family:var(--mono);font-size:9px;letter-spacing:.26em;fill:rgba(207,218,226,.42)}
+.plaq-n{font-size:10.5px;font-weight:700;letter-spacing:.16em;fill:#d5c5a8}
+.plaq-c{font-family:var(--mono);font-size:9px;letter-spacing:.05em;fill:var(--chalk-dim)}
+.probelab{font-family:var(--mono);font-size:8.5px;letter-spacing:.05em;fill:var(--chalk-dim)}
+.sysg,.nodeg{cursor:pointer}
+.hit{fill:transparent;stroke:none}
+.selring{stroke:var(--star-gold);stroke-width:1.2;fill:none;stroke-dasharray:3 3;opacity:.9}
+.twinkle{animation:tw 4.2s ease-in-out infinite}
+@keyframes tw{0%,100%{opacity:.22}50%{opacity:.75}}
+.pulse{animation:breathe 3.6s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+@keyframes breathe{0%,100%{opacity:.4}50%{opacity:.85}}
+.shimmer{animation:shim 2.8s ease-in-out infinite}
+@keyframes shim{0%,100%{opacity:.2}40%{opacity:.6}55%{opacity:.3}70%{opacity:.55}}
+.trail{transform-box:fill-box;transform-origin:center;animation:spin 90s linear infinite}
+.rays{transform-box:fill-box;transform-origin:center;animation:spin 160s linear infinite}
+.orr1{transform-box:fill-box;transform-origin:center;animation:spin 60s linear infinite}
+.orr2{transform-box:fill-box;transform-origin:center;animation:spinr 95s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes spinr{to{transform:rotate(-360deg)}}
+.drift{animation:drift 5s ease-in-out infinite}
+@keyframes drift{0%,100%{transform:translate(0,0)}50%{transform:translate(3px,-2px)}}
+.consti{animation:cfade 1s ease-out forwards}
+@keyframes cfade{from{opacity:0}to{opacity:1}}
+.bloom circle{transform-box:fill-box;transform-origin:center;animation:bloom 1.05s ease-out forwards}
+.bloom circle:nth-child(2){animation-delay:.16s}
+.bloom circle:nth-child(3){animation-delay:.32s}
+@keyframes bloom{0%{transform:scale(.2);opacity:.9}100%{transform:scale(2.6);opacity:0}}
+#dust1,#dust2{transition:transform .25s ease-out}
+/* tooltip / toast / overlays */
+#tt{position:absolute;z-index:30;pointer-events:none;background:var(--ink);color:var(--paper);border-radius:9px;padding:7px 11px;font-size:12px;line-height:1.45;max-width:260px;box-shadow:var(--shadow);display:none;border:1px solid rgba(232,192,122,.35)}
+#tt .tname{font-weight:700}#tt .tmeta{font-family:var(--mono);font-size:10.5px;color:rgba(251,248,242,.72);margin-top:2px}
+.toast{position:absolute;left:40px;top:24px;z-index:25;display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--gold);border-radius:999px;padding:7px 14px;font-family:var(--mono);font-size:11.5px;color:var(--gold-deep);box-shadow:var(--shadow);opacity:0;transition:opacity .4s;pointer-events:none}
+.toast.show{opacity:1}
+.empty-note{position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);width:352px;text-align:center;padding:20px 22px;z-index:10}
+.empty-note h3{margin:0 0 6px;font-family:var(--serif);font-weight:500;font-size:19px}
+.empty-note p{margin:0 0 13px;font-size:13px;color:var(--muted);line-height:1.5}
+.nopath{position:absolute;inset:0;display:grid;place-items:center;z-index:10}
+.nopath .inner{width:380px;text-align:center;padding:26px 26px 24px}
+.nopath h3{margin:8px 0 7px;font-family:var(--serif);font-weight:500;font-size:22px}
+.nopath p{margin:0 0 16px;font-size:13.5px;color:var(--muted);line-height:1.55}
+/* ---- drawer ---- */
+.drawer{position:absolute;top:0;right:0;bottom:0;width:356px;background:var(--card);border-left:1px solid var(--line-2);box-shadow:var(--shadow-lg);transform:translateX(105%);transition:transform .32s cubic-bezier(.3,.9,.3,1);z-index:40;display:flex;flex-direction:column}
+.drawer.open{transform:translateX(0)}
+.drawer .dhead{padding:18px 20px 14px;border-bottom:1px solid var(--line)}
+.drawer .dbody{padding:16px 20px 22px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:15px}
+.drawer h2{margin:4px 0 0;font-family:var(--serif);font-weight:500;font-size:23px;letter-spacing:-.01em;line-height:1.12}
+.ladder{display:flex;align-items:flex-start;margin-top:13px}
+.ladder .st{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;position:relative}
+.ladder .st::before{content:"";position:absolute;top:5.5px;left:-50%;width:100%;height:1.5px;background:var(--line-2)}
+.ladder .st:first-child::before{display:none}
+.ladder .st.done::before{background:var(--gold)}
+.ladder .dot{width:12px;height:12px;border-radius:50%;background:var(--card);border:1.5px solid var(--line-3);z-index:1}
+.ladder .st.done .dot{background:var(--gold);border-color:var(--gold)}
+.ladder .st.cur .dot{background:var(--clay);border-color:var(--clay);box-shadow:0 0 0 3px var(--clay-soft)}
+.ladder .sl{font-family:var(--mono);font-size:8px;letter-spacing:.06em;color:var(--muted-2);text-transform:uppercase}
+.ladder .st.cur .sl{color:var(--clay-deep);font-weight:700}
+.ladder .st.done .sl{color:var(--gold-deep)}
+.ddesc{font-size:13.5px;color:var(--ink-soft);line-height:1.55;margin:0}
+.dcounts{border-radius:var(--r-sm);padding:12px 14px;display:flex;flex-direction:column;gap:7px}
+.dcounts .cr{display:flex;justify-content:space-between;gap:12px;font-size:12.5px;color:var(--muted)}
+.dcounts .cr b{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--ink);text-align:right}
+.evfile{display:flex;align-items:center;gap:11px;border:1px solid var(--line-2);border-radius:var(--r-sm);padding:11px 13px;background:var(--paper)}
+.evfile .fg{width:34px;height:42px;border-radius:6px;flex:none;background:var(--card);border:1px solid var(--line-2);display:grid;place-items:center;font-family:var(--mono);font-size:9px;font-weight:700;color:var(--clay-deep);box-shadow:var(--shadow-sm)}
+.evfile .fn{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--ink)}
+.evfile .fd{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--sage-deep);font-weight:600;margin-top:2px}
+.evform{border:1px dashed var(--clay);background:var(--clay-tint);border-radius:var(--r-sm);padding:12px 13px}
+.evform input{width:100%;border:1px solid var(--line-2);border-radius:8px;padding:8px 10px;font-family:var(--mono);font-size:12px;color:var(--ink);background:var(--card);outline:none;margin:8px 0 10px}
+.evform input:focus{border-color:var(--clay)}
+.flagcard{border:1px dashed var(--gold);background:var(--gold-soft);border-radius:var(--r-sm);padding:11px 13px;font-size:12.5px;color:var(--ink-soft);line-height:1.5}
+.flagcard b{color:var(--gold-deep)}
+.notebox textarea{width:100%;min-height:64px;border:1px solid var(--line-2);border-radius:9px;padding:9px 11px;font-family:var(--mono);font-size:12px;line-height:1.55;color:var(--ink);background:var(--paper);resize:vertical;outline:none}
+.notebox textarea:focus{border-color:var(--line-3)}
+.adj{border-top:1px dashed var(--line-2);padding-top:12px}
+.adj .tierbtns{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap}
+.dfoot{display:flex;gap:8px;flex-wrap:wrap}
+.hint{font-size:11.5px;color:var(--muted);line-height:1.5;margin:0}
+.satick{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--sage-deep);font-weight:600}
+/* ---- phone ---- */
+.phone{width:396px;background:var(--ink);border-radius:46px;padding:10px;box-shadow:var(--shadow-lg);flex:none}
+.phone .screen{background:var(--paper);border-radius:37px;overflow:hidden;position:relative;height:760px;display:flex;flex-direction:column}
+.m-status{display:flex;align-items:center;justify-content:space-between;padding:14px 26px 6px;font-family:var(--mono);font-size:12px;font-weight:600;color:var(--ink)}
+.m-status .notch{width:86px;height:24px;background:var(--ink);border-radius:999px}
+.m-head{padding:8px 18px 10px;border-bottom:1px solid var(--line)}
+.m-head h2{margin:2px 0 1px;font-family:var(--serif);font-weight:500;font-size:20px}
+.m-counts{display:flex;gap:6px;overflow-x:auto;padding:8px 18px 10px;scrollbar-width:none}
+.m-counts::-webkit-scrollbar{display:none}
+.m-counts .chip{font-family:var(--mono);font-size:10px;padding:4px 10px;flex:none;cursor:default}
+.m-counts .chip b{color:var(--ink)}
+.m-sky{flex:1;overflow-y:auto;position:relative;background:radial-gradient(130% 60% at 50% 0%,#152538,var(--sky) 72%);color:var(--chalk);scrollbar-width:none}
+.m-sky::-webkit-scrollbar{display:none}
+.m-skyin{padding:16px 16px 26px;position:relative;z-index:1}
+.m-dust{position:absolute;inset:0;pointer-events:none;background-image:radial-gradient(1px 1px at 12% 8%,rgba(207,218,226,.5),transparent 60%),radial-gradient(1.2px 1.2px at 78% 14%,rgba(207,218,226,.4),transparent 60%),radial-gradient(1px 1px at 34% 30%,rgba(207,218,226,.35),transparent 60%),radial-gradient(1.4px 1.4px at 88% 44%,rgba(232,192,122,.3),transparent 60%),radial-gradient(1px 1px at 8% 58%,rgba(207,218,226,.4),transparent 60%),radial-gradient(1.1px 1.1px at 55% 72%,rgba(207,218,226,.3),transparent 60%),radial-gradient(1px 1px at 70% 90%,rgba(207,218,226,.35),transparent 60%)}
+.m-hint{position:sticky;top:8px;z-index:5;font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--chalk-dim);background:rgba(11,20,32,.7);padding:3px 8px;border-radius:999px;border:1px solid rgba(138,111,63,.4);display:inline-block;margin:0 0 6px 2px}
+.m-region{margin:14px 0 4px}
+.m-rlabel{font-family:var(--serif);font-style:italic;font-size:14px;letter-spacing:.1em;color:rgba(213,197,168,.65);margin:4px 2px 8px}
+.m-rlabel.lit{color:rgba(240,208,146,.9)}
+.m-cap,.m-srow,.m-card{display:flex;align-items:center;gap:12px;width:100%;background:rgba(255,255,255,.025);border:1px solid rgba(207,218,226,.1);border-radius:13px;padding:9px 12px;color:var(--chalk);font-family:var(--sans);text-align:left;cursor:pointer;margin-bottom:7px}
+.m-cap{background:rgba(232,192,122,.045);border-color:rgba(138,111,63,.35)}
+.m-srow{min-height:56px}
+.m-card{background:rgba(255,255,255,.035);margin:0}
+.mc-t{font-family:var(--serif);font-size:15px;line-height:1.2}
+.mc-s{font-family:var(--mono);font-size:9.5px;letter-spacing:.05em;color:var(--chalk-dim);margin-top:2px}
+.mc-s.warm{color:var(--star-gold)}
+.chev{margin-left:auto;color:var(--chalk-dim);font-size:11px;transition:transform .2s}
+.m-sys.open .chev{transform:rotate(180deg)}
+.m-acc{display:none;flex-direction:column;gap:7px;padding:2px 0 10px 14px;border-left:1px dashed rgba(207,218,226,.14);margin:0 0 4px 16px}
+.m-sys.open .m-acc{display:flex}
+.m-yours{font-family:var(--mono);font-size:9px;letter-spacing:.26em;color:rgba(207,218,226,.42);margin:18px 2px 8px;text-transform:uppercase}
+.m-plaq{margin:20px auto 0;width:250px;border:1px solid var(--brass-dim);border-radius:7px;padding:10px 12px;text-align:center;background:rgba(20,29,41,.8)}
+.m-plaq .n{font-size:10px;font-weight:700;letter-spacing:.16em;color:#d5c5a8}
+.m-plaq .c{font-family:var(--mono);font-size:8.5px;color:var(--chalk-dim);margin-top:3px}
+.m-empty{position:absolute;left:50%;top:34%;transform:translate(-50%,-50%);width:290px;text-align:center;padding:18px 18px 16px;z-index:10}
+.m-empty h3{margin:0 0 6px;font-family:var(--serif);font-weight:500;font-size:17px}
+.m-empty p{margin:0 0 12px;font-size:12.5px;color:var(--muted);line-height:1.5}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line-2);border-radius:22px 22px 37px 37px;box-shadow:0 -18px 44px -18px rgba(22,33,46,.3);z-index:20;padding:8px 18px 20px;transform:translateY(105%);transition:transform .32s cubic-bezier(.3,.9,.3,1);max-height:520px;overflow-y:auto}
+.sheet.open{transform:translateY(0)}
+.sheet .grab{width:38px;height:4px;border-radius:2px;background:var(--line-3);margin:4px auto 12px}
+.sheet h3{margin:1px 0 2px;font-family:var(--serif);font-weight:500;font-size:19px}
+.sheet .scnt{font-family:var(--mono);font-size:11px;color:var(--muted);margin:7px 0 12px}
+.sheet .btn{width:100%;min-height:46px}
+.sheet .srow{display:flex;gap:8px;margin-top:8px}
+.sheet .srow .btn{min-height:44px}
+.sheet .evfile{margin-bottom:8px}
+.sheet .notecard{border:1px dashed var(--line-2);border-radius:9px;padding:9px 11px;font-family:var(--mono);font-size:11px;color:var(--ink-soft);background:var(--paper);margin-bottom:8px}
+@media (prefers-reduced-motion:reduce){
+.twinkle,.pulse,.shimmer,.trail,.rays,.orr1,.orr2,.drift{animation:none}
+.twinkle{opacity:.45}.pulse{opacity:.6}.shimmer{opacity:.4}
+.consti{animation:none;opacity:1}
+.bloom circle{animation:none;opacity:0}
+.drawer,.sheet,.toast,.chev,#dust1,#dust2{transition:none}
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<radialGradient id="g-sky" cx="50%" cy="38%" r="75%"><stop offset="0%" stop-color="#152539"/><stop offset="60%" stop-color="#0e1926"/><stop offset="100%" stop-color="#0b1420"/></radialGradient>
+<radialGradient id="g-vig" cx="50%" cy="45%" r="72%"><stop offset="62%" stop-color="#060b12" stop-opacity="0"/><stop offset="100%" stop-color="#060b12" stop-opacity=".75"/></radialGradient>
+<radialGradient id="g-rock"><stop offset="0%" stop-color="#57626f"/><stop offset="70%" stop-color="#3c4754"/><stop offset="100%" stop-color="#2d3845"/></radialGradient>
+<radialGradient id="g-ocean"><stop offset="0%" stop-color="#5ab3a7"/><stop offset="62%" stop-color="#347a74"/><stop offset="100%" stop-color="#24504f"/></radialGradient>
+<radialGradient id="g-haze"><stop offset="55%" stop-color="#e0764a" stop-opacity="0"/><stop offset="82%" stop-color="#e0764a" stop-opacity=".3"/><stop offset="100%" stop-color="#e0764a" stop-opacity="0"/></radialGradient>
+<radialGradient id="g-glow"><stop offset="0%" stop-color="#e8c07a" stop-opacity=".5"/><stop offset="55%" stop-color="#e8c07a" stop-opacity=".16"/><stop offset="100%" stop-color="#e8c07a" stop-opacity="0"/></radialGradient>
+<radialGradient id="g-glowc"><stop offset="0%" stop-color="#b9c7d6" stop-opacity=".3"/><stop offset="100%" stop-color="#b9c7d6" stop-opacity="0"/></radialGradient>
+<radialGradient id="g-lamp"><stop offset="0%" stop-color="#e8c07a" stop-opacity=".11"/><stop offset="100%" stop-color="#e8c07a" stop-opacity="0"/></radialGradient>
+<radialGradient id="g-corona"><stop offset="0%" stop-color="#fff3da" stop-opacity=".95"/><stop offset="26%" stop-color="#e8c07a" stop-opacity=".45"/><stop offset="100%" stop-color="#e8c07a" stop-opacity="0"/></radialGradient>
+<radialGradient id="g-ember"><stop offset="0%" stop-color="#d97a4c" stop-opacity=".5"/><stop offset="100%" stop-color="#d97a4c" stop-opacity="0"/></radialGradient>
+<radialGradient id="g-neb-clay"><stop offset="0%" stop-color="#bd5a39" stop-opacity=".11"/><stop offset="100%" stop-color="#bd5a39" stop-opacity="0"/></radialGradient>
+<radialGradient id="g-neb-teal"><stop offset="0%" stop-color="#4d9a92" stop-opacity=".1"/><stop offset="100%" stop-color="#4d9a92" stop-opacity="0"/></radialGradient>
+<radialGradient id="g-neb-gold"><stop offset="0%" stop-color="#c08a3e" stop-opacity=".1"/><stop offset="100%" stop-color="#c08a3e" stop-opacity="0"/></radialGradient>
+<radialGradient id="g-neb-sage"><stop offset="0%" stop-color="#5f7a64" stop-opacity=".11"/><stop offset="100%" stop-color="#5f7a64" stop-opacity="0"/></radialGradient>
+<clipPath id="clip-p14"><circle cx="0" cy="0" r="14"/></clipPath>
+</defs></svg>
+<div class="demo-strip"><span class="tag">Loop · Knowledge map — star atlas demo states</span><button class="chip sm on" data-scn="mixed">Mixed progress</button><button class="chip sm" data-scn="fresh">Fresh start</button><button class="chip sm" data-scn="none">No pathway</button><button class="chip sm" data-scn="flourish">Flourishing</button><span class="spacer"></span><span>click a star = open its system · click a world = drawer · counts only, never percentages · no edges, nothing locked · reduced-motion respected</span></div>
+<div class="stage">
+<div>
+<div class="app" data-screen-label="Desktop · Knowledge map — star atlas" id="app">
+<div class="tb"><div class="brand"><div class="glyph">L</div><div class="word">Loop</div></div><nav class="tb-nav"><a>Today</a><a>Schedule</a><a class="on">Pathway</a><a>Check-ins</a></nav><span class="spacer"></span><span class="sync"><span class="dot"></span>Plan v5 · synced</span><div class="avatar">M</div></div>
+<div class="ph"><div><div class="eyebrow">Pathway · Knowledge map</div><h1 id="pname">AI-Integration Engineer</h1><div class="tagline">“Ships LLM-powered features into real products, end to end.”</div></div><span class="spacer"></span><div class="counts" id="counts"></div></div>
+<div class="chart-wrap" id="chartwrap"><div class="bezel"><div class="rim" id="chart"></div></div><div id="tt"></div><div class="toast" id="toast"></div><div id="overlay"></div></div>
+<aside class="drawer" id="drawer"></aside>
+</div>
+<div class="frame-cap">Desktop · 1240 — the sky through Loop’s instrument. Click a system’s star to open it in place — the sky glides it to centre, clear of the drawer. Study warms a world from barren rock to living oceans; a confirmed artifact crowns it with a ring. No edges, no order, nothing locked.</div>
+</div>
+<div>
+<div class="phone" data-screen-label="Mobile · Knowledge map — star atlas">
+<div class="screen"><div class="m-status"><span>9:41</span><span class="notch"></span><span>◐ 71</span></div>
+<div class="m-head"><div class="eyebrow" style="font-size:10px">Pathway · Knowledge map</div><h2>AI-Integration Engineer</h2></div>
+<div class="m-counts" id="mcounts"></div>
+<div class="m-sky" id="mskysc"><div class="m-dust"></div><div class="m-skyin" id="msky"></div><div id="moverlay"></div></div>
+<div class="sheet" id="sheet"></div>
+</div></div>
+<div class="frame-cap" style="max-width:396px">Mobile · 396 — the sky scrolls; systems open as inline cards; the drawer becomes a sheet. Same honest counts, same four tiers.</div>
+</div>
+</div>
+<script>
+/* ---- data model: branches → groups (kg-) → member nodes (kn-); capstones belong to branches; no edges ---- */
+const T=['Discovered','Training','Honed','Proven'];
+const TMEAN=['On the map, no study yet. Nothing is blocked — schedule whenever you like.','Study is scheduled or under way.','The planned study minutes are complete.','Honed, plus a real artifact you confirmed.'];
+const BRS=[
+{id:'llm',name:'LLM feature depth',cap:'cap-llm'},
+{id:'int',name:'Integration breadth',cap:'cap-int'},
+{id:'pub',name:'Public artifact',cap:'cap-pub'},
+{id:'core',name:'Core — shared ground',cap:null},
+{id:'personal',name:'Your additions',cap:null}];
+const CAPS=[
+{id:'cap-llm',b:'llm',title:'LLM feature shipped',blurb:'The real artifact itself: an LLM-powered feature shipped to real users.',x:280,y:100,evd:'feature-launch-notes.md'},
+{id:'cap-int',b:'int',title:'Integration shipped',blurb:'The real artifact itself: an LLM integration running in production, end to end.',x:900,y:100,evd:'prod-runbook.md'},
+{id:'cap-pub',b:'pub',title:'Public artifact live',blurb:'The real artifact itself: something public a stranger can read or watch.',x:590,y:88,evd:'talk-recording-link.md'}];
+const GROUPS=[
+{id:'kg-retr',b:'llm',title:'Retrieval & Grounding',blurb:'How a model answers from your data instead of guessing.',x:200,y:270,angs:[-90,30,150]},
+{id:'kg-prompt',b:'llm',title:'Prompting & Contracts',blurb:'Prompts and outputs the rest of the system can trust.',x:412,y:200,angs:[-45,135]},
+{id:'kg-rel',b:'llm',title:'Reliability',blurb:'Evals, guardrails and orchestration that hold up.',x:285,y:462,angs:[-90,30,150]},
+{id:'kg-serve',b:'int',title:'Serving the Feature',blurb:'The surface that puts the model in front of users.',x:958,y:255,angs:[-90,30,150]},
+{id:'kg-prod',b:'int',title:'Running It in Prod',blurb:'Budgets and observability once it\u2019s live.',x:838,y:448,angs:[-120,60]},
+{id:'kg-story',b:'pub',title:'Telling the Story',blurb:'The public write-up of what you built and why.',x:590,y:196,angs:[35,145]},
+{id:'kg-found',b:'core',title:'Foundations',blurb:'Shared ground every branch stands on.',x:590,y:402,angs:[-155,25]},
+{id:'kg-side',b:'personal',title:'Side quests',blurb:'Your own additions — off the charted pathway.',x:960,y:578,angs:[-140,-40],custom:1}];
+const NODES=[
+{id:'kn-retr',g:'kg-retr',title:'Retrieval fundamentals',blurb:'Chunking, indexing and lookup — how retrieval grounds a model in your data.',min:180},
+{id:'kn-embed',g:'kg-retr',title:'Embeddings & chunking',blurb:'Splitting and encoding text so the right pieces come back.',min:150},
+{id:'kn-ground',g:'kg-retr',title:'Grounded generation',blurb:'Answers that cite retrieved context instead of guessing.',min:180},
+{id:'kn-prompt',g:'kg-prompt',title:'Prompt & schema design',blurb:'Stable prompts with typed, validated outputs.',min:240},
+{id:'kn-struct',g:'kg-prompt',title:'Structured outputs',blurb:'Parseable, validated JSON the pipeline can rely on.',min:120},
+{id:'kn-eval',g:'kg-rel',title:'Eval harness basics',blurb:'A small, repeatable eval set that tells you when a change makes things worse.',min:150},
+{id:'kn-guard',g:'kg-rel',title:'Guardrails & failure paths',blurb:'Timeouts, fallbacks and refusals for when the model is wrong.',min:150},
+{id:'kn-tool',g:'kg-rel',title:'Tool use & orchestration',blurb:'Letting the model call tools — and keeping the chain observable.',min:180},
+{id:'kn-api',g:'kg-serve',title:'API surface design',blurb:'Endpoints and contracts that stay sane as the feature grows.',min:200},
+{id:'kn-auth',g:'kg-serve',title:'Auth & rate limits',blurb:'Keys, quotas and abuse cases — the unglamorous edges.',min:120},
+{id:'kn-stream',g:'kg-serve',title:'Streaming UX',blurb:'Tokens on screen fast: partial results, cancellation, retry.',min:150},
+{id:'kn-cost',g:'kg-prod',title:'Cost & latency budgets',blurb:'What a request costs and where the milliseconds go.',min:150},
+{id:'kn-obs',g:'kg-prod',title:'LLM observability',blurb:'Traces, token counts and failure taxonomies you can query.',min:150},
+{id:'kn-narr',g:'kg-story',title:'Technical narrative',blurb:'The write-up of what you built and why.',min:120},
+{id:'kn-talk',g:'kg-story',title:'Talk or deep-dive post',blurb:'One artifact in public: a talk given or a deep dive published.',min:180},
+{id:'kn-py',g:'kg-found',title:'Python & tooling fluency',blurb:'The daily toolchain, sharp.',min:200},
+{id:'kn-git',g:'kg-found',title:'Git & CI habits',blurb:'Version control and pipelines as reflexes.',min:120},
+{id:'kn-gpu',g:'kg-side',title:'Homelab GPU server',blurb:'Your own note: build a box that can fine-tune.',min:0,custom:1},
+{id:'kn-bot',g:'kg-side',title:'Discord bot experiments',blurb:'Your own note: a playground for agent ideas.',min:0,custom:1}];
+const REGIONS=[
+{b:'llm',cx:285,cy:290,rx:265,ry:255,grad:'g-neb-clay',lx:280,ly:48},
+{b:'int',cx:900,cy:285,rx:235,ry:240,grad:'g-neb-teal',lx:900,ly:48},
+{b:'pub',cx:590,cy:165,rx:175,ry:130,grad:'g-neb-gold',lx:590,ly:38},
+{b:'core',cx:590,cy:405,rx:170,ry:120,grad:'g-neb-sage',lx:590,ly:322}];
+const byN=Object.fromEntries(NODES.map(n=>[n.id,n])), byC=Object.fromEntries(CAPS.map(c=>[c.id,c])), byG=Object.fromEntries(GROUPS.map(g=>[g.id,g])), byB=Object.fromEntries(BRS.map(b=>[b.id,b]));
+const members=g=>NODES.filter(n=>n.g===g);
+const PATH_NODES=NODES.filter(n=>!n.custom);
+/* ---- scenarios ---- */
+function scnState(scn){
+const S2={scn,work:{},ev:{},notes:{},flags:{},ov:{},sa:{},open:new Set(),sel:null,msel:null,evOpen:false,focus:null};const S=S2;
+if(scn==='mixed'){
+S.work={'kn-retr':{plan:180,done:180,sd:4,st:4},'kn-embed':{plan:150,done:150,sd:3,st:3},'kn-ground':{plan:180,done:90,sd:2,st:4,next:'Thu 23 Jul · 09:00 · 45 min'},'kn-eval':{plan:150,done:150,sd:3,st:3},'kn-prompt':{plan:240,done:240,sd:5,st:5}};
+S.ev={'kn-retr':{file:'grounding-writeup.md',date:'confirmed 12 Jul'}};
+S.flags={'kn-eval':1};
+S.notes={'kn-retr':'Re-read the RAGAS paper — my chunking intuition was wrong.'};
+S.open=new Set(['kg-retr']);S.sel='kn-ground';S.msel='kn-ground';}
+if(scn==='flourish'){
+for(const n of PATH_NODES){S.work[n.id]={plan:n.min,done:n.min,sd:Math.ceil(n.min/45),st:Math.ceil(n.min/45)};S.ev[n.id]={file:n.id.slice(3)+'-artifact.md',date:'confirmed 14 Jul'}}
+S.work['kn-gpu']={plan:120,done:120,sd:3,st:3};S.work['kn-bot']={plan:90,done:90,sd:2,st:2};
+for(const c of CAPS)S.ev[c.id]={file:c.evd,date:'confirmed 18 Jul'};
+S.notes={'kn-retr':'Re-read the RAGAS paper — my chunking intuition was wrong.'};
+S.open=new Set(['kg-retr']);S.sel='cap-llm';S.msel='cap-llm';}
+return S}
+let S=scnState('mixed');
+const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+/* ---- tiers: derived, honest, never decaying ---- */
+function tierOf(id){
+if(byC[id])return S.ev[id]?3:0;
+if(S.ov[id]!=null)return S.ov[id];
+const n=byN[id],w=S.work[id];
+if(!w)return 0;
+if(S.ev[id]&&w.done>=w.plan&&!n.custom)return 3;
+if(w.plan>0&&w.done>=w.plan)return 2;
+return 1}
+function gStats(gid){const m=members(gid);const h=m.filter(n=>tierOf(n.id)>=2).length;return{h,t:m.length,anyLit:m.some(n=>tierOf(n.id)>=1)}}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;')}
+const $=id=>document.getElementById(id);
+/* ---- status line (honest counts only) ---- */
+function statusLine(id){
+if(byC[id])return tierOf(id)===3?'Capstone ✦ proven — '+S.ev[id].file:'Capstone — unproven · confirm the real artifact when it exists';
+const n=byN[id],tr=tierOf(id),w=S.work[id];const pre=n.custom?'Yours · ':'';
+if(tr===3)return `Proven ✦ ${S.ev[id].file} · ${S.ev[id].date}`;
+if(tr===2)return pre+`Honed · ${w?w.plan+' min complete':'self-assessed'}`+(S.flags[id]?' · review-flagged':'')+(S.sa[id]?' · self-assessed':'');
+if(tr===1)return pre+`Training · ${w.sd} of ${w.st} sessions · ${w.done} of ${w.plan} min`+(w.next?' · next '+w.next.split('·')[0].trim():'');
+return pre+'Discovered · on the map, no study yet'}
+/* ---- planet renderer (local coords, r=14) ---- */
+function planetG(id,opts={}){
+const n=byN[id],tr=tierOf(id),w=S.work[id];let s='';
+if(n.custom){ /* comet: chalk-sketched, never gold */
+s+=`<g opacity=".8"><line x1="8" y1="-6" x2="30" y2="-20" stroke="#cfdae2" stroke-width="1" opacity=".28"/><line x1="9" y1="-2" x2="32" y2="-12" stroke="#cfdae2" stroke-width=".8" opacity=".16"/><circle cx="24" cy="-15" r=".9" fill="#cfdae2" opacity=".4"/><circle cx="30" cy="-18" r=".7" fill="#cfdae2" opacity=".25"/></g>`;
+s+=`<circle r="10" fill="${tr>=2?'rgba(79,154,146,.28)':'rgba(207,218,226,.05)'}" stroke="#cfdae2" stroke-width="1.1" stroke-dasharray="3 3" opacity=".85"/>`;
+if(tr>=2)s+=`<circle r="4" fill="rgba(122,190,182,.5)"/>`;
+else if(tr===1)s+=`<circle r="3.5" fill="rgba(224,118,74,.45)"/>`;
+s+=`<circle class="hit" r="20"/>`;
+}else{
+if(tr===1)s+=`<circle class="pulse" r="24" fill="url(#g-ember)"/>`;
+if(tr===3)s+=`<circle r="26" fill="url(#g-glow)" opacity=".55"/><g transform="rotate(-16)"><ellipse rx="23" ry="6.5" fill="none" stroke="#d9a959" stroke-width="1.4" opacity=".55"/></g>`;
+s+=`<g clip-path="url(#clip-p14)">`;
+if(tr<2){s+=`<circle r="14" fill="url(#g-rock)"/><circle cx="-4" cy="-3" r="3" fill="#2b3644" opacity=".6"/><circle cx="5" cy="4" r="2.2" fill="#2b3644" opacity=".55"/><circle cx="1" cy="8" r="1.6" fill="#2b3644" opacity=".5"/>`;
+if(tr===1)s+=`<g stroke="#e0764a" fill="none"><path d="M-12 4 Q-4 7 2 3 T12 6" stroke-width="2.6" opacity=".25"/><path d="M-12 4 Q-4 7 2 3 T12 6" stroke-width="1.3"/><path d="M-8 -8 Q-2 -4 7 -9" stroke-width=".9" opacity=".8"/></g>`;}
+else{s+=`<circle r="14" fill="url(#g-ocean)"/><ellipse cx="-4" cy="-5" rx="8" ry="4.6" fill="#6f9a74" transform="rotate(-18 -4 -5)"/><ellipse cx="7" cy="6" rx="5.5" ry="3.6" fill="#5f8a68" transform="rotate(14 7 6)"/><ellipse cx="-8" cy="7" rx="3" ry="1.8" fill="#6f9a74" opacity=".85"/><path d="M-13 -1 Q0 -7 13 -2" stroke="#ffffff" stroke-width="2" fill="none" opacity=".2"/><path d="M-11 6 Q-2 3 9 8" stroke="#ffffff" stroke-width="1.4" fill="none" opacity=".13"/>`;
+if(tr===3)s+=`<path d="M0 -14 A14 14 0 0 1 0 14 L0 -14 Z" fill="#0b1420" opacity=".38"/><g fill="#ffd98f"><circle cx="7" cy="-3" r=".9"/><circle cx="9.5" cy="1.5" r=".8"/><circle cx="6" cy="5" r=".8"/><circle cx="10" cy="-7" r=".7"/></g>`;}
+s+=`</g>`;
+if(tr===1)s+=`<circle r="16.5" fill="none" stroke="#e0764a" stroke-width="3" opacity=".14"/>`;
+if(tr===0)s+=`<circle r="14" fill="none" stroke="rgba(207,218,226,.5)" stroke-width="1" stroke-dasharray="1.5 3"/>`;
+if(tr===3)s+=`<g transform="rotate(-16)"><path d="M-23 0 A23 6.5 0 0 0 23 0" fill="none" stroke="#e8c07a" stroke-width="1.6" opacity=".9"/></g><circle cx="10" cy="10" r="6" fill="#5f7a64" stroke="#0b1420" stroke-width="1.4"/><text x="10" y="12.6" text-anchor="middle" font-size="7.5" font-weight="800" fill="#fff">✓</text>`;
+if(tr===1&&w&&!opts.noTrail){let arcs='';const g2=.2,span=Math.PI*2/w.st;for(let i=0;i<w.st;i++){const a0=-Math.PI/2+i*span+g2/2,a1=-Math.PI/2+(i+1)*span-g2/2;const P=a=>[(20*Math.cos(a)).toFixed(1),(20*Math.sin(a)).toFixed(1)];const[x0,y0]=P(a0),[x1,y1]=P(a1);arcs+=`<path d="M${x0} ${y0}A20 20 0 ${a1-a0>Math.PI?1:0} 1 ${x1} ${y1}" fill="none" stroke="${i<w.sd?'#e0764a':'rgba(255,255,255,.15)'}" stroke-width="2.2" stroke-linecap="round"/>`}s+=`<g class="trail">${arcs}</g>`}
+if(S.flags[id])s+=`<circle class="shimmer" r="17.5" fill="none" stroke="rgba(232,192,122,.6)" stroke-width="1" stroke-dasharray="2 4"/>`;
+s+=`<circle class="hit" r="22"/>`;}
+if(S.notes[id])s+=`<text x="-19" y="-12" font-size="9" fill="#cfdae2" opacity=".75">✎</text>`;
+if(opts.sel)s+=`<circle class="selring" r="${n.custom?15:19}"/>`;
+return s}
+/* ---- system star (brightness/warmth by honest member count) ---- */
+function starG(gid,opts={}){
+const g=byG[gid],st=gStats(gid);const k=st.t?st.h/st.t:0;
+const mix=(a,b,t)=>a.map((v,i)=>Math.round(v+(b[i]-v)*t));
+const col=g.custom?'#cfdae2':`rgb(${mix([176,192,209],[244,206,138],k).join(',')})`;
+const r=g.custom?3:2.6+5*k;let s='';
+if(k>0)s+=`<circle r="${(12+30*k).toFixed(0)}" fill="url(#g-glow)" opacity="${(.3+.6*k).toFixed(2)}"/>`;
+else s+=`<circle r="9" fill="url(#g-glowc)" opacity=".6"/>`;
+const anyTraining=members(gid).some(n=>tierOf(n.id)===1);
+if(anyTraining)s+=`<circle class="pulse" r="15" fill="url(#g-ember)"/>`;
+if(g.custom)s+=`<circle r="4.5" fill="none" stroke="#cfdae2" stroke-width="1" stroke-dasharray="2 2.5" opacity=".7"/><circle r="1.6" fill="#cfdae2" opacity=".8"/>`;
+else{if(k>0){const L=(9+16*k).toFixed(0);s+=`<g stroke="${col}" stroke-width="1" opacity="${(.35+.4*k).toFixed(2)}"><line y1="-${L}" y2="${L}"/><line x1="-${L}" x2="${L}"/></g>`}
+s+=`<circle r="${r.toFixed(1)}" fill="${col}" ${k===0?'class="twinkle" opacity=".8"':''}/>`;
+if(k>0)s+=`<circle r="${(r*.45).toFixed(1)}" fill="#fff8ea" opacity=".9"/>`}
+return s}
+/* ---- capstone beacon ---- */
+function beaconG(cid){
+const pv=tierOf(cid)===3;let s='';
+if(pv){s+=`<circle r="36" fill="url(#g-corona)"/><g class="rays" stroke="#e8c07a" stroke-width=".9" opacity=".65">`;
+for(let i=0;i<8;i++){const a=i*Math.PI/4,L=i%2?18:27;s+=`<line x1="${(10*Math.cos(a)).toFixed(1)}" y1="${(10*Math.sin(a)).toFixed(1)}" x2="${(L*Math.cos(a)).toFixed(1)}" y2="${(L*Math.sin(a)).toFixed(1)}"/>`}
+s+=`</g><circle r="7.5" fill="#fff3da"/><circle r="3.5" fill="#fffdf7"/>`;}
+else{s+=`<circle class="pulse" r="14" fill="url(#g-ember)"/><g transform="rotate(45)"><rect x="-11" y="-11" width="22" height="22" fill="none" stroke="rgba(154,109,47,.7)" stroke-width="1" stroke-dasharray="2 3"/></g><circle r="5.5" fill="#4a2e21"/><circle r="2.4" fill="#c96f45" opacity=".85"/>`;}
+s+=`<circle class="hit" r="24"/>`;return s}
+/* ---- layout ---- */
+function planetPos(gid){const g=byG[gid],m=members(gid);
+return m.map((n,i)=>{const a=g.angs[i]*Math.PI/180;return{n,a,x:g.x+64*Math.cos(a),y:g.y+64*Math.sin(a)}})}
+function nodeXY(id){const c=byC[id];if(c)return{x:c.x,y:c.y};
+const n=byN[id];if(S.open.has(n.g)){const p=planetPos(n.g).find(p=>p.n.id===id);return{x:p.x,y:p.y}}
+const g=byG[n.g];return{x:g.x,y:g.y}}
+/* ---- seeded dust ---- */
+function rng(seed){let s=seed;return()=>{s=(s*16807)%2147483647;return(s-1)/2147483646}}
+function dustLayer(seed,count,rmin,rspan,op,cls){const r=rng(seed);let s='';
+for(let i=0;i<count;i++){const x=(20+r()*1140).toFixed(0),y=(16+r()*632).toFixed(0),rr=(rmin+r()*rspan).toFixed(1);const tw=cls&&r()<.3;
+s+=`<circle cx="${x}" cy="${y}" r="${rr}" fill="${r()<.12?'#e8c07a':'#cfdae2'}" opacity="${(op*(0.5+r()*.8)).toFixed(2)}" ${tw?`class="twinkle" style="animation-delay:-${(r()*4).toFixed(1)}s"`:''}/>`}
+return s}
+const DUST1=dustLayer(7,95,.5,.6,.3,1),DUST2=dustLayer(23,45,.7,.9,.45,1);
+/* ---- desktop chart ---- */
+function chartSVG(bloomId){
+const none=S.scn==='none';
+let s=`<svg viewBox="0 0 1180 665" xmlns="http://www.w3.org/2000/svg">`;
+s+=`<rect width="1180" height="665" fill="url(#g-sky)"/>`;
+s+=`<g id="skypan" style="transform-origin:0 0"><g id="dust1">${DUST1}</g><g id="dust2">${DUST2}</g>`;
+if(!none){
+/* nebula regions + light pollution from mastered systems */
+for(const r of REGIONS){const cap=BRS.find(b=>b.id===r.b).cap;const lit=cap&&tierOf(cap)===3;
+s+=`<ellipse cx="${r.cx}" cy="${r.cy}" rx="${r.rx}" ry="${r.ry}" fill="url(#${r.grad})"/>`;
+if(lit)s+=`<ellipse cx="${r.cx}" cy="${r.cy}" rx="${r.rx*.8}" ry="${r.ry*.8}" fill="url(#g-lamp)"/>`;}
+for(const g of GROUPS){if(g.custom)continue;const st=gStats(g.id);const k=st.h/st.t;
+if(k>0)s+=`<circle cx="${g.x}" cy="${g.y}" r="${(85+75*k).toFixed(0)}" fill="url(#g-lamp)" opacity="${(k*.95).toFixed(2)}"/>`;}
+const f=PATH_NODES.filter(n=>tierOf(n.id)>=2).length/PATH_NODES.length;
+if(f>0.5)s+=`<rect width="1180" height="665" fill="url(#g-lamp)" opacity="${((f-0.5)*.9).toFixed(2)}"/>`;
+/* region labels + capstone beacons */
+for(const r of REGIONS){const br=BRS.find(b=>b.id===r.b);const lit=br.cap&&tierOf(br.cap)===3;
+s+=`<text x="${r.lx}" y="${r.ly}" text-anchor="middle" class="rlabel${lit?' lit':''}">${esc(br.name)}</text>`;}
+for(const c of CAPS){const pv=tierOf(c.id)===3;
+s+=`<g class="nodeg" data-n="${c.id}" transform="translate(${c.x},${c.y})">${beaconG(c.id)}${S.sel===c.id?'<circle class="selring" r="18"/>':''}</g>`;
+s+=`<text x="${c.x}" y="${c.y+36}" text-anchor="middle" class="slab" font-size="12.5">${esc(c.title)}</text>`;
+s+=`<text x="${c.x}" y="${c.y+51}" text-anchor="middle" class="caplab${pv?' lit':''}">${pv?'CAPSTONE ✦ PROVEN':'CAPSTONE — UNPROVEN'}</text>`;}
+/* personal header */
+s+=`<text x="960" y="502" text-anchor="middle" class="yourshdr">YOUR ADDITIONS</text><line x1="922" y1="510" x2="998" y2="510" stroke="rgba(207,218,226,.25)" stroke-dasharray="2 3"/>`;
+/* systems */
+for(const g of GROUPS){const st=gStats(g.id),open=S.open.has(g.id);
+if(!open){
+s+=`<g class="sysg" data-g="${g.id}" transform="translate(${g.x},${g.y})">${starG(g.id)}<circle class="hit" r="30"/></g>`;
+s+=`<text x="${g.x}" y="${g.y+24}" text-anchor="middle" class="slab">${esc(g.title)}</text>`;
+s+=`<text x="${g.x}" y="${g.y+38}" text-anchor="middle" class="scount${st.h===st.t&&st.t?' warm':''}">${g.custom?st.t+' sketched · yours':st.h+'/'+st.t+' honed'}</text>`;
+}else{
+const pp=planetPos(g.id);const allHoned=!g.custom&&st.h===st.t;
+s+=`<circle cx="${g.x}" cy="${g.y}" r="64" fill="none" stroke="rgba(207,218,226,.12)" stroke-width="1"/>`;
+if(allHoned){let pts=pp.map(p=>`${p.x.toFixed(0)},${p.y.toFixed(0)}`);
+s+=`<g class="consti"><polygon points="${pts.join(' ')}" fill="none" stroke="#e8c07a" stroke-width="1" opacity=".5"/>${pp.map(p=>`<circle cx="${p.x}" cy="${p.y}" r="1.6" fill="#e8c07a" opacity=".7"/>`).join('')}</g>`;}
+s+=`<g class="sysg" data-g="${g.id}" transform="translate(${g.x},${g.y})">${starG(g.id)}<circle class="hit" r="16"/></g>`;
+const ty=g.y+84>648?g.y-80:g.y+84;
+s+=`<text x="${g.x}" y="${ty}" text-anchor="middle" class="scount${allHoned?' warm':''}">${esc(g.title.toUpperCase())} · ${g.custom?st.t+' YOURS':st.h+'/'+st.t}</text>`;
+s+=`<g class="sysg" data-g="${g.id}" transform="translate(${(g.x+54).toFixed(0)},${(g.y-54).toFixed(0)})"><circle r="8" fill="rgba(11,20,32,.7)" stroke="rgba(207,218,226,.3)"/><text y="3" text-anchor="middle" font-size="8.5" fill="#cfdae2">✕</text><circle class="hit" r="12"/></g>`;
+for(const p of pp){s+=`<g class="nodeg" data-n="${p.n.id}" transform="translate(${p.x.toFixed(1)},${p.y.toFixed(1)})">${planetG(p.n.id,{sel:S.sel===p.n.id})}</g>`;
+/* radial label placement: side planets anchor outward, top/bottom stack above/below */
+const co=Math.cos(p.a),si=Math.sin(p.a),off=p.n.custom?18:28;let lx,ly,anc;
+if(co>.35){anc='start';lx=p.x+off;ly=p.y+4}
+else if(co<-.35){anc='end';lx=p.x-off;ly=p.y+4}
+else{anc='middle';lx=p.x;ly=si<0?p.y-(p.n.custom?16:26):p.y+(p.n.custom?24:32)}
+s+=`<text x="${lx.toFixed(0)}" y="${ly.toFixed(0)}" text-anchor="${anc}" class="plab${tierOf(p.n.id)===0?' dim':''}">${esc(p.n.title)}</text>`;}
+}}
+/* probe en route to next scheduled session */
+const nx=Object.entries(S.work).filter(([,w])=>w.next).sort((a,b)=>a[1].next<b[1].next?-1:1)[0];
+if(nx){const tgt=nodeXY(nx[0]);const nn=byN[nx[0]];
+let ux=.8,uy=-.6; /* default approach vector when the system is collapsed */
+if(nn&&S.open.has(nn.g)){const gc=byG[nn.g];const dx=tgt.x-gc.x,dy=tgt.y-gc.y,L=Math.hypot(dx,dy)||1;ux=dx/L;uy=dy/L}
+const px=Math.min(1096,Math.max(84,tgt.x+ux*85)),py=Math.min(630,Math.max(30,tgt.y+uy*85));
+const ang=Math.atan2(tgt.y-py,tgt.x-px)*180/Math.PI;
+/* label on the far side of the probe, clamped inside the rim */
+const llx=Math.min(1072,Math.max(108,px)),lly=uy<0?py+18:py-14;
+s+=`<g class="drift"><g transform="translate(${px.toFixed(0)},${py.toFixed(0)}) rotate(${ang.toFixed(0)})"><circle cx="-13" cy="0" r=".9" fill="#cfdae2" opacity=".35"/><circle cx="-19" cy="0" r=".8" fill="#cfdae2" opacity=".22"/><circle cx="-25" cy="0" r=".7" fill="#cfdae2" opacity=".12"/><rect x="-8" y="-1.4" width="4" height="2.8" fill="#8ea1b5"/><path d="M-4 -3 L4 0 L-4 3 Z" fill="#cfdae2"/></g><text x="${llx.toFixed(0)}" y="${lly.toFixed(0)}" text-anchor="middle" class="probelab">next session · ${esc(nx[1].next.split('·').slice(0,2).join('·').trim())}</text></g>`;}
+/* tier-up supernova bloom */
+if(bloomId&&!reduced){const p=nodeXY(bloomId);
+s+=`<g class="bloom" pointer-events="none"><circle cx="${p.x}" cy="${p.y}" r="24" fill="none" stroke="#e8c07a" stroke-width="2.5"/><circle cx="${p.x}" cy="${p.y}" r="24" fill="none" stroke="#fff3da" stroke-width="1.2"/><circle cx="${p.x}" cy="${p.y}" r="24" fill="none" stroke="#7abeb6" stroke-width="1"/></g>`;}
+}
+/* mission plaque cartouche */
+s+=`</g>`; /* close skypan */
+/* engraved bezel ticks + corner brackets (instrument, not data — never zoomed) */
+s+=`<g stroke="rgba(138,111,63,.4)">`;
+for(let x=70;x<1130;x+=40)s+=`<line x1="${x}" y1="4" x2="${x}" y2="${x%120===110?12:8}"/><line x1="${x}" y1="661" x2="${x}" y2="${x%120===110?653:657}"/>`;
+for(let y=60;y<620;y+=40)s+=`<line x1="4" y1="${y}" x2="8" y2="${y}"/><line x1="1172" y1="${y}" x2="1176" y2="${y}"/>`;
+s+=`</g><g stroke="rgba(138,111,63,.55)" fill="none" stroke-width="1.2"><path d="M14 30V14H30"/><path d="M1150 14H1166V30"/><path d="M14 635V651H30"/><path d="M1166 635V651H1150"/></g>`;
+/* orrery ornament */
+s+=`<g transform="translate(1122,614)" opacity=".75"><circle r="5" fill="none" stroke="rgba(138,111,63,.5)"/><circle r="11" fill="none" stroke="rgba(138,111,63,.45)"/><circle r="17" fill="none" stroke="rgba(138,111,63,.4)"/><circle r="1.8" fill="#e8c07a" opacity=".8"/><g class="orr1"><circle cx="11" cy="0" r="1.3" fill="#cfdae2" opacity=".7"/></g><g class="orr2"><circle cx="-17" cy="0" r="1.1" fill="#c96f45" opacity=".7"/></g><text y="28" text-anchor="middle" class="probelab" opacity=".7">ORRERY</text></g>`;
+const hp=PATH_NODES.filter(n=>tierOf(n.id)>=2).length,pvp=PATH_NODES.filter(n=>tierOf(n.id)===3).length,cp=CAPS.filter(c=>tierOf(c.id)===3).length;
+s+=`<g><rect x="30" y="584" width="312" height="68" rx="6" fill="rgba(20,29,41,.88)" stroke="#8a6f3f"/><rect x="35" y="589" width="302" height="58" rx="3" fill="none" stroke="rgba(138,111,63,.35)"/>`;
+if(none)s+=`<text x="186" y="612" text-anchor="middle" class="plaq-n">— UNCHARTED —</text><text x="186" y="630" text-anchor="middle" class="plaq-c">no pathway chosen</text>`;
+else s+=`<text x="186" y="606" text-anchor="middle" class="plaq-n">AI-INTEGRATION ENGINEER</text><text x="186" y="622" text-anchor="middle" class="plaq-c">4 branches · 8 systems · ${PATH_NODES.length} worlds · 3 capstones</text><text x="186" y="637" text-anchor="middle" class="plaq-c">${hp} honed · ${pvp} proven · ${cp} of 3 capstones proven</text>`;
+s+=`</g>`;
+s+=`<rect width="1180" height="665" fill="url(#g-vig)" pointer-events="none"/></svg>`;
+return s}
+/* ---- header counts ---- */
+function countsHTML(mobile){
+if(S.scn==='none')return `<span class="chip"><span class="muted">no pathway chosen</span></span>`;
+const h=PATH_NODES.filter(n=>tierOf(n.id)>=2).length,pv=PATH_NODES.filter(n=>tierOf(n.id)===3).length,cp=CAPS.filter(c=>tierOf(c.id)===3).length;
+const nx=Object.entries(S.work).filter(([,w])=>w.next).sort((a,b)=>a[1].next<b[1].next?-1:1)[0];
+let out=`<span class="chip"><span class="cdot" style="background:var(--gold)"></span><b>${h} of ${PATH_NODES.length}</b>&nbsp;worlds honed</span><span class="chip"><span class="cdot" style="background:var(--sage)"></span><b>${pv}</b>&nbsp;proven</span><span class="chip"><span class="cdot" style="background:var(--gold-deep)"></span><b>${cp} of 3</b>&nbsp;capstones proven</span>`;
+if(nx&&!mobile)out+=`<span class="chip">next session · <b>&nbsp;${esc(nx[1].next.split('·')[0].trim()+' '+nx[1].next.split('·')[1].trim())}</b>&nbsp;— ${esc((byN[nx[0]]||byC[nx[0]]).title)}</span>`;
+return out}
+/* ---- drawer ---- */
+function ladderHTML(id){const cap=!!byC[id],cus=byN[id]&&byN[id].custom;const tr=tierOf(id);
+const steps=cap?[0,3]:cus?[0,1,2]:[0,1,2,3];
+return `<div class="ladder">`+steps.map(t=>`<div class="st ${t<tr?'done':''} ${t===tr?'cur':''}"><span class="dot"></span><span class="sl">${T[t]}</span></div>`).join('')+`</div>`}
+function drawerHTML(id){
+const cap=byC[id],n=cap||byN[id],tr=tierOf(id),w=S.work[id];
+const brName=byB[cap?cap.b:byG[n.g].b].name;
+let h=`<div class="dhead"><div class="row"><span class="eyebrow">${esc(cap?brName+' · capstone':n.custom?'Your additions · personal':brName+' · '+byG[n.g].title)}</span><span class="spacer"></span><button class="icon-btn" data-act="close">✕</button></div><h2>${esc(n.title)}</h2>${ladderHTML(id)}</div><div class="dbody">`;
+h+=`<p class="ddesc">${esc(n.blurb)}</p>`;
+h+=`<p class="hint" style="margin-top:-4px"><b style="color:var(--ink-soft)">${T[tr]}</b> — ${cap&&tr===0?'The artifact doesn\u2019t exist yet. There are no study minutes here — only real proof, confirmed by you.':TMEAN[tr]}${S.sa[id]?' <span class="satick">✓ self-assessed</span>':''}</p>`;
+if(S.flags[id])h+=`<div class="flagcard"><b>Revisit?</b> The study minutes are done, but your own check-ins after these sessions were shaky. Still honed — just worth a second look.<div class="row" style="margin-top:9px"><button class="btn sm btn-ghost" data-act="refresher">Add a refresher session</button><button class="btn sm btn-soft" data-act="flag-clear">Feels steady — clear</button></div></div>`;
+if(!cap){h+=`<div class="dcounts card soft">`;
+if(w)h+=`<div class="cr"><span>Planned study</span><b>${w.plan} min</b></div><div class="cr"><span>Logged</span><b>${w.done} of ${w.plan} min</b></div><div class="cr"><span>Sessions</span><b>${w.sd} of ${w.st} done</b></div>${w.next?`<div class="cr"><span>Next session</span><b>${esc(w.next)}</b></div>`:''}`;
+else h+=`<div class="cr"><span>Planned study</span><b>none yet</b></div><div class="cr"><span>Logged</span><b>0 min</b></div>`;
+h+=`</div>`;}
+else h+=`<p class="hint">This capstone <b>is</b> the branch\u2019s real artifact. It turns Proven the moment you confirm it exists — never automatically.</p>`;
+if(n.custom)h+=`<div class="guard"><span class="lk">◦</span><span>Your own object — it never counts toward pathway chips or capstones, and it caps at Honed. It\u2019s a margin note in your own hand.</span></div>`;
+if(tr===3&&S.ev[id])h+=`<div><div class="label">Evidence</div><div class="evfile" style="margin-top:7px"><div class="fg">MD</div><div><div class="fn">${esc(S.ev[id].file)}</div><div class="fd">✓ ${esc(S.ev[id].date)}</div></div></div></div>`;
+if((tr===2&&!n.custom)||(cap&&tr===0)){
+if(S.evOpen)h+=`<div class="evform"><div class="label" style="color:var(--clay-deep)">Confirm the real artifact</div><input id="evinput" value="${esc(cap?cap.evd:(id.slice(3)+'-artifact.md'))}"><div class="row"><button class="btn sm btn-primary" data-act="ev-confirm">Confirm evidence</button><button class="btn sm btn-soft" data-act="ev-cancel">Cancel</button></div></div>`;
+else h+=`<div><button class="btn btn-primary" data-act="ev-open">Mark evidence</button><p class="hint" style="margin-top:8px">Proof needs a real artifact — a repo, doc, talk or demo you can point to. Only you can confirm it.</p></div>`;}
+h+=`<div class="notebox"><div class="label">Your note</div><textarea id="notein" placeholder="A margin note in your own hand…">${esc(S.notes[id]||'')}</textarea><div class="row" style="margin-top:7px"><button class="btn sm btn-soft" data-act="note-save">Save note</button>${S.notes[id]?'<span class="hint">✎ shown on the map</span>':''}</div></div>`;
+h+=`<div class="dfoot">`;
+if(tr===0&&!cap)h+=`<button class="btn sm btn-primary" data-act="schedule">Schedule study</button>`;
+if(tr===1)h+=`<button class="btn sm btn-primary" data-act="log">Mark today\u2019s 45 min done</button><button class="btn sm btn-ghost" data-act="refresher">Reschedule</button>`;
+if(tr===2&&!S.flags[id]&&!cap)h+=`<button class="btn sm btn-ghost" data-act="refresher">Add refresher session</button>`;
+h+=`</div>`;
+/* adjust mastery — the ONLY thing that can set a tier down */
+h+=`<div class="adj"><div class="label">Adjust mastery</div><p class="hint" style="margin-top:5px">A deliberate, per-node call — the only thing that can set a tier down. ${n.custom?'Personal objects cap at Honed.':'Proven always needs confirmed evidence, so it isn\u2019t offered here.'}</p><div class="tierbtns">${(cap?[0]:[0,1,2]).map(t=>`<button class="btn sm ${t===tr?'btn-ink':'btn-soft'}" data-act="adj" data-tier="${t}">${cap?'Set back to Discovered':T[t]}</button>`).join('')}</div></div>`;
+h+=`</div>`;return h}
+/* ---- mobile sky + sheet ---- */
+function miniPlanet(id,size){return `<svg viewBox="-27 -27 54 54" width="${size}" height="${size}" style="flex:none">${planetG(id,{})}</svg>`}
+function mskyHTML(){
+if(S.scn==='none')return '';
+let h=`<div class="m-hint">Scroll the sky</div>`;
+for(const br of BRS){const gs=GROUPS.filter(g=>g.b===br.id);if(!gs.length)continue;
+if(br.id==='personal')h+=`<div class="m-yours">Your additions</div>`;
+else h+=`<div class="m-region"><div class="m-rlabel${br.cap&&tierOf(br.cap)===3?' lit':''}">${esc(br.name)}</div></div>`;
+if(br.cap){const c=byC[br.cap],pv=tierOf(c.id)===3;
+h+=`<button class="m-cap" data-n="${c.id}"><svg viewBox="-30 -30 60 60" width="40" height="40" style="flex:none">${beaconG(c.id)}</svg><div><div class="mc-t">${esc(c.title)}</div><div class="mc-s${pv?' warm':''}">${pv?'capstone ✦ proven':'capstone — unproven'}</div></div></button>`;}
+for(const g of gs){const st=gStats(g.id),open=S.open.has(g.id);
+h+=`<div class="m-sys${open?' open':''}"><button class="m-srow" data-g="${g.id}"><svg viewBox="-24 -24 48 48" width="36" height="36" style="flex:none">${starG(g.id)}</svg><div><div class="mc-t">${esc(g.title)}</div><div class="mc-s${st.h===st.t&&!g.custom?' warm':''}">${g.custom?st.t+' sketched · yours':st.h+'/'+st.t+' honed'}</div></div><span class="chev">▾</span></button><div class="m-acc">`;
+for(const n of members(g.id))h+=`<button class="m-card" data-n="${n.id}">${miniPlanet(n.id,40)}<div><div class="mc-t" style="font-size:14px">${esc(n.title)}</div><div class="mc-s">${esc(statusLine(n.id))}</div></div></button>`;
+h+=`</div></div>`;}}
+const hp=PATH_NODES.filter(n=>tierOf(n.id)>=2).length,pvp=PATH_NODES.filter(n=>tierOf(n.id)===3).length,cp=CAPS.filter(c=>tierOf(c.id)===3).length;
+h+=`<div class="m-plaq"><div class="n">AI-INTEGRATION ENGINEER</div><div class="c">4 branches · 8 systems · ${PATH_NODES.length} worlds · 3 capstones</div><div class="c">${hp} honed · ${pvp} proven · ${cp} of 3 capstones proven</div></div>`;
+return h}
+function sheetHTML(id){
+const cap=byC[id],n=cap||byN[id],tr=tierOf(id);
+let h=`<div class="grab"></div><div class="eyebrow" style="font-size:9.5px">${esc(cap?byB[cap.b].name+' · capstone':n.custom?'Your additions · personal':byB[byG[n.g].b].name+' · '+byG[n.g].title)}</div><h3>${esc(n.title)}</h3>${ladderHTML(id)}<div class="scnt">${esc(statusLine(id))}</div>`;
+if(S.notes[id])h+=`<div class="notecard">✎ ${esc(S.notes[id])}</div>`;
+if(tr===3&&S.ev[id])h+=`<div class="evfile"><div class="fg">MD</div><div><div class="fn">${esc(S.ev[id].file)}</div><div class="fd">✓ ${esc(S.ev[id].date)}</div></div></div>`;
+if(S.flags[id])h+=`<div class="notecard" style="border-color:var(--gold);background:var(--gold-soft);color:var(--gold-deep)">Revisit? Your check-ins were shaky — still honed, worth a second look.</div>`;
+if(tr===1)h+=`<button class="btn btn-primary" data-act="log">Mark today\u2019s 45 min done</button>`;
+else if((tr===2&&!n.custom)||(cap&&tr===0))h+=`<button class="btn btn-primary" data-act="ev-open-m">Mark evidence</button>`;
+else if(tr===0&&!cap)h+=`<button class="btn btn-primary" data-act="schedule">Schedule study</button>`;
+else if(tr===2&&n.custom)h+=`<button class="btn btn-soft" data-act="refresher">Add another session</button>`;
+if(S.evOpen&&S.msel===id&&((tr===2&&!n.custom)||(cap&&tr===0)))h+=`<div class="evform" style="margin-top:8px"><div class="label" style="color:var(--clay-deep)">Confirm the real artifact</div><input id="evinput-m" value="${esc(cap?cap.evd:(id.slice(3)+'-artifact.md'))}"><div class="srow"><button class="btn sm btn-primary" data-act="ev-confirm-m">Confirm</button><button class="btn sm btn-soft" data-act="ev-cancel">Cancel</button></div></div>`;
+if(tr===3)h+=`<div class="srow"><button class="btn sm btn-soft" data-act="refresher">Add refresher</button></div>`;
+return h}
+/* ---- overlays ---- */
+function overlayHTML(){
+if(S.scn==='none')return `<div class="nopath"><div class="inner card"><div class="eyebrow">Knowledge map</div><h3>No pathway charted yet</h3><p>Uncharted space. Choose a pathway and Loop charts its sky — every system, every world, and the real artifacts that prove them.</p><div class="row" style="justify-content:center"><button class="btn btn-ink">Choose a pathway</button><button class="btn btn-ghost">Browse examples</button></div></div></div>`;
+const anyLit=NODES.some(n=>tierOf(n.id)>=1)||CAPS.some(c=>tierOf(c.id)===3);
+if(!anyLit)return `<div class="empty-note card"><h3>Nothing lit yet</h3><p>The sky before first light. Every world is already on the map and already yours to study — schedule your first session and first light follows.</p><button class="btn sm btn-primary" data-act="firstlight">Light one star</button></div>`;
+return ''}
+function moverlayHTML(){
+if(S.scn==='none')return `<div class="m-empty card"><div class="eyebrow" style="font-size:9.5px">Knowledge map</div><h3>No pathway charted yet</h3><p>Choose a pathway and Loop charts its sky.</p><button class="btn sm btn-ink">Choose a pathway</button></div>`;
+const anyLit=NODES.some(n=>tierOf(n.id)>=1)||CAPS.some(c=>tierOf(c.id)===3);
+if(!anyLit)return `<div class="m-empty card"><h3>Nothing lit yet</h3><p>Schedule your first session and first light follows.</p><button class="btn sm btn-primary" data-act="firstlight">Light one star</button></div>`;
+return ''}
+/* ---- focus pan/zoom: glide the chosen system clear of the drawer ---- */
+let PAN={x:0,y:0,k:1};
+function panTarget(){
+if(!S.focus||S.scn==='none')return{x:0,y:0,k:1};
+const f=byC[S.focus]||byG[S.focus];if(!f)return{x:0,y:0,k:1};
+const k=1.3,vis=S.sel?860:1180; /* drawer overlays ~320 svg units on the right */
+let tx=vis/2-k*f.x,ty=332-k*f.y;
+tx=Math.min(0,Math.max(vis-1180*k,tx));ty=Math.min(0,Math.max(665-665*k,ty));
+return{x:tx,y:ty,k}}
+function applyPan(){const sp=document.getElementById('skypan');if(sp){const t=panTarget();
+sp.style.transform=`translate(${PAN.x}px,${PAN.y}px) scale(${PAN.k})`;
+sp.getBoundingClientRect();
+sp.style.transition=reduced?'none':'transform .55s cubic-bezier(.3,.9,.3,1)';
+requestAnimationFrame(()=>{sp.style.transform=`translate(${t.x}px,${t.y}px) scale(${t.k})`});
+PAN=t}}
+/* ---- render ---- */
+function render(bloomId){
+$('chart').innerHTML=chartSVG(bloomId);applyPan();
+$('overlay').innerHTML=overlayHTML();
+$('counts').innerHTML=countsHTML();$('mcounts').innerHTML=countsHTML(1);
+$('msky').innerHTML=mskyHTML();$('moverlay').innerHTML=moverlayHTML();
+if(S.sel&&S.scn!=='none'){$('drawer').innerHTML=drawerHTML(S.sel);$('drawer').classList.add('open')}
+else $('drawer').classList.remove('open');
+if(S.msel&&S.scn!=='none'){$('sheet').innerHTML=sheetHTML(S.msel);$('sheet').classList.add('open')}
+else $('sheet').classList.remove('open')}
+/* ---- interactions ---- */
+function toast(msg){const el=$('toast');el.textContent='✦ '+msg;el.classList.add('show');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('show'),3000)}
+function tierUp(id,before,special){const after=tierOf(id);
+if(after>before){const n=byC[id]||byN[id];if(byN[id])S.open.add(byN[id].g);
+render(id);toast(special||`${n.title} is now ${T[after]}${after===3?' ✦':''}`)}
+else render()}
+function saveNote(fromId){const f=$('notein');if(!f)return;const v=f.value.trim();
+if(v)S.notes[fromId]=v;else delete S.notes[fromId];render();toast(`Note saved — ${(byC[fromId]||byN[fromId]).title}`)}
+function doAct(act,el){
+const inSheet=!!el.closest('.sheet')||!!el.closest('.m-empty');
+const id=inSheet?(S.msel||S.sel):(S.sel||S.msel);
+if(act==='close'){S.sel=null;render();return}
+if(act==='firstlight'){const t='kn-retr';S.work[t]={plan:byN[t].min,done:0,sd:0,st:4,next:'Mon 20 Jul · 09:00 · 45 min'};S.open.add('kg-retr');S.sel=t;S.msel=t;render(t);toast('First light — Retrieval fundamentals is now Training');return}
+if(!id)return;
+const before=tierOf(id);
+if(act==='schedule'){const n=byN[id];if(!S.work[id])S.work[id]={plan:n.min||120,done:0,sd:0,st:Math.max(2,Math.ceil((n.min||120)/45)),next:'Mon 20 Jul · 09:00 · 45 min'};else S.work[id].next='Mon 20 Jul · 09:00 · 45 min';delete S.ov[id];delete S.sa[id];S.evOpen=false;tierUp(id,before);return}
+if(act==='log'){const w=S.work[id];w.done=Math.min(w.plan,w.done+45);w.sd=Math.min(w.st,w.sd+1);if(w.done>=w.plan)delete w.next;delete S.ov[id];S.evOpen=false;tierUp(id,before);return}
+if(act==='refresher'){if(!S.work[id])S.work[id]={plan:45,done:0,sd:0,st:1};S.work[id].next='Mon 20 Jul · 09:00 · 45 min';S.work[id].st+=1;S.evOpen=false;render();toast('Refresher scheduled — Mon 09:00');return}
+if(act==='flag-clear'){delete S.flags[id];render();toast(`${byN[id].title} — flag cleared, still Honed`);return}
+if(act==='ev-open'){S.evOpen=true;render();return}
+if(act==='ev-open-m'){S.evOpen=true;S.sel=id;render();return}
+if(act==='ev-cancel'){S.evOpen=false;render();return}
+if(act==='ev-confirm'||act==='ev-confirm-m'){const f=$(act==='ev-confirm'?'evinput':'evinput-m');const file=f&&f.value.trim()?f.value.trim():'artifact.md';
+S.ev[id]={file,date:'confirmed 19 Jul'};delete S.ov[id];delete S.sa[id];S.evOpen=false;
+const cap=byC[id];tierUp(id,before,cap?`Capstone proven — ${cap.title} ✦`:`${byN[id].title} is now Proven ✦ — evidence confirmed`);return}
+if(act==='note-save'){saveNote(id);return}
+if(act==='adj'){const t=+el.dataset.tier;delete S.sa[id];
+if(byC[id]){delete S.ev[id]}
+else{const derived=(()=>{const w=S.work[id];if(!w)return 0;if(S.ev[id]&&w.done>=w.plan&&!byN[id].custom)return 3;if(w.plan>0&&w.done>=w.plan)return 2;return 1})();
+if(t<3)delete S.ev[id];
+if(t===derived)delete S.ov[id];else{S.ov[id]=t;if(t===2&&derived<2)S.sa[id]=1}}
+render();toast(`${(byC[id]||byN[id]).title} set to ${T[tierOf(id)]}${S.sa[id]?' (self-assessed)':''}`);return}}
+document.addEventListener('click',e=>{
+const a=e.target.closest('[data-act]');if(a){doAct(a.dataset.act,a);return}
+const g=e.target.closest('[data-g]');if(g){const gid=g.dataset.g;const mob=!!g.closest('#msky');
+if(S.open.has(gid)){S.open.delete(gid);if(!mob&&S.focus===gid)S.focus=null}
+else{S.open.add(gid);if(!mob)S.focus=gid}
+render();return}
+const nd=e.target.closest('[data-n]');if(nd){const id=nd.dataset.n;S.evOpen=false;
+if(nd.closest('#msky'))S.msel=id;else{S.sel=id;S.msel=id;S.focus=byC[id]?id:byN[id].g}
+render();return}});
+/* tooltip + parallax (desktop) */
+const wrap=$('chartwrap');
+wrap.addEventListener('mousemove',e=>{
+const tt=$('tt');const tgt=e.target.closest('[data-n],[data-g]');
+if(tgt&&!e.target.closest('#overlay')){let name,meta;
+if(tgt.dataset.n){const id=tgt.dataset.n;name=(byC[id]||byN[id]).title;meta=statusLine(id)}
+else{const g=byG[tgt.dataset.g],st=gStats(tgt.dataset.g);name=g.title;meta=(g.custom?st.t+' sketched objects · yours':st.h+' of '+st.t+' honed')+' · click to '+(S.open.has(g.id)?'close':'open')}
+tt.innerHTML=`<div class="tname">${esc(name)}</div><div class="tmeta">${esc(meta)}</div>`;tt.style.display='block';
+const wr=wrap.getBoundingClientRect();tt.style.left=Math.min(e.clientX-wr.left+16,wr.width-280)+'px';tt.style.top=(e.clientY-wr.top+14)+'px';}
+else tt.style.display='none';
+if(!reduced){const wr=wrap.getBoundingClientRect();const nx=(e.clientX-wr.left)/wr.width-.5,ny=(e.clientY-wr.top)/wr.height-.5;
+const d1=document.getElementById('dust1'),d2=document.getElementById('dust2');
+if(d1)d1.style.transform=`translate(${(-nx*5).toFixed(1)}px,${(-ny*4).toFixed(1)}px)`;
+if(d2)d2.style.transform=`translate(${(-nx*11).toFixed(1)}px,${(-ny*9).toFixed(1)}px)`;}});
+wrap.addEventListener('mouseleave',()=>{$('tt').style.display='none'});
+/* scenarios */
+document.querySelectorAll('[data-scn]').forEach(c=>c.addEventListener('click',()=>{
+document.querySelectorAll('[data-scn]').forEach(x=>x.classList.toggle('on',x===c));
+S=scnState(c.dataset.scn);render()}));
+render();
+</script>
+</body>
+</html>

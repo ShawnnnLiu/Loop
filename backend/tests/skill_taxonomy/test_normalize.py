@@ -100,6 +100,16 @@ def test_resolve_is_total_on_arbitrary_strings(garbage: str) -> None:
         ("AI Engineer", CareerTrack.AI_ENGINEER),
         ("LLM engineer", CareerTrack.AI_ENGINEER),
         ("GenAI application developer", CareerTrack.AI_ENGINEER),
+        ("Data Scientist", CareerTrack.DATA_SCIENTIST),
+        ("Senior Data Scientist", CareerTrack.DATA_SCIENTIST),
+        ("Product Data Scientist", CareerTrack.DATA_SCIENTIST),
+        ("Decision Scientist", CareerTrack.DATA_SCIENTIST),
+        ("Data Science Manager", CareerTrack.DATA_SCIENTIST),
+        ("Data Engineer", CareerTrack.DATA_ENGINEER),
+        ("Senior Data Engineer", CareerTrack.DATA_ENGINEER),
+        ("ETL Developer", CareerTrack.DATA_ENGINEER),
+        ("Big Data Engineer", CareerTrack.DATA_ENGINEER),
+        ("Data Platform Engineer", CareerTrack.DATA_ENGINEER),
         ("Data Analyst", CareerTrack.DATA_ANALYST),
         ("Senior Data Analyst", CareerTrack.DATA_ANALYST),
         ("Business Intelligence Analyst", CareerTrack.DATA_ANALYST),
@@ -113,6 +123,11 @@ def test_resolve_is_total_on_arbitrary_strings(garbage: str) -> None:
         # (career-track-expansion 02-shared-entries.md); until it lands the
         # role falls to the union fallback, NOT to data_analyst.
         ("Business Analyst", None),
+        # "quantitative analyst" is deliberately unresolved: quant_dev is an
+        # enum track with no markers yet, and approximating quant-finance
+        # roles to data_scientist (the career profile's draft) was ruled
+        # out. A quant_dev marker increment re-homes this.
+        ("Quantitative Analyst", None),
         (None, None),
     ],
 )
@@ -138,9 +153,31 @@ def test_data_analyst_precedence_beats_swe() -> None:
     assert resolve_track("Data Analytics Developer") is CareerTrack.DATA_ANALYST
 
 
-def test_analytics_engineer_temporarily_resolves_to_data_analyst() -> None:
-    """Pins the interim ruling: "analytics engineer" belongs to the future
-    data_engineer track (career-track-expansion README); until that track
-    lands, the bare "analytics" marker claims it for data_analyst. The
-    data_engineer increment must re-home this title and update this test."""
-    assert resolve_track("Analytics Engineer") is CareerTrack.DATA_ANALYST
+def test_data_scientist_precedence_beats_data_analyst() -> None:
+    """The DATA_SCIENTIST tuple precedes DATA_ANALYST, so a mixed title
+    naming both "data science" and an analytics word takes the more
+    specific track."""
+    assert resolve_track("Data Science Analyst") is CareerTrack.DATA_SCIENTIST
+
+
+def test_ml_scientist_precedence_stays_with_mle() -> None:
+    """MLE precedes DATA_SCIENTIST (career profile ruling: mle markers stay
+    first), so ML-scientist titles do not drift to the new tuple."""
+    assert resolve_track("Machine Learning Scientist") is CareerTrack.MLE
+    assert resolve_track("ML Scientist") is CareerTrack.MLE
+
+
+def test_analytics_engineer_re_homed_to_data_engineer() -> None:
+    """The interim ruling (bare "analytics" claimed "analytics engineer"
+    for data_analyst until the data_engineer track landed) is retired: the
+    DATA_ENGINEER tuple precedes DATA_ANALYST, so the dbt-centric middle
+    role now resolves to data_engineer per the career profile."""
+    assert resolve_track("Analytics Engineer") is CareerTrack.DATA_ENGINEER
+    # Other analytics titles stay with data_analyst.
+    assert resolve_track("Marketing Analytics Manager") is CareerTrack.DATA_ANALYST
+
+
+def test_data_platform_precedence_beats_swe() -> None:
+    """DATA_ENGINEER precedes SWE, so a platform-flavored data title does
+    not fall through to the "platform engineer" software marker."""
+    assert resolve_track("Data Platform Engineer") is CareerTrack.DATA_ENGINEER

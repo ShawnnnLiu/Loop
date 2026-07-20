@@ -12,13 +12,16 @@ backend disagree, the backend (contracts/axioms) wins; surface the mismatch.
 - `design-loop/` — **current source of truth** (hi-fi React/JSX prototypes):
   `onboarding.jsx`, `schedule.jsx` (the drag-review loop), `calendar.jsx`,
   `agent.jsx`, `accountability.jsx`, `generation.jsx`, `app.css`.
-- `Loop - Pathway Map.html` — **visual source of truth for the Knowledge
-  Map** (the per-pathway mastery tree; the design canvas calls it "Pathway
-  Map" — same feature). Self-contained hi-fi page: desktop 1240 + mobile 396
-  frames, five tiers, hover lineage, detail drawer, empty states. Semantics
-  are normative in
+- `Loop - Star Atlas.html` — **visual source of truth for the Knowledge
+  Map** (newest drop, 2026-07-19): the per-pathway mastery tree rendered as a
+  "star atlas" (reference pathway: AI-Integration Engineer). Self-contained
+  hi-fi page with node detail + ladder views. Semantics are normative in
   `docs/implementation-plans/narrative-pathways/06-knowledge-tree.md`; this
   page is normative for the visuals.
+- `Loop - Pathway Map.html` — the previous Knowledge Map treatment (five
+  tiers, hover lineage, detail drawer, desktop 1240 + mobile 396 frames);
+  superseded by Star Atlas for visuals. `Loop - Pathway Map-print-4bewdj.html`
+  is a print export of it.
 - `claude_code_handoff/` — the designer's own handoff: `DESIGN-SYSTEM.md`,
   `DATA-MODEL.md`, `SPEC-*.md`, and `reference/` (jsx + `app.css`).
 - `design/`, `v2/`, `*.html`, `landing/` — older / canvas / marketing variants.

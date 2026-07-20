@@ -1,0 +1,197 @@
+{
+  "query_set_version": "claim-queries-v4",
+  "k": 5,
+  "comment": "Curated claim-assembly queries, v4 (career-track expansion): every v3 query verbatim plus data_engineer coverage. what refresh_claims retrieves per track before excerpting into source claims. Production config, versioned and reviewed like the corpus manifest; deliberately distinct from the retrieval-eval label set (evalsets/retrieval_queries_v1.json) so the population path is not tuned on the graded queries. Topics mirror the strategist's inputs: interview processes, role expectations, and the skills users declare as weaknesses.",
+  "queries": [
+    {
+      "track": "swe",
+      "query_text": "system design interview preparation expectations",
+      "comment": "interviewing.io system design guide, System Design Primer"
+    },
+    {
+      "track": "swe",
+      "query_text": "software engineer levels career ladder progression",
+      "comment": "levels.fyi taxonomy"
+    },
+    {
+      "track": "swe",
+      "query_text": "technical interview process hiring stages",
+      "comment": "interviewing.io blog, engineering blogs"
+    },
+    {
+      "track": "swe",
+      "query_text": "distributed systems scalability reliability lessons",
+      "comment": "Cloudflare / Dropbox / Uber engineering posts"
+    },
+    {
+      "track": "swe",
+      "query_text": "microservices architecture tradeoffs service boundaries",
+      "comment": "Fowler microservices article"
+    },
+    {
+      "track": "swe",
+      "query_text": "engineering culture code review practices",
+      "comment": "GitHub / Stack Overflow / Slack engineering"
+    },
+    {
+      "track": "mle",
+      "query_text": "machine learning production systems best practices",
+      "comment": "Rules of ML, Eugene Yan"
+    },
+    {
+      "track": "mle",
+      "query_text": "training neural networks debugging recipe",
+      "comment": "Karpathy training recipe"
+    },
+    {
+      "track": "mle",
+      "query_text": "feature engineering data pipelines training serving skew",
+      "comment": "Rules of ML, engineering blogs"
+    },
+    {
+      "track": "mle",
+      "query_text": "model deployment monitoring data drift",
+      "comment": "MLOps posts across the MLE sources"
+    },
+    {
+      "track": "mle",
+      "query_text": "transformer attention architecture fundamentals",
+      "comment": "Lil'Log, Raschka, Distill"
+    },
+    {
+      "track": "mle",
+      "query_text": "machine learning interview questions preparation",
+      "comment": "Chip Huyen, interviewing resources"
+    },
+    {
+      "track": "ai_engineer",
+      "query_text": "building llm applications production lessons",
+      "comment": "Chip Huyen, applied-llms year-of-building"
+    },
+    {
+      "track": "ai_engineer",
+      "query_text": "retrieval augmented generation evaluation quality",
+      "comment": "Eugene Yan LLM patterns"
+    },
+    {
+      "track": "ai_engineer",
+      "query_text": "prompt engineering techniques structured outputs",
+      "comment": "DAIR.AI prompt guide"
+    },
+    {
+      "track": "ai_engineer",
+      "query_text": "autonomous agents planning tool use design",
+      "comment": "Lilian Weng agents, Anthropic building effective agents"
+    },
+    {
+      "track": "ai_engineer",
+      "query_text": "rlhf fine tuning model alignment",
+      "comment": "Hugging Face RLHF"
+    },
+    {
+      "track": "ai_engineer",
+      "query_text": "llm evals testing regression quality",
+      "comment": "Simon Willison, Latent Space, Eugene Yan"
+    },
+    {
+      "track": "quant_dev",
+      "query_text": "quantitative developer trading systems low latency skills",
+      "comment": "Jane Street / HRT engineering posts"
+    },
+    {
+      "track": "quant_dev",
+      "query_text": "quantitative finance interview preparation topics",
+      "comment": "QuantStart articles"
+    },
+    {
+      "track": "quant_dev",
+      "query_text": "functional programming technology trading firms",
+      "comment": "Jane Street tech blog"
+    },
+    {
+      "track": "quant_dev",
+      "query_text": "research infrastructure market data engineering",
+      "comment": "HRT Beat, Two Sigma articles"
+    },
+    {
+      "track": "data_scientist",
+      "query_text": "data scientist levels career progression compensation",
+      "comment": "levels.fyi data-scientist taxonomy"
+    },
+    {
+      "track": "data_scientist",
+      "query_text": "data science interview preparation questions",
+      "comment": "Interview Query"
+    },
+    {
+      "track": "data_scientist",
+      "query_text": "experimentation a b testing product analytics",
+      "comment": "Stitch Fix MultiThreaded, Two Sigma"
+    },
+    {
+      "track": "data_scientist",
+      "query_text": "start with heuristics before machine learning",
+      "comment": "Eugene Yan first-rule-of-ml, Rules of ML"
+    },
+    {
+      "track": "product_manager",
+      "query_text": "product manager levels career ladder progression",
+      "comment": "levels.fyi product-manager taxonomy"
+    },
+    {
+      "track": "product_manager",
+      "query_text": "product manager hiring interview expectations",
+      "comment": "Ken Norton essay"
+    },
+    {
+      "track": "product_manager",
+      "query_text": "empowered product teams versus feature teams",
+      "comment": "SVPG essays"
+    },
+    {
+      "track": "product_manager",
+      "query_text": "product discovery strategy roadmap practices",
+      "comment": "SVPG, Mind the Product, Lenny's Newsletter"
+    },
+    {
+      "track": "data_analyst",
+      "query_text": "data analyst interview preparation sql case study",
+      "comment": "Exponent, Harvard, DataCamp guides"
+    },
+    {
+      "track": "data_analyst",
+      "query_text": "sql interview questions window functions joins",
+      "comment": "DataLemur, StrataScratch, Interview Query"
+    },
+    {
+      "track": "data_analyst",
+      "query_text": "data analytics certification skills measured power bi",
+      "comment": "Google Data Analytics cert, PL-300, Tableau syllabi"
+    },
+    {
+      "track": "data_analyst",
+      "query_text": "dashboards data visualization business intelligence reporting",
+      "comment": "roadmap.sh data-analyst, DataNerd skill frequencies"
+    },
+    {
+      "track": "data_engineer",
+      "query_text": "data engineer interview preparation sql pipeline design",
+      "comment": "Interview Query DE question set, Amazon DE guide"
+    },
+    {
+      "track": "data_engineer",
+      "query_text": "data modeling star schema dimensional warehouse design",
+      "comment": "DEA-C01 / DP-700 / SnowPro cert scopes, Zoomcamp warehouse module"
+    },
+    {
+      "track": "data_engineer",
+      "query_text": "batch streaming etl orchestration airflow dbt spark kafka",
+      "comment": "Data Engineering Zoomcamp, roadmap.sh data-engineer"
+    },
+    {
+      "track": "data_engineer",
+      "query_text": "data pipeline architecture reliability monitoring data quality",
+      "comment": "Monte Carlo architecture digest, DDIA scope"
+    }
+  ]
+}

@@ -9,7 +9,8 @@
         "quant_dev",
         "data_scientist",
         "product_manager",
-        "data_analyst"
+        "data_analyst",
+        "data_engineer"
       ],
       "title": "CareerTrack",
       "type": "string"

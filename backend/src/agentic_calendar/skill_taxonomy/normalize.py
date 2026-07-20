@@ -66,12 +66,41 @@ _TRACK_MARKERS: tuple[tuple[CareerTrack, tuple[str, ...]], ...] = (
         ("ai engineer", "ai engineering", "llm", "genai", "generative ai", "applied ai"),
     ),
     (
+        # After MLE so "ml scientist"/"machine learning scientist" keep
+        # resolving there; before DATA_ANALYST so mixed titles like "data
+        # science analyst" take the more specific track. "quantitative
+        # analyst" is deliberately absent — quant_dev is an enum track with
+        # no markers yet, so the title stays on the union fallback rather
+        # than being approximated to data_scientist (ruling against the
+        # career profile's draft, 2026-07-19).
+        CareerTrack.DATA_SCIENTIST,
+        ("data scientist", "data science", "decision scientist"),
+    ),
+    (
+        # After DATA_SCIENTIST (mixed "data science …" titles keep the more
+        # specific track) and before DATA_ANALYST, whose bare "analytics"
+        # marker would otherwise claim "analytics engineer" — the dbt-centric
+        # middle role is ruled to data_engineer (career profile judgment
+        # call: warehouse/dbt vocabulary stays in scope). Also precedes SWE
+        # so "data platform engineer" does not fall through to
+        # "platform engineer".
+        CareerTrack.DATA_ENGINEER,
+        (
+            "data engineer",
+            "data engineering",
+            "analytics engineer",
+            "etl developer",
+            "data platform",
+            "big data engineer",
+        ),
+    ),
+    (
         # Precedes SWE so BI/analytics titles never fall through to
         # engineering markers. "business analyst" is deliberately absent —
         # it is ruled to the future business_analyst track. Bare
-        # "analytics" means "analytics engineer" resolves here until the
-        # data_engineer track lands and re-homes it (ruling in
-        # docs/implementation-plans/career-track-expansion/README.md).
+        # "analytics" claims the remaining analytics titles now that
+        # "analytics engineer" is re-homed by the preceding data_engineer
+        # tuple.
         CareerTrack.DATA_ANALYST,
         (
             "data analyst",

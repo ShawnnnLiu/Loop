@@ -20,7 +20,7 @@ from agentic_calendar.contracts.career_track import CareerTrack
 from agentic_calendar.contracts.skill_taxonomy import SkillEntry, SkillTaxonomy
 
 DEFAULT_TAXONOMY_PATH = (
-    Path(__file__).resolve().parents[3] / "taxonomy" / "skill_taxonomy_v2.json"
+    Path(__file__).resolve().parents[3] / "taxonomy" / "skill_taxonomy_v4.json"
 )
 """The current pinned vocabulary version. A vocabulary change is a NEW file
 version referenced explicitly (append-only, like the eval sets); consumers

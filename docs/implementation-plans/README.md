@@ -11,6 +11,7 @@ authority; this table is a navigation aid.
 
 | Plan | Status |
 | --- | --- |
+| `animated-landing/` | Planned, not implemented — adopt the drop-3 scroll-animated landing page; gated on PR #50 merging. |
 | `career-track-expansion/` | Planning docs written, not implemented — 9 career profiles + mechanics checklist. |
 | `narrative-pathways/` | Planning docs written, not implemented — character sheet, pathway registry, knowledge map. |
 | `resume-intake-onboarding/` | Implemented — RI-A…RI-F merged; running the enrichment tool and adopting a v5 taxonomy remains an operator action. |

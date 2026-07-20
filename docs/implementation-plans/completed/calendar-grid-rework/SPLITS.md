@@ -46,7 +46,7 @@ prompt plus "G-A/G-B are already committed; resume at G-C".
 ## Conventions
 
 - **Branch:** `calendar-grid-rework`, created from `main` once this plan
-  folder has merged. If `docs/implementation-plans/calendar-grid-rework/`
+  folder has merged. If `docs/implementation-plans/completed/calendar-grid-rework/`
   is missing from `main`, stop and ask.
 - **One commit** at the end of the session (authorized by this prompt);
   never push.
@@ -74,7 +74,7 @@ then `01`–`04` in order.
 Kickoff prompt:
 
 ```
-Read docs/implementation-plans/calendar-grid-rework/00-overview.md and
+Read docs/implementation-plans/completed/calendar-grid-rework/00-overview.md and
 SPLITS.md, then 01-full-day-grid.md, 02-now-indicator.md,
 03-block-popover.md, 04-gates-and-smoke.md in that folder. Then read
 frontend/src/screens/ScheduleReview.tsx, frontend/src/styles/tokens.css

@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import re
 import sqlite3
+from collections.abc import Sequence
 
 from agentic_calendar.common.sqlite import SqliteDatabase
 from agentic_calendar.contracts.career_track import CareerTrack
@@ -83,6 +84,22 @@ def compile_match_expression(query_text: str) -> str:
     """
     tokens = _WORD.findall(query_text.lower())
     return " OR ".join(f'"{token}"' for token in tokens)
+
+
+def compile_phrase_expression(text: str) -> str:
+    """Deterministic FTS5 *phrase* expression: all tokens, consecutive.
+
+    One double-quoted phrase (`"power bi"`), so multi-word aliases match only
+    as adjacent tokens — the enrichment counterpart of the resolver's
+    exact-alias restraint, never bag-of-words. Punctuation-only characters
+    vanish under tokenization (``c++`` degrades to ``c``); that noise is a
+    documented property of the alias, not of this compiler. Text with no word
+    tokens compiles to ``""`` and the caller returns an honest empty result.
+    """
+    tokens = _WORD.findall(text.lower())
+    if not tokens:
+        return ""
+    return '"' + " ".join(tokens) + '"'
 
 
 def _fts_table_name(snapshot_id: str) -> str:
@@ -213,6 +230,42 @@ class SqliteChunkIndex:
                 for position, row in enumerate(rows, start=1)
             ],
         )
+
+    def match_phrase(
+        self,
+        snapshot_id: str,
+        phrase: str,
+        *,
+        tracks: Sequence[CareerTrack] | None = None,
+    ) -> list[tuple[str, str]]:
+        """Every ``(chunk_id, doc_id)`` containing ``phrase`` as adjacent tokens.
+
+        The enrichment primitive (résumé-intake RI-F): exhaustive — no top-k —
+        phrase-semantics matching, optionally restricted to chunks of documents
+        tagged with at least one of ``tracks``. Deterministic: results order by
+        ``chunk_id`` ascending, a pure function of (phrase, tracks, snapshot).
+        """
+        fts_table = _fts_table_name(snapshot_id)
+        if not self.is_built(snapshot_id):
+            raise SnapshotNotIndexedError(snapshot_id)
+        match = compile_phrase_expression(phrase)
+        if not match:
+            return []
+        sql = (
+            "SELECT c.chunk_id, c.doc_id"
+            f" FROM {fts_table} f"
+            " JOIN retrieval_chunks c ON c.rowid = f.rowid"
+            f" WHERE {fts_table} MATCH ? AND c.snapshot_id = ?"
+        )
+        parameters: list[object] = [match, snapshot_id]
+        if tracks:
+            clauses = " OR ".join("instr(c.track_tags, ?) > 0" for _ in tracks)
+            sql += f" AND ({clauses})"
+            parameters.extend(f",{track.value}," for track in tracks)
+        sql += " ORDER BY c.chunk_id ASC"
+        with self._db.read() as cur:
+            rows = cur.execute(sql, parameters).fetchall()
+        return [(row[0], row[1]) for row in rows]
 
     def list_chunks(
         self, snapshot_id: str, *, track: CareerTrack | None = None

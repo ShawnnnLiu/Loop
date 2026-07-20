@@ -20,9 +20,9 @@ clusters) decay much slower.
 
 - **`resume-intake-onboarding/06-skill-taxonomy.md`** defines the
   controlled vocabulary, the shared `CareerTrack` enum, and RI-F
-  (corpus-evidence enrichment — **not yet built**; it is that plan's open
-  gated increment). These docs supply the *content* a new track needs:
-  seed `SkillEntry` drafts with FTS5-conscious aliases.
+  (corpus-evidence enrichment — built as `tools/enrich_taxonomy.py`).
+  These docs supply the *content* a new track needs: seed `SkillEntry`
+  drafts with FTS5-conscious aliases.
 - **`loop-grounding-rag/01-corpus-and-contracts.md`** reserves G-I for
   "remaining tracks after the pipeline is proven." A career landed via
   this folder's checklist **is** a G-I increment: each profile's corpus

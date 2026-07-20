@@ -2045,6 +2045,136 @@
       "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
       "title": "DataNerd.tech skill-frequency analytics",
       "comment": "skill-frequency over 4M+ postings; data volatile by design, refresh per axiom-08 expiry; curator reads this as role_taxonomy-class content; host unknown to the classifier kernel"
+    },
+    {
+      "url": "https://www.bls.gov/ooh/math/data-scientists.htm",
+      "expected_type": "unclassified",
+      "track_tags": [
+        "data_scientist"
+      ],
+      "license_note": "U.S. government work, public domain.",
+      "title": "BLS Occupational Outlook: Data Scientists",
+      "comment": "authoritative outlook/duties; very stable; curator reads this as role_taxonomy-class content; host unknown to the classifier kernel"
+    },
+    {
+      "url": "https://roadmap.sh/ai-data-scientist",
+      "expected_type": "unclassified",
+      "track_tags": [
+        "data_scientist"
+      ],
+      "license_note": "Community roadmap under its published license; snapshot held for research reference with attribution.",
+      "title": "roadmap.sh: AI & Data Scientist",
+      "comment": "community skill tree; stable, PDF variant exists; curator reads this as role_taxonomy-class content; host unknown to the classifier kernel"
+    },
+    {
+      "url": "https://www.acethedatascienceinterview.com/",
+      "expected_type": "unclassified",
+      "track_tags": [
+        "data_scientist"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Ace the Data Science Interview: topic breakdown",
+      "comment": "canonical prep book's public site; book text copyrighted - site only; curator reads this as role_taxonomy-class content; host unknown to the classifier kernel"
+    },
+    {
+      "url": "https://www.interviewquery.com/learning-paths/data-science-interview/introduction-to-data-science/overview-of-the-data-science-learning-path",
+      "expected_type": "unclassified",
+      "track_tags": [
+        "data_scientist"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Interview Query: Data Science learning path overview",
+      "comment": "codified 4-module prep taxonomy with question-frequency stats; partial paywall; curator reads this as role_taxonomy-class content; host unknown to the classifier kernel"
+    },
+    {
+      "url": "https://www.tryexponent.com/blog/data-science-interview-guide",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "data_scientist"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Exponent: Data Science interview guide",
+      "comment": "loop-stage breakdown; refreshed yearly; curator reads this as role_taxonomy-class content; host classifies via manifest engineering-blog context"
+    },
+    {
+      "url": "https://igotanoffer.com/blogs/tech/facebook-data-scientist-interview",
+      "expected_type": "unclassified",
+      "track_tags": [
+        "data_scientist"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "IGotAnOffer: Meta Data Scientist interview",
+      "comment": "Meta DS loop detail; site serves 403 to plain fetchers (anti-bot caveat for ingestion); curator reads this as interview_report-class content; host unknown to the classifier kernel"
+    },
+    {
+      "url": "https://d3no4ktch0fdq4.cloudfront.net/public/course/files/Meta_Full_Loop_Interview_Guide_-_Data_Scientist_Product_Analytics.pdf",
+      "expected_type": "unclassified",
+      "track_tags": [
+        "data_scientist"
+      ],
+      "license_note": "Meta's own candidate-facing guide, distributed publicly; snapshot held for research reference with attribution.",
+      "title": "Meta full-loop interview guide: DS Product Analytics (PDF)",
+      "comment": "first-party loop description; CDN URL may rot - mirror early; curator reads this as interview_report-class content; host unknown to the classifier kernel"
+    },
+    {
+      "url": "https://datalemur.com/",
+      "expected_type": "unclassified",
+      "track_tags": [
+        "data_scientist"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "DataLemur SQL & data science question bank",
+      "comment": "question bank from the Ace the DS Interview author; partial paywall; curator reads this as interview_report-class content; host unknown to the classifier kernel"
+    },
+    {
+      "url": "https://netflixtechblog.com/interleaving-in-online-experiments-at-netflix-a04ee392ec55",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "data_scientist"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Netflix: Interleaving in online experiments",
+      "comment": "real experimentation practice at scale; complements the existing Netflix experimentation set"
+    },
+    {
+      "url": "https://medium.com/airbnb-engineering/beyond-a-b-test-speeding-up-airbnb-search-ranking-experimentation-through-interleaving-7087afa09c8e",
+      "expected_type": "unclassified",
+      "track_tags": [
+        "data_scientist"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Airbnb: Beyond A/B test - interleaving experimentation",
+      "comment": "Airbnb experimentation methodology; curator reads this as company_engineering_blog-class content, but medium.com is deliberately not declared an engineering-blog host (it would sweep all of Medium)"
+    },
+    {
+      "url": "https://365datascience.com/career-advice/career-guides/data-scientist-job-outlook-2025/",
+      "expected_type": "unclassified",
+      "track_tags": [
+        "data_scientist"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "365 Data Science: Data Scientist job outlook 2025",
+      "comment": "annual posting-derived skill percentages; URL-year drift - re-point at the successor edition on refresh; curator reads this as role_taxonomy-class content; host unknown to the classifier kernel"
+    },
+    {
+      "url": "https://www.coursera.org/professional-certificates/google-advanced-data-analytics",
+      "expected_type": "unclassified",
+      "track_tags": [
+        "data_scientist"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Google Advanced Data Analytics Certificate syllabus",
+      "comment": "closest thing to a standard DS cert syllabus; curator reads this as role_taxonomy-class content; host unknown to the classifier kernel"
+    },
+    {
+      "url": "https://www.datacamp.com/blog/data-scientist-interview-questions",
+      "expected_type": "unclassified",
+      "track_tags": [
+        "data_scientist"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "DataCamp: Data Scientist interview questions",
+      "comment": "canonical question set; refreshed yearly; curator reads this as interview_report-class content; host unknown to the classifier kernel"
     }
   ]
 }

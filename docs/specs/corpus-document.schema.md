@@ -57,9 +57,9 @@ are derived — see Field Semantics.)
 enum shared with the résumé-intake skill taxonomy
 (`skill-taxonomy.schema.md`). Members: `swe`, `mle`, `ai_engineer`
 (starting three), plus `quant_dev`, `data_scientist`, `product_manager`
-(grounding G-I track expansion), plus `data_analyst` (career-track
-expansion, wave 1). New tracks are added to the enum in review, never
-free-typed.
+(grounding G-I track expansion), plus `data_analyst` and `data_engineer`
+(career-track expansion, wave 1). New tracks are added to the enum in
+review, never free-typed.
 
 ## Contract vs. Registry Responsibility
 

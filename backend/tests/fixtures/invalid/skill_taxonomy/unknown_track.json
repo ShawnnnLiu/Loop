@@ -2,10 +2,10 @@
   "taxonomy_version": "skill-taxonomy-v2",
   "entries": [
     {
-      "skill_id": "skill.dbt",
-      "display_name": "dbt",
-      "aliases": ["dbt"],
-      "track_tags": ["data_engineer"],
+      "skill_id": "skill.ansible",
+      "display_name": "Ansible",
+      "aliases": ["ansible"],
+      "track_tags": ["devops_sre"],
       "kind": "tool",
       "corpus_evidence": null
     }

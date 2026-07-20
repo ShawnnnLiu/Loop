@@ -9,6 +9,7 @@ import type {
   TodayResult,
   UserProfile,
 } from '../api/types'
+import { BlockPopover } from '../components/BlockPopover'
 import { WeekPlanView } from '../components/WeekPlanView'
 import {
   DAY_MS,
@@ -23,6 +24,13 @@ import {
   windowStartMs,
 } from '../lib/datetime'
 import {
+  allowedWindowMin,
+  initialScrollMin,
+  nowMinutesOfDay,
+  splitBusySegments,
+} from '../lib/gridtime'
+import { popoverPlacement } from '../lib/popover'
+import {
   advisoryNote,
   flaggedReason,
   needsDraftRefetch,
@@ -32,7 +40,7 @@ import {
 } from '../lib/reconcile'
 import { RECOVERY_OPTIONS, planDiffLine, reviewBanner, reviewMode } from '../lib/review'
 import { stackByDay } from '../lib/stack'
-import { buildWeekPlan, milestoneGroups, todayFacts, weekRangeLabel } from '../lib/weekplan'
+import { buildWeekPlan, fmtDur, milestoneGroups, todayFacts, weekRangeLabel } from '../lib/weekplan'
 
 // The drag-to-adjust schedule review (the signature interaction). PROPOSED
 // blocks are draggable (snap 15 min, move across the week's days); imported
@@ -48,8 +56,11 @@ import { buildWeekPlan, milestoneGroups, todayFacts, weekRangeLabel } from '../l
 // that overlap — including adopted external moves onto another event
 // (ADR-0009) — stack side-by-side like Google Calendar, never as a collision.
 
-const START_HOUR = 8
-const END_HOUR = 23
+// The axis spans the full day; the user's ALLOWED window (profile
+// hard_constraints, fallback 8a–11p) drives the drag clamp and the off-hours
+// shading instead. GRID_TOP/GRID_BOT keep their axis meaning for geometry.
+const START_HOUR = 0
+const END_HOUR = 24
 const HOURS = END_HOUR - START_HOUR
 const HOUR_PX = 46
 const SNAP = 15
@@ -114,6 +125,21 @@ function toBusy(view: DraftView): BusyBlock[] {
 const topPx = (startMin: number) => ((startMin - GRID_TOP) / 60) * HOUR_PX
 const heightPx = (durMin: number) => Math.max(18, (durMin / 60) * HOUR_PX - 3)
 const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n))
+// End-time label: a split busy segment may end exactly at midnight (1440),
+// which fmtMinutes would render as "12p" — wrap it back to "12a".
+const fmtEnd = (min: number) => fmtMinutes(min % 1440)
+
+// "Tue Jul 21 · 10:30a–11:15a · 45m" for the popover's when line.
+const whenLine = (windowMs: number, dayIdx: number, startMin: number, durMin: number): string => {
+  const h = dayHeader(windowMs, dayIdx)
+  return `${h.dow} ${h.label} · ${fmtMinutes(startMin)}–${fmtEnd(startMin + durMin)} · ${fmtDur(durMin)}`
+}
+
+// Display form of a task category — same semantics as the Plan rail's labels.
+const prettyCategory = (raw: string): string => {
+  const label = raw.replace(/_/g, ' ')
+  return label.charAt(0).toUpperCase() + label.slice(1)
+}
 
 export function ScheduleReviewScreen() {
   const navigate = useNavigate()
@@ -132,6 +158,9 @@ export function ScheduleReviewScreen() {
   const [error, setError] = useState<string | null>(null)
   const [weekIdx, setWeekIdx] = useState<number | null>(null)
   const [drag, setDrag] = useState<DragState | null>(null)
+  // The open block-details popover, resolved to the LIVE block each render so
+  // a reconcile refetch can never show stale data.
+  const [detail, setDetail] = useState<{ kind: 'task' | 'busy'; key: string } | null>(null)
   const [saving, setSaving] = useState(false)
   const [violation, setViolation] = useState<{ taskId: string; text: string } | null>(null)
   const [replanning, setReplanning] = useState(false)
@@ -150,6 +179,13 @@ export function ScheduleReviewScreen() {
   const reconciledRef = useRef(false)
   const mountedRef = useRef(true)
   const colsRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  // Initial-scroll latch (same once-per-mount pattern as reconciledRef): the
+  // grid render below stores its target px; the effect fires the first time
+  // the scroll container actually exists and never again — week paging and
+  // Plan→Grid round-trips must not yank the user's scroll.
+  const scrolledRef = useRef(false)
+  const initialScrollPxRef = useRef(0)
   const geo = useRef<
     | {
         taskId: string
@@ -247,23 +283,34 @@ export function ScheduleReviewScreen() {
       })
   }, [syncEnabled, status])
 
-  // Live "synced X ago" age for the banner indicator: once a pull has actually
-  // compared against Google Calendar, re-render every 30s so the label keeps up
-  // with 1-minute granularity while the tab stays open. The initial nowMs
-  // predates the pull's server stamp, but fmtAgo clamps that to "just now".
+  // One mount-scoped 30s tick serves both the "synced X ago" banner age and
+  // the grid's now line. Side benefit: a tick after midnight re-renders,
+  // anchorMs is recomputed from Date.now() per render, and the window
+  // re-anchors on the new day without a reload.
   const syncedAt = reconcileResult ? syncedAtMs(reconcileResult) : null
   const [nowMs, setNowMs] = useState(() => Date.now())
   useEffect(() => {
-    if (syncedAt == null) return
     const id = setInterval(() => setNowMs(Date.now()), 30_000)
     return () => clearInterval(id)
-  }, [syncedAt])
+  }, [])
+
+  // Fires once per screen mount, as soon as the grid is actually rendered
+  // (grid view, non-empty draft) — see the scrolledRef note above.
+  useEffect(() => {
+    if (scrolledRef.current) return
+    const el = scrollRef.current
+    if (!el) return
+    scrolledRef.current = true
+    el.scrollTop = initialScrollPxRef.current
+  })
 
   if (loading) return <div className="screen-center muted">Loading your draft…</div>
   if (error) return <div className="screen-center">Couldn’t load the draft — {error}</div>
 
   const blocks = view ? toBlocks(view) : []
-  const busy = view ? toBusy(view) : []
+  // Split BEFORE the per-window filter, so a midnight-crossing busy interval
+  // lands each clipped segment in its own day column.
+  const busy = view ? splitBusySegments(toBusy(view)) : []
   if (!view || blocks.length === 0) {
     return (
       <div className="screen-center col" style={{ gap: 12 }}>
@@ -295,6 +342,17 @@ export function ScheduleReviewScreen() {
   const weekBusy = busy
     .filter((b) => windowStartMs(b.dayMs, anchorMs) === windowMs)
     .map((b) => ({ ...b, dayIdx: dayIdxOf(b.dayMs) }))
+
+  // The user's allowed scheduling window (profile hard_constraints, fallback
+  // 8a–11p): drives the drag clamp and the off-hours shading. The now line
+  // renders only when today's column is on screen — by the rolling-window
+  // construction, exactly when the current window IS the anchor window. "Now"
+  // is the user's wall clock (the draft's own offset), never the browser tz.
+  const allowed = allowedWindowMin(profile)
+  const todayVisible = windowMs === anchorMs
+  const nowMin = nowMinutesOfDay(nowMs, blocks[0].offset)
+  initialScrollPxRef.current =
+    (initialScrollMin(allowed.start, todayVisible ? nowMin : null) / 60) * HOUR_PX
 
   // Drag + approval are valid only while the run awaits approval; once it's been
   // written/active the same draft comes back from /draft, so we render it
@@ -380,6 +438,44 @@ export function ScheduleReviewScreen() {
   // blocks must never carry the written "✓" — the event is gone from the
   // calendar, but the task is still planned.
   const deletedIds = new Set(view?.deleted_task_ids ?? [])
+  const facts = todayFacts(today)
+
+  // Resolve the open popover against the live week data. Existing client data
+  // only: the status line mirrors the block's legend state, the busy card
+  // honestly explains why there is no event name (axiom 06 — free/busy is
+  // opaque ranges, titles never leave the user's calendar), and description is
+  // ALWAYS null today (no task description field exists anywhere).
+  const placementBase = { gridHeightPx: HOURS * HOUR_PX, cardHeightPx: 180, hourPx: HOUR_PX }
+  const detailCard = (() => {
+    if (!detail) return null
+    if (detail.kind === 'busy') {
+      const b = weekBusy[Number(detail.key.slice('busy'.length))]
+      if (!b) return null
+      return {
+        title: 'Busy',
+        when: whenLine(windowMs, b.dayIdx, b.startMin, b.durMin),
+        status: 'busy · from your Google Calendar · fixed',
+        detail: 'Loop only reads busy times — event details stay in your calendar.',
+        placement: popoverPlacement({ dayIdx: b.dayIdx, startMin: b.startMin, ...placementBase }),
+      }
+    }
+    const b = weekBlocks.find((blk) => blk.taskId === detail.key)
+    if (!b) return null
+    const fact = facts.details.get(b.taskId)
+    return {
+      title: b.title,
+      when: whenLine(windowMs, b.dayIdx, b.startMin, b.durMin),
+      status: editable
+        ? 'proposed · drag to adjust'
+        : deletedIds.has(b.taskId)
+          ? 'deleted from your calendar · still planned'
+          : mode === 'written'
+            ? 'confirmed · on your Google Calendar'
+            : 'planned · not confirmed on your calendar',
+      detail: fact ? `${prettyCategory(fact.category)} · ${fact.focusLevel} focus` : null,
+      placement: popoverPlacement({ dayIdx: b.dayIdx, startMin: b.startMin, ...placementBase }),
+    }
+  })()
 
   type WeekBlock = Block & { dayIdx: number }
   const posOf = (b: WeekBlock): { dayIdx: number; startMin: number } =>
@@ -435,6 +531,7 @@ export function ScheduleReviewScreen() {
       start: b.startMin,
     }
     setViolation(null)
+    setDetail(null)
     setDrag({ taskId: b.taskId, dayIdx: b.dayIdx, startMin: b.startMin })
   }
 
@@ -444,7 +541,10 @@ export function ScheduleReviewScreen() {
     const dDay = Math.round((event.clientX - g.x0) / g.dayW)
     const dMin = Math.round(((event.clientY - g.y0) / g.hourH) * 60) / SNAP
     const day = clamp(g.origDay + dDay, 0, 6)
-    const start = clamp(g.origStart + Math.round(dMin) * SNAP, GRID_TOP, GRID_BOT - g.dur)
+    // Clamp to the PROFILE's allowed window, not the axis: valid early/late
+    // slots stay reachable, and the server remains the only authority — every
+    // drop is still re-validated (OUTSIDE_ALLOWED_HOURS on rejection).
+    const start = clamp(g.origStart + Math.round(dMin) * SNAP, allowed.start, allowed.end - g.dur)
     g.day = day
     g.start = start
     setDrag({ taskId: g.taskId, dayIdx: day, startMin: start })
@@ -460,7 +560,10 @@ export function ScheduleReviewScreen() {
     }
     if (!g) return
     if (g.day === g.origDay && g.start === g.origStart) {
-      setDrag(null) // no move
+      // No effective move → this was a click: open the details popover.
+      // Snap-level movement stays a drag; sub-snap jitter resolves here.
+      setDrag(null)
+      setDetail({ kind: 'task', key: g.taskId })
       return
     }
     setSaving(true)
@@ -489,12 +592,19 @@ export function ScheduleReviewScreen() {
   }
 
   const pickView = (kind: ReviewViewKind) => {
+    setDetail(null) // switching Grid/Plan closes any open popover
     setViewKind(kind)
     try {
       localStorage.setItem(VIEW_PREF_KEY, kind)
     } catch {
       /* private mode — the toggle still works, just doesn't persist */
     }
+  }
+
+  // Week paging closes any open popover (its block leaves the screen).
+  const pageWeek = (idx: number) => {
+    setDetail(null)
+    setWeekIdx(idx)
   }
 
   async function runReplan(recoveryMode?: string) {
@@ -617,7 +727,7 @@ export function ScheduleReviewScreen() {
               className="btn btn-soft sm"
               type="button"
               disabled={safeWeek === 0}
-              onClick={() => setWeekIdx(safeWeek - 1)}
+              onClick={() => pageWeek(safeWeek - 1)}
             >
               ←
             </button>
@@ -628,7 +738,7 @@ export function ScheduleReviewScreen() {
               className="btn btn-soft sm"
               type="button"
               disabled={safeWeek === weeks.length - 1}
-              onClick={() => setWeekIdx(safeWeek + 1)}
+              onClick={() => pageWeek(safeWeek + 1)}
             >
               →
             </button>
@@ -775,7 +885,7 @@ export function ScheduleReviewScreen() {
       {viewKind === 'plan' ? (
         <WeekPlanView
           key={windowMs}
-          days={buildWeekPlan(view, mode, todayFacts(today), windowMs, anchorMs)}
+          days={buildWeekPlan(view, mode, facts, windowMs, anchorMs)}
           mode={mode}
           profile={profile}
           milestones={milestoneGroups(today)}
@@ -785,14 +895,14 @@ export function ScheduleReviewScreen() {
             canNext: safeWeek < weeks.length - 1,
             atToday: safeWeek === defaultWeek,
           }}
-          onPrev={() => setWeekIdx(safeWeek - 1)}
-          onNext={() => setWeekIdx(safeWeek + 1)}
-          onToday={() => setWeekIdx(defaultWeek)}
+          onPrev={() => pageWeek(safeWeek - 1)}
+          onNext={() => pageWeek(safeWeek + 1)}
+          onToday={() => pageWeek(defaultWeek)}
           onSwitchToGrid={() => pickView('grid')}
         />
       ) : (
         <>
-          <div className="sched-scroll">
+          <div ref={scrollRef} className="sched-scroll">
             <div className="sched-head">
               <div className="gutter" />
               {Array.from({ length: 7 }).map((_, i) => {
@@ -819,6 +929,23 @@ export function ScheduleReviewScreen() {
               </div>
 
               <div ref={colsRef} className="sched-cols" style={{ height: HOURS * HOUR_PX }}>
+                {/* Off-hours tint bands (outside the allowed window). First in
+                    DOM order and z-free so every block renders above them. */}
+                {allowed.start > GRID_TOP && (
+                  <div
+                    className="sched-offhours"
+                    style={{ top: 0, height: topPx(allowed.start) }}
+                  />
+                )}
+                {allowed.end < GRID_BOT && (
+                  <div
+                    className="sched-offhours"
+                    style={{
+                      top: topPx(allowed.end),
+                      height: ((GRID_BOT - allowed.end) / 60) * HOUR_PX,
+                    }}
+                  />
+                )}
                 {Array.from({ length: HOURS + 1 }).map((_, i) => (
                   <div key={`h${i}`} className="sched-hline" style={{ top: i * HOUR_PX }} />
                 ))}
@@ -831,6 +958,7 @@ export function ScheduleReviewScreen() {
                     key={`busy${i}`}
                     className="blk blk-busy"
                     title="From Google Calendar · fixed"
+                    onClick={() => setDetail({ kind: 'busy', key: `busy${i}` })}
                     style={{
                       ...stackGeom(`busy${i}`, b.dayIdx),
                       top: topPx(b.startMin),
@@ -839,7 +967,7 @@ export function ScheduleReviewScreen() {
                   >
                     <div className="bt">🔒 Busy</div>
                     <div className="bm">
-                      {fmtMinutes(b.startMin)}–{fmtMinutes(b.startMin + b.durMin)}
+                      {fmtMinutes(b.startMin)}–{fmtEnd(b.startMin + b.durMin)}
                     </div>
                   </div>
                 ))}
@@ -867,6 +995,9 @@ export function ScheduleReviewScreen() {
                       onPointerDown={editable ? (e) => onDown(e, b) : undefined}
                       onPointerMove={editable ? onMove : undefined}
                       onPointerUp={editable ? (e) => void onUp(e) : undefined}
+                      onClick={
+                        editable ? undefined : () => setDetail({ kind: 'task', key: b.taskId })
+                      }
                       style={{
                         ...stackGeom(b.taskId, pos.dayIdx),
                         top: topPx(pos.startMin),
@@ -878,11 +1009,31 @@ export function ScheduleReviewScreen() {
                         {b.title}
                       </div>
                       <div className="bm">
-                        {fmtMinutes(pos.startMin)}–{fmtMinutes(pos.startMin + b.durMin)}
+                        {fmtMinutes(pos.startMin)}–{fmtEnd(pos.startMin + b.durMin)}
                       </div>
                     </div>
                   )
                 })}
+
+                {/* Now line: today's column only (column 0 of the anchor
+                    window), ticking with the shared 30s interval. */}
+                {todayVisible && (
+                  <div className="sched-now" style={{ top: topPx(nowMin) }}>
+                    <span className="sched-now-dot" />
+                  </div>
+                )}
+
+                {detailCard && (
+                  <BlockPopover
+                    title={detailCard.title}
+                    when={detailCard.when}
+                    status={detailCard.status}
+                    detail={detailCard.detail}
+                    description={null}
+                    placement={detailCard.placement}
+                    onClose={() => setDetail(null)}
+                  />
+                )}
               </div>
             </div>
           </div>

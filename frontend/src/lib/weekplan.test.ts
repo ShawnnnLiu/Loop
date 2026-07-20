@@ -13,6 +13,7 @@ import {
   type PlanItem,
   buildWeekPlan,
   dayMeta,
+  fmtDur,
   milestoneGroups,
   railAction,
   railCounts,
@@ -434,5 +435,16 @@ describe('railCounts', () => {
     expect(railCounts(day([pitem({ state: 'unconfirmed' })]), 'failed')).toBe(
       '1 planned · not confirmed',
     )
+  })
+})
+
+describe('fmtDur', () => {
+  it('renders whole hours without a minutes part', () => {
+    expect(fmtDur(120)).toBe('2h')
+  })
+
+  it('renders mixed and sub-hour durations', () => {
+    expect(fmtDur(105)).toBe('1h 45m')
+    expect(fmtDur(45)).toBe('45m')
   })
 })

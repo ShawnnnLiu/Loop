@@ -472,6 +472,16 @@ def thresholds(service: Service, user_id: ActingUser) -> JSONResponse:
     return _json(service.thresholds_view())
 
 
+@router.get("/pathways")
+def pathways(
+    service: Service, user_id: ActingUser, track: str | None = None
+) -> JSONResponse:
+    """Narrative pathway cards for a track plus this user's deterministic slot
+    coverage (NP-D). Read-only, kernel-computed, no LLM; ``track`` is an optional
+    filter that falls back to the profile's resolved track."""
+    return _json(service.pathways_view(user_id, track=track))
+
+
 @router.get("/me")
 def me(service: Service, user_id: ActingUser) -> JSONResponse:
     return _json(service.me(user_id))

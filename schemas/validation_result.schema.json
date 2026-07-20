@@ -190,7 +190,10 @@
         "no_root_task",
         "orphan_source_claim",
         "expired_source_claim",
-        "company_module_missing_claim"
+        "company_module_missing_claim",
+        "pathway_not_selected",
+        "unknown_evidence_slot",
+        "slot_module_limit_exceeded"
       ],
       "title": "ViolationType",
       "type": "string"

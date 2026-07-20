@@ -66,6 +66,7 @@ from agentic_calendar.contracts.calendar_reconciliation import (
     ReconciliationDisposition,
     ReconciliationOutcome,
 )
+from agentic_calendar.contracts.career_track import CareerTrack
 from agentic_calendar.contracts.checkin_event import CheckinEvent, RecoveryAction
 from agentic_calendar.contracts.common_types import TaskCategory
 from agentic_calendar.contracts.data_access_audit import (
@@ -77,6 +78,7 @@ from agentic_calendar.contracts.drift_event import DriftEvent, RecommendedPolicy
 from agentic_calendar.contracts.hashing import canonical_payload_hash
 from agentic_calendar.contracts.motivation_profile import RecoveryPreference
 from agentic_calendar.contracts.notification_log import NotificationStatus
+from agentic_calendar.contracts.pathway_template import PathwayTemplate
 from agentic_calendar.contracts.placement_evidence import (
     EVIDENCE_MULTIPLIER_MAX,
     EVIDENCE_MULTIPLIER_MIN,
@@ -100,6 +102,7 @@ from agentic_calendar.contracts.recommitment import RecommitmentChoice, Recommit
 from agentic_calendar.contracts.resume_intake_input import ResumeIntakeInput
 from agentic_calendar.contracts.scheduler_output import SchedulerOutput, ScheduleStatus
 from agentic_calendar.contracts.sponsor import SponsorStatus
+from agentic_calendar.contracts.strategy_constraints import StrategyConstraints, UnfilledSlot
 from agentic_calendar.contracts.syllabus_units import SyllabusUnits
 from agentic_calendar.contracts.task_disposition import (
     DispositionSource,
@@ -108,6 +111,7 @@ from agentic_calendar.contracts.task_disposition import (
 )
 from agentic_calendar.contracts.task_plan import TaskPlan
 from agentic_calendar.contracts.telemetry import TelemetryEvent
+from agentic_calendar.contracts.user_profile import UserProfile
 from agentic_calendar.contracts.validation_result import (
     MAX_REPAIR_ATTEMPTS_LLM,
     NextAction,
@@ -129,6 +133,7 @@ from agentic_calendar.llm_nodes.prose_attachment import (
 )
 from agentic_calendar.llm_nodes.reflection_summary import ReflectionSummary
 from agentic_calendar.llm_nodes.user_facing_explanation import UserExplanation
+from agentic_calendar.narrative import SlotState, slot_coverage
 from agentic_calendar.planning.diff import (
     PlanContentDiff,
     as_plan_diff,
@@ -160,7 +165,13 @@ from agentic_calendar.supervisor.state import SupervisorSignal as Sig
 from agentic_calendar.supervisor.state import SupervisorState as S
 from agentic_calendar.telemetry.calibration import calibrate
 from agentic_calendar.telemetry.metrics import completion_rate
-from agentic_calendar.templates import theme_vocabulary
+from agentic_calendar.templates import (
+    PATHWAY_REGISTRY_VERSION,
+    get_pathway,
+    list_pathways,
+    pathways_for_track,
+    theme_vocabulary,
+)
 from agentic_calendar.validation import validate_syllabus_units, validate_task_plan
 
 from .environment import AppEnvironment
@@ -177,6 +188,9 @@ from .results import (
     IngestResult,
     MeResult,
     OnboardResult,
+    PathwayCard,
+    PathwaySlotView,
+    PathwaysResult,
     PlanDiffView,
     ProposeResult,
     RecommitResult,
@@ -495,6 +509,63 @@ class CycleService:
         return run
 
     # ------------------------------------------------------------------ #
+    # narrative pathways (NP-D) — deterministic selection resolution
+    # ------------------------------------------------------------------ #
+
+    def _resolve_selection_template(
+        self, profile: UserProfile
+    ) -> tuple[PathwayTemplate | None, bool]:
+        """The registry template a profile's selection resolves to, plus a
+        version-mismatch flag.
+
+        Returns ``(None, False)`` when there is no selection or the ``pathway_id``
+        is unknown, and ``(None, True)`` when the selection is pinned to a
+        ``pathway_registry_version`` the registry no longer serves — surfaced for
+        an explicit re-confirm, never silently re-mapped (pathway-selection spec).
+        Only a live, matching selection yields ``(template, False)``.
+        """
+        selection = profile.pathway_selection
+        if selection is None:
+            return None, False
+        template = get_pathway(selection.pathway_id)
+        if template is None:
+            return None, False
+        if selection.pathway_registry_version != PATHWAY_REGISTRY_VERSION:
+            return None, True
+        return template, False
+
+    def _pathway_constraints(
+        self, profile: UserProfile
+    ) -> tuple[StrategyConstraints | None, PathwayTemplate | None]:
+        """Story-layer ``StrategyConstraints`` for the profile's selection.
+
+        Returns ``(None, None)`` when nothing shapes generation (no selection, an
+        unknown pathway, or a stale version pin). Otherwise the kernel computes
+        the unfilled slots deterministically and they ride into the Strategist
+        bundle as typed constraints (``pathway_id`` + ``unfilled_slots``); the
+        resolved template is returned alongside so the validation gate disposes
+        exactly what the prompt was told to respect.
+        """
+        template, _mismatch = self._resolve_selection_template(profile)
+        if template is None:
+            return None, None
+        coverage = slot_coverage(profile, template)
+        filled = {c.slot_id for c in coverage if c.state is SlotState.FILLED}
+        unfilled = [
+            UnfilledSlot(
+                slot_id=slot.slot_id,
+                title=slot.title,
+                gap_module_hint=slot.gap_module_hint,
+            )
+            for slot in template.evidence_slots
+            if slot.slot_id not in filled
+        ]
+        constraints = StrategyConstraints(
+            pathway_id=template.pathway_id, unfilled_slots=unfilled
+        )
+        return constraints, template
+
+    # ------------------------------------------------------------------ #
     # propose
     # ------------------------------------------------------------------ #
 
@@ -580,11 +651,25 @@ class CycleService:
             )
         registry = {c.claim_id: c for c in claims}
 
+        # Narrative shaping (NP-D): when the profile carries a confirmed pathway
+        # selection that resolves against the pinned registry, the kernel
+        # computes the unfilled slots deterministically and the Strategist is
+        # *told* the gaps as typed constraints — never asked to find them. The
+        # same selected template + bound gate the output. No selection ⇒
+        # ``constraints`` is None and this is byte-identical to today.
+        constraints, selected_pathway = self._pathway_constraints(profile)
+        max_slot_modules = (
+            constraints.max_slot_modules if constraints is not None else 3
+        )
+
         syllabus: SyllabusUnits | None = None
         for attempt in range(MAX_REPAIR_ATTEMPTS_LLM + 1):
             try:
                 candidate = env.nodes.strategist.run(
-                    run_id=run.run_id, user_profile=profile, source_claims=claims
+                    run_id=run.run_id,
+                    user_profile=profile,
+                    source_claims=claims,
+                    strategy_constraints=constraints,
                 )
             except LLMNodeError as exc:
                 return self._propose_failure(self._llm_failure(run, exc))
@@ -594,6 +679,8 @@ class CycleService:
                 claim_registry=registry,
                 now=env.clock.now(),
                 run_id=run.run_id,
+                selected_pathway=selected_pathway,
+                max_slot_modules=max_slot_modules,
                 repair_attempt=attempt,
             )
             if result.valid:
@@ -3056,6 +3143,78 @@ class CycleService:
             inbound_calendar_sync_enabled=(
                 onboarding.inbound_calendar_sync_enabled if onboarding is not None else False
             ),
+        )
+
+    def pathways_view(
+        self, user_id: str, *, track: str | None = None
+    ) -> PathwaysResult:
+        """Registry cards for a track plus the user's deterministic coverage (NP-D).
+
+        ``track`` is the optional query-param filter; an unknown value falls back
+        to the track resolved from the profile's ``target_role`` (and if that is
+        also unresolvable, every pathway is shown). Fit counts and slot states
+        are computed by the ``narrative/`` kernel over the *stored* profile — no
+        LLM participates — and the cards are ordered by ``filled_slots``
+        descending, ties broken by registry order (a stable sort).
+        """
+        onboarding = self._require_onboarding(user_id)
+        profile = onboarding.user_profile
+        resolved_track = self._resolve_pathways_track(track, profile)
+        templates = (
+            pathways_for_track(resolved_track)
+            if resolved_track is not None
+            else list_pathways()
+        )
+        selection = profile.pathway_selection
+        selected_id = selection.pathway_id if selection is not None else None
+        _template, version_mismatch = self._resolve_selection_template(profile)
+        cards = [self._pathway_card(profile, t, selected_id) for t in templates]
+        cards.sort(key=lambda c: c.filled_slots, reverse=True)
+        return PathwaysResult(
+            track=resolved_track,
+            registry_version=PATHWAY_REGISTRY_VERSION,
+            selected_pathway_id=selected_id,
+            version_mismatch=version_mismatch,
+            cards=cards,
+        )
+
+    def _resolve_pathways_track(
+        self, track: str | None, profile: UserProfile
+    ) -> CareerTrack | None:
+        """Pick the track to draw cards for: an explicit valid query param wins,
+        else the track resolved from the profile's ``target_role`` (possibly
+        ``None`` when nothing resolves — the caller then shows every pathway)."""
+        if track is not None:
+            try:
+                return CareerTrack(track)
+            except ValueError:
+                pass  # unknown track string: fall back to the profile's track
+        return resolve_track(profile.target_role)
+
+    def _pathway_card(
+        self, profile: UserProfile, template: PathwayTemplate, selected_id: str | None
+    ) -> PathwayCard:
+        """One card: kernel coverage over ``template`` for ``profile``'s evidence."""
+        coverage = slot_coverage(profile, template)
+        slots = [
+            PathwaySlotView(
+                slot_id=cover.slot_id,
+                title=slot.title,
+                state=cover.state,
+                matched_item_indices=list(cover.matched_item_indices),
+            )
+            for slot, cover in zip(template.evidence_slots, coverage, strict=True)
+        ]
+        return PathwayCard(
+            pathway_id=template.pathway_id,
+            display_name=template.display_name,
+            spine=template.spine,
+            audience_note=template.audience_note,
+            career_track=template.career_track,
+            filled_slots=sum(1 for c in coverage if c.state is SlotState.FILLED),
+            total_slots=len(template.evidence_slots),
+            slots=slots,
+            selected=template.pathway_id == selected_id,
         )
 
     def inbound_calendar_sync_enabled(self, user_id: str) -> bool:

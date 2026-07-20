@@ -239,6 +239,17 @@ def test_read_endpoints_expose_projections() -> None:
     assert thresholds.status_code == 200
     assert thresholds.json()["sections"]
 
+    pathways = client.get("/api/pathways?track=swe")
+    assert pathways.status_code == 200
+    pbody = pathways.json()
+    assert pbody["track"] == "swe"
+    assert pbody["registry_version"] == "pathway-registry-v1"
+    assert pbody["selected_pathway_id"] is None  # canonical profile skips the step
+    ids = [c["pathway_id"] for c in pbody["cards"]]
+    assert "backend-infrastructure-engineer" in ids
+    # No evidence stored → every pillar empty, honest 0-of-n counts.
+    assert all(card["filled_slots"] == 0 for card in pbody["cards"])
+
     acct = client.get("/api/accountability")
     assert acct.status_code == 200
     assert acct.json()["has_motivation_profile"] is False  # empty-state (axiom 21)

@@ -84,12 +84,11 @@ _PINNED: list[tuple[str, object, str, str]] = [
         "_STRATEGIST_SYSTEM",
         adapter.STRATEGIST_CONFIG,
         # v5 (PD-B): plan-direction translate rule + hedge extension changed
-        # the system-prompt bytes; the labeled-block assembly change is
-        # covered by the full-rendered pin below. Version date bumped to
-        # 2026-07-20 (NP-A) for the StrategyConstraints story-layer fields —
-        # system-prompt bytes are unchanged, so this hash is unchanged.
-        "strategist-v5-2026-07-20",
-        "15910b0550ab2bc28fe45d4761b3ef207762fc6163bac58e61ceeac94e3c0b41",
+        # the system-prompt bytes. v6 (NP-D): system-prompt rule 7 (link up to
+        # max_slot_modules modules to unfilled_slots via evidence_slot_id) +
+        # the seven-rule self-check line changed the bytes again.
+        "strategist-v6-2026-07-20",
+        "b3fbf12f2a90065f998a086171bc44bfb288c924d21c45d01bbe9bd73581e174",
     ),
     (
         "_PLANNER_SYSTEM",
@@ -352,8 +351,9 @@ _FULL_PROMPT_PINS: list[
         _strategist_full,
         # 2026-07-20 (NP-A): StrategyConstraints story-layer default fields now
         # serialize into the input bundle — rendered bytes changed, rehashed.
-        "strategist-v5-2026-07-20",
-        "0ad3ad9014410150a677a958ce80d8ca8debe1f49a7e42f238e3d781239edb5c",
+        # v6 (NP-D): system-prompt rule 7 changed the system frame, rehashed.
+        "strategist-v6-2026-07-20",
+        "498d544a77d4effb8a3e7604fb5ed0a4d37ab0431d845b7a46f89ffe2575e3c6",
     ),
     (
         "planner",

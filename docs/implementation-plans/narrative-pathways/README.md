@@ -66,8 +66,9 @@ narrative:
 | `03-llm-surfaces.md` | What LLMs propose and where: ResumeIntakeNode tag extension, UserFacingExplanationNode story summaries, why **no new node class** is needed in Loop, prompt-exposure table, groundedness posture, cost. |
 | `04-loop-increments.md` | NP-A…NP-F Loop implementation increments (one commit each), seed pathway content for the three live tracks, definition of done. |
 | `05-tandem-vision.md` | The admissions end state: activity-shaped evidence, major-anchored pathways, the essay-editor seam (the future sixth node class), counselor visibility via the existing sponsor layer, staging gates. |
-| `06-knowledge-tree.md` | The per-pathway knowledge tree (added 2026-07-16): generated DAG (see `07-…`) crowned by the evidence-slot capstones, five deterministic mastery tiers, the illuminated-map UI spec, KT-A…KT-D increments. Display-layer only — never a second prerequisite engine. Hi-fi visual reference: `docs/design-reference/Loop - Pathway Map.html`. |
-| `07-tree-generation.md` | How knowledge trees come to exist (added 2026-07-17): deterministic generation from a curated, versioned **skill graph** (prerequisite edges + minutes prior + blurb per `skill_id`) and per-slot seed skills; build-time `make trees` / `trees-check` tool with committed, byte-identical output; g-series open decisions. Curation moves from per-pathway trees to per-skill graph rows. |
+| `06-knowledge-tree.md` | The **knowledge map** (added 2026-07-16 as a DAG; reworked 2026-07-19 to expandable groups, filename kept): per-**account** map of group nodes that click-expand into skill nodes, four deterministic mastery tiers, the **add-only onboarding rule**, user customization (vocabulary-picked node additions that feed planning; user-created named groups/nodes + descriptions + private notes as a **personal layer that never counts toward pathway progress or enters prompts**; per-node mastery set-points incl. downward), KT-A…KT-D increments. Never a second prerequisite engine. Design canvas (`docs/design-reference/Loop - Pathway Map.html`) needs a re-pass for the group interaction. |
+| `07-tree-generation.md` | How knowledge maps come to exist (added 2026-07-17 for the DAG; reworked 2026-07-19 for groups): deterministic generation from a curated, versioned **skill grouping** (group assignment + minutes prior + blurb per `skill_id`) and per-slot seed skills; build-time `make maps` / `maps-check` tool with committed, byte-identical output; g-series open decisions. No edges, no cycles — generation is membership lookup. |
+| `08-mastery-memory.md` | Completions that shape the next plan (added 2026-07-19): optional `solve_confidence` triage at check-off, the three-source **mastery basis fold** (confidence-weighted telemetry + add-only onboarding grants + user set-points, the only path down), skill-keyed and permanent across plan versions, and a typed `StrategyConstraints` mastery slice so regeneration stops re-assigning honed skills and allocates bounded review instead. Amends `06-…`'s non-interference rule with one advisory-context exception; MM-A…MM-C increments; m-series open decisions. |
 
 ## How these docs plug into existing plans
 
@@ -95,9 +96,12 @@ narrative:
 1. **Loop (this plan, NP-A…NP-F):** career pathways only, three live tracks
    (`swe`, `mle`, `ai_engineer`), one new wizard step, story panel in
    Progress. No essay features, no new LLM node class.
-1b. **Knowledge map (KT-A…KT-D, `06-…`):** the per-pathway tree + mastery
-   tiers + map UI; interleaves with or follows the NP series (KT-A/B need
-   NP-B, KT-C needs NP-D, KT-D needs NP-E).
+1b. **Knowledge map (KT-A…KT-D, `06-…`):** the per-account grouped map +
+   mastery tiers + customization + map UI; interleaves with or follows the
+   NP series (KT-A/B need NP-B, KT-C needs NP-D, KT-D needs NP-E).
+1c. **Mastery memory (MM-A…MM-C, `08-…`):** confidence triage capture +
+   mastery-aware generation; follows the KT series (MM-A needs KT-A, MM-B
+   needs KT-B, MM-C needs KT-C; KT-D independent).
 2. **Track expansion interlock:** each career landed via
    `career-track-expansion/` should land its 2–4 pathway templates in the
    same review, once the registry exists.
@@ -120,17 +124,22 @@ narrative:
 4. **Registry curation ownership**: same human-review gate as the taxonomy;
    whether pathway content review needs a second pair of eyes beyond the
    normal commit review is the user's call.
-5. **Knowledge-tree decisions d1–d4** (tier names, honed threshold basis,
-   whether a `locked` display state exists, tree size): see the open
-   decisions section of `06-knowledge-tree.md`.
-6. **Tree-generation decisions g1–g3** (transitive reduction on/off,
-   whether hand overrides on generated trees are ever allowed, where
-   blurbs live): see `07-tree-generation.md`.
+5. **Knowledge-map decisions d1–d6** (tier names — now four, `locked`
+   resolved by removal; honed threshold basis; map size + group
+   granularity; group expansion interaction; whether a map can exist
+   without a pathway selection): see the open decisions section of
+   `06-knowledge-tree.md`.
+6. **Map-generation decisions g2–g4** (hand overrides still none in v1,
+   blurb home, group granularity; g1 transitive reduction resolved by
+   removal — no edges exist): see `07-tree-generation.md`.
+7. **Mastery-memory decisions m1–m6** (confidence weights, triage surface,
+   mastered = honed vs proven, advisory vs hard exclusion, interval review
+   parked, onboarding grant sizing): see `08-mastery-memory.md`.
 
 ## Kickoff prompt (copy-paste into a fresh session, when implementation is approved)
 
 ```
-Read docs/implementation-plans/narrative-pathways/README.md, then the seven
+Read docs/implementation-plans/narrative-pathways/README.md, then the eight
 numbered docs in that folder, then docs/specs/milestone-template.schema.md,
 docs/specs/user-profile.schema.md, docs/specs/resume-extraction.schema.md,
 docs/specs/strategy-constraints.schema.md,

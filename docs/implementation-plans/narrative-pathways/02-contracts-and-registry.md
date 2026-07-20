@@ -100,9 +100,9 @@ split — the contract enforces shape, the registry review owns content):
 - `gap_module_hint` is display/prompt seed text, never control flow.
 - `branch_skill_ids` (3–6 per slot, content guideline): each member
   resolves against the pinned skill taxonomy (registry-completeness test,
-  like `required_themes_any`). They are the seed set the knowledge-tree
-  generator expands (`06-…` / `07-tree-generation.md`) and have no
-  control-plane effect.
+  like `required_themes_any`). They are the seed set the knowledge-map
+  generator resolves to groups (`06-…` / `07-tree-generation.md`) and have
+  no control-plane effect.
 - Templates are deterministic literals; an LLM never produces one at runtime.
 
 ## 4. `PathwaySelection` — typed control-plane state
@@ -192,19 +192,19 @@ pinned to a version the registry no longer serves — surfaced, never silently
 re-mapped). Intake-side failures reuse the existing generation codes
 unchanged; theme/kind membership violations are repair-loop material like
 weak spots, surfacing as `REPAIR_LIMIT_EXCEEDED` when persistent.
-Knowledge-tree codes are listed in `06-…`; the skill-graph /
-tree-generation structured violations (`SKILL_GRAPH_CYCLE`,
-`SKILL_GRAPH_MISSING_ENTRY`, `SLOT_SEEDS_MISSING`,
-`KNOWLEDGE_TREE_BUDGET_EXCEEDED`) are build/registry-time only and live in
-`07-tree-generation.md`.
+Knowledge-map codes are listed in `06-…`; the skill-grouping /
+map-generation structured violations (`SKILL_GROUPING_MISSING_ENTRY`,
+`SLOT_SEEDS_MISSING`, `KNOWLEDGE_MAP_BUDGET_EXCEEDED`) are
+build/registry-time only and live in `07-tree-generation.md`.
 
 ## Spec-first checklist for NP-A (order matters)
 
 1. `docs/axioms/00-product-thesis.md` — deterministic-ownership line above.
 2. `docs/axioms/03-data-contracts.md` — register the two new specs.
 3. `docs/specs/pathway-template.schema.md`, `pathway-selection.schema.md`,
-   `skill-graph.schema.md` (new; the last per `07-tree-generation.md`,
-   authored in KT-A); `user-profile.schema.md`,
+   `skill-grouping.schema.md`, `knowledge-map-overlay.schema.md` (new; the
+   last two per `07-tree-generation.md` / `06-…`, authored in KT-A);
+   `user-profile.schema.md`,
    `resume-extraction.schema.md`, `strategy-constraints.schema.md`,
    `syllabus-units.schema.md` (amend).
 4. Contracts + fixtures (valid + invalid with expected structured

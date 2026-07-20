@@ -35,6 +35,7 @@ source_modules =
     agentic_calendar.disposition
     agentic_calendar.retrieval
     agentic_calendar.skill_taxonomy
+    agentic_calendar.narrative
 forbidden_modules =
     openai
     anthropic
@@ -554,3 +555,42 @@ forbidden_modules =
     agentic_calendar.consent
     agentic_calendar.identity
     agentic_calendar.disposition
+
+# ---------------------------------------------------------------------------
+# Contract 20: Narrative kernel leaf-deps (narrative-pathways NP-B).
+#
+# `narrative` (deterministic pathway fit / slot coverage / story progress) is a
+# shared kernel like `prerequisites`: it may depend only on `common` and
+# `contracts`, and any region / the composition root may import it. Nothing
+# inside it may reach back into a region or another kernel — not even
+# `templates`, which owns the PathwayTemplate literals: the kernel is handed a
+# template, it never reads the registry. It is intentionally NOT in the
+# independence set so regions can import it. It computes fit deterministically
+# from confirmed evidence — an LLM never ranks pathways (axiom 00).
+# ---------------------------------------------------------------------------
+[importlinter:contract:narrative-is-leaf]
+name = narrative/ may only depend on common/ and contracts/.
+type = forbidden
+source_modules =
+    agentic_calendar.narrative
+forbidden_modules =
+    agentic_calendar.supervisor
+    agentic_calendar.validation
+    agentic_calendar.scheduler
+    agentic_calendar.planning
+    agentic_calendar.llm_nodes
+    agentic_calendar.prerequisites
+    agentic_calendar.calendar_writer
+    agentic_calendar.approval
+    agentic_calendar.accountability
+    agentic_calendar.telemetry
+    agentic_calendar.drift
+    agentic_calendar.duration_estimation
+    agentic_calendar.source_claims
+    agentic_calendar.cache
+    agentic_calendar.templates
+    agentic_calendar.consent
+    agentic_calendar.identity
+    agentic_calendar.disposition
+    agentic_calendar.retrieval
+    agentic_calendar.skill_taxonomy

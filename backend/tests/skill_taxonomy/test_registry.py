@@ -18,13 +18,13 @@ from agentic_calendar.skill_taxonomy import (
 
 
 def test_default_path_points_at_the_checked_in_seed() -> None:
-    assert DEFAULT_TAXONOMY_PATH.name == "skill_taxonomy_v2.json"
+    assert DEFAULT_TAXONOMY_PATH.name == "skill_taxonomy_v3.json"
     assert DEFAULT_TAXONOMY_PATH.is_file()
 
 
 def test_load_taxonomy_validates_the_seed_file() -> None:
     taxonomy = load_taxonomy()
-    assert taxonomy.taxonomy_version == "skill-taxonomy-v2"
+    assert taxonomy.taxonomy_version == "skill-taxonomy-v3"
     assert len(taxonomy.entries) > 0
 
 

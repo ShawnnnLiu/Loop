@@ -180,7 +180,7 @@ def test_every_v3_case_parses_into_typed_node_inputs() -> None:
 
 
 def test_capture_v3_set_now_mismatches_served_taxonomy() -> None:
-    """eval_set_v3 pins skill-taxonomy-v1; the registry serves v2. The
+    """eval_set_v3 pins skill-taxonomy-v1; the registry serves v3. The
     version guard must refuse the capture rather than silently stamping a
     recording the v3 cases cannot grade."""
     eval_set = _load_set(_EVAL_SET_V3_PATH)
@@ -190,14 +190,18 @@ def test_capture_v3_set_now_mismatches_served_taxonomy() -> None:
         store=InMemoryLlmCallLogStore(),
         label="canned-intake-test",
     )
-    assert recording.taxonomy_version == "skill-taxonomy-v2"
+    assert recording.taxonomy_version == "skill-taxonomy-v3"
     with pytest.raises(EvalError, match="taxonomy_version"):
         grade_recording(eval_set, recording)
 
 
 def test_capture_v5_stamps_taxonomy_version_and_haiku_model() -> None:
     """The resume_intake branch: real adapter wiring, one attempt per case,
-    taxonomy pinned on the recording (06-skill-taxonomy discipline)."""
+    taxonomy pinned on the recording (06-skill-taxonomy discipline).
+
+    eval_set_v5 pins skill-taxonomy-v2; the registry serves v3, so grading
+    now refuses the fresh capture (the checked-in v5 fixture twin still
+    grades against its own pinned version)."""
     eval_set = _load_set(_EVAL_SET_V5_PATH)
     transport = _CannedTransport()
     recording = capture(
@@ -209,11 +213,10 @@ def test_capture_v5_stamps_taxonomy_version_and_haiku_model() -> None:
 
     assert set(recording.outputs) == {case.case_id for case in eval_set.cases}
     assert all(len(attempts) == 1 for attempts in recording.outputs.values())
-    assert recording.taxonomy_version == "skill-taxonomy-v2"
+    assert recording.taxonomy_version == "skill-taxonomy-v3"
     assert recording.model_name == "claude-haiku-4-5"
-
-    report = grade_recording(eval_set, recording)
-    assert report.overall.schema_validity_rate == 1.0
+    with pytest.raises(EvalError, match="taxonomy_version"):
+        grade_recording(eval_set, recording)
 
 
 def test_cli_validate_only_is_offline_and_green() -> None:

@@ -47,6 +47,15 @@ class SyllabusModule(BaseModel):
     need the selection + constraints, so they live in the validation layer,
     NP-D). Downstream it is opaque module metadata: the Planner and Scheduler
     never behave differently because of story state."""
+    knowledge_node_ids: list[str] = Field(default_factory=list, max_length=3)
+    """Optional knowledge-map nodes this module trains (narrative-pathways
+    KT-A; ``06-knowledge-tree.md``). Mirrors ``source_claim_ids``: the
+    Strategist proposes them from the account's pathway-content vocabulary
+    (KT-C); the deterministic validator disposes (``UNKNOWN_KNOWLEDGE_NODE``,
+    checked against the account map in KT-C - it needs the map, so it lives in
+    the validation layer, not here). Bounded to 3. Tasks inherit the linkage
+    via their existing ``module_id``; the Planner and Scheduler never see the
+    map."""
 
     @model_validator(mode="after")
     def _high_priority_needs_reason(self) -> SyllabusModule:

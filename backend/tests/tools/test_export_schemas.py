@@ -98,6 +98,15 @@ def test_every_contract_registered() -> None:
         # Narrative pathways (NP-A story layer)
         "pathway_template",
         "pathway_selection",
+        # Narrative pathways (KT-A knowledge map)
+        "knowledge_map",
+        "skill_grouping",
+        "knowledge_node_addition",
+        "knowledge_custom_group",
+        "knowledge_custom_node",
+        "knowledge_node_note",
+        "knowledge_mastery_grant",
+        "knowledge_mastery_setpoint",
     }
     assert set(CONTRACTS.keys()) == expected
 

@@ -86,6 +86,7 @@ company-specific-claim rule).
 | `modules[].source_claim_ids` | Claims that justify the module |
 | `modules[].company_specific` | Whether the module is tailored to a specific target company (default `false`). The Strategist proposes it; the validator uses it to enforce the claim-reference rule below. |
 | `modules[].evidence_slot_id` | Optional typed link to an evidence slot of the selected pathway (default absent; narrative-pathways NP-A). The Strategist proposes it when `strategy_constraints.unfilled_slots` names gaps; the deterministic validator disposes (rules below). Downstream it is opaque module metadata: the Planner and Scheduler never behave differently because of story state. |
+| `modules[].knowledge_node_ids` | Optional list (default empty, `<= 3`) of knowledge-map node ids this module trains (narrative-pathways KT-A; `06-knowledge-tree.md`). Mirrors `source_claim_ids` mechanics: the Strategist proposes them from the account's pathway-content vocabulary (KT-C); the deterministic validator disposes (`UNKNOWN_KNOWLEDGE_NODE`). Tasks inherit the linkage via their existing `module_id`; the Planner and Scheduler never see the map. |
 
 ## Validation Rules
 
@@ -103,6 +104,7 @@ company-specific-claim rule).
 - `evidence_slot_id` set but no pathway selected → `PATHWAY_NOT_SELECTED` (validation layer, NP-D).
 - `evidence_slot_id` not a slot of the selected pathway → `UNKNOWN_EVIDENCE_SLOT` (validation layer, NP-D).
 - Slot-linked module count above `strategy_constraints.max_slot_modules` → `SLOT_MODULE_LIMIT_EXCEEDED` (validation layer, NP-D).
+- `knowledge_node_ids` holds at most 3 entries (contract bound). Each id must be present on the account's knowledge map → otherwise `UNKNOWN_KNOWLEDGE_NODE` (validation layer, KT-C). Untagged modules are valid - general modules exist.
 
 ## Syllabus Staleness Rules
 

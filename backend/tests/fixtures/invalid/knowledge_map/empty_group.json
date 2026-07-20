@@ -1,0 +1,21 @@
+{
+  "groups": [
+    {
+      "group_id": "kg-retrieval",
+      "title": "Retrieval",
+      "branch": "llm-feature-depth",
+      "blurb": "b",
+      "member_node_ids": []
+    }
+  ],
+  "nodes": [
+    {
+      "node_id": "kn-rag",
+      "title": "Retrieval fundamentals",
+      "kind": "skill",
+      "skill_id": "skill.rag",
+      "group_id": "kg-retrieval",
+      "expected_minutes": 360
+    }
+  ]
+}

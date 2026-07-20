@@ -1,0 +1,49 @@
+{
+  "$defs": {
+    "MasteryGrantSource": {
+      "description": "What onboarding flow produced a ``MasteryGrant`` (knowledge-map-overlay\nspec, KT-A). The only two flows allowed to write mastery grants.",
+      "enum": [
+        "onboarding",
+        "evidence"
+      ],
+      "title": "MasteryGrantSource",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Mastery-basis credit from onboarding / evidence confirmation.\n\nPathway content, and the only mastery record onboarding may write. The\n``node_id`` is a generated (taxonomy-anchored) node only: a grant has no\nmeaning on a personal node, so a ``kcn-`` id is rejected at parse time.",
+  "properties": {
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "credit_minutes": {
+      "exclusiveMinimum": 0,
+      "title": "Credit Minutes",
+      "type": "integer"
+    },
+    "node_id": {
+      "pattern": "^kn-[a-z0-9-]+$",
+      "title": "Node Id",
+      "type": "string"
+    },
+    "source": {
+      "$ref": "#/$defs/MasteryGrantSource"
+    },
+    "user_id": {
+      "minLength": 1,
+      "title": "User Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "user_id",
+    "node_id",
+    "credit_minutes",
+    "source",
+    "created_at"
+  ],
+  "title": "MasteryGrant",
+  "type": "object"
+}

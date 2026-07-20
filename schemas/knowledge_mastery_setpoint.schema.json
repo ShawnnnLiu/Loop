@@ -1,0 +1,45 @@
+{
+  "$defs": {
+    "MasteryTier": {
+      "description": "The four-state deterministic mastery ladder (knowledge-map, KT-A).\n\nComputed by the ``narrative/`` map-state kernel (KT-B) from stored records;\nan LLM never assigns, names, or explains a tier. ``target_tier`` on a\n``MasterySetPoint`` (knowledge-map-overlay spec) is a member of this enum.",
+      "enum": [
+        "discovered",
+        "training",
+        "honed",
+        "proven"
+      ],
+      "title": "MasteryTier",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "The explicit per-node user control - the only record that can lower\nmastery. Applies to any node; on a custom node it caps at ``honed`` (a\nstore/kernel concern, KT-B - the contract accepts any ``MasteryTier``).",
+  "properties": {
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "node_id": {
+      "pattern": "^k(n|cn)-[a-z0-9-]+$",
+      "title": "Node Id",
+      "type": "string"
+    },
+    "target_tier": {
+      "$ref": "#/$defs/MasteryTier"
+    },
+    "user_id": {
+      "minLength": 1,
+      "title": "User Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "user_id",
+    "node_id",
+    "target_tier",
+    "created_at"
+  ],
+  "title": "MasterySetPoint",
+  "type": "object"
+}

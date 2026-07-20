@@ -1,0 +1,35 @@
+{
+  "groups": [
+    {
+      "group_id": "kg-retrieval",
+      "title": "Retrieval",
+      "branch": "llm-feature-depth",
+      "blurb": "b",
+      "member_node_ids": ["kn-rag"]
+    }
+  ],
+  "nodes": [
+    {
+      "node_id": "kn-rag",
+      "title": "Retrieval fundamentals",
+      "kind": "skill",
+      "skill_id": "skill.rag",
+      "group_id": "kg-retrieval",
+      "expected_minutes": 360
+    },
+    {
+      "node_id": "kn-cap-one",
+      "title": "Capstone one",
+      "kind": "capstone",
+      "evidence_slot_id": "llm-feature-depth",
+      "branch": "llm-feature-depth"
+    },
+    {
+      "node_id": "kn-cap-two",
+      "title": "Capstone two",
+      "kind": "capstone",
+      "evidence_slot_id": "llm-feature-depth",
+      "branch": "llm-feature-depth"
+    }
+  ]
+}

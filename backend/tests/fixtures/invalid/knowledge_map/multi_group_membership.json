@@ -1,0 +1,28 @@
+{
+  "groups": [
+    {
+      "group_id": "kg-a",
+      "title": "Group A",
+      "branch": "llm-feature-depth",
+      "blurb": "b",
+      "member_node_ids": ["kn-rag"]
+    },
+    {
+      "group_id": "kg-b",
+      "title": "Group B",
+      "branch": "public-artifact",
+      "blurb": "b",
+      "member_node_ids": ["kn-rag"]
+    }
+  ],
+  "nodes": [
+    {
+      "node_id": "kn-rag",
+      "title": "Retrieval fundamentals",
+      "kind": "skill",
+      "skill_id": "skill.rag",
+      "group_id": "kg-a",
+      "expected_minutes": 360
+    }
+  ]
+}

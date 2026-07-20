@@ -42,6 +42,14 @@
           "default": null,
           "title": "Evidence Slot Id"
         },
+        "knowledge_node_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 3,
+          "title": "Knowledge Node Ids",
+          "type": "array"
+        },
         "module_id": {
           "minLength": 1,
           "title": "Module Id",

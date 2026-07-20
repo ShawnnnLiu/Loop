@@ -13,6 +13,8 @@ The schemas in `../specs/` are the canonical contracts between LLM nodes and det
 - `resume_extraction` — schema-bound proposal returned by the ResumeIntakeNode. See `../specs/resume-extraction.schema.md`.
 - `pathway_template` - Curated narrative pathway with evidence slots; a deterministic registry literal, never LLM-authored. See `../specs/pathway-template.schema.md`.
 - `pathway_selection` - The user's explicit pathway choice, pinned to a pathway registry version. See `../specs/pathway-selection.schema.md`.
+- `skill_grouping` - Versioned overlay beside the skill taxonomy: the curated group, minutes prior, and blurb for each `skill_id`; input to the deterministic knowledge-map generator. See `../specs/skill-grouping.schema.md`.
+- `knowledge_map_overlay` - Six append-only per-account record types (node additions, custom groups/nodes, notes, mastery grants, set-points) that overlay a pathway's generated `KnowledgeMap`. See `../specs/knowledge-map-overlay.schema.md`.
 - `source_claim` — Atomic claim from an external or internal source with provenance, deterministic confidence score, and expiration. See `../specs/source-claim.schema.md`.
 - `syllabus_units` — Structured learning modules with outcomes, priority, difficulty, and source claims. See `../specs/syllabus-units.schema.md`.
 - `task_plan` — Concrete tasks derived from syllabus units. Must not include `prerequisites_met`. See `../specs/task-plan.schema.md`.
@@ -34,6 +36,8 @@ The schemas in `../specs/` are the canonical contracts between LLM nodes and det
 | `resume_extraction` | ResumeIntakeNode | onboarding UI (display + edit), tests |
 | `pathway_template` | pathway registry (deterministic literals) | onboarding UI (pathway cards), `narrative/` kernel, Strategist constraints composition |
 | `pathway_selection` | onboarding UI / Tuning via the `POST /api/onboard` confirm gate | profile service, `narrative/` kernel, Strategist constraints composition |
+| `skill_grouping` | curated literal (KT-B), reviewed offline | knowledge-map generator, add-node placement path |
+| `knowledge_map_overlay` | onboarding/evidence grants + explicit user map actions (KT-C) | `narrative/` map-state kernel, map API, map UI |
 | `source_claim` | RAG ingestion, claim extractor, deterministic scorer | StrategistNode, syllabus validator, cache, audit views |
 | `syllabus_units` | StrategistNode | syllabus validator, PlannerNode, coverage metrics |
 | `task_plan` | PlannerNode | task validator, Scheduler, approval UI |

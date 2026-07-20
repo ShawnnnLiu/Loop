@@ -388,7 +388,7 @@ PLANNER_CONFIG = AdapterConfig(
     # link; it serializes into the validated-syllabus block (default null,
     # opaque metadata — the Planner is untouched by design). System-prompt
     # template text is unchanged.
-    prompt_version="planner-v5-2026-07-20",
+    prompt_version="planner-v6-2026-07-20",
     max_tokens=16384,
     input_price_per_mtok=3.00,
     output_price_per_mtok=15.00,

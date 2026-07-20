@@ -1,0 +1,104 @@
+{
+  "$defs": {
+    "SkillGroup": {
+      "additionalProperties": false,
+      "description": "One curated group: a named cluster skills are assigned to.",
+      "properties": {
+        "blurb": {
+          "minLength": 1,
+          "title": "Blurb",
+          "type": "string"
+        },
+        "group_id": {
+          "pattern": "^kg-[a-z0-9-]+$",
+          "title": "Group Id",
+          "type": "string"
+        },
+        "title": {
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "group_id",
+        "title",
+        "blurb"
+      ],
+      "title": "SkillGroup",
+      "type": "object"
+    },
+    "SkillGroupingEntry": {
+      "additionalProperties": false,
+      "description": "One curated ``skill_id \u2192 group`` placement with its minutes prior.",
+      "properties": {
+        "blurb": {
+          "minLength": 1,
+          "title": "Blurb",
+          "type": "string"
+        },
+        "expected_minutes": {
+          "minimum": 1,
+          "title": "Expected Minutes",
+          "type": "integer"
+        },
+        "group_id": {
+          "pattern": "^kg-[a-z0-9-]+$",
+          "title": "Group Id",
+          "type": "string"
+        },
+        "skill_id": {
+          "minLength": 1,
+          "title": "Skill Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "skill_id",
+        "group_id",
+        "expected_minutes",
+        "blurb"
+      ],
+      "title": "SkillGroupingEntry",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A versioned skill grouping: groups + per-skill placement entries.",
+  "properties": {
+    "entries": {
+      "items": {
+        "$ref": "#/$defs/SkillGroupingEntry"
+      },
+      "minItems": 1,
+      "title": "Entries",
+      "type": "array"
+    },
+    "groups": {
+      "items": {
+        "$ref": "#/$defs/SkillGroup"
+      },
+      "minItems": 1,
+      "title": "Groups",
+      "type": "array"
+    },
+    "skill_grouping_version": {
+      "minLength": 1,
+      "title": "Skill Grouping Version",
+      "type": "string"
+    },
+    "taxonomy_version": {
+      "minLength": 1,
+      "title": "Taxonomy Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "skill_grouping_version",
+    "taxonomy_version",
+    "groups",
+    "entries"
+  ],
+  "title": "SkillGrouping",
+  "type": "object"
+}

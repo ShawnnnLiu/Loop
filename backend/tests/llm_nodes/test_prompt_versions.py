@@ -98,9 +98,10 @@ _PINNED: list[tuple[str, object, str, str]] = [
     (
         "_PLANNER_SYSTEM",
         adapter.PLANNER_CONFIG,
-        # Version date bumped to 2026-07-20 (NP-A) for the SyllabusModule
-        # evidence_slot_id field — system-prompt bytes unchanged, hash same.
-        "planner-v5-2026-07-20",
+        # Bumped v5->v6 (KT-A) for the SyllabusModule knowledge_node_ids field
+        # (v5 was NP-A's evidence_slot_id). System-prompt template text is
+        # unchanged in both cases, so the system-prompt hash is the same.
+        "planner-v6-2026-07-20",
         "71cb5b40315ec2f2ef0411c03928a27518f1a6df05903f4c5c4a46e9a0626513",
     ),
     (
@@ -501,10 +502,11 @@ _FULL_PROMPT_PINS: list[
     (
         "planner",
         _planner_full,
-        # 2026-07-20 (NP-A): SyllabusModule evidence_slot_id serializes into the
-        # validated-syllabus block — rendered bytes changed, rehashed.
-        "planner-v5-2026-07-20",
-        "c7097dbd61a824ec973191de62d083e2385d48d520c036e1fc5b8217b8782290",
+        # v6 (KT-A): SyllabusModule knowledge_node_ids serializes into the
+        # validated-syllabus block (default []) — rendered bytes changed,
+        # rehashed. (v5 was NP-A's evidence_slot_id.)
+        "planner-v6-2026-07-20",
+        "bf92ef3556fa4d11350a3cb02fc15d4f8ac9ff67f7fdbb59002ffeb938e8a8f8",
     ),
     (
         "reflection_summary",

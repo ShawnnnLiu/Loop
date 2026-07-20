@@ -1,0 +1,37 @@
+{
+  "groups": [
+    {
+      "group_id": "kg-retrieval",
+      "title": "Retrieval & Grounding",
+      "branch": "llm-feature-depth",
+      "blurb": "Finding and feeding the right context to a model.",
+      "member_node_ids": ["kn-rag", "kn-embeddings"]
+    }
+  ],
+  "nodes": [
+    {
+      "node_id": "kn-rag",
+      "title": "Retrieval fundamentals",
+      "kind": "skill",
+      "skill_id": "skill.rag",
+      "group_id": "kg-retrieval",
+      "expected_minutes": 360,
+      "blurb": "How dense and lexical retrieval differ, and when each wins."
+    },
+    {
+      "node_id": "kn-embeddings",
+      "title": "Embeddings",
+      "kind": "skill",
+      "skill_id": "skill.embeddings",
+      "group_id": "kg-retrieval",
+      "expected_minutes": 240
+    },
+    {
+      "node_id": "kn-llm-feature-capstone",
+      "title": "LLM feature shipped",
+      "kind": "capstone",
+      "evidence_slot_id": "llm-feature-depth",
+      "branch": "llm-feature-depth"
+    }
+  ]
+}

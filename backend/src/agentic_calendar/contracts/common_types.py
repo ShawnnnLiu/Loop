@@ -69,6 +69,44 @@ class EvidenceKind(StrEnum):
     COURSEWORK = "coursework"
 
 
+class KnowledgeNodeKind(StrEnum):
+    """What a knowledge-map node represents (pathway-template spec, KT-A).
+
+    ``skill`` nodes are taxonomy-anchored and live in exactly one group;
+    ``capstone`` nodes are branch-level (one per evidence slot) and belong to
+    no group. There are no other kinds and no edges between nodes.
+    """
+
+    SKILL = "skill"
+    CAPSTONE = "capstone"
+
+
+class MasteryTier(StrEnum):
+    """The four-state deterministic mastery ladder (knowledge-map, KT-A).
+
+    Computed by the ``narrative/`` map-state kernel (KT-B) from stored records;
+    an LLM never assigns, names, or explains a tier. ``target_tier`` on a
+    ``MasterySetPoint`` (knowledge-map-overlay spec) is a member of this enum.
+    """
+
+    DISCOVERED = "discovered"
+    """On the map, no work yet."""
+    TRAINING = "training"
+    """Work underway (a linked task, or basis below the honed bar)."""
+    HONED = "honed"
+    """The study happened, or the user self-assessed ownership."""
+    PROVEN = "proven"
+    """Honed and backed by a confirmed evidence anchor (pathway nodes only)."""
+
+
+class MasteryGrantSource(StrEnum):
+    """What onboarding flow produced a ``MasteryGrant`` (knowledge-map-overlay
+    spec, KT-A). The only two flows allowed to write mastery grants."""
+
+    ONBOARDING = "onboarding"
+    EVIDENCE = "evidence"
+
+
 class TaskCategory(StrEnum):
     """Allowed values for ``task.category`` (see task-plan spec)."""
 

@@ -61,6 +61,7 @@ Pathway fit and gap computation over these templates is deterministic (axiom 00)
 | `spine` | The one-sentence claim the story makes |
 | `audience_note` | Who buys this story (kinds of roles/teams). Category language only - no company names, no prestige tiers |
 | `evidence_slots` | Non-empty list of `EvidenceSlot`s with unique `slot_id`s; 4-6 slots is the content guideline |
+| `knowledge_map` | Optional generated `KnowledgeMap` (KT-A shape; KT-B populates). Default `null`. See the Knowledge Map section below |
 
 ### `EvidenceSlot`
 
@@ -82,6 +83,81 @@ Theme tags and `required_themes_any` are stored in their authored display case b
 The theme vocabulary lives inside the pathway registry file and versions with it: the union of all themes any registered pathway references, plus a small track-tagged pool of non-slot themes for tagging breadth.
 Target is <= ~30 themes per career track; the combined intake-prompt slice (taxonomy + themes) must stay inside the résumé-intake prompt budget (re-asserted in NP-C).
 Same curation wall as the taxonomy (axiom 08): versioned literals, append-only versions, human review is the gate, LLMs never extend it.
+
+## Knowledge Map (KT-A; generated, optional)
+
+A `PathwayTemplate` gains an optional `knowledge_map: KnowledgeMap | None` field (default `null`).
+It is the two-level grouped map for the pathway - **emitted by the deterministic generator** (`07-tree-generation.md`, KT-B), never hand-authored - and attached to the template at registry import.
+KT-A defines the shape; the field defaults `null` so every existing registry template and fixture stays valid until KT-B commits the generated artifact.
+The map never gates the Planner, the Scheduler, or task availability (the `06-knowledge-tree.md` non-interference rule, axiom 11); it is a presentation and memory layer.
+
+```json
+{
+  "knowledge_map": {
+    "groups": [
+      {
+        "group_id": "kg-retrieval",
+        "title": "Retrieval & Grounding",
+        "branch": "llm-feature-depth",
+        "blurb": "Finding and feeding the right context to a model.",
+        "member_node_ids": ["kn-rag", "kn-embeddings"]
+      }
+    ],
+    "nodes": [
+      {
+        "node_id": "kn-rag",
+        "title": "Retrieval fundamentals",
+        "kind": "skill",
+        "skill_id": "skill.rag",
+        "group_id": "kg-retrieval",
+        "expected_minutes": 360,
+        "blurb": "How dense and lexical retrieval differ, and when each wins."
+      },
+      {
+        "node_id": "kn-llm-feature-capstone",
+        "title": "LLM feature shipped",
+        "kind": "capstone",
+        "evidence_slot_id": "llm-feature-depth",
+        "branch": "llm-feature-depth"
+      }
+    ]
+  }
+}
+```
+
+### `KnowledgeGroup`
+
+| Field | Purpose |
+| --- | --- |
+| `group_id` | Unique within the map; `^kg-[a-z0-9-]+$` |
+| `title` | Group waypoint title |
+| `branch` | The evidence `slot_id` the group serves, or `core` (a group seeded by 2+ slots) |
+| `blurb` | 1-2 sentence display description; prose, never parsed |
+| `member_node_ids` | The group's skill nodes; non-empty; every entry resolves to a `skill` node whose `group_id` is this group (both-way membership) |
+
+### `KnowledgeNode`
+
+| Field | Purpose |
+| --- | --- |
+| `node_id` | Unique within the map; `^kn-[a-z0-9-]+$` |
+| `title` | Node title (taxonomy `display_name` for skills; slot title for capstones) |
+| `kind` | `skill` (taxonomy-anchored, lives in exactly one group) or `capstone` (one per evidence slot, branch-level, no group) |
+| `skill_id` | Taxonomy anchor; required for `kind: skill`, forbidden for `capstone` |
+| `group_id` | The one group a `skill` node belongs to; forbidden for `capstone` |
+| `expected_minutes` | Honed-threshold prior (`> 0`); required for `kind: skill`, forbidden for `capstone` |
+| `evidence_slot_id` | The slot a `capstone` proves; required for `kind: capstone`, forbidden for `skill` |
+| `branch` | The `capstone`'s slot (branch-level); required for `kind: capstone`, forbidden for `skill` |
+| `blurb` | Optional 1-2 sentence display description; prose, never parsed |
+
+### Map invariants
+
+- `group_id`s and `node_id`s are each unique within the map.
+- Every `skill` node lives in exactly one group; its `group_id` resolves to a group whose `member_node_ids` contains it, and every `member_node_ids` entry resolves to a `skill` node pointing back at that group (both-way membership).
+- Groups are non-empty.
+- Exactly one `capstone` per evidence `slot_id` referenced, and no `capstone` dangling (its `evidence_slot_id`/`branch` names a slot).
+- There are **no edges** - membership is a function; cycle handling is deleted, not deferred.
+
+Registry-level checks (KT-B): `skill_id`s resolve against the pinned taxonomy; every referenced `evidence_slot_id` is a slot of the template; prestige denylist over all text fields.
 
 ## Contract vs. Registry Responsibility
 

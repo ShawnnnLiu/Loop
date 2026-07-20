@@ -24,6 +24,7 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_vali
 from ._dedup import casefold_key, find_duplicates
 from .career_track import CareerTrack
 from .common_types import EvidenceKind
+from .knowledge_map import KnowledgeMap
 
 ThemeName = Annotated[str, StringConstraints(min_length=1, max_length=60)]
 
@@ -85,6 +86,12 @@ class PathwayTemplate(BaseModel):
     spine: str = Field(min_length=1)
     audience_note: str = Field(min_length=1)
     evidence_slots: list[EvidenceSlot] = Field(min_length=1)
+    knowledge_map: KnowledgeMap | None = None
+    """The pathway's generated grouped knowledge map (KT-A shape; KT-B
+    populates from the committed generator artifact). Default ``None`` keeps
+    every existing registry template and fixture valid until KT-B. A
+    presentation/memory layer only - never gates the Planner or Scheduler
+    (axiom 11 non-interference)."""
 
     @model_validator(mode="after")
     def _slot_ids_unique(self) -> PathwayTemplate:

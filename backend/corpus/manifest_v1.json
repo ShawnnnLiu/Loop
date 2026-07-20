@@ -1925,6 +1925,126 @@
       ],
       "license_note": "Public personal blog; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
       "title": "What do Staff engineers actually do?"
+    },
+    {
+      "url": "https://roadmap.sh/data-analyst",
+      "expected_type": "unclassified",
+      "track_tags": [
+        "data_analyst"
+      ],
+      "license_note": "Community roadmap under its published license; snapshot held for research reference with attribution.",
+      "title": "roadmap.sh: Data Analyst",
+      "comment": "community skill tree; stable, PDF variant exists; curator reads this as role_taxonomy-class content; host unknown to the classifier kernel"
+    },
+    {
+      "url": "https://www.coursera.org/professional-certificates/google-data-analytics",
+      "expected_type": "unclassified",
+      "track_tags": [
+        "data_analyst"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Google Data Analytics Professional Certificate (Coursera)",
+      "comment": "canonical entry-cert syllabus; marketing page, occasionally restructured; curator reads this as role_taxonomy-class content; host unknown to the classifier kernel"
+    },
+    {
+      "url": "https://learn.microsoft.com/en-us/credentials/certifications/resources/study-guides/pl-300",
+      "expected_type": "unclassified",
+      "track_tags": [
+        "data_analyst"
+      ],
+      "license_note": "Microsoft Learn documentation; permissively licensed; snapshot held for research reference.",
+      "title": "Microsoft PL-300 study guide (skills measured)",
+      "comment": "official cert domains with published weights; stable; curator reads this as role_taxonomy-class content; host unknown to the classifier kernel"
+    },
+    {
+      "url": "https://www.tableau.com/learn/certification/desktop-specialist",
+      "expected_type": "unclassified",
+      "track_tags": [
+        "data_analyst"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Tableau Desktop Specialist certification",
+      "comment": "official cert scope; Salesforce URL churn risk; curator reads this as role_taxonomy-class content; host unknown to the classifier kernel"
+    },
+    {
+      "url": "https://mode.com/sql-tutorial/sql-in-mode/index.html",
+      "expected_type": "unclassified",
+      "track_tags": [
+        "data_analyst"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Mode SQL Tutorial",
+      "comment": "canonical free analyst SQL curriculum; stable for years; curator reads this as role_taxonomy-class content; host unknown to the classifier kernel"
+    },
+    {
+      "url": "https://www.tryexponent.com/blog/data-analyst-interview-guide",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "data_analyst"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Exponent: Data Analyst interview guide",
+      "comment": "loop-stage breakdown; refreshed yearly; curator reads this as role_taxonomy-class content; host unknown to the classifier kernel"
+    },
+    {
+      "url": "https://careerservices.fas.harvard.edu/blog/2025/05/05/data-analyst-interview-prep-2025-guide/",
+      "expected_type": "unclassified",
+      "track_tags": [
+        "data_analyst"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Harvard FAS Career Services: Data Analyst interview prep",
+      "comment": "neutral university prep guide; stable; curator reads this as role_taxonomy-class content; host unknown to the classifier kernel"
+    },
+    {
+      "url": "https://www.interviewquery.com/p/sql-questions-data-analyst",
+      "expected_type": "unclassified",
+      "track_tags": [
+        "data_analyst"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Interview Query: SQL questions for data analysts",
+      "comment": "real DA SQL patterns; partial paywall; curator reads this as interview_report-class content; host unknown to the classifier kernel"
+    },
+    {
+      "url": "https://datalemur.com/questions",
+      "expected_type": "unclassified",
+      "track_tags": [
+        "data_analyst"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "DataLemur question bank",
+      "comment": "FAANG SQL/analytics bank; partial paywall; curator reads this as interview_report-class content; host unknown to the classifier kernel"
+    },
+    {
+      "url": "https://www.stratascratch.com/blog/sql-interview-questions-for-the-data-analyst-position",
+      "expected_type": "unclassified",
+      "track_tags": [
+        "data_analyst"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "StrataScratch: SQL interview questions (data analyst)",
+      "comment": "company-attributed questions; curator reads this as interview_report-class content; host unknown to the classifier kernel"
+    },
+    {
+      "url": "https://www.datacamp.com/blog/how-to-prepare-for-a-data-analyst-interview",
+      "expected_type": "unclassified",
+      "track_tags": [
+        "data_analyst"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "DataCamp: how to prepare for a data analyst interview",
+      "comment": "25-question prep guide; refreshed yearly; curator reads this as interview_report-class content; host unknown to the classifier kernel"
+    },
+    {
+      "url": "https://datanerd.tech/",
+      "expected_type": "unclassified",
+      "track_tags": [
+        "data_analyst"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "DataNerd.tech skill-frequency analytics",
+      "comment": "skill-frequency over 4M+ postings; data volatile by design, refresh per axiom-08 expiry; curator reads this as role_taxonomy-class content; host unknown to the classifier kernel"
     }
   ]
 }

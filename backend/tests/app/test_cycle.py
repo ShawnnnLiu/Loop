@@ -722,6 +722,76 @@ def test_default_horizon_covers_the_profile_timeline() -> None:
     assert all(e.start >= clock.now() + timedelta(days=15) for e in draft.entries)
 
 
+def test_onboard_round_trips_plan_direction_and_reonboard_clears_it() -> None:
+    """`plan_direction` flows onboard → stored profile with zero app-layer
+    code (OnboardingRecord validates the raw payload straight through), and a
+    re-onboard that nulls it clears it — profile edits are the rebuild path."""
+    service, env, _clock = make_service()
+    base = _canonical_profile().model_dump(mode="json")
+
+    # The default onboard (canonical fixture, no plan_direction) stores None.
+    initial = env.state.get_onboarding(USER_ID)
+    assert initial is not None
+    assert initial.user_profile.plan_direction is None
+
+    service.onboard(
+        {
+            "user_profile": {
+                **base,
+                "plan_direction": "Blind 75 first, then system design.",
+            },
+            "timezone": "UTC",
+        }
+    )
+    stored = env.state.get_onboarding(USER_ID)
+    assert stored is not None
+    assert stored.user_profile.plan_direction == "Blind 75 first, then system design."
+
+    service.onboard(
+        {"user_profile": {**base, "plan_direction": None}, "timezone": "UTC"}
+    )
+    cleared = env.state.get_onboarding(USER_ID)
+    assert cleared is not None
+    assert cleared.user_profile.plan_direction is None
+
+
+def test_fresh_propose_prompt_carries_stored_plan_direction() -> None:
+    """Pins the store → propose → prompt path, not just the adapter unit: a
+    fresh propose hands the STORED profile to the real Strategist assembly,
+    so the labeled plan-direction block must reach the outbound prompt."""
+    from agentic_calendar.llm_nodes.anthropic_adapter import AnthropicStrategist
+    from agentic_calendar.llm_nodes.call_log import InMemoryLlmCallLogStore
+    from tests.llm_nodes.test_anthropic_adapter import FakeTransport, _ok
+
+    transport = FakeTransport([_ok(_canonical_syllabus().model_dump(mode="json"))])
+    strategist = AnthropicStrategist(
+        transport=transport,
+        store=InMemoryLlmCallLogStore(),
+        clock=FrozenClock(HAPPY_NOW),
+        id_generator=DeterministicIdGenerator(),
+    )
+    service, _env, _clock = make_service(strategist=strategist)
+    base = _canonical_profile().model_dump(mode="json")
+    service.onboard(
+        {
+            "user_profile": {
+                **base,
+                "plan_direction": "PLAN_DIRECTION_MARKER dynamic programming first",
+            },
+            "timezone": "UTC",
+        }
+    )
+
+    result = service.propose(USER_ID)
+
+    assert result.state is S.AWAITING_USER_APPROVAL
+    prompt = transport.requests[0]["user_prompt"]
+    assert "User-provided plan direction" in prompt
+    assert "PLAN_DIRECTION_MARKER dynamic programming first" in prompt
+    # And the raw text stayed out of the canonical bundle JSON.
+    assert prompt.count("PLAN_DIRECTION_MARKER dynamic programming first") == 1
+
+
 # --------------------------------------------------------------------------- #
 # G. approve
 # --------------------------------------------------------------------------- #

@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ApiError, api, errorMessage } from '../api/client'
 import type { ExperienceLevel, ExtractResumeResult, MeResult, Weekday } from '../api/types'
 import {
+  PLAN_DIRECTION_MAX_CHARS,
   RESUME_MIN_CHARS,
   STEP_LABELS,
   addChips,
@@ -270,6 +271,7 @@ export function OnboardingScreen({ me }: { me: MeResult }) {
   const canAdvance = step !== 0 || goalReady
   const isLast = step === STEP_LABELS.length - 1
   const resumeLength = form.resume_text.trim().length
+  const planDirectionLength = form.plan_direction.length
   const weakAreasGuess = weakAreasAreGuess(form.known_weaknesses, extractedWeakSpots)
 
   async function submit() {
@@ -756,6 +758,31 @@ export function OnboardingScreen({ me }: { me: MeResult }) {
               />
               <div className="field-hint">Always yours to set — never auto-filled.</div>
             </div>
+          </div>
+
+          <div className="field">
+            <label className="field-label" htmlFor="plan-direction">
+              Already have a plan? (optional)
+            </label>
+            <textarea
+              id="plan-direction"
+              className="textarea"
+              style={{ minHeight: 120 }}
+              value={form.plan_direction}
+              onChange={(e) => set('plan_direction', e.target.value)}
+              maxLength={PLAN_DIRECTION_MAX_CHARS}
+              placeholder="e.g. Blind 75 first, then two weeks of system design…"
+            />
+            <div className="field-hint">
+              Paste your own plan or the first steps you want to take — we&rsquo;ll adapt it to
+              your weekly hours and timeline.
+            </div>
+            {planDirectionLength >= PLAN_DIRECTION_MAX_CHARS * 0.8 && (
+              <div className="field-hint">
+                {planDirectionLength.toLocaleString()} / {PLAN_DIRECTION_MAX_CHARS.toLocaleString()}{' '}
+                characters
+              </div>
+            )}
           </div>
         </section>
       )}

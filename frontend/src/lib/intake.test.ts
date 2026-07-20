@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { ExtractResumeResult, MeResult, UserProfile } from '../api/types'
 import {
+  PLAN_DIRECTION_MAX_CHARS,
   RESUME_MIN_CHARS,
   STEP_LABELS,
   addChips,
@@ -58,6 +59,7 @@ const profile: UserProfile = {
   },
   motivation_profile_id: null,
   resume_text: null,
+  plan_direction: null,
   created_at: '2026-07-06T00:00:00Z',
   updated_at: '2026-07-06T00:00:00Z',
 }
@@ -178,6 +180,38 @@ describe('payload round-trip (experience + skills)', () => {
       timeline_weeks: 10,
       weekly_hours: 8,
     })
+  })
+})
+
+describe('plan direction round-trip', () => {
+  it('starts empty, submits null when trimmed-empty, and passes a set value verbatim', () => {
+    const form = initialForm(bareMe)
+    expect(form.plan_direction).toBe('')
+    // Trimmed-empty must submit null, never '' — the contract rejects ''.
+    expect(buildPayload(form, 'UTC').user_profile.plan_direction).toBeNull()
+    form.plan_direction = '   '
+    expect(buildPayload(form, 'UTC').user_profile.plan_direction).toBeNull()
+    form.plan_direction = 'Blind 75 first, then two weeks of system design.'
+    expect(buildPayload(form, 'UTC').user_profile.plan_direction).toBe(
+      'Blind 75 first, then two weeks of system design.',
+    )
+  })
+
+  it('allows a value at exactly the cap', () => {
+    const form = initialForm(bareMe)
+    form.plan_direction = 'x'.repeat(PLAN_DIRECTION_MAX_CHARS)
+    expect(buildPayload(form, 'UTC').user_profile.plan_direction).toHaveLength(
+      PLAN_DIRECTION_MAX_CHARS,
+    )
+  })
+
+  it('prefills from a saved profile on re-onboard, like resume_text', () => {
+    const withPlan = { ...profile, plan_direction: 'Dynamic programming first.' }
+    const form = initialForm({ ...bareMe, onboarded: true, profile: withPlan })
+    expect(form.plan_direction).toBe('Dynamic programming first.')
+    expect(buildPayload(form, 'UTC').user_profile.plan_direction).toBe(
+      'Dynamic programming first.',
+    )
   })
 })
 

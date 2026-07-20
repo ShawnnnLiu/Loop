@@ -59,6 +59,9 @@ export interface UserProfile {
   preferences: Preferences
   motivation_profile_id?: string | null
   resume_text: string | null
+  /** Optional freeform plan the user pasted ("Blind 75 first, then system
+   *  design"). Strategist-only raw context — never parsed client-side. */
+  plan_direction: string | null
   created_at: string
   updated_at: string
 }

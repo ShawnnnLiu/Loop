@@ -370,6 +370,20 @@
           "default": null,
           "title": "Motivation Profile Id"
         },
+        "plan_direction": {
+          "anyOf": [
+            {
+              "maxLength": 4000,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Plan Direction"
+        },
         "preferences": {
           "$ref": "#/$defs/Preferences"
         },

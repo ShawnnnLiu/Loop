@@ -17,6 +17,8 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_vali
 
 from .common_types import HHMM, Day, ExperienceLevel
 
+PLAN_DIRECTION_MAX_CHARS = 4_000
+
 
 class ExperienceItem(BaseModel):
     """One confirmed work-experience entry.
@@ -132,8 +134,32 @@ class UserProfile(BaseModel):
     skips the step. PII: stored on the user's own profile, not persisted in the
     LLM call log, never used for training.
     """
+    plan_direction: str | None = Field(
+        default=None, min_length=1, max_length=PLAN_DIRECTION_MAX_CHARS
+    )
+    """Optional freeform plan the user pastes during onboarding: their own
+    proposed steps toward the goal. Untrusted raw context with exactly one
+    consumer: the Strategist (appended as a labeled raw block — see the
+    spec's Prompt Exposure table). Never an oracle for routing or
+    validation. ``None`` when the user skips the box. Stored on the user's
+    own profile only, hashed (never raw) in the LLM call log, never used
+    for training."""
     created_at: datetime
     updated_at: datetime
+
+    @model_validator(mode="after")
+    def _plan_direction_no_control_chars(self) -> UserProfile:
+        if self.plan_direction is not None:
+            bad = sorted(
+                {
+                    f"U+{ord(c):04X}"
+                    for c in self.plan_direction
+                    if ord(c) < 0x20 and c not in "\n\r\t"
+                }
+            )
+            if bad:
+                raise ValueError(f"plan_direction contains control characters: {bad}")
+        return self
 
     @model_validator(mode="after")
     def _skills_unique(self) -> UserProfile:

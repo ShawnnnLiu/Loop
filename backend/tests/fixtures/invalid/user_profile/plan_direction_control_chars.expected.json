@@ -1,0 +1,6 @@
+{
+  "error_substrings": [
+    "plan_direction contains control characters",
+    "U+0000"
+  ]
+}

@@ -444,7 +444,7 @@ def test_extract_route_returns_proposal_with_normalized_skills() -> None:
     body = resp.json()
     assert body["status"] == "ok"
     assert body["run_id"].startswith("intake-")
-    assert body["taxonomy_version"] == "skill-taxonomy-v1"
+    assert body["taxonomy_version"] == "skill-taxonomy-v2"
     assert body["proposal"]["skills"]
     assert {s["skill_id"] for s in body["skills_canonical"]} >= {
         "skill.python",

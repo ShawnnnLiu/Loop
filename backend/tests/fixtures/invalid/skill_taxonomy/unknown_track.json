@@ -1,0 +1,13 @@
+{
+  "taxonomy_version": "skill-taxonomy-v2",
+  "entries": [
+    {
+      "skill_id": "skill.dbt",
+      "display_name": "dbt",
+      "aliases": ["dbt"],
+      "track_tags": ["data_engineer"],
+      "kind": "tool",
+      "corpus_evidence": null
+    }
+  ]
+}

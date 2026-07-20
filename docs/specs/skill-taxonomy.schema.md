@@ -65,15 +65,18 @@ later annotate taxonomy entries deterministically.
 | `quant_dev` | Quantitative development (trading-systems engineering) |
 | `data_scientist` | Data science |
 | `product_manager` | Product management |
+| `data_analyst` | Data analysis (BI, SQL, dashboards, analytics casework) |
 
 Both this taxonomy and the grounding-layer corpus (`track_tags` in
 `corpus-document.schema.md`) use **this** enum. The taxonomy is not
 required to cover every track: taxonomy v1 has entries for the starting
-three only, and `resolve_track`'s role markers likewise cover the
-starting three — a target role that resolves to no track means the
-caller uses the union of all entries as the weak-spot choice set
-(`quant_dev`, `data_scientist`, `product_manager` are corpus-only until
-taxonomy entries and role markers are curated for them).
+three only; taxonomy v2 adds curated `data_analyst` entries (career-track
+expansion, wave 1). `resolve_track`'s role markers cover the starting
+three plus `data_analyst` — a target role that resolves to no track means
+the caller uses the union of all entries as the weak-spot choice set.
+`quant_dev` remains corpus-only; `data_scientist` and `product_manager`
+carry shared-entry tags from the v2 expansion but stay unresolvable
+(no role markers) until their own tracks are curated.
 
 ### `SkillEntry`
 

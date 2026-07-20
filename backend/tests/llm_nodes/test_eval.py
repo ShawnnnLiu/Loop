@@ -420,6 +420,24 @@ def test_v3_fixture_recording_rates_exact() -> None:
     assert report.overall.rubric_pass_rate == 1.0
 
 
+def test_v5_fixture_recording_rates_exact() -> None:
+    """The v5 set re-pins the seven v3 cases to skill-taxonomy-v2 and adds
+    the two data_analyst cases (track resolution + the GlimmerBI
+    out-of-vocabulary trap); the fixture twin grades clean on all nine."""
+    eval_set = EvalSet.model_validate(_load(EVALSETS / "eval_set_v5.json"))
+    recording = EvalRecording.model_validate(
+        _load(EVALSETS / "recordings" / "fixture_resume_intake_v5.json")
+    )
+    assert recording.taxonomy_version == "skill-taxonomy-v2"
+    report = grade_recording(eval_set, recording)
+    assert report.overall.cases == 9
+    assert report.overall.schema_validity_rate == 1.0
+    assert report.overall.post_repair_invalid_rate == 0.0
+    # The dense backend case pins "Python"; the data-analyst case pins "SQL".
+    assert report.overall.rubric_graded == 2
+    assert report.overall.rubric_pass_rate == 1.0
+
+
 def test_grade_recording_rejects_judge_scores_for_unknown_cases() -> None:
     from agentic_calendar.llm_nodes.call_log import LlmNodeName
     from agentic_calendar.llm_nodes.eval import (

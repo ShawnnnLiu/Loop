@@ -6,12 +6,13 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pytest
 from pydantic import BaseModel
 
 from agentic_calendar.llm_nodes import InMemoryLlmCallLogStore
 from agentic_calendar.llm_nodes.anthropic_adapter import TransportResult
 from agentic_calendar.llm_nodes.call_log import LlmNodeName
-from agentic_calendar.llm_nodes.eval import EvalSet, grade_recording
+from agentic_calendar.llm_nodes.eval import EvalError, EvalSet, grade_recording
 from agentic_calendar.llm_nodes.eval_judge import judge_recording
 from agentic_calendar.tools.capture_eval_recordings import (
     capture,
@@ -21,6 +22,7 @@ from agentic_calendar.tools.capture_eval_recordings import (
 
 _EVAL_SET_PATH = Path(__file__).parents[2] / "evalsets" / "eval_set_v2.json"
 _EVAL_SET_V3_PATH = Path(__file__).parents[2] / "evalsets" / "eval_set_v3.json"
+_EVAL_SET_V5_PATH = Path(__file__).parents[2] / "evalsets" / "eval_set_v5.json"
 
 
 def _load_set(path: Path = _EVAL_SET_PATH) -> EvalSet:
@@ -177,10 +179,26 @@ def test_every_v3_case_parses_into_typed_node_inputs() -> None:
         assert set(kwargs) == {"intake"}
 
 
-def test_capture_v3_stamps_taxonomy_version_and_haiku_model() -> None:
+def test_capture_v3_set_now_mismatches_served_taxonomy() -> None:
+    """eval_set_v3 pins skill-taxonomy-v1; the registry serves v2. The
+    version guard must refuse the capture rather than silently stamping a
+    recording the v3 cases cannot grade."""
+    eval_set = _load_set(_EVAL_SET_V3_PATH)
+    recording = capture(
+        eval_set,
+        transport=_CannedTransport(),  # type: ignore[arg-type]
+        store=InMemoryLlmCallLogStore(),
+        label="canned-intake-test",
+    )
+    assert recording.taxonomy_version == "skill-taxonomy-v2"
+    with pytest.raises(EvalError, match="taxonomy_version"):
+        grade_recording(eval_set, recording)
+
+
+def test_capture_v5_stamps_taxonomy_version_and_haiku_model() -> None:
     """The resume_intake branch: real adapter wiring, one attempt per case,
     taxonomy pinned on the recording (06-skill-taxonomy discipline)."""
-    eval_set = _load_set(_EVAL_SET_V3_PATH)
+    eval_set = _load_set(_EVAL_SET_V5_PATH)
     transport = _CannedTransport()
     recording = capture(
         eval_set,
@@ -191,7 +209,7 @@ def test_capture_v3_stamps_taxonomy_version_and_haiku_model() -> None:
 
     assert set(recording.outputs) == {case.case_id for case in eval_set.cases}
     assert all(len(attempts) == 1 for attempts in recording.outputs.values())
-    assert recording.taxonomy_version == "skill-taxonomy-v1"
+    assert recording.taxonomy_version == "skill-taxonomy-v2"
     assert recording.model_name == "claude-haiku-4-5"
 
     report = grade_recording(eval_set, recording)

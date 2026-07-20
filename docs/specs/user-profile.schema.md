@@ -149,7 +149,12 @@ Motivation, accountability, sponsor visibility, and pressure tolerance live in a
   check - the vocabulary constrains the LLM proposal, and the UI offers the
   same closed dropdowns).
 - `pathway_selection`, when present, is a valid `PathwaySelection`
-  (`pathway-selection.schema.md`).
+  (`pathway-selection.schema.md`). Additionally, every
+  `pathway_selection.slot_overrides` entry must name an `experience` item that
+  exists in this profile, matched on the case-insensitive
+  `(title, organization)` identity. This referential check lives on
+  `UserProfile` (not `PathwaySelection`, which cannot see `experience`): a
+  dangling override is rejected at parse time, not deferred to the kernel.
 - `skills` holds at most 40 non-empty strings (each max 60 chars),
   case-insensitively unique.
 - `plan_direction`, when present, is 1–4,000 characters and contains no

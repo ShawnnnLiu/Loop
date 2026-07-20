@@ -65,6 +65,7 @@ Evidence items are pathway-independent facts: changing pathway never resets evid
 - `selected_at` is timezone-aware.
 - Unknown fields are rejected (`extra="forbid"`).
 - Registry membership of `pathway_id` and `slot_id` is a service-layer check against the pinned registry version, not a contract-shape check.
+- Referential integrity of `slot_overrides` (each override names an experience item that exists) is **not** checkable here - `PathwaySelection` cannot see the `experience` list - so it is enforced one level up, on `UserProfile`, which owns both halves (see `user-profile.schema.md`). A dangling override is rejected at parse time, not deferred to the kernel.
 
 ## Invalid Examples
 

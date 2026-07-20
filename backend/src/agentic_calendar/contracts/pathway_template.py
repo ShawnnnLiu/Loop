@@ -21,6 +21,7 @@ from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
+from ._dedup import casefold_key, find_duplicates
 from .career_track import CareerTrack
 from .common_types import EvidenceKind
 
@@ -50,18 +51,15 @@ class EvidenceSlot(BaseModel):
 
     @model_validator(mode="after")
     def _required_kinds_unique(self) -> EvidenceSlot:
-        if len(set(self.required_kinds)) != len(self.required_kinds):
-            dupes = sorted(
-                {k.value for k in self.required_kinds if self.required_kinds.count(k) > 1}
-            )
+        dupes = find_duplicates([k.value for k in self.required_kinds])
+        if dupes:
             raise ValueError(f"required_kinds must be unique; duplicates: {dupes}")
         return self
 
     @model_validator(mode="after")
     def _themes_unique(self) -> EvidenceSlot:
-        lowered = [t.lower() for t in self.required_themes_any]
-        if len(set(lowered)) != len(lowered):
-            dupes = sorted({t for t in lowered if lowered.count(t) > 1})
+        dupes = find_duplicates([casefold_key(t) for t in self.required_themes_any])
+        if dupes:
             raise ValueError(
                 f"required_themes_any must be case-insensitively unique; duplicates: {dupes}"
             )
@@ -69,10 +67,8 @@ class EvidenceSlot(BaseModel):
 
     @model_validator(mode="after")
     def _branch_skill_ids_unique(self) -> EvidenceSlot:
-        if len(set(self.branch_skill_ids)) != len(self.branch_skill_ids):
-            dupes = sorted(
-                {s for s in self.branch_skill_ids if self.branch_skill_ids.count(s) > 1}
-            )
+        dupes = find_duplicates(self.branch_skill_ids)
+        if dupes:
             raise ValueError(f"branch_skill_ids must be unique; duplicates: {dupes}")
         return self
 
@@ -92,8 +88,7 @@ class PathwayTemplate(BaseModel):
 
     @model_validator(mode="after")
     def _slot_ids_unique(self) -> PathwayTemplate:
-        ids = [s.slot_id for s in self.evidence_slots]
-        if len(set(ids)) != len(ids):
-            dupes = sorted({i for i in ids if ids.count(i) > 1})
+        dupes = find_duplicates([s.slot_id for s in self.evidence_slots])
+        if dupes:
             raise ValueError(f"evidence_slots must have unique slot_id values; duplicates: {dupes}")
         return self

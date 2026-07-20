@@ -69,7 +69,7 @@ Pathway fit and gap computation over these templates is deterministic (axiom 00)
 | `slot_id` | Stable identifier, unique within a template |
 | `title` | User-facing pillar name |
 | `required_kinds` | Non-empty, unique subset of the closed `EvidenceKind` enum (`work`, `project`, `volunteering`, `leadership`, `research`, `award`, `coursework`); an evidence item can only fill this slot if its `kind` is a member |
-| `required_themes_any` | Non-empty, case-insensitively unique theme list; an item matches when its `theme_tags` intersect this set. Every member must exist in the registry's theme vocabulary (registry-completeness test) |
+| `required_themes_any` | Non-empty, case-insensitively unique theme list; an item matches when its `theme_tags` intersect this set **case-insensitively** (both sides normalized through `contracts/_dedup.casefold_key`). Every member must exist in the registry's theme vocabulary (registry-completeness test) |
 | `min_items` | How many matched items fill the slot (`>= 1`; below it with at least one match is `partial`) |
 | `gap_module_hint` | Display/prompt seed text for the Strategist's `unfilled_slots` projection; never control flow, never parsed |
 | `branch_skill_ids` | Non-empty, unique skill ids (3-6 is the content guideline); each must resolve against the pinned skill taxonomy (registry-completeness test). Seed set for the knowledge-map generator (`06-knowledge-tree.md` / `07-tree-generation.md`); no control-plane effect |
@@ -78,6 +78,7 @@ Pathway fit and gap computation over these templates is deterministic (axiom 00)
 
 Theme tags are broader than skills ("distributed-systems", "applied-ml", "developer-experience").
 They deliberately do not join the skill taxonomy: taxonomy kinds are `language|framework|tool|concept|practice` and its per-track slices are prompt-budgeted at ~100 entries, which themes would bloat.
+Theme tags and `required_themes_any` are stored in their authored display case but compared case-insensitively everywhere: uniqueness within a list, membership in the vocabulary, and the item-to-slot join all normalize through `contracts/_dedup.casefold_key` (the `narrative/` kernel, NP-B, must use the same function).
 The theme vocabulary lives inside the pathway registry file and versions with it: the union of all themes any registered pathway references, plus a small track-tagged pool of non-slot themes for tagging breadth.
 Target is <= ~30 themes per career track; the combined intake-prompt slice (taxonomy + themes) must stay inside the résumé-intake prompt budget (re-asserted in NP-C).
 Same curation wall as the taxonomy (axiom 08): versioned literals, append-only versions, human review is the gate, LLMs never extend it.

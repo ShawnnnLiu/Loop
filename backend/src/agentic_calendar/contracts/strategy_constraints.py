@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from ._dedup import find_duplicates
 from .common_types import Priority
 
 
@@ -70,8 +71,7 @@ class StrategyConstraints(BaseModel):
 
     @model_validator(mode="after")
     def _unfilled_slot_ids_unique(self) -> StrategyConstraints:
-        ids = [s.slot_id for s in self.unfilled_slots]
-        if len(set(ids)) != len(ids):
-            dupes = sorted({i for i in ids if ids.count(i) > 1})
+        dupes = find_duplicates([s.slot_id for s in self.unfilled_slots])
+        if dupes:
             raise ValueError(f"unfilled_slots must have unique slot_id values; duplicates: {dupes}")
         return self

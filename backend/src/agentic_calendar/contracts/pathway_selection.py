@@ -21,6 +21,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from ._dedup import casefold_key, find_duplicates
+
 
 class SlotOverride(BaseModel):
     """One explicit item-to-slot assignment correcting the greedy default.
@@ -55,11 +57,11 @@ class PathwaySelection(BaseModel):
     @model_validator(mode="after")
     def _override_items_unique(self) -> PathwaySelection:
         keys = [
-            (o.item_title.lower(), (o.item_organization or "").lower())
+            (casefold_key(o.item_title), casefold_key(o.item_organization or ""))
             for o in self.slot_overrides
         ]
-        if len(set(keys)) != len(keys):
-            dupes = sorted({k for k in keys if keys.count(k) > 1})
+        dupes = find_duplicates(keys)
+        if dupes:
             raise ValueError(
                 "slot_overrides must be unique by (item_title, item_organization), "
                 f"case-insensitively - one item may fill only one slot; duplicates: {dupes}"

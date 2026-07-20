@@ -137,6 +137,9 @@ Validation `reason_code` and violation `type` values are engineer-facing. Each m
 | `self_dependency` | "A task depended on itself. Removing the cycle." |
 | `duplicate_task_id` | "Two tasks shared the same ID. Re-numbering." |
 | `no_root_task` | "The plan has no starting task — every task depends on another. Restructuring so something can begin." |
+| `pathway_not_selected` | "A module was linked to a story pillar, but no pathway is selected. Unlinking it." |
+| `unknown_evidence_slot` | "A module pointed at a pillar that isn't part of your pathway. Re-aligning it." |
+| `slot_module_limit_exceeded` | "Too many modules were building toward story pillars at once. Trimming to the limit." |
 
 The `UserFacingExplanationNode` may compose multi-violation summaries from these strings, but the source phrases come from this deterministic table.
 

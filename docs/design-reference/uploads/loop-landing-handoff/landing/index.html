@@ -1,0 +1,850 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Loop turns your interview-prep goal and real calendar into a study plan. It drafts sessions around your commitments and writes to Google Calendar only after you approve." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Hanken+Grotesk:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <meta name="application-name" content="Loop" />
+    <meta property="og:site_name" content="Loop" />
+    <meta property="og:title" content="Loop - interview prep, scheduled around your real life" />
+    <meta property="og:description" content="Loop is a study-planning app: it turns your interview-prep goal and real availability into a week-by-week plan and writes it to Google Calendar only after you approve." />
+    <title>Loop - interview prep, scheduled around your real life</title>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Loop",
+        "url": "https://loop-study.com/",
+        "applicationCategory": "EducationalApplication",
+        "operatingSystem": "Web",
+        "description": "Loop is a study-planning app for interview prep: it turns your goal and real availability into a week-by-week study plan, drafts it around your existing commitments, and writes it to Google Calendar only after you approve."
+      }
+    </script>
+    <style>
+      /* Design tokens shared with the product SPA (frontend/src/styles/tokens.css). Inlined so the landing stays a single self-contained static file. */
+      :root{--ink:#16212e;--ink-2:#22303f;--ink-soft:#38485a;--muted:#6c7886;--muted-2:#97a0ab;--paper:#fbf8f2;--paper-2:#f4ece0;--paper-3:#ece2d3;--card:#ffffff;--clay:#bd5a39;--clay-deep:#9c4527;--clay-soft:#f1ddd1;--clay-tint:#faeee6;--sage:#5f7a64;--sage-deep:#496650;--sage-soft:#e3ebe2;--gold:#c08a3e;--gold-soft:#f6e6cf;--line:#e9e0d2;--line-2:#ddd2bf;--serif:'Newsreader',Georgia,serif;--sans:'Hanken Grotesk',system-ui,-apple-system,sans-serif;--mono:'Spline Sans Mono',ui-monospace,'SF Mono',Menlo,monospace;--r:16px;--r-sm:11px;--shadow-sm:0 1px 2px rgba(22,33,46,.05),0 4px 14px rgba(22,33,46,.05);--shadow:0 2px 6px rgba(22,33,46,.05),0 18px 44px -18px rgba(22,33,46,.22);--ease:cubic-bezier(.22,.7,.3,1)}
+      *{box-sizing:border-box}
+      html{scroll-behavior:smooth}
+      body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:clip}
+      h1,h2,h3{margin:0;font-family:var(--serif);font-weight:500;letter-spacing:-.015em;line-height:1.08}
+      a{color:inherit}
+      a:hover{color:var(--clay-deep)}
+      .wrap{max-width:1080px;margin:0 auto;padding:0 clamp(20px,5vw,48px)}
+      .eyebrow{font-family:var(--sans);font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--clay-deep)}
+      .mono{font-family:var(--mono)}
+      .muted{color:var(--muted)}
+      /* --- Top nav --- */
+      .nav{display:flex;align-items:center;gap:14px;padding:18px clamp(20px,5vw,48px);max-width:1080px;margin:0 auto}
+      .brand{display:flex;align-items:center;gap:11px}
+      .glyph{width:34px;height:34px;border-radius:10px;background:var(--ink);color:var(--paper);display:grid;place-items:center;font-family:var(--serif);font-size:19px;font-weight:600;position:relative}
+      .glyph::after{content:'✓';position:absolute;right:-4px;bottom:-4px;width:16px;height:16px;border-radius:50%;background:var(--clay);color:#fff;font-size:9px;font-weight:800;display:grid;place-items:center;border:2px solid var(--paper)}
+      .word{font-family:var(--serif);font-size:20px;font-weight:600}
+      .spacer{flex:1}
+      /* --- Buttons --- */
+      .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-family:var(--sans);font-weight:600;font-size:15px;padding:12px 20px;border-radius:11px;border:1px solid transparent;cursor:pointer;text-decoration:none;white-space:nowrap}
+      .btn-primary{background:var(--clay);color:#fff;box-shadow:0 1px 2px rgba(157,69,39,.25),0 10px 22px -12px rgba(189,90,57,.7)}
+      .btn-primary:hover{color:#fff}
+      .btn-ghost{background:var(--card);color:var(--ink);border-color:var(--line-2);box-shadow:var(--shadow-sm)}
+      .btn-quiet{background:transparent;color:var(--ink-soft);padding:8px 12px}
+      .gmark{font-family:var(--mono);font-weight:700}
+      /* --- Closed-beta strip --- */
+      .beta-strip{background:var(--gold-soft);border-top:1px solid var(--line);border-bottom:1px solid var(--line-2);font-size:13.5px;color:var(--ink-soft)}
+      .beta-inner{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding-top:10px;padding-bottom:10px}
+      .beta-tag{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#8a5c20;background:#fff;border:1px solid var(--gold);border-radius:999px;padding:2px 9px;white-space:nowrap}
+      /* --- Hero --- */
+      .hero{display:grid;grid-template-columns:1.05fr .95fr;gap:clamp(28px,5vw,56px);align-items:center;padding:clamp(36px,6vw,72px) 0 clamp(20px,3vw,36px)}
+      .hero h1{font-size:clamp(34px,5.2vw,54px);margin-top:14px}
+      .hero p.lede{font-size:clamp(16px,2vw,18.5px);color:var(--ink-soft);margin:16px 0 0;max-width:36ch}
+      .cta-row{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:26px}
+      .tester-note{font-size:12.5px;color:var(--muted);margin-top:12px;max-width:44ch}
+      .scroll-hint{text-align:center;font-family:var(--mono);font-size:12.5px;color:var(--muted);padding:6px 0 clamp(24px,4vw,40px)}
+      .scroll-hint .blink{display:inline-block;color:var(--clay)}
+      /* --- Product mock (shared by hero + scene 3) --- */
+      .mock{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden}
+      .mock-bar{display:flex;align-items:center;gap:8px;padding:11px 14px;background:var(--clay-tint);border-bottom:1px solid var(--clay-soft);font-size:13px;color:var(--clay-deep);font-weight:600}
+      .mock-dot{width:9px;height:9px;border-radius:50%;background:var(--clay)}
+      .mock-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;padding:14px}
+      .mock-col{display:flex;flex-direction:column;gap:6px}
+      .mock-day{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-2);text-align:center}
+      .blk{border-radius:8px;padding:7px 8px;font-size:11px;line-height:1.3;position:relative}
+      .blk-p{background:var(--clay-tint);border:1.5px dashed var(--clay);border-left:3px solid var(--clay-deep);color:var(--clay-deep)}
+      .blk-busy{background:repeating-linear-gradient(135deg,rgba(108,120,134,.16) 0 7px,rgba(108,120,134,.07) 7px 14px);border:1px solid rgba(108,120,134,.3);color:var(--muted)}
+      .blk .t{font-weight:600}
+      .blk .m{font-family:var(--mono);font-size:9.5px;opacity:.85}
+      .mock-foot{display:flex;align-items:center;gap:10px;padding:12px 14px;border-top:1px solid var(--line);background:var(--paper-2)}
+      .mock-foot .approve{background:var(--clay);color:#fff;border-radius:9px;padding:7px 13px;font-size:12.5px;font-weight:600;position:relative}
+      .lock{font-size:12px;color:var(--muted)}
+      /* Confirmed overlay: the post-approval sage state fades in over a dashed draft (opacity only). Base = visible so the no-JS / reduced-motion final frame reads written+verified. */
+      .okov{position:absolute;inset:-2px;border-radius:8px;background:var(--sage-soft);border:1px solid var(--sage);border-left:3px solid var(--sage-deep);color:var(--sage-deep);padding:7px 8px;font-size:11px;line-height:1.3}
+      .approve .okov{inset:0;border-radius:9px;background:var(--sage-deep);border:none;color:#fff;display:grid;place-items:center;padding:0;font-weight:600;font-size:12.5px}
+      /* --- Scroll scenes --- */
+      .scene{padding:clamp(40px,9vh,96px) 0}
+      .scene-inner{display:grid;grid-template-columns:minmax(260px,.85fr) 1.15fr;gap:clamp(26px,5vw,64px);align-items:center}
+      .scene.flip .scene-copy{order:2}
+      .scene.wide .scene-inner{grid-template-columns:1fr}
+      .scene-kicker{font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.02em}
+      .scene-kicker b{color:var(--clay-deep);font-weight:500}
+      .scene-copy h2{font-size:clamp(26px,3.2vw,34px);margin-top:10px}
+      .scene-copy p{font-size:15.5px;color:var(--ink-soft);margin:12px 0 0;max-width:44ch}
+      .scene-copy .fine{font-size:12.5px;color:var(--muted);margin-top:10px}
+      .viz{position:relative}
+      /* Scene 1: resume -> evidence */
+      .s1{display:grid;grid-template-columns:.8fr 1.2fr;gap:18px;align-items:center}
+      .resume{background:var(--card);border:1px solid var(--line);border-radius:var(--r-sm);box-shadow:var(--shadow-sm);padding:16px 15px}
+      .resume .rh{font-family:var(--serif);font-size:15px;font-weight:600}
+      .resume .rs{font-family:var(--mono);font-size:9.5px;color:var(--muted-2);margin-bottom:10px}
+      .rl{height:7px;border-radius:4px;background:repeating-linear-gradient(90deg,var(--paper-3) 0 6px,var(--paper-2) 6px 12px);margin-top:7px;opacity:.9}
+      .rl.w1{width:92%}.rl.w2{width:76%}.rl.w3{width:84%}.rl.w4{width:60%}.rl.w5{width:88%}.rl.w6{width:70%}
+      .rgap{height:10px}
+      .evi{display:flex;flex-direction:column;gap:9px}
+      .echip{background:var(--card);border:1px solid var(--line-2);border-radius:var(--r-sm);box-shadow:var(--shadow-sm);padding:9px 12px;display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;font-size:12.5px}
+      .echip .kind{font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;border-radius:5px;padding:2px 6px;background:var(--paper-2);border:1px solid var(--line-2);color:var(--ink-soft)}
+      .echip .kind.work{background:var(--clay-tint);border-color:var(--clay-soft);color:var(--clay-deep)}
+      .echip .kind.research{background:var(--sage-soft);border-color:var(--sage-soft);color:var(--sage-deep)}
+      .echip .et{font-weight:600}
+      .echip .theme{font-family:var(--mono);font-size:10px;color:var(--sage-deep);background:var(--sage-soft);border-radius:999px;padding:1.5px 8px}
+      .erow{display:flex;flex-wrap:wrap;gap:6px;align-items:baseline;font-size:12px}
+      .erow .el{font-family:var(--mono);font-size:10px;color:var(--muted);min-width:0}
+      .erow .ev{background:var(--paper-2);border:1px solid var(--line);border-radius:999px;padding:1.5px 9px;font-weight:600;font-size:11.5px;color:var(--ink-soft)}
+      /* Scene 2: strategist pipeline */
+      .s2{display:flex;flex-direction:column;gap:12px;max-width:520px;margin-inline:auto}
+      .s2-inputs{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+      .inchip{display:inline-flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--line-2);border-radius:999px;padding:6px 13px;font-size:12.5px;font-weight:600;color:var(--ink-soft);box-shadow:var(--shadow-sm)}
+      .inchip .il{font-family:var(--mono);font-size:9.5px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+      .s2-arrow{text-align:center;font-family:var(--mono);font-size:13px;color:var(--muted-2)}
+      .pipe{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:8px 20px}
+      .pstep{display:flex;align-items:center;gap:13px;padding:11px 0;border-bottom:1px solid var(--line)}
+      .pstep:last-child{border-bottom:none}
+      .pico{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;background:var(--sage-soft);color:var(--sage-deep);border:1px solid var(--sage-soft);flex:none}
+      .pt{font-weight:600;font-size:14px}
+      .pm{font-size:12.5px;color:var(--muted)}
+      .s2-result{display:flex;flex-wrap:wrap;align-items:center;gap:10px;justify-content:center}
+      .draft-pill{display:inline-flex;align-items:center;gap:7px;border-radius:999px;padding:6px 14px;background:var(--clay-tint);border:1.5px dashed var(--clay);color:var(--clay-deep);font-size:12.5px;font-weight:600}
+      .err-mini{display:inline-flex;align-items:center;gap:8px;font-size:11.5px;color:var(--muted)}
+      .err-code{font-family:var(--mono);font-size:10.5px;font-weight:600;color:#a33;border:1px solid #e3b7ab;border-radius:6px;padding:2px 7px;background:#fff}
+      /* Scene 4: pathway clusters */
+      .pwgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(186px,1fr));gap:12px;margin-top:26px}
+      .pw{position:relative;background:var(--card);border:1px solid var(--line);border-radius:var(--r-sm);box-shadow:var(--shadow-sm);padding:15px 15px 13px}
+      .pw::after{content:'';position:absolute;inset:-1px;border-radius:var(--r-sm);box-shadow:0 0 0 1.5px var(--sage),var(--shadow);pointer-events:none;opacity:0}
+      .pw.lit::after{opacity:1}
+      .pw .track{font-family:var(--mono);font-size:9.5px;color:var(--muted-2);text-transform:uppercase;letter-spacing:.07em}
+      .pw h3{font-size:16px;margin-top:5px}
+      .pw .spine{font-size:12px;color:var(--ink-soft);margin:6px 0 10px;line-height:1.45}
+      .slot{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--muted);padding:3.5px 0;position:relative}
+      .slot .dot{width:12px;height:12px;border-radius:50%;border:1.5px dashed var(--line-2);flex:none;position:relative}
+      .slot .dot .fill{position:absolute;inset:-1.5px;border-radius:50%;background:var(--sage);color:#fff;font-size:8px;font-weight:800;display:grid;place-items:center}
+      .slot.hit{color:var(--ink-2);font-weight:600}
+      .pw .fit{position:absolute;top:11px;right:12px;font-family:var(--mono);font-size:9.5px;color:var(--sage-deep);background:var(--sage-soft);border-radius:999px;padding:2px 8px}
+      /* Scene 5: mastery sneak peek - the star atlas sky through Loop's instrument window. Bezel + brass rim and all sky assets replicated from the knowledge-map design. */
+      .skywrap{margin-top:8px}
+      .bezel{background:linear-gradient(160deg,#2b333f,#171f2a 42%,#232b37);border:1px solid #3a4553;border-radius:16px;padding:11px;box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 14px 34px -16px rgba(22,33,46,.55)}
+      .rim{border-radius:8px;border:1px solid #8a6f3f;box-shadow:inset 0 0 0 1px rgba(138,111,63,.22),inset 0 0 46px rgba(0,0,0,.55);overflow:hidden;position:relative;background:#0b1420}
+      .rim svg{display:block;width:100%;height:auto}
+      .rim text{font-family:var(--sans)}
+      .rim .rlabel{font-family:var(--serif);font-style:italic;font-size:15px;letter-spacing:.12em;fill:rgba(213,197,168,.6)}
+      .rim .slab{font-family:var(--serif);font-size:13.5px;fill:#dbe4ea;paint-order:stroke;stroke:rgba(11,20,32,.85);stroke-width:3.5px;stroke-linejoin:round}
+      .rim .scount{font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;fill:#8ea1b5;paint-order:stroke;stroke:rgba(11,20,32,.85);stroke-width:3px}
+      .rim .scount.warm{fill:#e8c07a}
+      .rim .plab{font-size:10.5px;font-weight:600;fill:#c6d2dc;paint-order:stroke;stroke:rgba(11,20,32,.88);stroke-width:3.2px;stroke-linejoin:round}
+      .rim .plab.dim{fill:#7f92a5}
+      .rim .caplab{font-family:var(--mono);font-size:9px;letter-spacing:.14em;fill:#8ea1b5;paint-order:stroke;stroke:rgba(11,20,32,.85);stroke-width:3px}
+      .rim .caplab.lit{fill:#e8c07a}
+      .twinkle{opacity:.45}
+      .pulse{opacity:.6;transform-box:fill-box;transform-origin:center}
+      .trail,.rays{transform-box:fill-box;transform-origin:center}
+      html.anim .twinkle{animation:tw 4.2s ease-in-out infinite}
+      html.anim .pulse{animation:breathe 3.6s ease-in-out infinite}
+      html.anim .trail{animation:spin 36s linear infinite}
+      html.anim .rays{animation:spin 80s linear infinite}
+      @keyframes tw{0%,100%{opacity:.22}50%{opacity:.75}}
+      @keyframes breathe{0%,100%{opacity:.4}50%{opacity:.85}}
+      @keyframes spin{to{transform:rotate(360deg)}}
+      .sky-legend{display:flex;flex-wrap:wrap;gap:8px 22px;justify-content:center;font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:12px}
+      .sky-legend .lw{color:#9a6d2f}
+      /* --- Animation framework. Off by default: no JS or reduced motion = static final frames. --- */
+      html.anim .aa{opacity:0;transform:translateY(16px);transition:opacity .65s var(--ease),transform .65s var(--ease);transition-delay:var(--d,0s)}
+      html.anim .play .aa{opacity:1;transform:translateY(0)}
+      html.anim .aa.ax{transform:translateX(-14px)}
+      html.anim .play .aa.ax{transform:translateX(0)}
+      html.anim .okov{opacity:0;transition:opacity .45s ease;transition-delay:var(--d,0s)}
+      html.anim .play .okov{opacity:1}
+      html.anim .slot .fill{opacity:0;transform:scale(.5);transition:opacity .4s ease,transform .4s var(--ease);transition-delay:var(--d,0s)}
+      html.anim .play .slot .fill{opacity:1;transform:scale(1)}
+      html.anim .rim .aa{transform:none}
+      html.anim .pw::after{transition:opacity .6s ease;transition-delay:var(--d,0s)}
+      html.anim .pw.lit::after{opacity:0}
+      html.anim .play .pw.lit::after{opacity:1}
+      html.anim .pw .fit,html.anim .rfade{transition:opacity .6s ease;transition-delay:var(--d,0s)}
+      html.anim .scene:not(.play) .pw .fit{opacity:0}
+      html.anim .play .rfade{opacity:.45}
+      html.anim .scene .scene-inner{transition:opacity .5s ease,transform .5s ease}
+      html.anim .scene.gone .scene-inner{opacity:0;transform:translateY(-22px)}
+      html.anim .blink{animation:blink 1.1s steps(1) infinite}
+      /* Panel hand-off: hero mock flies out right on scroll; scene 3's mock arrives from the right */
+      html.anim body{overflow-x:hidden}
+      html.anim .hero .mock{will-change:transform,opacity,filter}
+      html.anim [data-scene="3"] .viz .mock{opacity:0;transform:translateX(min(52vw,620px)) rotate(3deg) scale(.96);filter:blur(7px);transition:transform .9s var(--ease),opacity .7s ease,filter .9s ease;will-change:transform,opacity,filter}
+      html.anim [data-scene="3"].play .viz .mock{opacity:1;transform:none;filter:none}
+      /* Reversing (scrolling back up): drop the stagger so pieces retreat together */
+      html.anim .scene.rev .aa,html.anim .scene.rev .okov,html.anim .scene.rev .slot .fill,html.anim .scene.rev .pw::after,html.anim .scene.rev .pw .fit,html.anim .scene.rev .rfade{transition-delay:0s}
+      @keyframes blink{50%{opacity:0}}
+      /* --- Sections --- */
+      section.band{padding:clamp(40px,6vw,76px) 0}
+      .band-alt{background:var(--paper-2);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+      .band h2{font-size:clamp(26px,3.4vw,36px)}
+      .section-lede{color:var(--ink-soft);font-size:16.5px;margin:12px 0 0;max-width:60ch}
+      /* --- How it works --- */
+      .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:34px}
+      .step{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:20px;box-shadow:var(--shadow-sm);position:relative}
+      .step.hinge{border-color:var(--clay-soft);background:var(--clay-tint)}
+      .step .num{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--muted)}
+      .step h3{font-size:18px;margin-top:8px}
+      .step.hinge h3{color:var(--clay-deep)}
+      .step p{font-size:13.5px;color:var(--ink-soft);margin:7px 0 0}
+      .step .pill{display:inline-block;margin-top:10px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--clay-deep);background:#fff;border:1px solid var(--clay-soft);border-radius:999px;padding:3px 9px}
+      /* --- Trust strip --- */
+      .trust{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;margin-top:34px}
+      .trust-item{padding:18px 20px;border-left:3px solid var(--sage);background:var(--card);border-radius:0 var(--r-sm) var(--r-sm) 0;box-shadow:var(--shadow-sm)}
+      .trust-item h3{font-size:16px}
+      .trust-item p{font-size:13.5px;color:var(--ink-soft);margin:6px 0 0}
+      /* --- Google data panel --- */
+      .gdata{margin-top:34px;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:clamp(20px,3vw,30px);box-shadow:var(--shadow-sm)}
+      .gdata h3{font-size:20px}
+      .gdata-rows{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;margin-top:18px}
+      .gdata-row h4{margin:0;font-family:var(--sans);font-size:14px;font-weight:700;color:var(--ink)}
+      .gdata-row .scope{display:inline-block;font-family:var(--mono);font-size:10.5px;color:var(--muted);background:var(--paper-2);border:1px solid var(--line);border-radius:6px;padding:2px 7px;margin-top:6px}
+      .gdata-row p{font-size:13.5px;color:var(--ink-soft);margin:8px 0 0}
+      .gdata-foot{font-size:13.5px;color:var(--ink-soft);margin:20px 0 0;padding-top:16px;border-top:1px solid var(--line)}
+      /* --- Thesis --- */
+      .thesis{text-align:center;padding:clamp(44px,7vw,88px) 0}
+      .thesis blockquote{margin:0;font-family:var(--serif);font-size:clamp(24px,3.6vw,38px);line-height:1.18;letter-spacing:-.015em;max-width:18ch;margin-inline:auto}
+      .thesis .sub{color:var(--muted);margin-top:16px;font-size:15px}
+      /* --- Not-this strip --- */
+      .notthis{display:flex;flex-wrap:wrap;gap:10px 20px;margin-top:22px}
+      .notthis span{font-size:14px;color:var(--ink-soft)}
+      .notthis b{color:var(--ink)}
+      /* --- Final CTA --- */
+      .final{text-align:center;padding:clamp(44px,7vw,84px) 0}
+      .final h2{font-size:clamp(28px,4vw,40px)}
+      .final .cta-row{justify-content:center}
+      /* --- Footer --- */
+      footer{border-top:1px solid var(--line);padding:28px clamp(20px,5vw,48px)}
+      .foot-inner{max-width:1080px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:14px;font-size:13px;color:var(--muted)}
+      @media (max-width:820px){
+        .hero{grid-template-columns:1fr}
+        .hero .mock{order:2}
+        .scene-inner{grid-template-columns:1fr}
+        .scene.flip .scene-copy{order:0}
+        .s1{grid-template-columns:1fr}
+        .resume{max-width:300px}
+      }
+      @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+    </style>
+  </head>
+  <body>
+    <header class="nav">
+      <div class="brand">
+        <span class="glyph">L</span>
+        <span class="word">Loop</span>
+      </div>
+      <span class="spacer"></span>
+      <a class="btn btn-quiet" href="#how">How it works</a>
+      <a class="btn btn-quiet" href="/how-its-built">How it’s built</a>
+      <a class="btn btn-ghost" href="/auth/login">Sign in</a>
+    </header>
+
+    <div class="beta-strip" role="note">
+      <div class="wrap beta-inner">
+        <span class="beta-tag">Closed beta</span>
+        <span>
+          Loop is awaiting Google’s OAuth verification, so sign-in is limited to approved
+          testers for now. Email
+          <a href="mailto:xl3704@columbia.edu?subject=Loop%20beta%20access">xl3704@columbia.edu</a>
+          to request access.
+        </span>
+      </div>
+    </div>
+
+    <main>
+      <!-- Hero -->
+      <div class="wrap">
+        <section class="hero">
+          <div>
+            <span class="eyebrow">Interview prep · job search</span>
+            <h1>Loop puts your prep plan on your calendar, and never writes without your say-so.</h1>
+            <p class="lede">
+              Loop turns your goal and your real availability into a week-by-week study plan, drafts
+              it around your existing commitments, and writes it to Google Calendar
+              <em>only after you approve</em>.
+            </p>
+            <div class="cta-row">
+              <a class="btn btn-primary" href="/auth/login">
+                <span class="gmark">G</span> Connect Google Calendar
+              </a>
+              <a class="btn btn-ghost" href="#how">See how it works</a>
+            </div>
+            <p class="tester-note">
+              Loop is in closed beta while Google’s OAuth verification is in progress, so sign-in
+              works only for allowlisted Google accounts. Email
+              <a href="mailto:xl3704@columbia.edu?subject=Loop%20beta%20access">xl3704@columbia.edu</a>
+              to request access. If your account isn’t on the list yet, you’ll see a clear message
+              at sign-in.
+            </p>
+          </div>
+          <div class="mock" aria-hidden="true">
+            <div class="mock-bar"><span class="mock-dot"></span> Proposed week · review &amp; adjust</div>
+            <div class="mock-grid">
+              <div class="mock-col">
+                <div class="mock-day">Mon</div>
+                <div class="blk blk-p"><div class="t">Graphs drill</div><div class="m">9:00a</div></div>
+                <div class="blk blk-busy"><div class="t">Standup</div><div class="m">11:00a</div></div>
+              </div>
+              <div class="mock-col">
+                <div class="mock-day">Tue</div>
+                <div class="blk blk-busy"><div class="t">Busy</div><div class="m">1:00p</div></div>
+                <div class="blk blk-p"><div class="t">DP review</div><div class="m">6:30p</div></div>
+              </div>
+              <div class="mock-col">
+                <div class="mock-day">Wed</div>
+                <div class="blk blk-p"><div class="t">Mock interview</div><div class="m">4:00p</div></div>
+              </div>
+              <div class="mock-col">
+                <div class="mock-day">Thu</div>
+                <div class="blk blk-p"><div class="t">System design</div><div class="m">10:00a</div></div>
+                <div class="blk blk-busy"><div class="t">Busy</div><div class="m">3:00p</div></div>
+              </div>
+              <div class="mock-col">
+                <div class="mock-day">Fri</div>
+                <div class="blk blk-p"><div class="t">Behavioral</div><div class="m">4:00p</div></div>
+              </div>
+            </div>
+            <div class="mock-foot">
+              <span class="approve">✓ Approve &amp; write</span>
+              <span class="lock">🔒 hash-checked at write time</span>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- Scene 1: resume -> evidence -->
+      <div class="wrap">
+        <section class="scene" data-scene="1" data-screen-label="Scene 1 - resume extraction">
+          <div class="scene-inner">
+            <div class="scene-copy">
+              <span class="scene-kicker"><b>01</b> / 04 · résumé → evidence</span>
+              <h2>Paste a résumé. Get structured evidence, not a summary.</h2>
+              <p>
+                Loop proposes profile fields from your résumé: each experience typed by kind
+                (work, project, research) and tagged with themes from a closed vocabulary. You
+                review and edit every field before anything is saved.
+              </p>
+              <p class="fine">
+                Empty over fabrication: no confidence scores, no invented entries. Skip the résumé
+                and every field stays hand-editable.
+              </p>
+            </div>
+            <div class="viz s1" aria-hidden="true">
+              <div class="resume aa ax" style="--d:.05s">
+                <div class="rh">resume.pdf</div>
+                <div class="rs">pasted · 4,120 chars</div>
+                <div class="rl w1 rfade"></div><div class="rl w2 rfade"></div><div class="rl w3 rfade"></div>
+                <div class="rgap"></div>
+                <div class="rl w5 rfade"></div><div class="rl w4 rfade"></div><div class="rl w6 rfade"></div>
+                <div class="rgap"></div>
+                <div class="rl w3 rfade"></div><div class="rl w2 rfade"></div>
+              </div>
+              <div class="evi">
+                <div class="echip aa" style="--d:.35s"><span class="kind work">work</span><span class="et">Payments service rewrite</span><span class="theme">backend-systems</span><span class="theme">api-design</span></div>
+                <div class="echip aa" style="--d:.55s"><span class="kind">project</span><span class="et">Retrieval side project</span><span class="theme">retrieval</span><span class="theme">llm-integration</span></div>
+                <div class="echip aa" style="--d:.75s"><span class="kind research">research</span><span class="et">Eval methods writeup</span><span class="theme">evaluation</span><span class="theme">technical-writing</span></div>
+                <div class="erow aa" style="--d:.95s"><span class="el">skills</span><span class="ev">Python</span><span class="ev">Postgres</span><span class="ev">Docker</span></div>
+                <div class="erow aa" style="--d:1.1s"><span class="el">strengths</span><span class="ev">API design</span></div>
+                <div class="erow aa" style="--d:1.25s"><span class="el">weak spots</span><span class="ev">system design at scale</span></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Scene 2: strategist + gates -->
+        <section class="scene flip" data-scene="2" data-screen-label="Scene 2 - strategist">
+          <div class="scene-inner">
+            <div class="scene-copy">
+              <span class="scene-kicker"><b>02</b> / 04 · strategist → gates</span>
+              <h2>The AI proposes. Deterministic gates dispose.</h2>
+              <p>
+                Your goal, weekly hours, and deep-work windows go through one pipeline: a
+                strategist drafts, a planner shapes weekly blocks, then deterministic code
+                validates fit and schedules around your busy times, with bounded repair.
+              </p>
+              <p class="fine">
+                A failure comes back typed, with a recovery step. Never a dead end, and nothing is
+                written to your calendar at this stage.
+              </p>
+            </div>
+            <div class="viz s2" aria-hidden="true">
+              <div class="s2-inputs">
+                <span class="inchip aa" style="--d:.05s"><span class="il">goal</span> Backend offers by June</span>
+                <span class="inchip aa" style="--d:.2s"><span class="il">hours</span> 8 h/week</span>
+                <span class="inchip aa" style="--d:.35s"><span class="il">windows</span> weekday evenings</span>
+              </div>
+              <div class="s2-arrow aa" style="--d:.5s">↓</div>
+              <div class="pipe aa" style="--d:.6s">
+                <div class="pstep"><span class="pico aa" style="--d:.9s">✓</span><div><div class="pt">Strategist</div><div class="pm">setting strategy &amp; milestones</div></div></div>
+                <div class="pstep"><span class="pico aa" style="--d:1.4s">✓</span><div><div class="pt">Planner</div><div class="pm">drafting weekly blocks</div></div></div>
+                <div class="pstep"><span class="pico aa" style="--d:1.9s">✓</span><div><div class="pt">Validation</div><div class="pm">checking fit &amp; constraints</div></div></div>
+                <div class="pstep"><span class="pico aa" style="--d:2.4s">✓</span><div><div class="pt">Scheduler</div><div class="pm">placing around your calendar</div></div></div>
+              </div>
+              <div class="s2-result">
+                <span class="draft-pill aa" style="--d:2.9s">Draft ready · nothing written yet</span>
+                <span class="err-mini aa" style="--d:3.1s">if it can’t fit: <span class="err-code">INSUFFICIENT_WEEKLY_CAPACITY</span> + how to recover</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Scene 3: calendar draft -> approval -->
+        <section class="scene" data-scene="3" data-screen-label="Scene 3 - calendar approval">
+          <div class="scene-inner">
+            <div class="scene-copy">
+              <span class="scene-kicker"><b>03</b> / 04 · drafts → approval</span>
+              <h2>Drafts slide around your real week. You hold the pen.</h2>
+              <p>
+                Proposed blocks land around your existing commitments. Drag any block to a new time
+                or day; every move is re-checked on the server. When you approve, the payload is
+                hash-locked to exactly what you saw, written to a dedicated calendar, then every
+                event is re-read to verify it landed.
+              </p>
+              <p class="fine">The calendar stays drafts-only until you approve. No exceptions.</p>
+            </div>
+            <div class="viz" aria-hidden="true">
+              <div class="mock">
+                <div class="mock-bar"><span class="mock-dot"></span> Proposed week · review &amp; adjust</div>
+                <div class="mock-grid">
+                  <div class="mock-col">
+                    <div class="mock-day">Mon</div>
+                    <div class="blk blk-p aa" style="--d:.5s"><div class="t">Graphs drill</div><div class="m">9:00a</div><div class="okov" style="--d:2.5s"><div class="t">Graphs drill ✓</div><div class="m">9:00a</div></div></div>
+                    <div class="blk blk-busy aa" style="--d:.05s"><div class="t">Standup</div><div class="m">11:00a</div></div>
+                  </div>
+                  <div class="mock-col">
+                    <div class="mock-day">Tue</div>
+                    <div class="blk blk-busy aa" style="--d:.1s"><div class="t">Busy</div><div class="m">1:00p</div></div>
+                    <div class="blk blk-p aa" style="--d:.7s"><div class="t">DP review</div><div class="m">6:30p</div><div class="okov" style="--d:2.62s"><div class="t">DP review ✓</div><div class="m">6:30p</div></div></div>
+                  </div>
+                  <div class="mock-col">
+                    <div class="mock-day">Wed</div>
+                    <div class="blk blk-p aa" style="--d:.9s"><div class="t">Mock interview</div><div class="m">4:00p</div><div class="okov" style="--d:2.74s"><div class="t">Mock interview ✓</div><div class="m">4:00p</div></div></div>
+                  </div>
+                  <div class="mock-col">
+                    <div class="mock-day">Thu</div>
+                    <div class="blk blk-p aa" style="--d:1.1s"><div class="t">System design</div><div class="m">10:00a</div><div class="okov" style="--d:2.86s"><div class="t">System design ✓</div><div class="m">10:00a</div></div></div>
+                    <div class="blk blk-busy aa" style="--d:.15s"><div class="t">Busy</div><div class="m">3:00p</div></div>
+                  </div>
+                  <div class="mock-col">
+                    <div class="mock-day">Fri</div>
+                    <div class="blk blk-p aa" style="--d:1.3s"><div class="t">Behavioral</div><div class="m">4:00p</div><div class="okov" style="--d:2.98s"><div class="t">Behavioral ✓</div><div class="m">4:00p</div></div></div>
+                  </div>
+                </div>
+                <div class="mock-foot">
+                  <span class="approve aa" style="--d:1.7s">✓ Approve &amp; write<span class="okov" style="--d:3.2s">✓ Written · verified</span></span>
+                  <span class="lock aa" style="--d:1.9s">🔒 hash-checked at write time · re-read after writing</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Scene 4: pathway clusters -->
+        <section class="scene wide" data-scene="4" data-screen-label="Scene 4 - pathway clusters">
+          <div class="scene-inner">
+            <div class="scene-copy" style="max-width:640px">
+              <span class="scene-kicker"><b>04</b> / 04 · evidence → pathways</span>
+              <h2>Your evidence lights up a pathway. Gaps become the plan.</h2>
+              <p>
+                Five curated pathway templates, each a one-sentence story spine plus the evidence
+                slots a coherent version of that story needs. Your extracted evidence fills the
+                slots it already covers; unfilled slots become study modules. Fit is computed
+                deterministically - an LLM never ranks pathways or authors templates.
+              </p>
+            </div>
+            <div class="viz" aria-hidden="true">
+              <div class="pwgrid">
+                <div class="pw lit aa" style="--d:.05s">
+                  <span class="track">swe</span><span class="fit" style="--d:2.2s">2/4 covered</span>
+                  <h3>Backend &amp; Infrastructure</h3>
+                  <p class="spine">Builds reliable backend services and the infrastructure that keeps them running.</p>
+                  <div class="slot hit"><span class="dot"><span class="fill" style="--d:1s">✓</span></span>Backend service built end to end</div>
+                  <div class="slot"><span class="dot"></span>Data layer you designed</div>
+                  <div class="slot"><span class="dot"></span>Ran it in production</div>
+                  <div class="slot hit"><span class="dot"><span class="fill" style="--d:1.15s">✓</span></span>Public writeup or open-source work</div>
+                </div>
+                <div class="pw aa" style="--d:.15s">
+                  <span class="track">swe</span><span class="fit" style="--d:2.2s">1/4 covered</span>
+                  <h3>Full-Stack Product Engineer</h3>
+                  <p class="spine">Ships complete product features from database to interface.</p>
+                  <div class="slot"><span class="dot"></span>Frontend you built</div>
+                  <div class="slot hit"><span class="dot"><span class="fill" style="--d:1.3s">✓</span></span>Backend behind the product</div>
+                  <div class="slot"><span class="dot"></span>Product shipped to users</div>
+                  <div class="slot"><span class="dot"></span>User-facing polish or writeup</div>
+                </div>
+                <div class="pw lit aa" style="--d:.25s">
+                  <span class="track">ai_engineer</span><span class="fit" style="--d:2.35s">3/4 covered</span>
+                  <h3>AI-Integration Engineer</h3>
+                  <p class="spine">Ships LLM-powered features into real products, end to end.</p>
+                  <div class="slot hit"><span class="dot"><span class="fill" style="--d:1.45s">✓</span></span>LLM feature shipped in a real app</div>
+                  <div class="slot"><span class="dot"></span>Integration and tooling breadth</div>
+                  <div class="slot hit"><span class="dot"><span class="fill" style="--d:1.6s">✓</span></span>Evaluation and telemetry literacy</div>
+                  <div class="slot hit"><span class="dot"><span class="fill" style="--d:1.75s">✓</span></span>Public writeup or talk</div>
+                </div>
+                <div class="pw aa" style="--d:.35s">
+                  <span class="track">mle</span><span class="fit" style="--d:2.35s">1/5 covered</span>
+                  <h3>Applied ML Specialist</h3>
+                  <p class="spine">Builds and ships machine-learning models that solve real problems.</p>
+                  <div class="slot"><span class="dot"></span>Core modeling project</div>
+                  <div class="slot"><span class="dot"></span>Deep-learning or specialized modeling</div>
+                  <div class="slot"><span class="dot"></span>Model deployed</div>
+                  <div class="slot"><span class="dot"></span>Data pipeline you built</div>
+                  <div class="slot hit"><span class="dot"><span class="fill" style="--d:1.9s">✓</span></span>Technical writeup</div>
+                </div>
+                <div class="pw lit aa" style="--d:.45s">
+                  <span class="track">ai_engineer</span><span class="fit" style="--d:2.5s">3/4 covered</span>
+                  <h3>LLM Systems Engineer</h3>
+                  <p class="spine">Builds production LLM systems: orchestration, retrieval, evaluation, and cost control.</p>
+                  <div class="slot hit"><span class="dot"><span class="fill" style="--d:2s">✓</span></span>Orchestration and evaluation depth</div>
+                  <div class="slot hit"><span class="dot"><span class="fill" style="--d:2.1s">✓</span></span>Retrieval system you built</div>
+                  <div class="slot"><span class="dot"></span>Cost and latency optimization</div>
+                  <div class="slot hit"><span class="dot"><span class="fill" style="--d:2.2s">✓</span></span>Public writeup or talk</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Sneak peek: mastery system (star atlas) -->
+        <section class="scene wide" data-scene="5" data-screen-label="Sneak peek - mastery star atlas">
+          <div class="scene-inner">
+            <div class="scene-copy" style="max-width:640px">
+              <span class="scene-kicker"><b>sneak peek</b> · the mastery sky</span>
+              <h2>Coming soon: a sky you light up.</h2>
+              <p>
+                Your pathway charts a night sky. Every skill is a world: study warms it from barren
+                rock to living oceans, and a confirmed artifact crowns it with a ring. Systems
+                brighten as their worlds are honed; nothing lights on its own - only your logged
+                check-ins do, and only you can set a tier back down.
+              </p>
+            </div>
+            <div class="skywrap" aria-hidden="true">
+              <div class="bezel aa"><div class="rim">
+                <svg viewBox="0 0 900 420">
+                  <defs>
+                    <radialGradient id="g-sky" cx="50%" cy="38%" r="75%"><stop offset="0%" stop-color="#152539"></stop><stop offset="60%" stop-color="#0e1926"></stop><stop offset="100%" stop-color="#0b1420"></stop></radialGradient>
+                    <radialGradient id="g-vig" cx="50%" cy="45%" r="72%"><stop offset="62%" stop-color="#060b12" stop-opacity="0"></stop><stop offset="100%" stop-color="#060b12" stop-opacity=".75"></stop></radialGradient>
+                    <radialGradient id="g-rock"><stop offset="0%" stop-color="#57626f"></stop><stop offset="70%" stop-color="#3c4754"></stop><stop offset="100%" stop-color="#2d3845"></stop></radialGradient>
+                    <radialGradient id="g-ocean"><stop offset="0%" stop-color="#5ab3a7"></stop><stop offset="62%" stop-color="#347a74"></stop><stop offset="100%" stop-color="#24504f"></stop></radialGradient>
+                    <radialGradient id="g-glow"><stop offset="0%" stop-color="#e8c07a" stop-opacity=".5"></stop><stop offset="55%" stop-color="#e8c07a" stop-opacity=".16"></stop><stop offset="100%" stop-color="#e8c07a" stop-opacity="0"></stop></radialGradient>
+                    <radialGradient id="g-lamp"><stop offset="0%" stop-color="#e8c07a" stop-opacity=".11"></stop><stop offset="100%" stop-color="#e8c07a" stop-opacity="0"></stop></radialGradient>
+                    <radialGradient id="g-corona"><stop offset="0%" stop-color="#fff3da" stop-opacity=".95"></stop><stop offset="26%" stop-color="#e8c07a" stop-opacity=".45"></stop><stop offset="100%" stop-color="#e8c07a" stop-opacity="0"></stop></radialGradient>
+                    <radialGradient id="g-ember"><stop offset="0%" stop-color="#d97a4c" stop-opacity=".5"></stop><stop offset="100%" stop-color="#d97a4c" stop-opacity="0"></stop></radialGradient>
+                    <radialGradient id="g-neb-clay"><stop offset="0%" stop-color="#bd5a39" stop-opacity=".11"></stop><stop offset="100%" stop-color="#bd5a39" stop-opacity="0"></stop></radialGradient>
+                    <radialGradient id="g-neb-teal"><stop offset="0%" stop-color="#4d9a92" stop-opacity=".1"></stop><stop offset="100%" stop-color="#4d9a92" stop-opacity="0"></stop></radialGradient>
+                    <radialGradient id="g-neb-gold"><stop offset="0%" stop-color="#c08a3e" stop-opacity=".1"></stop><stop offset="100%" stop-color="#c08a3e" stop-opacity="0"></stop></radialGradient>
+                    <clipPath id="clip-p14"><circle cx="0" cy="0" r="14"></circle></clipPath>
+                  </defs>
+                  <rect width="900" height="420" fill="url(#g-sky)"></rect>
+                  <g><circle cx="16" cy="377" r="0.7" fill="#cfdae2" opacity="0.28" class="twinkle" style="animation-delay:-1.3s"></circle><circle cx="669" cy="311" r="0.8" fill="#cfdae2" opacity="0.35"></circle><circle cx="226" cy="160" r="0.9" fill="#e8c07a" opacity="0.31"></circle><circle cx="422" cy="377" r="1.0" fill="#cfdae2" opacity="0.37" class="twinkle" style="animation-delay:-2.8s"></circle><circle cx="575" cy="241" r="1.0" fill="#cfdae2" opacity="0.23"></circle><circle cx="743" cy="144" r="0.6" fill="#cfdae2" opacity="0.22" class="twinkle" style="animation-delay:-3.7s"></circle><circle cx="500" cy="301" r="1.0" fill="#cfdae2" opacity="0.28" class="twinkle" style="animation-delay:-2.0s"></circle><circle cx="382" cy="88" r="1.0" fill="#cfdae2" opacity="0.23" class="twinkle" style="animation-delay:-2.7s"></circle><circle cx="818" cy="216" r="0.6" fill="#cfdae2" opacity="0.24"></circle><circle cx="384" cy="144" r="0.8" fill="#cfdae2" opacity="0.37"></circle><circle cx="413" cy="354" r="0.9" fill="#cfdae2" opacity="0.27"></circle><circle cx="614" cy="384" r="0.7" fill="#cfdae2" opacity="0.29"></circle><circle cx="320" cy="143" r="0.7" fill="#cfdae2" opacity="0.18"></circle><circle cx="727" cy="43" r="0.7" fill="#e8c07a" opacity="0.39" class="twinkle" style="animation-delay:-0.9s"></circle><circle cx="565" cy="69" r="0.8" fill="#cfdae2" opacity="0.37"></circle><circle cx="784" cy="365" r="1.0" fill="#cfdae2" opacity="0.22"></circle><circle cx="25" cy="110" r="0.5" fill="#cfdae2" opacity="0.21" class="twinkle" style="animation-delay:-3.0s"></circle><circle cx="441" cy="284" r="0.6" fill="#cfdae2" opacity="0.24"></circle><circle cx="792" cy="59" r="0.8" fill="#cfdae2" opacity="0.30" class="twinkle" style="animation-delay:-3.7s"></circle><circle cx="34" cy="368" r="0.6" fill="#cfdae2" opacity="0.31"></circle><circle cx="247" cy="100" r="0.6" fill="#e8c07a" opacity="0.33"></circle><circle cx="624" cy="295" r="0.8" fill="#e8c07a" opacity="0.37" class="twinkle" style="animation-delay:-0.5s"></circle><circle cx="613" cy="366" r="0.5" fill="#cfdae2" opacity="0.39"></circle><circle cx="844" cy="315" r="0.8" fill="#cfdae2" opacity="0.36" class="twinkle" style="animation-delay:-1.6s"></circle><circle cx="220" cy="172" r="1.0" fill="#cfdae2" opacity="0.30"></circle><circle cx="654" cy="145" r="0.9" fill="#cfdae2" opacity="0.22"></circle><circle cx="871" cy="406" r="0.9" fill="#cfdae2" opacity="0.20"></circle><circle cx="576" cy="66" r="0.8" fill="#cfdae2" opacity="0.38"></circle><circle cx="434" cy="86" r="0.8" fill="#cfdae2" opacity="0.28" class="twinkle" style="animation-delay:-2.2s"></circle><circle cx="456" cy="312" r="0.7" fill="#e8c07a" opacity="0.22"></circle><circle cx="486" cy="92" r="0.9" fill="#cfdae2" opacity="0.31" class="twinkle" style="animation-delay:-1.7s"></circle><circle cx="81" cy="318" r="1.0" fill="#cfdae2" opacity="0.31"></circle><circle cx="848" cy="22" r="1.0" fill="#cfdae2" opacity="0.37"></circle><circle cx="48" cy="66" r="0.5" fill="#e8c07a" opacity="0.15" class="twinkle" style="animation-delay:-2.4s"></circle><circle cx="837" cy="88" r="0.6" fill="#cfdae2" opacity="0.21" class="twinkle" style="animation-delay:-1.8s"></circle><circle cx="879" cy="179" r="0.9" fill="#cfdae2" opacity="0.25"></circle><circle cx="69" cy="103" r="1.0" fill="#cfdae2" opacity="0.37"></circle><circle cx="458" cy="60" r="0.6" fill="#cfdae2" opacity="0.17"></circle><circle cx="253" cy="268" r="0.8" fill="#cfdae2" opacity="0.17"></circle><circle cx="375" cy="137" r="0.5" fill="#cfdae2" opacity="0.17" class="twinkle" style="animation-delay:-0.9s"></circle><circle cx="818" cy="320" r="1.0" fill="#cfdae2" opacity="0.38"></circle><circle cx="711" cy="274" r="0.8" fill="#cfdae2" opacity="0.27"></circle><circle cx="446" cy="237" r="0.9" fill="#cfdae2" opacity="0.32"></circle><circle cx="784" cy="347" r="1.1" fill="#cfdae2" opacity="0.38"></circle><circle cx="862" cy="154" r="0.5" fill="#cfdae2" opacity="0.32"></circle><circle cx="657" cy="390" r="1.0" fill="#cfdae2" opacity="0.34" class="twinkle" style="animation-delay:-0.4s"></circle><circle cx="811" cy="329" r="0.9" fill="#cfdae2" opacity="0.26"></circle><circle cx="773" cy="235" r="1.0" fill="#cfdae2" opacity="0.25" class="twinkle" style="animation-delay:-1.6s"></circle><circle cx="179" cy="245" r="0.6" fill="#cfdae2" opacity="0.23"></circle><circle cx="609" cy="359" r="0.6" fill="#cfdae2" opacity="0.15"></circle><circle cx="130" cy="169" r="0.5" fill="#cfdae2" opacity="0.19"></circle><circle cx="200" cy="387" r="0.9" fill="#e8c07a" opacity="0.30" class="twinkle" style="animation-delay:-0.1s"></circle><circle cx="721" cy="246" r="1.0" fill="#cfdae2" opacity="0.32" class="twinkle" style="animation-delay:-3.8s"></circle><circle cx="492" cy="245" r="1.0" fill="#cfdae2" opacity="0.29"></circle><circle cx="103" cy="30" r="0.9" fill="#cfdae2" opacity="0.21" class="twinkle" style="animation-delay:-0.9s"></circle><circle cx="554" cy="261" r="1.0" fill="#cfdae2" opacity="0.16" class="twinkle" style="animation-delay:-2.8s"></circle><circle cx="369" cy="326" r="0.9" fill="#e8c07a" opacity="0.37"></circle><circle cx="451" cy="338" r="0.8" fill="#cfdae2" opacity="0.32"></circle><circle cx="804" cy="352" r="0.6" fill="#cfdae2" opacity="0.18"></circle><circle cx="839" cy="390" r="0.5" fill="#cfdae2" opacity="0.38" class="twinkle" style="animation-delay:-3.5s"></circle><circle cx="846" cy="122" r="0.6" fill="#cfdae2" opacity="0.28" class="twinkle" style="animation-delay:-0.6s"></circle><circle cx="296" cy="202" r="0.6" fill="#e8c07a" opacity="0.17" class="twinkle" style="animation-delay:-2.5s"></circle><circle cx="422" cy="332" r="0.9" fill="#cfdae2" opacity="0.24"></circle><circle cx="548" cy="394" r="1.0" fill="#cfdae2" opacity="0.29"></circle><circle cx="713" cy="80" r="0.5" fill="#cfdae2" opacity="0.25"></circle><circle cx="489" cy="165" r="0.8" fill="#e8c07a" opacity="0.17" class="twinkle" style="animation-delay:-1.4s"></circle><circle cx="315" cy="91" r="0.9" fill="#e8c07a" opacity="0.15" class="twinkle" style="animation-delay:-3.3s"></circle><circle cx="771" cy="30" r="1.0" fill="#cfdae2" opacity="0.37"></circle><circle cx="708" cy="17" r="1.1" fill="#cfdae2" opacity="0.25" class="twinkle" style="animation-delay:-0.1s"></circle><circle cx="166" cy="311" r="1.0" fill="#cfdae2" opacity="0.35" class="twinkle" style="animation-delay:-1.3s"></circle></g><g><circle cx="16" cy="22" r="1.0" fill="#cfdae2" opacity="0.24"></circle><circle cx="87" cy="255" r="1.3" fill="#cfdae2" opacity="0.57"></circle><circle cx="113" cy="327" r="0.9" fill="#cfdae2" opacity="0.29" class="twinkle" style="animation-delay:-3.3s"></circle><circle cx="482" cy="250" r="1.4" fill="#cfdae2" opacity="0.39"></circle><circle cx="120" cy="58" r="0.7" fill="#cfdae2" opacity="0.56"></circle><circle cx="477" cy="26" r="0.8" fill="#cfdae2" opacity="0.42"></circle><circle cx="361" cy="326" r="1.1" fill="#cfdae2" opacity="0.45"></circle><circle cx="300" cy="402" r="1.3" fill="#cfdae2" opacity="0.32"></circle><circle cx="49" cy="261" r="1.6" fill="#cfdae2" opacity="0.32"></circle><circle cx="736" cy="87" r="1.3" fill="#cfdae2" opacity="0.52"></circle><circle cx="540" cy="358" r="1.0" fill="#cfdae2" opacity="0.27"></circle><circle cx="91" cy="328" r="1.3" fill="#cfdae2" opacity="0.36"></circle><circle cx="31" cy="85" r="1.3" fill="#cfdae2" opacity="0.41"></circle><circle cx="636" cy="28" r="1.5" fill="#cfdae2" opacity="0.57"></circle><circle cx="432" cy="382" r="1.3" fill="#cfdae2" opacity="0.36"></circle><circle cx="55" cy="41" r="1.4" fill="#cfdae2" opacity="0.40"></circle><circle cx="324" cy="89" r="1.2" fill="#cfdae2" opacity="0.44"></circle><circle cx="104" cy="224" r="0.8" fill="#cfdae2" opacity="0.33"></circle><circle cx="420" cy="397" r="0.9" fill="#cfdae2" opacity="0.36"></circle><circle cx="334" cy="279" r="1.5" fill="#cfdae2" opacity="0.26"></circle><circle cx="290" cy="39" r="1.2" fill="#cfdae2" opacity="0.43"></circle><circle cx="466" cy="76" r="1.0" fill="#cfdae2" opacity="0.39"></circle><circle cx="598" cy="358" r="1.5" fill="#cfdae2" opacity="0.41"></circle><circle cx="405" cy="239" r="1.6" fill="#cfdae2" opacity="0.45"></circle><circle cx="365" cy="116" r="1.6" fill="#cfdae2" opacity="0.47"></circle><circle cx="107" cy="368" r="1.2" fill="#cfdae2" opacity="0.55"></circle><circle cx="866" cy="130" r="1.1" fill="#cfdae2" opacity="0.57"></circle><circle cx="602" cy="270" r="1.4" fill="#cfdae2" opacity="0.51"></circle><circle cx="395" cy="19" r="1.0" fill="#cfdae2" opacity="0.45" class="twinkle" style="animation-delay:-1.6s"></circle><circle cx="728" cy="55" r="0.7" fill="#e8c07a" opacity="0.37"></circle><circle cx="542" cy="182" r="1.6" fill="#cfdae2" opacity="0.55"></circle><circle cx="670" cy="329" r="1.5" fill="#cfdae2" opacity="0.51"></circle><circle cx="350" cy="262" r="1.5" fill="#e8c07a" opacity="0.57"></circle><circle cx="751" cy="72" r="1.3" fill="#cfdae2" opacity="0.46"></circle></g>
+                  <ellipse cx="300" cy="200" rx="210" ry="145" fill="url(#g-neb-teal)"></ellipse>
+                  <ellipse cx="600" cy="110" rx="170" ry="105" fill="url(#g-neb-clay)"></ellipse>
+                  <ellipse cx="740" cy="270" rx="190" ry="135" fill="url(#g-neb-gold)"></ellipse>
+                  <circle cx="585" cy="120" r="122" fill="url(#g-lamp)" opacity=".71"></circle>
+                  <circle cx="700" cy="272" r="160" fill="url(#g-lamp)" opacity=".95"></circle>
+                  <text x="300" y="52" text-anchor="middle" class="rlabel">SYSTEMS &amp; SCALE</text>
+                  <!-- open system: Retrieval, mixed tiers -->
+                  <g class="aa" style="--d:.3s">
+                    <circle cx="300" cy="215" r="64" fill="none" stroke="rgba(207,218,226,.12)" stroke-width="1"></circle>
+                    <g transform="translate(300,215)"><circle r="27" fill="url(#g-glow)" opacity=".6"></circle><circle class="pulse" r="15" fill="url(#g-ember)"></circle><g stroke="rgb(210,199,174)" stroke-width="1" opacity=".55"><line y1="-17" y2="17"></line><line x1="-17" x2="17"></line></g><circle r="5.1" fill="rgb(210,199,174)"></circle><circle r="2.3" fill="#fff8ea" opacity=".9"></circle></g>
+                    <g transform="translate(300,151)"><circle r="26" fill="url(#g-glow)" opacity=".55"></circle><g transform="rotate(-16)"><ellipse rx="23" ry="6.5" fill="none" stroke="#d9a959" stroke-width="1.4" opacity=".55"></ellipse></g><g clip-path="url(#clip-p14)"><circle r="14" fill="url(#g-ocean)"></circle><ellipse cx="-4" cy="-5" rx="8" ry="4.6" fill="#6f9a74" transform="rotate(-18 -4 -5)"></ellipse><ellipse cx="7" cy="6" rx="5.5" ry="3.6" fill="#5f8a68" transform="rotate(14 7 6)"></ellipse><ellipse cx="-8" cy="7" rx="3" ry="1.8" fill="#6f9a74" opacity=".85"></ellipse><path d="M-13 -1 Q0 -7 13 -2" stroke="#ffffff" stroke-width="2" fill="none" opacity=".2"></path><path d="M-11 6 Q-2 3 9 8" stroke="#ffffff" stroke-width="1.4" fill="none" opacity=".13"></path><path d="M0 -14 A14 14 0 0 1 0 14 L0 -14 Z" fill="#0b1420" opacity=".38"></path><g fill="#ffd98f"><circle cx="7" cy="-3" r=".9"></circle><circle cx="9.5" cy="1.5" r=".8"></circle><circle cx="6" cy="5" r=".8"></circle><circle cx="10" cy="-7" r=".7"></circle></g></g><g transform="rotate(-16)"><path d="M-23 0 A23 6.5 0 0 0 23 0" fill="none" stroke="#e8c07a" stroke-width="1.6" opacity=".9"></path></g><circle cx="10" cy="10" r="6" fill="#5f7a64" stroke="#0b1420" stroke-width="1.4"></circle><text x="10" y="12.6" text-anchor="middle" font-size="7.5" font-weight="800" fill="#fff">✓</text></g><text x="300" y="123" text-anchor="middle" class="plab">Caching</text>
+                    <g transform="translate(364,215)"><circle class="pulse" r="24" fill="url(#g-ember)"></circle><g clip-path="url(#clip-p14)"><circle r="14" fill="url(#g-rock)"></circle><circle cx="-4" cy="-3" r="3" fill="#2b3644" opacity=".6"></circle><circle cx="5" cy="4" r="2.2" fill="#2b3644" opacity=".55"></circle><circle cx="1" cy="8" r="1.6" fill="#2b3644" opacity=".5"></circle><g stroke="#e0764a" fill="none"><path d="M-12 4 Q-4 7 2 3 T12 6" stroke-width="2.6" opacity=".25"></path><path d="M-12 4 Q-4 7 2 3 T12 6" stroke-width="1.3"></path><path d="M-8 -8 Q-2 -4 7 -9" stroke-width=".9" opacity=".8"></path></g></g><circle r="16.5" fill="none" stroke="#e0764a" stroke-width="3" opacity=".14"></circle><g class="trail"><path d="M2 -19.9A20 20 0 0 1 19.9 -2" fill="none" stroke="#e0764a" stroke-width="2.2" stroke-linecap="round"></path><path d="M19.9 2A20 20 0 0 1 2 19.9" fill="none" stroke="#e0764a" stroke-width="2.2" stroke-linecap="round"></path><path d="M-2 19.9A20 20 0 0 1 -19.9 2" fill="none" stroke="rgba(255,255,255,.15)" stroke-width="2.2" stroke-linecap="round"></path><path d="M-19.9 -2A20 20 0 0 1 -2 -19.9" fill="none" stroke="rgba(255,255,255,.15)" stroke-width="2.2" stroke-linecap="round"></path></g></g><text x="392" y="219" class="plab">Load balancing</text>
+                    <g transform="translate(300,279)"><g clip-path="url(#clip-p14)"><circle r="14" fill="url(#g-ocean)"></circle><ellipse cx="-4" cy="-5" rx="8" ry="4.6" fill="#6f9a74" transform="rotate(-18 -4 -5)"></ellipse><ellipse cx="7" cy="6" rx="5.5" ry="3.6" fill="#5f8a68" transform="rotate(14 7 6)"></ellipse><ellipse cx="-8" cy="7" rx="3" ry="1.8" fill="#6f9a74" opacity=".85"></ellipse><path d="M-13 -1 Q0 -7 13 -2" stroke="#ffffff" stroke-width="2" fill="none" opacity=".2"></path><path d="M-11 6 Q-2 3 9 8" stroke="#ffffff" stroke-width="1.4" fill="none" opacity=".13"></path></g></g><text x="300" y="311" text-anchor="middle" class="plab">Sharding</text>
+                    <g transform="translate(236,215)"><g clip-path="url(#clip-p14)"><circle r="14" fill="url(#g-rock)"></circle><circle cx="-4" cy="-3" r="3" fill="#2b3644" opacity=".6"></circle><circle cx="5" cy="4" r="2.2" fill="#2b3644" opacity=".55"></circle><circle cx="1" cy="8" r="1.6" fill="#2b3644" opacity=".5"></circle></g><circle r="14" fill="none" stroke="rgba(207,218,226,.5)" stroke-width="1" stroke-dasharray="1.5 3"></circle></g><text x="208" y="219" text-anchor="end" class="plab dim">Consensus</text>
+                    <text x="300" y="345" text-anchor="middle" class="scount">DISTRIBUTED SYSTEMS · 2/4</text>
+                  </g>
+                  <!-- closed system: a warming star -->
+                  <g class="aa" style="--d:.8s">
+                    <g transform="translate(585,120)"><circle r="35" fill="url(#g-glow)" opacity=".75"></circle><g stroke="rgb(227,203,156)" stroke-width="1" opacity=".65"><line y1="-21" y2="21"></line><line x1="-21" x2="21"></line></g><circle r="6.4" fill="rgb(227,203,156)"></circle><circle r="2.9" fill="#fff8ea" opacity=".9"></circle></g>
+                    <text x="585" y="144" text-anchor="middle" class="slab">Testing &amp; CI</text>
+                    <text x="585" y="158" text-anchor="middle" class="scount">3/4 honed</text>
+                  </g>
+                  <!-- open system: all honed, constellation drawn -->
+                  <g class="aa" style="--d:1.2s">
+                    <circle cx="700" cy="272" r="64" fill="none" stroke="rgba(207,218,226,.12)" stroke-width="1"></circle>
+                    <g><polygon points="700,208 755,304 645,304" fill="none" stroke="#e8c07a" stroke-width="1" opacity=".5"></polygon><circle cx="700" cy="208" r="1.6" fill="#e8c07a" opacity=".7"></circle><circle cx="755" cy="304" r="1.6" fill="#e8c07a" opacity=".7"></circle><circle cx="645" cy="304" r="1.6" fill="#e8c07a" opacity=".7"></circle></g>
+                    <g transform="translate(700,272)"><circle r="42" fill="url(#g-glow)" opacity=".9"></circle><g stroke="rgb(244,206,138)" stroke-width="1" opacity=".75"><line y1="-25" y2="25"></line><line x1="-25" x2="25"></line></g><circle r="7.6" fill="rgb(244,206,138)"></circle><circle r="3.4" fill="#fff8ea" opacity=".9"></circle></g>
+                    <g transform="translate(700,208)"><g clip-path="url(#clip-p14)"><circle r="14" fill="url(#g-ocean)"></circle><ellipse cx="-4" cy="-5" rx="8" ry="4.6" fill="#6f9a74" transform="rotate(-18 -4 -5)"></ellipse><ellipse cx="7" cy="6" rx="5.5" ry="3.6" fill="#5f8a68" transform="rotate(14 7 6)"></ellipse><ellipse cx="-8" cy="7" rx="3" ry="1.8" fill="#6f9a74" opacity=".85"></ellipse><path d="M-13 -1 Q0 -7 13 -2" stroke="#ffffff" stroke-width="2" fill="none" opacity=".2"></path><path d="M-11 6 Q-2 3 9 8" stroke="#ffffff" stroke-width="1.4" fill="none" opacity=".13"></path></g></g><text x="700" y="186" text-anchor="middle" class="plab">REST semantics</text>
+                    <g transform="translate(755,304)"><g clip-path="url(#clip-p14)"><circle r="14" fill="url(#g-ocean)"></circle><ellipse cx="-4" cy="-5" rx="8" ry="4.6" fill="#6f9a74" transform="rotate(-18 -4 -5)"></ellipse><ellipse cx="7" cy="6" rx="5.5" ry="3.6" fill="#5f8a68" transform="rotate(14 7 6)"></ellipse><ellipse cx="-8" cy="7" rx="3" ry="1.8" fill="#6f9a74" opacity=".85"></ellipse><path d="M-13 -1 Q0 -7 13 -2" stroke="#ffffff" stroke-width="2" fill="none" opacity=".2"></path><path d="M-11 6 Q-2 3 9 8" stroke="#ffffff" stroke-width="1.4" fill="none" opacity=".13"></path></g></g><text x="783" y="308" class="plab">Pagination</text>
+                    <g transform="translate(645,304)"><g clip-path="url(#clip-p14)"><circle r="14" fill="url(#g-ocean)"></circle><ellipse cx="-4" cy="-5" rx="8" ry="4.6" fill="#6f9a74" transform="rotate(-18 -4 -5)"></ellipse><ellipse cx="7" cy="6" rx="5.5" ry="3.6" fill="#5f8a68" transform="rotate(14 7 6)"></ellipse><ellipse cx="-8" cy="7" rx="3" ry="1.8" fill="#6f9a74" opacity=".85"></ellipse><path d="M-13 -1 Q0 -7 13 -2" stroke="#ffffff" stroke-width="2" fill="none" opacity=".2"></path><path d="M-11 6 Q-2 3 9 8" stroke="#ffffff" stroke-width="1.4" fill="none" opacity=".13"></path></g></g><text x="617" y="308" text-anchor="end" class="plab">Error contracts</text>
+                    <text x="700" y="356" text-anchor="middle" class="scount warm">API DESIGN · 3/3</text>
+                  </g>
+                  <!-- proven capstone beacon -->
+                  <g class="aa" style="--d:1.6s">
+                    <g transform="translate(830,96)"><circle r="36" fill="url(#g-corona)"></circle><g class="rays" stroke="#e8c07a" stroke-width=".9" opacity=".65"><line x1="10.0" y1="0.0" x2="27.0" y2="0.0"></line><line x1="7.1" y1="7.1" x2="12.7" y2="12.7"></line><line x1="0.0" y1="10.0" x2="0.0" y2="27.0"></line><line x1="-7.1" y1="7.1" x2="-12.7" y2="12.7"></line><line x1="-10.0" y1="0.0" x2="-27.0" y2="0.0"></line><line x1="-7.1" y1="-7.1" x2="-12.7" y2="-12.7"></line><line x1="-0.0" y1="-10.0" x2="-0.0" y2="-27.0"></line><line x1="7.1" y1="-7.1" x2="12.7" y2="-12.7"></line></g><circle r="7.5" fill="#fff3da"></circle><circle r="3.5" fill="#fffdf7"></circle></g>
+                    <text x="830" y="132" text-anchor="middle" class="slab" font-size="12.5">Ship a service to prod</text>
+                    <text x="830" y="147" text-anchor="middle" class="caplab lit">CAPSTONE ✦ PROVEN</text>
+                  </g>
+                  <rect width="900" height="420" fill="url(#g-vig)"></rect>
+                </svg>
+              </div></div>
+              <p class="sky-legend aa" style="--d:1.9s"><span>○ discovered</span><span>◐ training</span><span>● honed</span><span class="lw">✦ proven with artifact</span><span>honest counts, never percentages</span></p>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- How it works -->
+      <section class="band band-alt" id="how">
+        <div class="wrap">
+          <span class="eyebrow">The loop</span>
+          <h2>Propose, review, approve. Then it’s on your calendar.</h2>
+          <p class="section-lede">
+            A deterministic pipeline does the routing and scheduling; the AI only proposes
+            candidates. Nothing reaches your calendar before the approval gate.
+          </p>
+          <div class="steps">
+            <div class="step">
+              <div class="num">01</div>
+              <h3>Onboard</h3>
+              <p>A quick form: your goal, weekly hours, deep-work windows, and an optional résumé paste.</p>
+            </div>
+            <div class="step">
+              <div class="num">02</div>
+              <h3>Generate</h3>
+              <p>The AI proposes a structured plan; deterministic code validates and schedules it around your busy times.</p>
+            </div>
+            <div class="step">
+              <div class="num">03</div>
+              <h3>Review &amp; adjust</h3>
+              <p>Drag any proposed block to a new time or day. Every move is re-checked on the server.</p>
+            </div>
+            <div class="step hinge">
+              <div class="num">04</div>
+              <h3>Approve</h3>
+              <p>You confirm the exact set of events. The payload is hash-locked to what you saw.</p>
+              <span class="pill">the gate</span>
+            </div>
+            <div class="step">
+              <div class="num">05</div>
+              <h3>Write &amp; verify</h3>
+              <p>Loop writes to one calendar and re-reads every event to confirm it landed. If anything can’t be verified, the plan is not activated, and you see exactly what did and didn’t land.</p>
+            </div>
+            <div class="step">
+              <div class="num">06</div>
+              <h3>Check in &amp; calibrate</h3>
+              <p>Mark sessions complete or missed. Honest progress signals tune the plan over time.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Trust / safety -->
+      <section class="band">
+        <div class="wrap">
+          <span class="eyebrow">What the engine guarantees</span>
+          <h2>Safe by construction, not by good intentions.</h2>
+          <div class="trust">
+            <div class="trust-item">
+              <h3>No silent calendar writes</h3>
+              <p>Every write needs your explicit approval. Loop never edits your calendar on its own.</p>
+            </div>
+            <div class="trust-item">
+              <h3>Hash-checked at write time</h3>
+              <p>The approved plan is fingerprinted; if anything changed since you approved, the write is refused.</p>
+            </div>
+            <div class="trust-item">
+              <h3>Verified after writing</h3>
+              <p>Each event is re-read after writing. Anything unverified blocks the plan from activating, so nothing is silently treated as done.</p>
+            </div>
+            <div class="trust-item">
+              <h3>Your data stays yours</h3>
+              <p>Your résumé and plan live on your account and are never used for training.</p>
+            </div>
+            <div class="trust-item">
+              <h3>Scoped, revocable access</h3>
+              <p>Loop reads your busy times and writes to a single dedicated calendar. You can revoke access at any time.</p>
+            </div>
+            <div class="trust-item">
+              <h3>Typed failures, never dead ends</h3>
+              <p>When it can’t proceed, it tells you exactly why and how to recover.</p>
+            </div>
+          </div>
+
+          <div class="gdata">
+            <h3>What Loop accesses from your Google account, and why</h3>
+            <div class="gdata-rows">
+              <div class="gdata-row">
+                <h4>Who you are</h4>
+                <span class="scope">email · profile</span>
+                <p>
+                  Your email address and display name, used to sign you in and identify your
+                  account. Nothing else from your Google profile.
+                </p>
+              </div>
+              <div class="gdata-row">
+                <h4>When you’re busy</h4>
+                <span class="scope">calendar.freebusy</span>
+                <p>
+                  Busy/free time ranges only, so the scheduler plans study sessions around your
+                  existing commitments. Loop cannot see event titles, descriptions, attendees, or
+                  locations on your calendars. The permission it requests does not allow it.
+                </p>
+              </div>
+              <div class="gdata-row">
+                <h4>One calendar Loop creates</h4>
+                <span class="scope">calendar.app.created</span>
+                <p>
+                  Approved study sessions are written to a dedicated calendar Loop creates in your
+                  account. Loop cannot edit or delete events on any other calendar.
+                </p>
+              </div>
+            </div>
+            <p class="gdata-foot">
+              Your Google data is used only to provide these features. It is never sold, never
+              shared with third parties, never used for advertising, and never used to train AI
+              models. You can revoke Loop’s access at any time from your
+              <a href="https://myaccount.google.com/permissions">Google Account permissions</a>,
+              and it stops working immediately.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Thesis -->
+      <section class="band band-alt thesis">
+        <div class="wrap">
+          <blockquote>LLMs propose. Deterministic infrastructure disposes.</blockquote>
+          <p class="sub">
+            The AI generates candidates and explanations. Routing, validation, scheduling, the
+            approval gate, calendar writes, and verification are deterministic code.
+          </p>
+        </div>
+      </section>
+
+      <!-- What it's NOT -->
+      <section class="band">
+        <div class="wrap">
+          <span class="eyebrow">Honest framing</span>
+          <h2>What Loop is not.</h2>
+          <div class="notthis">
+            <span>Not an <b>autonomous calendar assistant</b>: it never acts without your approval.</span>
+            <span>Not a <b>chatbot</b>: it produces auditable plans, not prose that runs your week.</span>
+            <span>Not a <b>content firehose</b>: one plan, on your terms, kept honest.</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Final CTA -->
+      <section class="band band-alt final">
+        <div class="wrap">
+          <h2>Put your prep on the calendar, safely.</h2>
+          <div class="cta-row">
+            <a class="btn btn-primary" href="/auth/login">
+              <span class="gmark">G</span> Connect Google Calendar
+            </a>
+          </div>
+          <p class="tester-note" style="margin-inline: auto; text-align: center">
+            Closed beta. Email
+            <a href="mailto:xl3704@columbia.edu?subject=Loop%20beta%20access">xl3704@columbia.edu</a>
+            to request access while Google’s OAuth verification is in progress.
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="foot-inner">
+        <div class="brand">
+          <span class="glyph">L</span>
+          <span class="word">Loop</span>
+        </div>
+        <span class="muted">Interview prep, scheduled around your real life.</span>
+        <span class="muted">Built by <a class="muted" href="https://github.com/ShawnnnLiu">Shawn Liu</a></span>
+        <span class="spacer"></span>
+        <a class="muted" href="/how-its-built">How it’s built</a>
+        <a class="muted" href="/privacy">Privacy</a>
+        <a class="muted" href="/terms">Terms</a>
+        <a class="muted" href="/auth/login">Get started →</a>
+      </div>
+    </footer>
+
+    <script>
+      // Scroll-driven scenes. Motion is opt-in: without JS, or with
+      // prefers-reduced-motion, every scene renders its static final frame.
+      (function () {
+        var rm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)');
+        if (!('IntersectionObserver' in window) || (rm && rm.matches)) return;
+        document.documentElement.classList.add('anim');
+        var scenes = Array.prototype.slice.call(document.querySelectorAll('.scene'));
+        // Play when a scene reaches its trigger point; un-play (reverse the
+        // entrance) when it drops back below the viewport on upward scroll.
+        var playIO = new IntersectionObserver(
+          function (entries) {
+            entries.forEach(function (e) {
+              if (e.isIntersecting) {
+                e.target.classList.add('play');
+                e.target.classList.remove('rev');
+              } else if (e.boundingClientRect.top > 0 && e.target.classList.contains('play')) {
+                e.target.classList.add('rev');
+                e.target.classList.remove('play');
+              }
+            });
+          },
+          { threshold: 0.3 }
+        );
+        // Fade a played scene to clear once it is mostly scrolled past
+        // (leaving the top of the viewport), before the next trigger.
+        var exitIO = new IntersectionObserver(
+          function (entries) {
+            entries.forEach(function (e) {
+              var leavingUp = e.boundingClientRect.top < 0;
+              e.target.classList.toggle('gone', leavingUp && e.intersectionRatio < 0.3);
+            });
+          },
+          { threshold: [0, 0.3, 0.6, 1] }
+        );
+        scenes.forEach(function (s) {
+          playIO.observe(s);
+          exitIO.observe(s);
+        });
+        // Hero panel slips away to the right as you scroll past the hero,
+        // scrubbed to scroll position (so it reverses on the way back up).
+        var hero = document.querySelector('.hero');
+        var heroMock = document.querySelector('.hero .mock');
+        if (hero && heroMock) {
+          var ticking = false;
+          var flyRange = function () { return Math.max(window.innerHeight * 0.55, 320); };
+          var render = function () {
+            ticking = false;
+            var p = Math.min(Math.max(-hero.getBoundingClientRect().top / flyRange(), 0), 1);
+            p = p * p * (3 - 2 * p); // smoothstep ease
+            if (p === 0) {
+              heroMock.style.transform = '';
+              heroMock.style.opacity = '';
+              heroMock.style.filter = '';
+              return;
+            }
+            heroMock.style.transform =
+              'translateX(' + (p * 72) + 'vw) rotate(' + (p * 4) + 'deg) scale(' + (1 - p * 0.06) + ')';
+            heroMock.style.opacity = Math.max(1 - p * 1.2, 0);
+            heroMock.style.filter = 'blur(' + (p * 8) + 'px)';
+          };
+          var onScroll = function () {
+            if (!ticking) { ticking = true; requestAnimationFrame(render); }
+          };
+          window.addEventListener('scroll', onScroll, { passive: true });
+          window.addEventListener('resize', onScroll);
+          render();
+        }
+      })();
+    </script>
+  </body>
+</html>

@@ -431,7 +431,7 @@ s+=`<g class="nodeg" data-n="${c.id}" transform="translate(${c.x},${c.y})">${bea
 s+=`<text x="${c.x}" y="${c.y+36}" text-anchor="middle" class="slab" font-size="12.5">${esc(c.title)}</text>`;
 s+=`<text x="${c.x}" y="${c.y+51}" text-anchor="middle" class="caplab${pv?' lit':''}">${pv?'CAPSTONE ✦ PROVEN':'CAPSTONE — UNPROVEN'}</text>`;}
 /* personal header */
-s+=`<text x="960" y="502" text-anchor="middle" class="yourshdr">YOUR ADDITIONS</text><line x1="922" y1="510" x2="998" y2="510" stroke="rgba(207,218,226,.25)" stroke-dasharray="2 3"/>`;
+if(!S.open.has('kg-side'))s+=`<text x="960" y="502" text-anchor="middle" class="yourshdr">YOUR ADDITIONS</text><line x1="922" y1="510" x2="998" y2="510" stroke="rgba(207,218,226,.25)" stroke-dasharray="2 3"/>`;
 /* systems */
 for(const g of GROUPS){const st=gStats(g.id),open=S.open.has(g.id);
 if(!open){

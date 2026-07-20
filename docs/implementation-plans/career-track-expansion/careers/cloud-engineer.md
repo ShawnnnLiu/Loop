@@ -97,7 +97,7 @@ Shared entries from `devops-sre.md` that tag `cloud_engineer`:
 | `skill.cloud-cli` | Cloud CLIs | `aws cli`, `azure cli`, `az cli`, `gcloud`, `cloud shell` | tool | cloud_engineer | Daily driver; ACE tests gcloud explicitly |
 | `skill.hybrid-connectivity` | Hybrid Connectivity | `site-to-site vpn`, `direct connect`, `expressroute` | concept | cloud_engineer | Hybrid architecture questions; secondary; bare `vpn` left out (generic) |
 | `skill.landing-zones` | Landing Zones & Governance | `landing zone`, `control tower`, `azure policy`, `tagging strategy` | concept | cloud_engineer | Enterprise multi-account design; secondary |
-| `skill.compliance` | Compliance Frameworks | `compliance`, `pci dss`, `hipaa`, `soc 2`, `fedramp`, `grc` | concept | cloud_engineer, security_analyst | NEW·shared; regulated-industry postings |
+| `skill.compliance` | Compliance Frameworks | `compliance`, `pci dss`, `soc 2`, `fedramp`, `grc` | concept | cloud_engineer, security_analyst, medical_coder | NEW·shared; regulated-industry postings. Ruling changed 2026-07-19: `hipaa` re-homed to `skill.hipaa-privacy` (medical-coder.md — core exam domain there); this entry gains the medical_coder tag for framework-level overlap |
 | `skill.cloud-resume-challenge` | Cloud Resume Challenge | `cloud resume challenge` | practice | cloud_engineer | The recognized cert-to-job bridge project |
 | `skill.troubleshooting` | Systematic Troubleshooting | `troubleshooting`, `root cause analysis`? | practice | cloud_engineer | **Collision**: `root cause analysis`/`rca` proposed on `skill.postmortems` (devops) — one home; recommend leaving both aliases there and keeping only `troubleshooting` here |
 

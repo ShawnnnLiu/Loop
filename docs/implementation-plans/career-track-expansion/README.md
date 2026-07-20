@@ -1,7 +1,8 @@
 # Career Track Expansion — Research-Grounded Planning Docs
 
-Written 2026-07-06. Status: **planning docs only — nothing here is
-implemented.** These docs exist so that when a new career track is added,
+Written 2026-07-06; extended 2026-07-19 with a second research pass
+adding fifteen wave-4/5 profiles. Status: **planning docs only — nothing
+here is implemented.** These docs exist so that when a new career track is added,
 the three requirements (enum membership, curated taxonomy entries,
 track-tagged corpus documents) can be satisfied from a researched draft
 instead of from scratch — and so the RI-F enrichment run over the
@@ -19,8 +20,9 @@ clusters) decay much slower.
 
 - **`resume-intake-onboarding/06-skill-taxonomy.md`** defines the
   controlled vocabulary, the shared `CareerTrack` enum, and RI-F
-  (corpus-evidence enrichment). These docs supply the *content* a new
-  track needs: seed `SkillEntry` drafts with FTS5-conscious aliases.
+  (corpus-evidence enrichment — **not yet built**; it is that plan's open
+  gated increment). These docs supply the *content* a new track needs:
+  seed `SkillEntry` drafts with FTS5-conscious aliases.
 - **`loop-grounding-rag/01-corpus-and-contracts.md`** reserves G-I for
   "remaining tracks after the pipeline is proven." A career landed via
   this folder's checklist **is** a G-I increment: each profile's corpus
@@ -78,11 +80,76 @@ data careers minimizes shared-entry churn):
 careers proven end-to-end plus a credential-prerequisite contract spec.
 PMP first when it opens.
 
+**Wave 4 — cert/interview-codified, beyond tech** (researched
+2026-07-19; popularity ranked by BLS openings/growth × active-prepper
+volume × prep codification; rides existing machinery like waves 1–2):
+
+10. `it_support` — ~50k openings/yr; CompTIA A+ V15 + Google IT cert;
+    the standard IT on-ramp, several rungs below devops/cloud.
+11. `digital_marketer` — 127k+ open roles (Google's revised figure);
+    Google/HubSpot cert stack; near-zero taxonomy overlap (~28 new).
+12. `management_consultant` — ~98k openings/yr; the case-interview canon
+    is the most codified non-exam loop anywhere; deadline-anchored
+    recruiting calendar is a scheduling-relevant constraint.
+13. `business_analyst` — same BLS SOC; BABOK/ECBA→CBAP ladder;
+    **re-homes the `business analyst` resolver marker from
+    `data_analyst`** (coordinated marker edit, done in both profiles).
+14. `network_engineer` — 331k jobs; CCNA→CCNP canon; lands the network
+    vocabulary it_support tags instead of minting.
+15. `hr_specialist` — ~82k openings/yr; aPHR/PHR/SHRM-CP (optional-cert
+    caveat recorded honestly); one track covers generalist + recruiter.
+16. `financial_analyst` — ~30k openings/yr; modeling-test/BIWS canon +
+    FMVA; explicit boundary drawn against wave-3 CFA (clean-room kept).
+17. `salesforce_admin` — smaller posting base (vendor hype discounted in
+    the profile) but a large self-study population on a free codified
+    curriculum (Trailhead; 2025-12-15 exam refresh weights recorded).
+
+**Wave 5 — licensure/exam-gated** (wave-3 pattern: credential-prereq
+gates, blueprint versioning, concept-heavy kind skew; same gating rule
+as wave 3 — do not start before the credential-prerequisite contract
+spec exists):
+
+18. `teacher_k12` — 200k+ openings/yr across grade bands; Praxis
+    Core/Subject/PLT + edTPA; state variance = blueprint-version analog.
+19. `real_estate_agent` — ~46k openings/yr, highest-churn licensure
+    career; per-state course-hours + PSI/Pearson VUE exam; "state" must
+    become a plan-level input.
+20. `financial_advisor` — +10% growth; SIE→Series 7→65/66→CFP ladder;
+    Series 7's firm-sponsorship gate is the canonical "Planner must
+    refuse to schedule around it" case.
+21. `insurance_agent` — ~47k openings/yr; per-line state exams with
+    published weighted outlines; serial multi-line gate chains.
+22. `actuary` — tiny headcount (~2.4k openings/yr) but near-perfect
+    product fit: SOA/CAS ladder, 300+ scheduled hrs/exam for years.
+23. `medical_coder` — 250k+ AAPC members; CPC/CCS; code-set versioning
+    (ICD Oct 1 / CPT Jan 1) is a literal blueprint-version problem.
+24. `electrician` — ~81k openings/yr; trades proxy/template; only the
+    bookends (apprenticeship aptitude test, NEC journeyman exam) are
+    schedulable study — the profile is honest that the multi-year middle
+    is employment, not prep.
+
+Wave-4/5 cross-career alias rulings (sales cluster, exam-practice
+entry, powerpoint/m&a/change-management homes, the `hipaa` re-home) are
+recorded in `02-shared-entries.md` § "Wave 4–5 additions" — read that
+section before implementing ANY of these fifteen.
+
+**Next-up (researched and cut just below the top 15, in order):**
+physician_assistant (PANCE), pharmacist (NAPLEX), physical_therapist
+(NPTE), emt_paramedic (NREMT), supply_chain_analyst (APICS CSCP/CPIM),
+scrum_master (high fold-risk into the PMP track — revisit only after
+PMP lands), paralegal (flat outlook, AI headwinds).
+
 **Explicit non-tracks:** frontend/backend/full-stack stay inside `swe`
 (same loop shape; the resolver already homes them there). QA engineer,
 solutions architect, TPM, and analytics engineer were considered and
 folded or deferred (analytics engineer → `data_engineer` markers; TPM
-deliberately unresolved → union fallback).
+deliberately unresolved → union fallback). The 2026-07-19 pass added:
+penetration tester → `security_analyst` specialization (OSCP noted, same
+pattern as the QA ruling); game developer and embedded/firmware →
+portfolio + standard `swe` loops; customer success manager and tech
+sales → prep essentially uncodified (no artifact to schedule); technical
+writer and DBA → too small / DBA folds into `data_engineer` per the
+analytics-engineer precedent.
 
 ## What "helpful for RAG enrichment later" concretely means here
 

@@ -208,6 +208,25 @@ def test_invalid_onboard_payload_maps_to_422() -> None:
     assert body["type"] == "ValidationError"
 
 
+def test_onboard_rejects_unknown_pathway_selection() -> None:
+    # A shape-valid selection whose pathway_id is not in the registry is a
+    # semantic (not schema) failure: HTTP 200 with a typed reason_code, nothing
+    # persisted (the profile keeps no selection).
+    client, _clock = _client()
+    profile = client.get("/api/me").json()["profile"]
+    profile["pathway_selection"] = {
+        "pathway_id": "ghost-pathway",
+        "pathway_registry_version": "pathway-registry-v1",
+        "selected_at": "2026-07-19T12:00:00-07:00",
+    }
+    resp = client.post("/api/onboard", json={"user_profile": profile})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "rejected"
+    assert body["reason_code"] == "UNKNOWN_PATHWAY_ID"
+    assert client.get("/api/me").json()["profile"]["pathway_selection"] is None
+
+
 # --------------------------------------------------------------------------- #
 # Read projections + guarded check-in (F-A): the JSON the SPA renders from.
 # --------------------------------------------------------------------------- #

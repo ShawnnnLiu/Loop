@@ -338,6 +338,14 @@ class CycleService:
         default UTC), ``motivation_profile`` (optional). Re-onboarding the
         same user replaces the bundle (profile edits are expected during
         dogfooding) but keeps the original ``created_at``.
+
+        A ``pathway_selection`` on the profile is checked against the registry
+        (NP-D): an unknown pathway, a stale registry-version pin, or an override
+        naming a slot the pathway does not have is rejected with a typed
+        ``reason_code`` and nothing is persisted. When the selection *changes*
+        vs the stored profile, the syllabus, tasks, and schedule are invalidated
+        per the profile-update policy (the accountability contract is not
+        touched); evidence is never reset.
         """
         env = self._env
         now = env.clock.now()
@@ -353,6 +361,20 @@ class CycleService:
             }
         )
         prior = env.state.get_onboarding(record.user_id)
+
+        rejection = self._reject_invalid_selection(record.user_profile)
+        if rejection is not None:
+            reason, detail = rejection
+            return OnboardResult(
+                user_id=record.user_id,
+                created=prior is None,
+                timezone=record.timezone,
+                has_motivation_profile=record.motivation_profile is not None,
+                status="rejected",
+                reason_code=reason,
+                detail=detail,
+            )
+
         if prior is not None:
             # Re-onboarding (a profile edit) keeps the original created_at and the
             # user's inbound-calendar-sync preference (which onboarding never sets).
@@ -363,6 +385,10 @@ class CycleService:
                     "inbound_calendar_sync_enabled": prior.inbound_calendar_sync_enabled,
                 }
             )
+            if self._selection_id(prior.user_profile) != self._selection_id(
+                record.user_profile
+            ):
+                self._invalidate_for_pathway_change(record.user_id)
         env.state.save_onboarding(record)
         return OnboardResult(
             user_id=record.user_id,
@@ -370,6 +396,83 @@ class CycleService:
             timezone=record.timezone,
             has_motivation_profile=record.motivation_profile is not None,
         )
+
+    @staticmethod
+    def _selection_id(profile: UserProfile) -> str | None:
+        """The profile's selected ``pathway_id``, or ``None`` when unselected.
+
+        Slot-override edits keep the same ``pathway_id`` and never invalidate: a
+        pathway *change* is what the policy table gates, and coverage recomputes
+        against the new mapping on read (pathway-selection spec)."""
+        selection = profile.pathway_selection
+        return selection.pathway_id if selection is not None else None
+
+    def _reject_invalid_selection(
+        self, profile: UserProfile
+    ) -> tuple[ReasonCode, str] | None:
+        """Registry-membership check for the profile's selection (service layer).
+
+        Returns a typed ``(reason_code, detail)`` for an unknown pathway, a stale
+        registry-version pin, or an override naming a slot the pathway lacks;
+        ``None`` when there is no selection or it is fully valid. Shape is already
+        contract-checked (``PathwaySelection``); this is the semantic check the
+        contract cannot make (it cannot see the registry)."""
+        selection = profile.pathway_selection
+        if selection is None:
+            return None
+        template = get_pathway(selection.pathway_id)
+        if template is None:
+            return (
+                ReasonCode.UNKNOWN_PATHWAY_ID,
+                f"pathway {selection.pathway_id!r} is not in the registry",
+            )
+        if selection.pathway_registry_version != PATHWAY_REGISTRY_VERSION:
+            return (
+                ReasonCode.PATHWAY_REGISTRY_VERSION_MISMATCH,
+                f"selection pinned to registry version "
+                f"{selection.pathway_registry_version!r}; the registry serves "
+                f"{PATHWAY_REGISTRY_VERSION!r} — re-confirm on the current version",
+            )
+        slot_ids = {slot.slot_id for slot in template.evidence_slots}
+        unknown = sorted(
+            {o.slot_id for o in selection.slot_overrides if o.slot_id not in slot_ids}
+        )
+        if unknown:
+            return (
+                ReasonCode.UNKNOWN_EVIDENCE_SLOT,
+                f"slot_overrides reference slots not in pathway "
+                f"{selection.pathway_id!r}: {unknown}",
+            )
+        return None
+
+    def _invalidate_for_pathway_change(self, user_id: str) -> None:
+        """Invalidate syllabus + tasks + schedule after a pathway change (NP-D).
+
+        Full discard: every non-terminal plan version is moved to ``DISCARDED``
+        (so the tasks and schedule no longer reflect the superseded pathway and
+        the read projections go empty), the stored syllabus is dropped (the next
+        propose regenerates a fresh one against the new pathway), and a pending
+        awaiting-approval run is retired through the existing reject edge so its
+        stale draft can never be approved. The calendar is never touched here (no
+        silent writes): already-written events supersede on the next
+        approve→write, exactly like a replan. The accountability contract lives
+        on the motivation profile and is deliberately left intact (profile-update
+        policy)."""
+        env = self._env
+        now = env.clock.now()
+        for plan_version in env.plan_store.list_for_user(user_id):
+            if plan_version.state in (
+                LifecycleState.DRAFT,
+                LifecycleState.APPROVED,
+                LifecycleState.ACTIVE,
+            ):
+                env.plan_store.save(
+                    plan_version.transition_to(LifecycleState.DISCARDED, now=now)
+                )
+        env.state.delete_syllabus(user_id)
+        latest = env.state.latest_run_for_user(user_id)
+        if latest is not None and latest.state is S.AWAITING_USER_APPROVAL:
+            self._transition(latest, Sig.USER_REJECTED)
 
     # ------------------------------------------------------------------ #
     # extract (résumé intake — persistence-free)
@@ -598,7 +701,14 @@ class CycleService:
         if horizon_days is None:
             horizon_days = onboarding.user_profile.timeline_weeks * 7
         latest = self._env.state.latest_run_for_user(user_id)
-        if latest is not None and latest.state is S.REPLAN_REQUIRED:
+        if (
+            latest is not None
+            and latest.state is S.REPLAN_REQUIRED
+            # A pathway change (NP-D) discards the active plan out from under a
+            # queued replan; with no plan to recalibrate, fall through to a fresh
+            # cycle rather than dead-ending on "no plan is active".
+            and self._env.plan_store.get_active(user_id) is not None
+        ):
             return self._propose_replan(
                 onboarding,
                 latest,

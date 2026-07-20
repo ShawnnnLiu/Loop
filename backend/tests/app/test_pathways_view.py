@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import Any
 
 from agentic_calendar.app.cycle import CycleService
+from agentic_calendar.app.state import OnboardingRecord
 from agentic_calendar.contracts.common_types import EvidenceKind
 from tests.app.test_cycle import USER_ID, make_service
 from tests.narrative._helpers import item, make_profile, selection
@@ -77,10 +78,26 @@ def test_selected_card_flagged_no_mismatch_when_pinned_current() -> None:
 
 
 def test_stale_version_pin_surfaces_mismatch_without_remap() -> None:
-    service = _service()
+    # A stale pin cannot be created through onboard (it rejects one, NP-D-c);
+    # it only arises when a *later* registry bump orphans an already-stored
+    # selection. Simulate that by writing the record directly, then assert
+    # pathways_view surfaces the mismatch rather than silently re-mapping.
+    service, env, clock = make_service(onboard=False, seed_claims=False)
     stale = selection(pathway_id=BACKEND)
     stale["pathway_registry_version"] = "pathway-registry-v0"
-    _onboard(service, [], pathway_selection=stale)
+    profile = make_profile([], stale)
+    now = clock.now()
+    env.state.save_onboarding(
+        OnboardingRecord.model_validate(
+            {
+                "user_id": USER_ID,
+                "user_profile": profile.model_dump(mode="json"),
+                "timezone": "UTC",
+                "created_at": now,
+                "updated_at": now,
+            }
+        )
+    )
     result = service.pathways_view(USER_ID, track="swe")
 
     assert result.version_mismatch is True

@@ -44,6 +44,13 @@ class OnboardResult(BaseModel):
     """``True`` on first onboarding, ``False`` when an existing record was updated."""
     timezone: str
     has_motivation_profile: bool
+    status: Literal["ok", "rejected"] = "ok"
+    """``"rejected"`` when the bundle carried a ``pathway_selection`` the registry
+    could not honor (NP-D); nothing was persisted and ``reason_code`` says why —
+    the typed-failure axiom, surfaced without a Pydantic 422 (the shape was
+    valid; the selection was a *semantic* mismatch against the registry)."""
+    reason_code: ReasonCode | None = None
+    detail: str | None = None
 
 
 class CanonicalSkill(BaseModel):

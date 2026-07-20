@@ -29,7 +29,7 @@ do not exist yet.
 
 ## Phase 1 scope
 
-Phase 1 (`docs/implementation-plans/phase-1-core-planning.md`) implements the
+Phase 1 (`docs/implementation-plans/completed/phase-1-core-planning.md`) implements the
 deterministic planning core:
 
 - Pydantic contracts for `user_profile`, `motivation_profile`,

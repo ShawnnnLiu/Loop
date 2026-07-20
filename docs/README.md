@@ -70,14 +70,9 @@ Core thesis: **LLMs propose. Deterministic infrastructure disposes.**
 
 ## Implementation Plans
 
-- `implementation-plans/phase-1-core-planning.md`
-- `implementation-plans/phase-2-calendar-safety.md`
-- `implementation-plans/phase-3-sponsor-reporting.md`
-- `implementation-plans/phase-4-telemetry-drift.md`
-- `implementation-plans/phase-5-rag-caching.md`
-- `implementation-plans/phase-6-advanced-personalization.md`
-- `implementation-plans/phase-7-accountability-mvp.md`
-- `implementation-plans/phase-8-llm-eval-observability.md`
+See `implementation-plans/README.md` for the index. Active plans live at the
+top level of `implementation-plans/`; completed plans are archived under
+`implementation-plans/completed/`.
 
 ## Reading Path
 

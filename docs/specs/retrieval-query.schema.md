@@ -68,4 +68,4 @@ Reason: `k` must be at least 1.
 - `retrieval-result.schema.md`
 - `corpus-snapshot.schema.md`
 - `../axioms/08-rag-source-claims.md` (corpus-registry subsection)
-- `../implementation-plans/loop-grounding-rag/02-retrieval-pipeline.md`
+- `../implementation-plans/completed/loop-grounding-rag/02-retrieval-pipeline.md`

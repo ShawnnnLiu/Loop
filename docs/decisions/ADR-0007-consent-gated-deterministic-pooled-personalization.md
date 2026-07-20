@@ -94,4 +94,4 @@ honesty) until real multi-user data exists.
 - `../specs/consent-record.schema.md`
 - `../specs/data-access-audit.schema.md`
 - `../specs/telemetry.schema.md`
-- `../implementation-plans/phase-6-advanced-personalization.md`
+- `../implementation-plans/completed/phase-6-advanced-personalization.md`

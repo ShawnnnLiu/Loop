@@ -3,7 +3,7 @@
 Added 2026-07-06 (user follow-up to the locked decisions): extracted skills
 must not be invented on the go — they must resolve against a canonical,
 field-specific skill vocabulary, and that vocabulary must connect to the
-grounding-RAG corpus (`../loop-grounding-rag/`). This doc defines the
+grounding-RAG corpus (`../completed/loop-grounding-rag`). This doc defines the
 mechanism. Its work is folded into RI-A/RI-B/RI-C (build-order table at the
 bottom) plus one new gated increment, **RI-F**, that runs after the RAG
 pipeline exists.
@@ -52,7 +52,7 @@ asymmetry, not an oversight.
   This is the literal connection point to the RAG plan: G-A's
   `corpus-document.schema.md` requires `track_tags` from "a closed track
   enum" — both plans use THIS enum, whichever branch lands first creates it
-  (cross-notes added to `../loop-grounding-rag/01-corpus-and-contracts.md`).
+  (cross-notes added to `../completed/loop-grounding-rag/01-corpus-and-contracts.md`).
 - `SkillEntry`: `skill_id` (stable slug, e.g. `skill.system-design`),
   `display_name`, `aliases: list[str]` (non-empty, lowercase-normalized,
   globally unique across the taxonomy — one alias resolves to exactly one

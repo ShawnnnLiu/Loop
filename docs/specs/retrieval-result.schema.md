@@ -122,4 +122,4 @@ part of the contract).
 - `retrieval-query.schema.md`
 - `corpus-snapshot.schema.md` (chunking params are part of the snapshot pin)
 - `../axioms/08-rag-source-claims.md`
-- `../implementation-plans/loop-grounding-rag/02-retrieval-pipeline.md`
+- `../implementation-plans/completed/loop-grounding-rag/02-retrieval-pipeline.md`

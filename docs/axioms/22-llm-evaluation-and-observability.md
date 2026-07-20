@@ -137,5 +137,5 @@ This axiom does not widen the LLM's authority. It instruments and grades the fiv
 - `09-cost-and-metrics.md`
 - `16-reliability-patterns.md`
 - `../decisions/ADR-0006-llm-never-touches-the-calendar.md`
-- `../implementation-plans/phase-8-llm-eval-observability.md`
+- `../implementation-plans/completed/phase-8-llm-eval-observability.md`
 - `../golden-test-cases.md`

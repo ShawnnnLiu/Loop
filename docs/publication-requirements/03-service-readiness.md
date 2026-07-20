@@ -10,7 +10,7 @@ blocks launch.
 - Status: code side shipped and dormant (`CANONICAL_HOST` redirect in
   `backend/src/agentic_calendar/app/web/server.py`; commented `[env]` slot
   in `fly.toml`). Infra side not done.
-- Runbook: `docs/implementation-plans/loop-recruiter-readiness/REMAINING.md`
+- Runbook: `docs/implementation-plans/completed/loop-recruiter-readiness/REMAINING.md`
   §2 — buy domain → `fly certs add` on app `acme-agentic-cal` → add
   Console redirect URI + authorized origin (keep the old fly.dev URI during
   transition) → set `OAUTH_REDIRECT_URI` + `CANONICAL_HOST` → deploy →

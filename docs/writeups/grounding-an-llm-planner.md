@@ -271,7 +271,7 @@ kept as written, the fixes are recorded here.
   anecdote reaches 0.55, the `medium` boundary, breaking the
   anecdotes-ceiling-at-`low` invariant. Change record: axiom 08 "Serving
   curation floor"; simulation data:
-  `docs/implementation-plans/loop-grounding-rag/05-production-operations.md`.
+  `docs/implementation-plans/completed/loop-grounding-rag/05-production-operations.md`.
 - **"Index-page chrome produces junk claims" — now gated.** Measured
   against this store: 20 of 117 claims were navigation chrome, including
   **10 of the 27 claims that were actually serving** (all three levels.fyi

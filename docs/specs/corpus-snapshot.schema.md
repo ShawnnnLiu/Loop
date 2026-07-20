@@ -143,6 +143,6 @@ overlap would make chunking non-progressing).
 
 - `corpus-document.schema.md`
 - `../axioms/08-rag-source-claims.md` (corpus-registry subsection)
-- `../implementation-plans/loop-grounding-rag/01-corpus-and-contracts.md`
-- `../implementation-plans/loop-grounding-rag/02-retrieval-pipeline.md`
+- `../implementation-plans/completed/loop-grounding-rag/01-corpus-and-contracts.md`
+- `../implementation-plans/completed/loop-grounding-rag/02-retrieval-pipeline.md`
   (G-C added `chunking_params`; G-D consumes the pinned chunks)

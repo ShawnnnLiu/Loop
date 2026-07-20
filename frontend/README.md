@@ -6,7 +6,7 @@ client of the FastAPI JSON API (`/api/*`) and the server-side Google OAuth flow
 the approval gate, the payload-hash recheck, calendar writes, and verification
 all stay server-side. The SPA renders state and sends intents.
 
-See `docs/implementation-plans/phase-loop-mvp-frontend.md` for the full plan and
+See `docs/implementation-plans/completed/phase-loop-mvp-frontend.md` for the full plan and
 the commit breakdown (F-A…F-H).
 
 ## Develop

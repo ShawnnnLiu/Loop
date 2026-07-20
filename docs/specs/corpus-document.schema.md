@@ -128,4 +128,4 @@ must match its derivation.
 - `source-claim.schema.md` (shared `SourceType`)
 - `../axioms/08-rag-source-claims.md` (classification rules, corpus-registry
   subsection)
-- `../implementation-plans/loop-grounding-rag/01-corpus-and-contracts.md`
+- `../implementation-plans/completed/loop-grounding-rag/01-corpus-and-contracts.md`

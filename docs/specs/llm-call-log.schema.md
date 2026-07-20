@@ -177,4 +177,4 @@ are `list_for_run(run_id)` (trace view) and `list_all()` (eval aggregates).
 - `../axioms/04-validation-layer.md`
 - `../axioms/16-reliability-patterns.md`
 - `../decisions/ADR-0006-llm-never-touches-the-calendar.md`
-- `../implementation-plans/phase-8-llm-eval-observability.md`
+- `../implementation-plans/completed/phase-8-llm-eval-observability.md`

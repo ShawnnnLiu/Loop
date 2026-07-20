@@ -122,6 +122,48 @@ describe('api client request handling', () => {
     })
   })
 
+  it('pathways / evidenceVocabulary encode the optional query param, omitting it when absent', async () => {
+    const fetchMock = vi.fn(async () => jsonResponse(200, { cards: [], kinds: [], themes: [] }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await api.pathways()
+    await api.pathways('ai_engineer')
+    await api.evidenceVocabulary('Backend SWE')
+
+    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/pathways', expect.objectContaining({ method: 'GET' }))
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      '/api/pathways?track=ai_engineer',
+      expect.objectContaining({ method: 'GET' }),
+    )
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      3,
+      '/api/evidence-vocabulary?role=Backend%20SWE',
+      expect.objectContaining({ method: 'GET' }),
+    )
+  })
+
+  it('selectPathway posts the id and markEvidence posts the tagged item', async () => {
+    const fetchMock = vi.fn(async () => jsonResponse(200, { user_id: 'u_1', onboarded: true }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await api.selectPathway('backend-infrastructure-engineer')
+    await api.markEvidence({ title: 'Shelter app', kind: 'volunteering', theme_tags: ['community'] })
+
+    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/pathways/select', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pathway_id: 'backend-infrastructure-engineer' }),
+    })
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/evidence', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'Shelter app', kind: 'volunteering', theme_tags: ['community'] }),
+    })
+  })
+
   it('reconcile posts an empty body and returns the typed reconciliation result', async () => {
     const fetchMock = vi.fn(async () =>
       jsonResponse(200, { run_id: 'run_1', outcome: 'sync_disabled', deltas: [] }),

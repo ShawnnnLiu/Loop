@@ -111,6 +111,15 @@ class MarkEvidenceRequest(BaseModel):
     theme_tags: list[str] = []
 
 
+class SelectPathwayRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    pathway_id: str
+    # Slot-override editing has no NP-E UI yet; the field is accepted (and
+    # registry-validated by the service) so the shape is forward-compatible.
+    slot_overrides: list[dict[str, Any]] = []
+
+
 class CalendarSyncRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -511,6 +520,51 @@ def pathways(
     coverage (NP-D). Read-only, kernel-computed, no LLM; ``track`` is an optional
     filter that falls back to the profile's resolved track."""
     return _json(service.pathways_view(user_id, track=track))
+
+
+@router.post("/onboard/pathways")
+def onboard_pathways(
+    service: Service,
+    user_id: ActingUser,
+    payload: Annotated[dict[str, Any], Body()],
+) -> JSONResponse:
+    """Persistence-free pathway cards + coverage over a *draft* profile (NP-E).
+
+    Powers the onboarding wizard's "Your story" step, which needs live slot
+    coverage before anything is saved. Body: ``{user_profile, track?}``; the
+    acting user is session-derived (the onboard trust boundary). Nothing persists
+    - the only profile write path stays ``POST /api/onboard``. A contract-invalid
+    draft profile is the standard 422."""
+    return _json(service.preview_pathways(user_id, payload))
+
+
+@router.get("/evidence-vocabulary")
+def evidence_vocabulary(
+    service: Service, user_id: ActingUser, role: str | None = None
+) -> JSONResponse:
+    """The closed evidence-tagging vocabularies for the UI dropdowns (NP-E).
+
+    Returns the fixed ``EvidenceKind`` enum plus the registry's per-track theme
+    slice, resolved from ``role`` (the wizard's not-yet-saved ``target_role``) or,
+    absent that, the stored profile. Onboarding is not required; registry/enum
+    literals only, no LLM."""
+    return _json(service.evidence_vocabulary_view(user_id, role=role))
+
+
+@router.post("/pathways/select")
+def select_pathway(
+    service: Service, user_id: ActingUser, body: SelectPathwayRequest
+) -> JSONResponse:
+    """Set or change the profile's pathway selection (NP-E) - a targeted mutation
+    preserving every other profile field (the accountability contract included).
+    A ``pathway_id`` change invalidates the syllabus/tasks/schedule like ``onboard``;
+    an unknown pathway or override slot is a command-precondition failure (409).
+    Returns the refreshed ``me`` projection."""
+    return _json(
+        service.select_pathway(
+            user_id, pathway_id=body.pathway_id, slot_overrides=body.slot_overrides
+        )
+    )
 
 
 @router.get("/me")

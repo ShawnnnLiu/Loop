@@ -78,6 +78,7 @@ from agentic_calendar.contracts.drift_event import DriftEvent, RecommendedPolicy
 from agentic_calendar.contracts.hashing import canonical_payload_hash
 from agentic_calendar.contracts.motivation_profile import RecoveryPreference
 from agentic_calendar.contracts.notification_log import NotificationStatus
+from agentic_calendar.contracts.pathway_selection import PathwaySelection
 from agentic_calendar.contracts.pathway_template import PathwayTemplate
 from agentic_calendar.contracts.placement_evidence import (
     EVIDENCE_MULTIPLIER_MAX,
@@ -185,6 +186,7 @@ from .results import (
     CanonicalSkill,
     DraftView,
     DropResult,
+    EvidenceVocabularyResult,
     ExtractResumeResult,
     IngestResult,
     MeResult,
@@ -3268,8 +3270,35 @@ class CycleService:
         LLM participates — and the cards are ordered by ``filled_slots``
         descending, ties broken by registry order (a stable sort).
         """
-        onboarding = self._require_onboarding(user_id)
-        profile = onboarding.user_profile
+        profile = self._require_onboarding(user_id).user_profile
+        return self._pathways_result(profile, track)
+
+    def preview_pathways(
+        self, user_id: str, payload: Mapping[str, Any]
+    ) -> PathwaysResult:
+        """Pathway cards + coverage over a *draft* profile - persistence-free (NP-E).
+
+        The onboarding wizard's "Your story" step needs live slot coverage before
+        the profile is saved, so this mirrors :meth:`extract_resume`'s
+        persistence-free posture: the body's ``user_profile`` is validated (with
+        ``user_id`` forced to the acting user - the onboard trust boundary) and run
+        through the same :meth:`_pathways_result` the persisted
+        :meth:`pathways_view` uses, so a draft and a saved profile with identical
+        evidence produce byte-identical cards. Nothing is stored; the only profile
+        write path stays :meth:`onboard`. ``payload`` keys: ``user_profile``
+        (required), ``track`` (optional filter).
+        """
+        raw = payload.get("user_profile")
+        profile_dict = dict(raw) if isinstance(raw, Mapping) else {}
+        profile = UserProfile.model_validate({**profile_dict, "user_id": user_id})
+        track = payload.get("track")
+        return self._pathways_result(profile, track if isinstance(track, str) else None)
+
+    def _pathways_result(
+        self, profile: UserProfile, track: str | None
+    ) -> PathwaysResult:
+        """The registry cards + per-profile coverage, shared by the persisted and
+        draft-preview surfaces so both agree exactly (NP-E)."""
         resolved_track = self._resolve_pathways_track(track, profile)
         templates = (
             pathways_for_track(resolved_track)
@@ -3288,6 +3317,88 @@ class CycleService:
             version_mismatch=version_mismatch,
             cards=cards,
         )
+
+    def evidence_vocabulary_view(
+        self, user_id: str, *, role: str | None = None
+    ) -> EvidenceVocabularyResult:
+        """The closed evidence-tagging vocabularies for the UI dropdowns (NP-E).
+
+        ``kinds`` is the fixed :class:`EvidenceKind` enum; ``themes`` is the
+        registry's per-track slice. The track resolves from ``role`` when given
+        (the wizard passes the not-yet-saved ``target_role`` - this endpoint does
+        not require onboarding), else from the stored profile's ``target_role``
+        when the user is onboarded, else ``None`` (empty theme slice). Registry
+        literals only - the same closed sets the intake node is bound to.
+        """
+        resolved_track: CareerTrack | None = None
+        if role is not None and role.strip():
+            resolved_track = resolve_track(role)
+        else:
+            onboarding = self._env.state.get_onboarding(user_id)
+            if onboarding is not None:
+                resolved_track = resolve_track(onboarding.user_profile.target_role)
+        themes = (
+            list(theme_vocabulary(resolved_track))
+            if resolved_track is not None
+            else []
+        )
+        return EvidenceVocabularyResult(
+            track=resolved_track,
+            registry_version=PATHWAY_REGISTRY_VERSION,
+            kinds=list(EvidenceKind),
+            themes=themes,
+        )
+
+    def select_pathway(
+        self,
+        user_id: str,
+        *,
+        pathway_id: str,
+        slot_overrides: Sequence[Mapping[str, Any]] = (),
+    ) -> MeResult:
+        """Set (or change) the profile's pathway selection - a targeted mutation (NP-E).
+
+        Unlike re-running :meth:`onboard`, this touches only ``pathway_selection``:
+        the accountability contract (motivation profile), ``created_at``, the
+        inbound-calendar-sync opt-in, evidence, and every other profile field are
+        preserved byte-for-byte - the profile-update policy row "Pathway changed →
+        Invalidate Accountability Contract? No", which a full re-onboard (whose
+        payload cannot carry the motivation profile back) could not honor. The
+        selection always pins the *current* registry version. Registry membership
+        is checked (``_reject_invalid_selection``); a bad ``pathway_id`` or override
+        slot is a command-precondition failure (``CycleError`` → HTTP 409). When
+        the ``pathway_id`` changes vs the stored selection, the syllabus, tasks,
+        and schedule are invalidated exactly as :meth:`onboard` does.
+        """
+        onboarding = self._require_onboarding(user_id)
+        prior_profile = onboarding.user_profile
+        selection = PathwaySelection.model_validate(
+            {
+                "pathway_id": pathway_id,
+                "pathway_registry_version": PATHWAY_REGISTRY_VERSION,
+                "selected_at": self._env.clock.now(),
+                "slot_overrides": list(slot_overrides),
+            }
+        )
+        new_profile = UserProfile.model_validate(
+            prior_profile.model_dump(mode="json")
+            | {"pathway_selection": selection.model_dump(mode="json")}
+        )
+        rejection = self._reject_invalid_selection(new_profile)
+        if rejection is not None:
+            _reason, detail = rejection
+            raise CycleError(detail)
+        record = OnboardingRecord.model_validate(
+            onboarding.model_dump()
+            | {
+                "user_profile": new_profile.model_dump(mode="json"),
+                "updated_at": self._env.clock.now(),
+            }
+        )
+        if self._selection_id(prior_profile) != self._selection_id(new_profile):
+            self._invalidate_for_pathway_change(user_id)
+        self._env.state.save_onboarding(record)
+        return self.me(user_id)
 
     def _resolve_pathways_track(
         self, track: str | None, profile: UserProfile

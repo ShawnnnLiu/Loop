@@ -28,12 +28,57 @@ export interface Preferences {
   avoid_back_to_back_deep_work: boolean
 }
 
+/** Mirror of contracts/common_types.py::EvidenceKind — the closed classification
+ *  of one confirmed evidence item (NP-A). Closed for humans too: it is a join key
+ *  for the deterministic narrative kernel, so the UI offers this fixed dropdown. */
+export type EvidenceKind =
+  | 'work'
+  | 'project'
+  | 'volunteering'
+  | 'leadership'
+  | 'research'
+  | 'award'
+  | 'coursework'
+
+/** The kind enum in registry order — the dropdown source. Kept in lockstep with
+ *  the backend enum; GET /api/evidence-vocabulary also returns it as the oracle. */
+export const EVIDENCE_KINDS: EvidenceKind[] = [
+  'work',
+  'project',
+  'volunteering',
+  'leadership',
+  'research',
+  'award',
+  'coursework',
+]
+
 /** Mirror of contracts/user_profile.py::ExperienceItem — one confirmed
- *  work-experience entry (RI-A). */
+ *  evidence entry (RI-A). `kind` + `theme_tags` are the story-layer additions
+ *  (NP-A): both proposed by the intake node, both editable, both closed-vocab. */
 export interface ExperienceItem {
   title: string
   organization: string | null
   summary: string | null
+  kind: EvidenceKind
+  theme_tags: string[]
+}
+
+/** Mirror of contracts/pathway_selection.py::SlotOverride — an explicit
+ *  item→slot correction. No NP-E editing UI yet; carried so the round-trip
+ *  preserves any overrides a stored profile already holds. */
+export interface SlotOverride {
+  item_title: string
+  item_organization: string | null
+  slot_id: string
+}
+
+/** Mirror of contracts/pathway_selection.py::PathwaySelection — the user's
+ *  confirmed pathway, pinned to the registry version it was made against. */
+export interface PathwaySelection {
+  pathway_id: string
+  pathway_registry_version: string
+  selected_at: string
+  slot_overrides: SlotOverride[]
 }
 
 /** Mirror of contracts/user_profile.py::UserProfile. Times are HH:MM strings;
@@ -58,6 +103,9 @@ export interface UserProfile {
   hard_constraints: HardConstraints
   preferences: Preferences
   motivation_profile_id?: string | null
+  /** The user's chosen narrative pathway (NP-D); null = skipped, and every
+   *  downstream surface behaves exactly as before the story layer. */
+  pathway_selection: PathwaySelection | null
   resume_text: string | null
   /** Optional freeform plan the user pasted ("Blind 75 first, then system
    *  design"). Strategist-only raw context — never parsed client-side. */
@@ -138,6 +186,66 @@ export interface ExtractResumeResult {
   taxonomy_version: string | null
   reason_code: ReasonCode | null
   detail: string | null
+}
+
+// Narrative pathways (NP-D/NP-E). Every ranking and slot state below is
+// reproducible by the deterministic narrative/ kernel over the stored (or draft)
+// profile — no LLM output participates in any of them.
+
+export type SlotState = 'filled' | 'partial' | 'empty'
+
+/** Mirror of app/results.py::PathwaySlotView — one evidence slot with its
+ *  kernel-computed coverage state. `matched_item_indices` point into
+ *  `UserProfile.experience` so the UI can name *why* a pillar is filled. */
+export interface PathwaySlotView {
+  slot_id: string
+  title: string
+  state: SlotState
+  matched_item_indices: number[]
+}
+
+/** Mirror of app/results.py::PathwayCard — one pathway with kernel-computed fit.
+ *  `filled_slots`/`total_slots` are the honest "n of m pillars" count (never a
+ *  score) and the card-ordering key (sorted filled_slots desc, ties by registry
+ *  order server-side). No LLM fit note yet — that is NP-F. */
+export interface PathwayCard {
+  pathway_id: string
+  display_name: string
+  spine: string
+  audience_note: string
+  career_track: string
+  filled_slots: number
+  total_slots: number
+  slots: PathwaySlotView[]
+  selected: boolean
+}
+
+/** Mirror of app/results.py::PathwaysResult. `version_mismatch` means the stored
+ *  selection is pinned to a registry version no longer served — surfaced for an
+ *  explicit re-confirm, never silently re-mapped. */
+export interface PathwaysResult {
+  track: string | null
+  registry_version: string
+  selected_pathway_id: string | null
+  version_mismatch: boolean
+  cards: PathwayCard[]
+}
+
+/** Body of POST /api/onboard/pathways — the wizard's persistence-free draft
+ *  coverage preview (nothing persists; the only write path stays onboard). */
+export interface PreviewPathwaysPayload {
+  user_profile: UserProfile
+  track?: string | null
+}
+
+/** Mirror of app/results.py::EvidenceVocabularyResult — the closed dropdowns the
+ *  UI binds evidence tagging to. `kinds` is the fixed enum; `themes` is the
+ *  registry's per-track slice (empty when no track resolves). */
+export interface EvidenceVocabularyResult {
+  track: string | null
+  registry_version: string
+  kinds: EvidenceKind[]
+  themes: string[]
 }
 
 export interface MeResult {

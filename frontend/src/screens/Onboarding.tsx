@@ -1,9 +1,18 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 
 import { ApiError, api, errorMessage } from '../api/client'
-import type { ExperienceLevel, ExtractResumeResult, MeResult, Weekday } from '../api/types'
+import type {
+  EvidenceKind,
+  ExperienceLevel,
+  ExtractResumeResult,
+  MeResult,
+  PathwaysResult,
+  Weekday,
+} from '../api/types'
+import { EVIDENCE_KINDS } from '../api/types'
 import {
+  MAX_THEME_TAGS,
   PLAN_DIRECTION_MAX_CHARS,
   RESUME_MIN_CHARS,
   STEP_LABELS,
@@ -22,6 +31,8 @@ import {
   type ExperienceRow,
   type FormState,
 } from '../lib/intake'
+import { characterSheet, kindLabel, unfilledSlots } from '../lib/story'
+import { PathwayCardView } from '../components/PathwayCard'
 
 // The onboarding wizard. Every field maps straight onto the UserProfile
 // contract, which is the single validation oracle — the wizard only shapes
@@ -194,8 +205,34 @@ export function OnboardingScreen({ me }: { me: MeResult }) {
   const [unmatched, setUnmatched] = useState<string[]>([])
   const [extractedWeakSpots, setExtractedWeakSpots] = useState<string[]>([])
 
+  // Story layer (NP-E): the closed theme vocabulary for the tag editors, and the
+  // persistence-free pathway-card preview over the draft evidence for the
+  // "Your story" step. Both are deterministic reads — no LLM.
+  const [themes, setThemes] = useState<string[]>([])
+  const [pathways, setPathways] = useState<PathwaysResult | null>(null)
+  const [pathwaysLoading, setPathwaysLoading] = useState(false)
+  const [pathwaysError, setPathwaysError] = useState<string | null>(null)
+
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }))
+
+  // Fetch the track's theme vocabulary once the role is known and the user has
+  // reached the tagging steps; empty themes (no track) simply hides the theme
+  // pickers. Ignores errors — tagging is optional, kinds work without it.
+  useEffect(() => {
+    const role = form.target_role.trim()
+    if (step < 2 || !role) return
+    let active = true
+    api
+      .evidenceVocabulary(role)
+      .then((vocab) => {
+        if (active) setThemes(vocab.themes)
+      })
+      .catch(() => {})
+    return () => {
+      active = false
+    }
+  }, [step, form.target_role])
 
   const toggleDay = (day: Weekday) =>
     setForm((prev) => ({
@@ -213,10 +250,71 @@ export function OnboardingScreen({ me }: { me: MeResult }) {
   const addExperienceRow = () =>
     setForm((prev) => ({
       ...prev,
-      experience: [...prev.experience, { title: '', organization: '', summary: '' }],
+      experience: [
+        ...prev.experience,
+        { title: '', organization: '', summary: '', kind: 'work', theme_tags: [] },
+      ],
     }))
   const removeExperienceRow = (index: number) =>
     setForm((prev) => ({ ...prev, experience: prev.experience.filter((_, i) => i !== index) }))
+
+  const setExperienceKind = (index: number, kind: EvidenceKind) =>
+    setForm((prev) => ({
+      ...prev,
+      experience: prev.experience.map((row, i) => (i === index ? { ...row, kind } : row)),
+    }))
+  // Toggle a closed-vocab theme on one item, honoring the contract's 5-tag cap.
+  const toggleExperienceTheme = (index: number, theme: string) =>
+    setForm((prev) => ({
+      ...prev,
+      experience: prev.experience.map((row, i) => {
+        if (i !== index) return row
+        const has = row.theme_tags.includes(theme)
+        if (!has && row.theme_tags.length >= MAX_THEME_TAGS) return row
+        return {
+          ...row,
+          theme_tags: has ? row.theme_tags.filter((t) => t !== theme) : [...row.theme_tags, theme],
+        }
+      }),
+    }))
+
+  // Persistence-free pathway preview over the current draft evidence. Re-run each
+  // time the "Your story" step opens so the cards reflect the latest tags, and
+  // pin the selection to the registry version the cards were drawn against.
+  function loadPathways() {
+    setPathwaysLoading(true)
+    setPathwaysError(null)
+    const tz = form.timezone.trim() || browserTimezone() || 'UTC'
+    api
+      .previewPathways({ user_profile: buildPayload(form, tz).user_profile })
+      .then((result) => {
+        setPathways(result)
+        setPathwaysLoading(false)
+      })
+      .catch((err: unknown) => {
+        if (err instanceof ApiError && err.status === 401) return
+        setPathwaysError(errorMessage(err))
+        setPathwaysLoading(false)
+      })
+  }
+
+  const selectPathway = (pathwayId: string, registryVersion: string) => {
+    setForm((prev) => ({
+      ...prev,
+      pathway_id: pathwayId,
+      pathway_registry_version: registryVersion,
+    }))
+  }
+  const skipPathway = () =>
+    setForm((prev) => ({ ...prev, pathway_id: null, pathway_registry_version: null }))
+
+  // Advance one step; entering "Your story" (index 3) refreshes the card preview
+  // over the latest draft evidence.
+  const advance = () => {
+    const next = Math.min(STEP_LABELS.length - 1, step + 1)
+    if (next === 3) loadPathways()
+    setStep(next)
+  }
 
   function applyResult(result: ExtractResumeResult) {
     setForm((prev) => applyProposal(prev, result))
@@ -273,6 +371,9 @@ export function OnboardingScreen({ me }: { me: MeResult }) {
   const resumeLength = form.resume_text.trim().length
   const planDirectionLength = form.plan_direction.length
   const weakAreasGuess = weakAreasAreGuess(form.known_weaknesses, extractedWeakSpots)
+  const sheet = characterSheet(form.experience)
+  const experienceTitles = form.experience.map((row) => row.title)
+  const selectedCard = pathways?.cards.find((c) => c.pathway_id === form.pathway_id) ?? null
 
   async function submit() {
     setSubmitting(true)
@@ -642,6 +743,49 @@ export function OnboardingScreen({ me }: { me: MeResult }) {
                   value={row.summary}
                   onChange={(e) => setExperienceRow(i, 'summary', e.target.value)}
                 />
+                <div className="row" style={{ gap: 10, marginTop: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <label className="cs" htmlFor={`kind-${i}`}>
+                    Kind
+                  </label>
+                  <select
+                    id={`kind-${i}`}
+                    className="input"
+                    style={{ maxWidth: 150, padding: '6px 8px', fontSize: 13 }}
+                    value={row.kind}
+                    onChange={(e) => setExperienceKind(i, e.target.value as EvidenceKind)}
+                  >
+                    {EVIDENCE_KINDS.map((k) => (
+                      <option key={k} value={k}>
+                        {kindLabel(k)}
+                      </option>
+                    ))}
+                  </select>
+                  {themes.length > 0 && (
+                    <span className="cs">
+                      Themes ({row.theme_tags.length}/{MAX_THEME_TAGS})
+                    </span>
+                  )}
+                </div>
+                {themes.length > 0 && (
+                  <div className="chip-row" style={{ marginTop: 6 }}>
+                    {themes.map((theme) => {
+                      const on = row.theme_tags.includes(theme)
+                      const atCap = !on && row.theme_tags.length >= MAX_THEME_TAGS
+                      return (
+                        <button
+                          key={theme}
+                          type="button"
+                          className={`chip sm${on ? ' on' : ''}`}
+                          disabled={atCap}
+                          aria-pressed={on}
+                          onClick={() => toggleExperienceTheme(i, theme)}
+                        >
+                          {theme}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
             ))}
             <div>
@@ -790,6 +934,115 @@ export function OnboardingScreen({ me }: { me: MeResult }) {
       {step === 3 && (
         <section>
           <h1 className="t-h1" style={{ marginTop: 14 }}>
+            Your story
+          </h1>
+          <p className="muted" style={{ marginTop: 4 }}>
+            Pick one story to build toward - the planner will prioritize the pillars you haven&rsquo;t
+            filled yet. This is optional: skip it and Loop works exactly as before. You can change it
+            any time from Tuning.
+          </p>
+
+          <div className="card soft" style={{ padding: '12px 16px', marginTop: 14 }}>
+            <span className="label">Who you are today</span>
+            {sheet.total === 0 ? (
+              <p className="muted" style={{ fontSize: 13, marginTop: 6, lineHeight: 1.5 }}>
+                Your evidence is thin so far - that&rsquo;s honest, not a problem. Choosing an
+                aspirational story from zero is a legitimate move; the plan then schedules the work
+                that fills it.
+              </p>
+            ) : (
+              <>
+                <div className="chip-row" style={{ marginTop: 8 }}>
+                  {sheet.kindCounts.map((kc) => (
+                    <span key={kc.kind} className="chip sm on">
+                      {kc.count} {kindLabel(kc.kind)}
+                    </span>
+                  ))}
+                </div>
+                {sheet.topThemes.length > 0 && (
+                  <div className="chip-row" style={{ marginTop: 6 }}>
+                    {sheet.topThemes.map((theme) => (
+                      <span key={theme} className="chip sm">
+                        {theme}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          {pathwaysLoading && (
+            <div className="row" style={{ marginTop: 16, alignItems: 'center', gap: 8 }}>
+              <span className="spin" style={{ width: 12, height: 12 }} />
+              <span className="muted">Ranking your pathways…</span>
+            </div>
+          )}
+          {pathwaysError && (
+            <div className="banner-error" style={{ marginTop: 14 }}>
+              Couldn&rsquo;t load pathways — {pathwaysError}
+              <button className="btn btn-quiet sm" type="button" style={{ marginLeft: 10 }} onClick={loadPathways}>
+                Retry
+              </button>
+            </div>
+          )}
+          {pathways && !pathwaysLoading && pathways.cards.length === 0 && (
+            <p className="muted" style={{ marginTop: 16, fontSize: 13 }}>
+              We don&rsquo;t have curated pathways for this role yet — skip this step and continue.
+            </p>
+          )}
+
+          {pathways &&
+            !pathwaysLoading &&
+            pathways.cards.map((card) => (
+              <PathwayCardView
+                key={card.pathway_id}
+                card={{ ...card, selected: card.pathway_id === form.pathway_id }}
+                experienceTitles={experienceTitles}
+                onSelect={() => selectPathway(card.pathway_id, pathways.registry_version)}
+              />
+            ))}
+
+          {selectedCard && (
+            <div
+              className="card"
+              style={{ marginTop: 14, padding: '12px 16px', borderColor: 'var(--sage)', background: 'var(--sage-soft)' }}
+            >
+              <span style={{ fontWeight: 600, fontSize: 13.5 }}>
+                Your plan will prioritize filling{' '}
+                {unfilledSlots(selectedCard).length === 0
+                  ? 'no new pillars — this story is already complete'
+                  : `${unfilledSlots(selectedCard).length} pillar${
+                      unfilledSlots(selectedCard).length === 1 ? '' : 's'
+                    }`}
+                .
+              </span>
+              {unfilledSlots(selectedCard).length > 0 && (
+                <div className="muted" style={{ fontSize: 12.5, marginTop: 4 }}>
+                  {unfilledSlots(selectedCard)
+                    .map((s) => s.title)
+                    .join(' · ')}
+                </div>
+              )}
+            </div>
+          )}
+
+          {pathways && !pathwaysLoading && pathways.cards.length > 0 && (
+            <button
+              type="button"
+              className="btn btn-quiet sm"
+              style={{ marginTop: 14 }}
+              onClick={skipPathway}
+            >
+              {form.pathway_id ? 'Clear selection (skip)' : 'Skip — no pathway for now'}
+            </button>
+          )}
+        </section>
+      )}
+
+      {step === 4 && (
+        <section>
+          <h1 className="t-h1" style={{ marginTop: 14 }}>
             You&rsquo;re connected
           </h1>
           <p className="muted" style={{ marginTop: 4 }}>
@@ -824,12 +1077,7 @@ export function OnboardingScreen({ me }: { me: MeResult }) {
             {submitting ? 'Saving…' : 'Finish setup →'}
           </button>
         ) : (
-          <button
-            className="btn btn-primary lg"
-            type="button"
-            disabled={!canAdvance}
-            onClick={() => setStep((s) => Math.min(STEP_LABELS.length - 1, s + 1))}
-          >
+          <button className="btn btn-primary lg" type="button" disabled={!canAdvance} onClick={advance}>
             Next →
           </button>
         )}

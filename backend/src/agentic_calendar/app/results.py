@@ -18,6 +18,7 @@ from agentic_calendar.contracts.accountability_intervention import InterventionD
 from agentic_calendar.contracts.accountability_state import AccountabilityState
 from agentic_calendar.contracts.career_track import CareerTrack
 from agentic_calendar.contracts.checkin_event import RecoveryAction
+from agentic_calendar.contracts.common_types import EvidenceKind
 from agentic_calendar.contracts.draft_schedule import DraftSchedule
 from agentic_calendar.contracts.drift_event import DriftEvent
 from agentic_calendar.contracts.plan_diff import PlanDiff
@@ -154,6 +155,25 @@ class PathwaysResult(BaseModel):
     registry no longer serves - surfaced for an explicit re-confirm, never
     silently re-mapped (pathway-selection spec)."""
     cards: list[PathwayCard] = Field(default_factory=list)
+
+
+class EvidenceVocabularyResult(BaseModel):
+    """The closed vocabularies the UI binds evidence tagging to (NP-E).
+
+    ``kinds`` is the fixed :class:`EvidenceKind` enum (identical for every user);
+    ``themes`` is the pathway registry's per-track slice, resolved from the query
+    ``role`` (else the stored profile's ``target_role``, else empty when no track
+    resolves). Both are registry/enum literals - the same closed sets the résumé
+    intake node is bound to (axiom 08) - so the human picks from exactly what the
+    ``narrative/`` kernel joins on, never free text.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    track: CareerTrack | None
+    registry_version: str
+    kinds: list[EvidenceKind]
+    themes: list[str] = Field(default_factory=list)
 
 
 class ProposeResult(BaseModel):

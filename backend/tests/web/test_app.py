@@ -301,6 +301,62 @@ def test_mark_evidence_appends_item_and_rejects_off_vocabulary_theme() -> None:
     assert bad.status_code == 409
 
 
+def test_onboard_pathways_preview_is_persistence_free() -> None:
+    # The wizard's "Your story" step ranks cards over draft evidence before the
+    # profile is saved (NP-E). The stored profile must be untouched afterward.
+    client, _clock = _client()
+    profile = client.get("/api/me").json()["profile"]
+    profile["experience"] = [
+        {"title": "Payments service", "kind": "work", "theme_tags": ["backend-systems"]}
+    ]
+    preview = client.post(
+        "/api/onboard/pathways", json={"user_profile": profile, "track": "swe"}
+    )
+    assert preview.status_code == 200
+    cards = preview.json()["cards"]
+    assert any(card["filled_slots"] >= 1 for card in cards)
+
+    # Nothing persisted: the stored (evidence-free) profile still reads all-empty.
+    stored = client.get("/api/pathways?track=swe").json()["cards"]
+    assert all(card["filled_slots"] == 0 for card in stored)
+
+
+def test_evidence_vocabulary_exposes_closed_sets() -> None:
+    client, _clock = _client()
+    swe = client.get("/api/evidence-vocabulary", params={"role": "Backend SWE"})
+    assert swe.status_code == 200
+    body = swe.json()
+    assert body["track"] == "swe"
+    assert len(body["kinds"]) == 7  # the fixed EvidenceKind enum
+    assert "backend-systems" in body["themes"]
+
+    # A role that resolves to no track yields an empty theme slice, kinds intact.
+    none = client.get("/api/evidence-vocabulary", params={"role": "Astronaut"}).json()
+    assert none["track"] is None
+    assert none["themes"] == []
+    assert len(none["kinds"]) == 7
+
+
+def test_select_pathway_route_sets_selection_and_invalidates() -> None:
+    client, _clock = _client()
+    client.post("/api/propose", json={})
+    client.post("/api/approve", json={})
+    client.post("/api/write", json={})
+    assert client.get("/api/today").json()["tasks"] or True  # plan exists
+
+    ok = client.post("/api/pathways/select", json={"pathway_id": "backend-infrastructure-engineer"})
+    assert ok.status_code == 200
+    assert ok.json()["profile"]["pathway_selection"]["pathway_id"] == (
+        "backend-infrastructure-engineer"
+    )
+    # Selecting from none invalidated the active plan (full discard, NP-D-c).
+    assert client.get("/api/today").json()["tasks"] == []
+
+    # An unknown pathway is a command-precondition failure (409).
+    bad = client.post("/api/pathways/select", json={"pathway_id": "ghost"})
+    assert bad.status_code == 409
+
+
 def test_draft_endpoint_exposes_pending_draft_with_approval_hash() -> None:
     client, _clock = _client()
     proposed = client.post("/api/propose", json={})

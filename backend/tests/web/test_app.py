@@ -274,6 +274,33 @@ def test_read_endpoints_expose_projections() -> None:
     assert acct.json()["has_motivation_profile"] is False  # empty-state (axiom 21)
 
 
+def test_mark_evidence_appends_item_and_rejects_off_vocabulary_theme() -> None:
+    client, _clock = _client()
+    ok = client.post(
+        "/api/evidence",
+        json={
+            "title": "Payments service",
+            "kind": "work",
+            "theme_tags": ["backend-systems"],
+        },
+    )
+    assert ok.status_code == 200
+    experience = ok.json()["profile"]["experience"]
+    assert experience[-1]["title"] == "Payments service"
+    assert experience[-1]["theme_tags"] == ["backend-systems"]
+
+    # The new evidence fills a pillar deterministically on the next read.
+    cards = client.get("/api/pathways?track=swe").json()["cards"]
+    backend = next(c for c in cards if c["pathway_id"] == "backend-infrastructure-engineer")
+    assert backend["filled_slots"] >= 1
+
+    # Off-vocabulary tag is a precondition failure (409), not a schema 422.
+    bad = client.post(
+        "/api/evidence", json={"title": "X", "theme_tags": ["nonsense-theme"]}
+    )
+    assert bad.status_code == 409
+
+
 def test_draft_endpoint_exposes_pending_draft_with_approval_hash() -> None:
     client, _clock = _client()
     proposed = client.post("/api/propose", json={})

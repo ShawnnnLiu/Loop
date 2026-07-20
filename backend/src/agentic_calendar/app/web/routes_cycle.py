@@ -27,6 +27,7 @@ from pydantic import BaseModel, ConfigDict
 
 from agentic_calendar.app.cycle import DEFAULT_TARGET_CALENDAR_ID, CycleService
 from agentic_calendar.contracts.checkin_event import RecoveryAction
+from agentic_calendar.contracts.common_types import EvidenceKind
 from agentic_calendar.contracts.recommitment import RecommitmentChoice
 from agentic_calendar.scheduler.adjustment import DraftAdjustment
 
@@ -98,6 +99,16 @@ class CheckinRequest(BaseModel):
 
     task_id: str
     outcome: Literal["complete", "missed"]
+
+
+class MarkEvidenceRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    title: str
+    organization: str | None = None
+    summary: str | None = None
+    kind: EvidenceKind = EvidenceKind.WORK
+    theme_tags: list[str] = []
 
 
 class CalendarSyncRequest(BaseModel):
@@ -470,6 +481,26 @@ def accountability(service: Service, user_id: ActingUser) -> JSONResponse:
 @router.get("/thresholds")
 def thresholds(service: Service, user_id: ActingUser) -> JSONResponse:
     return _json(service.thresholds_view())
+
+
+@router.post("/evidence")
+def mark_evidence(
+    service: Service, user_id: ActingUser, body: MarkEvidenceRequest
+) -> JSONResponse:
+    """Append one confirmed evidence item to the profile (NP-D) — a plain profile
+    edit (no LLM, no plan invalidation); returns the refreshed ``me`` projection.
+    An off-vocabulary ``theme_tag`` is a command-precondition failure (HTTP 409);
+    exceeding the evidence cap is the standard contract 422 on rebuild."""
+    return _json(
+        service.mark_evidence(
+            user_id,
+            title=body.title,
+            organization=body.organization,
+            summary=body.summary,
+            kind=body.kind,
+            theme_tags=body.theme_tags,
+        )
+    )
 
 
 @router.get("/pathways")

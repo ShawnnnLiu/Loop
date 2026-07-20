@@ -68,7 +68,7 @@ from agentic_calendar.contracts.calendar_reconciliation import (
 )
 from agentic_calendar.contracts.career_track import CareerTrack
 from agentic_calendar.contracts.checkin_event import CheckinEvent, RecoveryAction
-from agentic_calendar.contracts.common_types import TaskCategory
+from agentic_calendar.contracts.common_types import EvidenceKind, TaskCategory
 from agentic_calendar.contracts.data_access_audit import (
     DataAccessor,
     DataAccessPurpose,
@@ -168,6 +168,7 @@ from agentic_calendar.telemetry.metrics import completion_rate
 from agentic_calendar.templates import (
     PATHWAY_REGISTRY_VERSION,
     get_pathway,
+    is_theme_in_vocabulary,
     list_pathways,
     pathways_for_track,
     theme_vocabulary,
@@ -3326,6 +3327,61 @@ class CycleService:
             slots=slots,
             selected=template.pathway_id == selected_id,
         )
+
+    def mark_evidence(
+        self,
+        user_id: str,
+        *,
+        title: str,
+        organization: str | None = None,
+        summary: str | None = None,
+        kind: EvidenceKind = EvidenceKind.WORK,
+        theme_tags: Sequence[str] = (),
+    ) -> MeResult:
+        """Append one confirmed evidence item to the profile (NP-D).
+
+        A plain profile edit: no LLM, and - unlike a pathway change - no
+        invalidation. Evidence is a pathway-independent fact; coverage recomputes
+        on read (profile-update policy: "Evidence item added/edited/marked" is
+        No/No/No/No), and a filled slot merely makes a planned module redundant,
+        which the next regular replan absorbs. ``theme_tags`` stay closed to the
+        track's registry vocabulary - they are join keys for the ``narrative/``
+        kernel, not free text - with an empty list always allowed; the list cap
+        (20) is contract-enforced when the profile is rebuilt.
+        """
+        onboarding = self._require_onboarding(user_id)
+        profile = onboarding.user_profile
+        tags = list(theme_tags)
+        track = resolve_track(profile.target_role)
+        if track is not None:
+            off_vocab = sorted(
+                {t for t in tags if not is_theme_in_vocabulary(track, t)}
+            )
+            if off_vocab:
+                raise CycleError(
+                    f"theme_tags not in the {track.value} theme vocabulary: "
+                    f"{off_vocab}"
+                )
+        profile_dump = profile.model_dump(mode="json")
+        new_item = {
+            "title": title,
+            "organization": organization,
+            "summary": summary,
+            "kind": kind.value,
+            "theme_tags": tags,
+        }
+        new_profile = UserProfile.model_validate(
+            profile_dump | {"experience": [*profile_dump["experience"], new_item]}
+        )
+        record = OnboardingRecord.model_validate(
+            onboarding.model_dump()
+            | {
+                "user_profile": new_profile.model_dump(mode="json"),
+                "updated_at": self._env.clock.now(),
+            }
+        )
+        self._env.state.save_onboarding(record)
+        return self.me(user_id)
 
     def inbound_calendar_sync_enabled(self, user_id: str) -> bool:
         """Whether the user opted in to inbound calendar reconciliation (off until

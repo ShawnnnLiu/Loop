@@ -3,8 +3,9 @@
 Everything runs against an in-test :class:`FakeGoogleTransport` that speaks
 real-shape Calendar v3 ``Event`` resources — no network, no
 ``googleapiclient`` import. The suite pins the adapter-level safety
-properties (dedicated-calendar guard, content-free event bodies, cancelled →
-absent translation) and then re-runs the axiom 06 manager flow —
+properties (dedicated-calendar guard, title fallback + no-description body,
+inbound summary never ingested, cancelled → absent translation) and then
+re-runs the axiom 06 manager flow —
 preview / approval / write / verify / duplicate guard / rollback — with the
 Google adapter underneath, proving the manager invariants survive the swap
 from the in-memory adapter unchanged.
@@ -238,13 +239,12 @@ def test_every_method_guards_target_before_any_transport_io(
 # --------------------------------------------------------------------------- #
 
 
-def test_create_event_body_is_content_free_and_utc() -> None:
-    """The wire body carries the fixed content-free summary, UTC dateTime
+def test_create_event_body_carries_title_and_utc() -> None:
+    """The wire body carries the task's title as the summary (outbound titles
+    are user-approved on the user's own dedicated calendar), UTC dateTime
     bounds, and exactly the canonical metadata under
-    ``extendedProperties.private`` — no raw task titles or descriptions ever
-    reach the external calendar (axiom 06). ``create_event`` has no
-    title/description parameter at all; the only free-text field is the
-    ``EVENT_SUMMARY`` constant."""
+    ``extendedProperties.private``. Descriptions are never written — the
+    summary is the only content field on the wire."""
     adapter, transport = _make_adapter()
     metadata = _metadata()
     # Non-UTC inputs must be converted, not passed through.
@@ -254,12 +254,13 @@ def test_create_event_body_is_content_free_and_utc() -> None:
         scheduled_start=datetime(2026, 5, 4, 14, 0, tzinfo=minus_four),
         scheduled_end=datetime(2026, 5, 4, 15, 0, tzinfo=minus_four),
         metadata=metadata,
+        title="Review binary trees",
     )
     assert handle.calendar_event_id == "gcal_evt_1"
     assert handle.target_calendar_id == _DEDICATED
 
     resource = transport.events["gcal_evt_1"]
-    assert resource["summary"] == EVENT_SUMMARY
+    assert resource["summary"] == "Review binary trees"
     assert resource["start"] == {
         "dateTime": "2026-05-04T18:00:00+00:00",
         "timeZone": "UTC",
@@ -280,6 +281,63 @@ def test_create_event_body_is_content_free_and_utc() -> None:
         "end",
         "extendedProperties",
     }
+
+
+@pytest.mark.parametrize("title", [None, "   "])
+def test_create_event_without_title_falls_back_to_generic_summary(
+    title: str | None,
+) -> None:
+    """No title (or a whitespace-only one) yields the generic fallback —
+    never an empty summary on the wire."""
+    adapter, transport = _make_adapter()
+    adapter.create_event(
+        target_calendar_id=_DEDICATED,
+        scheduled_start=_START,
+        scheduled_end=_END,
+        metadata=_metadata(),
+        title=title,
+    )
+    assert transport.events["gcal_evt_1"]["summary"] == EVENT_SUMMARY
+
+
+def test_create_event_title_is_stripped_and_capped() -> None:
+    adapter, transport = _make_adapter()
+    adapter.create_event(
+        target_calendar_id=_DEDICATED,
+        scheduled_start=_START,
+        scheduled_end=_END,
+        metadata=_metadata(task_id="t1"),
+        title="  Review binary trees  ",
+    )
+    assert transport.events["gcal_evt_1"]["summary"] == "Review binary trees"
+
+    adapter.create_event(
+        target_calendar_id=_DEDICATED,
+        scheduled_start=_START,
+        scheduled_end=_END,
+        metadata=_metadata(task_id="t2"),
+        title="x" * 2000,
+    )
+    assert transport.events["gcal_evt_2"]["summary"] == "x" * 1024
+
+
+def test_read_event_does_not_ingest_summary() -> None:
+    """Structural pin of the inbound rule: even when the provider payload
+    carries a summary, the record the adapter returns has ``summary is None``
+    — raw calendar titles are never read back or stored (axiom 06)."""
+    adapter, _transport = _make_adapter()
+    handle = adapter.create_event(
+        target_calendar_id=_DEDICATED,
+        scheduled_start=_START,
+        scheduled_end=_END,
+        metadata=_metadata(),
+        title="Review binary trees",
+    )
+    record = adapter.read_event(
+        target_calendar_id=_DEDICATED, calendar_event_id=handle.calendar_event_id
+    )
+    assert record is not None
+    assert record.summary is None
 
 
 # --------------------------------------------------------------------------- #

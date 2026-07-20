@@ -107,6 +107,8 @@ See `../specs/calendar-event-mapping.schema.md`.
 9. Mark `calendar_write_verified`.
 10. Release `calendar_write_lock`.
 
+The event summary is the task's title (outbound posture change, user-approved 2026-07-16; the write targets the user's own dedicated calendar). Descriptions are never written, and inbound titles are still never read back or stored.
+
 ## Partial Failure Recovery
 
 1. Query calendar events by `run_id`.

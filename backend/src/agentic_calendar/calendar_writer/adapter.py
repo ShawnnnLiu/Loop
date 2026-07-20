@@ -42,11 +42,20 @@ class ExternalEventRecord:
     scheduled_start: datetime
     scheduled_end: datetime
     metadata: Mapping[str, str]
+    summary: str | None = None
+    """Populated only by fakes for test observability. The Google adapter
+    never ingests titles on read-back — raw calendar titles are never read
+    back or stored (inbound privacy rule, axiom 06)."""
 
 
 @runtime_checkable
 class ExternalCalendarAdapter(Protocol):
-    """Sync write/read surface against an external calendar."""
+    """Sync write/read surface against an external calendar.
+
+    ``create_event``'s ``title`` is the task's human-readable title from the
+    validated plan; ``None`` means the adapter applies its own generic
+    fallback. Descriptions are never written.
+    """
 
     def create_event(
         self,
@@ -55,6 +64,7 @@ class ExternalCalendarAdapter(Protocol):
         scheduled_start: datetime,
         scheduled_end: datetime,
         metadata: Mapping[str, str],
+        title: str | None = None,
     ) -> ExternalEventHandle: ...
 
     def read_event(

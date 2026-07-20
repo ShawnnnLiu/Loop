@@ -120,6 +120,8 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     approval = create_approval(draft, env)
+    # No task_titles: scenario drafts over the in-memory adapter keep the
+    # generic fallback summary on purpose.
     result = env.manager.approve_and_write(
         approval_event_id=approval.approval_event_id,
         draft=draft,

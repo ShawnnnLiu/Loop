@@ -13,11 +13,13 @@ Two safety properties are enforced *here*:
   secondary calendar id it may touch; any call addressed elsewhere (including
   ``primary``) raises before any network I/O. The system can therefore never
   write into the user's primary calendar, whatever the caller passes.
-* **No raw content.** Created events carry a fixed, content-free summary and
-  the four canonical metadata keys (``app``/``run_id``/``plan_version``/
-  ``task_id``) in ``extendedProperties.private`` — task titles and
-  descriptions never reach the external calendar, mirroring the rule that
-  they are never stored (axiom 06).
+* **Outbound titles only, inbound never.** Created events carry the task's
+  title as the summary (user-approved posture change, 2026-07-16 — the
+  events land on the user's own dedicated calendar) and the four canonical
+  metadata keys (``app``/``run_id``/``plan_version``/``task_id``) in
+  ``extendedProperties.private``. Descriptions are never written, and
+  inbound titles are still never read back or stored (axiom 06): read-back
+  ingests times and metadata only.
 
 The Google SDK stays at the edge: credentials and the ``service`` object are
 built in ``tools/`` (the only place allowed to import ``google.*``; see the
@@ -39,7 +41,10 @@ from .errors import CalendarWriterError
 from .metadata import APP_TAG
 
 EVENT_SUMMARY = "Career prep study block"
-"""Fixed, content-free summary for every event the system creates."""
+"""Fallback summary when the caller supplies no task title."""
+
+_MAX_SUMMARY_LEN = 1024
+"""Practical cap on a Google Calendar event summary."""
 
 
 class GoogleCalendarAdapterError(CalendarWriterError):
@@ -310,10 +315,13 @@ class GoogleCalendarAdapter:
         scheduled_start: datetime,
         scheduled_end: datetime,
         metadata: Mapping[str, str],
+        title: str | None = None,
     ) -> ExternalEventHandle:
         self._guard(target_calendar_id)
         body = {
-            "summary": EVENT_SUMMARY,
+            # Strip, then cap, then fall back — a whitespace-only title must
+            # hit the generic fallback, not produce an empty summary.
+            "summary": (title or "").strip()[:_MAX_SUMMARY_LEN] or EVENT_SUMMARY,
             "start": {
                 "dateTime": scheduled_start.astimezone(UTC).isoformat(),
                 "timeZone": "UTC",
@@ -386,6 +394,8 @@ class GoogleCalendarAdapter:
         if not isinstance(event_id, str) or not event_id:
             raise GoogleCalendarApiError("event resource has no id")
         private = item.get("extendedProperties", {}).get("private", {})
+        # ``summary`` is intentionally not ingested: inbound titles are never
+        # read back or stored (axiom 06 privacy rule).
         return ExternalEventRecord(
             calendar_event_id=event_id,
             target_calendar_id=target_calendar_id,

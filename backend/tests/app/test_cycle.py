@@ -835,6 +835,41 @@ def test_dry_run_previews_without_side_effects_then_write_activates() -> None:
     assert active.state is LifecycleState.ACTIVE
 
 
+def test_write_carries_real_task_titles_onto_calendar_events() -> None:
+    """The full propose → approve → write flow stamps each created calendar
+    event with its task's real title from the approved plan version — the
+    generic summary is only a fallback. Fails if ``write()`` drops the
+    ``task_titles`` map."""
+    service, env, _clock = make_service()
+    proposed = service.propose(USER_ID)
+    service.approve(USER_ID)
+    written = service.write(USER_ID)
+    assert written.state is S.ACTIVE_PLAN
+
+    plan = env.plan_store.get(USER_ID, proposed.plan_version)
+    assert plan is not None
+    titles = {task.task_id: task.title for task in plan.plan.tasks}
+    assert isinstance(env.calendar_adapter, InMemoryCalendarAdapter)
+    events = env.calendar_adapter.all_events()
+    assert len(events) == len(PLAN_TASK_IDS)
+    for event in events:
+        assert event.summary == titles[event.metadata["task_id"]]
+        assert event.summary  # real, non-empty titles — not the fallback
+
+
+def test_task_titles_helper_falls_back_to_empty_map_with_warning(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A failed plan lookup degrades to the generic summary (empty map) with
+    a warning — an approved write must never fail over a display field."""
+    service, _env, _clock = make_service()
+    with caplog.at_level("WARNING"):
+        assert service._task_titles_for(USER_ID, "plan_does_not_exist") == {}
+        assert service._task_titles_for(USER_ID, None) == {}
+    warnings = [r for r in caplog.records if "task titles unavailable" in r.message]
+    assert len(warnings) == 2
+
+
 # --------------------------------------------------------------------------- #
 # I-b. full-horizon / plan-level write (D-7, D-8): the whole horizon is approved
 # and written as ONE unit; no per-week slicing creeps in.
@@ -940,6 +975,7 @@ class _QueryRaisingAdapter:
         scheduled_start: datetime,
         scheduled_end: datetime,
         metadata: Mapping[str, str],
+        title: str | None = None,
     ) -> ExternalEventHandle:
         raise AssertionError("create_event must not be reached")
 

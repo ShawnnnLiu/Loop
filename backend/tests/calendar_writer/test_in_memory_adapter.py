@@ -69,6 +69,40 @@ def test_create_read_round_trip() -> None:
     assert record.metadata == _meta()
 
 
+def test_create_event_records_title_verbatim() -> None:
+    """The fake stores the title verbatim as ``summary`` (no fallback), so
+    manager/app tests can distinguish "no title passed" from "fallback
+    applied" — applying ``EVENT_SUMMARY`` is the Google adapter's job."""
+    a = _adapter()
+    handle = a.create_event(
+        target_calendar_id="primary",
+        scheduled_start=_START,
+        scheduled_end=_END,
+        metadata=_meta(),
+        title="X",
+    )
+    record = a.read_event(
+        target_calendar_id="primary", calendar_event_id=handle.calendar_event_id
+    )
+    assert record is not None
+    assert record.summary == "X"
+
+
+def test_create_event_without_title_leaves_summary_none() -> None:
+    a = _adapter()
+    handle = a.create_event(
+        target_calendar_id="primary",
+        scheduled_start=_START,
+        scheduled_end=_END,
+        metadata=_meta(),
+    )
+    record = a.read_event(
+        target_calendar_id="primary", calendar_event_id=handle.calendar_event_id
+    )
+    assert record is not None
+    assert record.summary is None
+
+
 def test_event_id_uses_deterministic_prefix() -> None:
     a = _adapter()
     h1 = a.create_event(

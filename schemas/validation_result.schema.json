@@ -105,6 +105,11 @@
         "POWER_USER_INSUFFICIENT_ASSESSABLE_WEEKS",
         "POWER_USER_COMPLETION_RATE_UNSTABLE",
         "PER_USER_REFINEMENT_UNAVAILABLE",
+        "PATHWAY_NOT_SELECTED",
+        "UNKNOWN_PATHWAY_ID",
+        "UNKNOWN_EVIDENCE_SLOT",
+        "SLOT_MODULE_LIMIT_EXCEEDED",
+        "PATHWAY_REGISTRY_VERSION_MISMATCH",
         "LLM_CALL_FAILED",
         "LLM_MALFORMED_OUTPUT",
         "LLM_SCHEMA_REJECTED",
@@ -185,7 +190,10 @@
         "no_root_task",
         "orphan_source_claim",
         "expired_source_claim",
-        "company_module_missing_claim"
+        "company_module_missing_claim",
+        "pathway_not_selected",
+        "unknown_evidence_slot",
+        "slot_module_limit_exceeded"
       ],
       "title": "ViolationType",
       "type": "string"

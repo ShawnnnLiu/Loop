@@ -1,0 +1,525 @@
+{
+  "prompt_version": "fixture-resume-intake-2026-07-20",
+  "model_name": "recorded-fixtures",
+  "outputs": {
+    "resume_dense_backend_newgrad": [
+      {
+        "experience": [
+          {
+            "title": "Backend Engineering Intern",
+            "organization": "Acme Cloud",
+            "summary": null
+          },
+          {
+            "title": "Teaching Assistant",
+            "organization": "State University",
+            "summary": null
+          }
+        ],
+        "skills": [
+          "Python",
+          "microservices",
+          "gRPC",
+          "PostgreSQL",
+          "Redis",
+          "Docker",
+          "Kubernetes",
+          "CI/CD",
+          "GitHub Actions",
+          "data structures",
+          "algorithms",
+          "SQL",
+          "Go",
+          "caching",
+          "REST"
+        ],
+        "known_strengths": [
+          "backend services",
+          "API design"
+        ],
+        "inferred_weak_spots": [
+          "System design",
+          "Dynamic programming"
+        ],
+        "target_company_categories": [
+          "infra startups",
+          "big tech"
+        ]
+      }
+    ],
+    "resume_career_switcher": [
+      {
+        "experience": [
+          {
+            "title": "Financial Analyst",
+            "organization": "Brightline Capital",
+            "summary": null
+          },
+          {
+            "title": "Operations Associate",
+            "organization": "Metro Health",
+            "summary": null
+          }
+        ],
+        "skills": [
+          "Python",
+          "SQL",
+          "Django",
+          "PostgreSQL",
+          "Git"
+        ],
+        "known_strengths": [
+          "backend services",
+          "API design"
+        ],
+        "inferred_weak_spots": [
+          "System design",
+          "Dynamic programming"
+        ],
+        "target_company_categories": [
+          "infra startups",
+          "big tech"
+        ]
+      }
+    ],
+    "resume_sparse_two_lines": [
+      {
+        "experience": [],
+        "skills": [],
+        "known_strengths": [
+          "shipped real projects"
+        ],
+        "inferred_weak_spots": [
+          "System design"
+        ],
+        "target_company_categories": [
+          "product startups",
+          "big tech"
+        ]
+      }
+    ],
+    "resume_prompt_injection": [
+      {
+        "experience": [
+          {
+            "title": "Software Engineer",
+            "organization": "Stripe",
+            "summary": null
+          }
+        ],
+        "skills": [
+          "Go",
+          "Java"
+        ],
+        "known_strengths": [
+          "backend services",
+          "API design"
+        ],
+        "inferred_weak_spots": [
+          "System design",
+          "Dynamic programming"
+        ],
+        "target_company_categories": [
+          "infra startups",
+          "big tech"
+        ]
+      }
+    ],
+    "resume_non_tech": [
+      {
+        "experience": [
+          {
+            "title": "Head Pastry Chef",
+            "organization": "Butterflake Bakery",
+            "summary": null
+          },
+          {
+            "title": "Catering Lead",
+            "organization": "Fig & Vine Events",
+            "summary": null
+          }
+        ],
+        "skills": [],
+        "known_strengths": [
+          "shipped real projects"
+        ],
+        "inferred_weak_spots": [
+          "System design"
+        ],
+        "target_company_categories": [
+          "product startups",
+          "big tech"
+        ]
+      }
+    ],
+    "resume_variant_casing": [
+      {
+        "experience": [
+          {
+            "title": "Full-Stack Developer",
+            "organization": "Nimbus Labs",
+            "summary": null
+          }
+        ],
+        "skills": [
+          "React",
+          "js",
+          "TypeScript",
+          "PostgreSQL",
+          "Redis",
+          "K8s",
+          "GraphQL"
+        ],
+        "known_strengths": [
+          "backend services",
+          "API design"
+        ],
+        "inferred_weak_spots": [
+          "System design",
+          "Dynamic programming"
+        ],
+        "target_company_categories": [
+          "infra startups",
+          "big tech"
+        ]
+      }
+    ],
+    "resume_fabricated_skill": [
+      {
+        "experience": [
+          {
+            "title": "Backend Developer",
+            "organization": "Vantage Analytics",
+            "summary": null
+          }
+        ],
+        "skills": [
+          "Python",
+          "PostgreSQL",
+          "js"
+        ],
+        "known_strengths": [
+          "backend services",
+          "API design"
+        ],
+        "inferred_weak_spots": [
+          "System design",
+          "Dynamic programming"
+        ],
+        "target_company_categories": [
+          "infra startups",
+          "big tech"
+        ]
+      }
+    ],
+    "resume_data_analyst_track": [
+      {
+        "experience": [
+          {
+            "title": "Data Analyst",
+            "organization": "Northwind Retail",
+            "summary": null
+          },
+          {
+            "title": "Marketing Analyst",
+            "organization": "Beacon Media",
+            "summary": null
+          }
+        ],
+        "skills": [
+          "SQL",
+          "Power BI",
+          "Tableau",
+          "Python",
+          "Excel",
+          "data cleaning",
+          "dashboards",
+          "window functions",
+          "cohort analysis",
+          "A/B testing",
+          "Google Analytics"
+        ],
+        "known_strengths": [
+          "dashboards",
+          "SQL reporting"
+        ],
+        "inferred_weak_spots": [
+          "Hypothesis Testing",
+          "Data Storytelling"
+        ],
+        "target_company_categories": [
+          "product startups",
+          "big tech"
+        ]
+      }
+    ],
+    "resume_data_analyst_oov_trap": [
+      {
+        "experience": [
+          {
+            "title": "Business Intelligence Analyst",
+            "organization": "Harborline Logistics",
+            "summary": null
+          }
+        ],
+        "skills": [
+          "Excel",
+          "SQL",
+          "GlimmerBI"
+        ],
+        "known_strengths": [
+          "SQL reports"
+        ],
+        "inferred_weak_spots": [
+          "Hypothesis Testing"
+        ],
+        "target_company_categories": [
+          "product startups",
+          "big tech"
+        ]
+      }
+    ],
+    "resume_data_scientist_track": [
+      {
+        "experience": [
+          {
+            "title": "Data Scientist",
+            "organization": "Lumen Health Analytics",
+            "summary": null
+          },
+          {
+            "title": "Research Assistant",
+            "organization": "State University Statistics Department",
+            "summary": null
+          }
+        ],
+        "skills": [
+          "Python",
+          "scikit-learn",
+          "XGBoost",
+          "MLflow",
+          "A/B testing",
+          "SQL",
+          "Snowflake",
+          "R",
+          "regression analysis",
+          "hypothesis testing"
+        ],
+        "known_strengths": [
+          "churn prediction models",
+          "regression analysis"
+        ],
+        "inferred_weak_spots": [
+          "Experiment Design",
+          "Product Sense"
+        ],
+        "target_company_categories": [
+          "product startups",
+          "big tech"
+        ]
+      }
+    ],
+    "resume_data_scientist_oov_trap": [
+      {
+        "experience": [
+          {
+            "title": "Data Scientist",
+            "organization": "Brightfield Insurance",
+            "summary": null
+          }
+        ],
+        "skills": [
+          "Python",
+          "A/B testing",
+          "forecasting",
+          "QuantaViz"
+        ],
+        "known_strengths": [
+          "time-series forecasting"
+        ],
+        "inferred_weak_spots": [
+          "Experiment Design"
+        ],
+        "target_company_categories": [
+          "product startups",
+          "big tech"
+        ]
+      }
+    ],
+    "resume_data_engineer_track": [
+      {
+        "experience": [
+          {
+            "title": "Data Engineer",
+            "organization": "Harborline Logistics",
+            "summary": null
+          },
+          {
+            "title": "Analytics Engineer",
+            "organization": "Brightcart",
+            "summary": null
+          }
+        ],
+        "skills": [
+          "Python",
+          "SQL",
+          "Snowflake",
+          "Airflow",
+          "dbt",
+          "Kafka",
+          "Spark",
+          "partitioning",
+          "Great Expectations"
+        ],
+        "known_strengths": [
+          "ELT pipelines",
+          "dbt models"
+        ],
+        "inferred_weak_spots": [
+          "Dimensional Modeling",
+          "Data Governance"
+        ],
+        "target_company_categories": [
+          "product startups",
+          "big tech"
+        ]
+      }
+    ],
+    "resume_data_engineer_oov_trap": [
+      {
+        "experience": [
+          {
+            "title": "Data Engineer",
+            "organization": "Coastline Media",
+            "summary": null
+          }
+        ],
+        "skills": [
+          "Python",
+          "SQL",
+          "BigQuery",
+          "Airflow",
+          "PipeForge"
+        ],
+        "known_strengths": [
+          "Batch ETL"
+        ],
+        "inferred_weak_spots": [
+          "Stream Processing"
+        ],
+        "target_company_categories": [
+          "product startups",
+          "big tech"
+        ]
+      }
+    ],
+    "resume_tagged_project_volunteer_split": [
+      {
+        "experience": [
+          {
+            "title": "Open Source Project",
+            "organization": "Ledger CLI",
+            "summary": null,
+            "kind": "project",
+            "theme_tags": [
+              "open-source",
+              "developer-experience"
+            ]
+          },
+          {
+            "title": "Volunteer Mentor",
+            "organization": "Code Forward",
+            "summary": null,
+            "kind": "volunteering",
+            "theme_tags": [
+              "developer-experience"
+            ]
+          }
+        ],
+        "skills": [
+          "Python",
+          "GitHub",
+          "tests"
+        ],
+        "known_strengths": [
+          "mentoring",
+          "command-line tooling"
+        ],
+        "inferred_weak_spots": [
+          "System design"
+        ],
+        "target_company_categories": [
+          "developer-tools companies"
+        ]
+      }
+    ],
+    "resume_offvocab_theme_repairs": [
+      {
+        "experience": [
+          {
+            "title": "Backend Developer",
+            "organization": "Cobalt Systems",
+            "summary": null,
+            "kind": "work",
+            "theme_tags": [
+              "quantum-astrology"
+            ]
+          }
+        ],
+        "skills": [
+          "Python",
+          "PostgreSQL",
+          "gRPC"
+        ],
+        "known_strengths": [
+          "backend services"
+        ],
+        "inferred_weak_spots": [
+          "System design"
+        ],
+        "target_company_categories": [
+          "infra startups"
+        ]
+      },
+      {
+        "experience": [
+          {
+            "title": "Backend Developer",
+            "organization": "Cobalt Systems",
+            "summary": null,
+            "kind": "work",
+            "theme_tags": [
+              "backend-systems",
+              "data-layer"
+            ]
+          }
+        ],
+        "skills": [
+          "Python",
+          "PostgreSQL",
+          "gRPC"
+        ],
+        "known_strengths": [
+          "backend services"
+        ],
+        "inferred_weak_spots": [
+          "System design"
+        ],
+        "target_company_categories": [
+          "infra startups"
+        ]
+      }
+    ],
+    "resume_sparse_no_themes": [
+      {
+        "experience": [],
+        "skills": [],
+        "known_strengths": [],
+        "inferred_weak_spots": [],
+        "target_company_categories": []
+      }
+    ]
+  },
+  "judge_scores": {},
+  "taxonomy_version": "skill-taxonomy-v4"
+}

@@ -23,6 +23,17 @@ The log is telemetry, never control plane: no runtime routing decision may read
 it (`llm_nodes/` is in the import-linter independence set, so no other region
 *can* import it). Eval and trace tooling consume it offline.
 
+One node may serve several **prompt targets**, each its own system prompt and
+`prompt_version` (the same call site, different call). The `node` enum stays the
+five-node set — targets are distinguished by `prompt_version`, so no schema
+field is added. As of NP-F the `user_facing_explanation` node emits three
+targets: the validation explanation (`explanation-*`, Sonnet tier), the batched
+pathway fit note (`story-fit-note-*`, Haiku tier), and the story summary
+(`story-summary-*`, Haiku tier). The story targets are display-only prose that
+decorate the deterministic `narrative/` coverage; their rows carry no
+`plan_version` (they run outside any run/plan, under a service-minted
+`story-`-prefixed `run_id`, like résumé extraction's `intake-` ids).
+
 ## Privacy Rule
 
 The record stores **identifiers, counts, hashes, and outcome metadata only**.
@@ -66,7 +77,7 @@ retention-limited debug flag on the adapter and is never persisted to this log
 | Field | Type | Purpose |
 | --- | --- | --- |
 | `llm_call_log_id` | string | Primary key; unique, used for append-only dedup. |
-| `run_id` | string | Deterministic correlation id supplied by the call site. Calls made before any run exists (résumé extraction during onboarding) use a service-minted id with the `intake-` prefix. |
+| `run_id` | string | Deterministic correlation id supplied by the call site. Calls made outside any run (résumé extraction during onboarding; NP-F story fit notes / summaries) use a service-minted id with the `intake-` or `story-` prefix. |
 | `plan_version` | string or null | Plan version in play, where applicable; null for calls outside a plan context (e.g. onboarding Strategist). |
 | `node` | enum `LlmNodeName`: `strategist`, `planner`, `reflection_summary`, `user_facing_explanation`, `resume_intake` | Which of the five allowed nodes made the call. |
 | `prompt_version` | string | Version tag of the prompt template; eval before/after comparisons key on it. |

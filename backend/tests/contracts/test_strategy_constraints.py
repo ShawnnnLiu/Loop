@@ -16,6 +16,42 @@ def test_defaults_match_spec() -> None:
     assert c.required_priority_values == [Priority.HIGH, Priority.MEDIUM, Priority.LOW]
     assert c.max_total_estimated_minutes == 4800
     assert c.must_reference_claims_for_company_specific_modules is True
+    # Story-layer fields (NP-A) default to "no pathway shaping": a profile
+    # without a selection produces today's bundle unchanged.
+    assert c.pathway_id is None
+    assert c.unfilled_slots == []
+    assert c.max_slot_modules == 3
+
+
+def test_unfilled_slots_require_pathway_id() -> None:
+    from agentic_calendar.contracts.strategy_constraints import UnfilledSlot
+
+    slot = UnfilledSlot(slot_id="s", title="Slot", gap_module_hint="Build it")
+    with pytest.raises(ValidationError):
+        StrategyConstraints(unfilled_slots=[slot])
+    # With a pathway_id it is valid.
+    ok = StrategyConstraints(pathway_id="p", unfilled_slots=[slot])
+    assert ok.pathway_id == "p"
+
+
+def test_duplicate_unfilled_slot_ids_rejected() -> None:
+    from agentic_calendar.contracts.strategy_constraints import UnfilledSlot
+
+    with pytest.raises(ValidationError):
+        StrategyConstraints(
+            pathway_id="p",
+            unfilled_slots=[
+                UnfilledSlot(slot_id="dup", title="A", gap_module_hint="x"),
+                UnfilledSlot(slot_id="dup", title="B", gap_module_hint="y"),
+            ],
+        )
+
+
+def test_max_slot_modules_bounds() -> None:
+    with pytest.raises(ValidationError):
+        StrategyConstraints(max_slot_modules=0)
+    with pytest.raises(ValidationError):
+        StrategyConstraints(max_slot_modules=11)
 
 
 def test_duplicate_priority_values_rejected() -> None:

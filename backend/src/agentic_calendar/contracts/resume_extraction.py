@@ -12,6 +12,12 @@ The groundedness, denylist, and weak-spot-membership invariants need the
 source résumé text / allowed vocabulary and are enforced by the adapter's
 deterministic post-validator inside the bounded repair loop; this contract
 enforces bounds and uniqueness.
+
+Since narrative-pathways NP-A, each proposed ``ExperienceItem`` may carry
+``kind`` + ``theme_tags`` (shape shared with the profile via the imported
+model; defaults keep older extractions valid). The intake prompt starts
+proposing them, and theme-vocabulary membership joins the repair loop, in
+NP-C.
 """
 
 from __future__ import annotations

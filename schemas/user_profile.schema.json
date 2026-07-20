@@ -38,10 +38,28 @@
       "title": "DeepWorkWindow",
       "type": "object"
     },
+    "EvidenceKind": {
+      "description": "Closed classification of one confirmed evidence item.\n\nShared by ``ExperienceItem.kind`` (user-profile spec) and\n``EvidenceSlot.required_kinds`` (pathway-template spec). Closed for humans\ntoo: kinds are join keys for the deterministic ``narrative/`` kernel, so\nthe UI offers the same fixed dropdown the LLM proposal is bound to.",
+      "enum": [
+        "work",
+        "project",
+        "volunteering",
+        "leadership",
+        "research",
+        "award",
+        "coursework"
+      ],
+      "title": "EvidenceKind",
+      "type": "string"
+    },
     "ExperienceItem": {
       "additionalProperties": false,
-      "description": "One confirmed work-experience entry.\n\nProfile vocabulary: lives here because the profile owns the confirmed\nvalues; ``resume_extraction`` (the ResumeIntakeNode proposal) imports it\nrather than redeclaring.",
+      "description": "One confirmed evidence entry (work, project, volunteering, ...).\n\nProfile vocabulary: lives here because the profile owns the confirmed\nvalues; ``resume_extraction`` (the ResumeIntakeNode proposal) imports it\nrather than redeclaring.\n\nThe field name (and the profile's ``experience`` list name) predates the\nstory layer and deliberately stays: ``kind`` / ``theme_tags`` landed as an\nadditive amendment, not a rename/migration (narrative-pathways NP-A).\n``theme_tags`` membership in the registry theme vocabulary is a\nservice-layer check, not a contract-shape check.",
       "properties": {
+        "kind": {
+          "$ref": "#/$defs/EvidenceKind",
+          "default": "work"
+        },
         "organization": {
           "anyOf": [
             {
@@ -69,6 +87,16 @@
           ],
           "default": null,
           "title": "Summary"
+        },
+        "theme_tags": {
+          "items": {
+            "maxLength": 60,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 5,
+          "title": "Theme Tags",
+          "type": "array"
         },
         "title": {
           "maxLength": 120,
@@ -131,6 +159,41 @@
       "title": "HardConstraints",
       "type": "object"
     },
+    "PathwaySelection": {
+      "additionalProperties": false,
+      "description": "The user's confirmed pathway choice, pinned to a registry version.",
+      "properties": {
+        "pathway_id": {
+          "minLength": 1,
+          "title": "Pathway Id",
+          "type": "string"
+        },
+        "pathway_registry_version": {
+          "minLength": 1,
+          "title": "Pathway Registry Version",
+          "type": "string"
+        },
+        "selected_at": {
+          "format": "date-time",
+          "title": "Selected At",
+          "type": "string"
+        },
+        "slot_overrides": {
+          "items": {
+            "$ref": "#/$defs/SlotOverride"
+          },
+          "title": "Slot Overrides",
+          "type": "array"
+        }
+      },
+      "required": [
+        "pathway_id",
+        "pathway_registry_version",
+        "selected_at"
+      ],
+      "title": "PathwaySelection",
+      "type": "object"
+    },
     "Preferences": {
       "additionalProperties": false,
       "description": "Soft preferences used as tie-breakers when multiple schedules are valid.",
@@ -152,6 +215,43 @@
         }
       },
       "title": "Preferences",
+      "type": "object"
+    },
+    "SlotOverride": {
+      "additionalProperties": false,
+      "description": "One explicit item-to-slot assignment correcting the greedy default.\n\nThe item is identified the way the profile identifies ``experience``\nentries: the case-insensitive ``(title, organization)`` pair.",
+      "properties": {
+        "item_organization": {
+          "anyOf": [
+            {
+              "maxLength": 120,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Item Organization"
+        },
+        "item_title": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Item Title",
+          "type": "string"
+        },
+        "slot_id": {
+          "minLength": 1,
+          "title": "Slot Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "item_title",
+        "slot_id"
+      ],
+      "title": "SlotOverride",
       "type": "object"
     }
   },
@@ -220,6 +320,17 @@
       ],
       "default": null,
       "title": "Motivation Profile Id"
+    },
+    "pathway_selection": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/PathwaySelection"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     },
     "plan_direction": {
       "anyOf": [

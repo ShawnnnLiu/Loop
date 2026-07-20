@@ -73,3 +73,16 @@ def test_phase_3_sponsor_codes_present() -> None:
     }
     present = {c.value for c in ReasonCode}
     assert required.issubset(present)
+
+
+def test_narrative_pathway_codes_present() -> None:
+    """Story-layer reason codes (NP-A) must be defined."""
+    required = {
+        "PATHWAY_NOT_SELECTED",
+        "UNKNOWN_PATHWAY_ID",
+        "UNKNOWN_EVIDENCE_SLOT",
+        "SLOT_MODULE_LIMIT_EXCEEDED",
+        "PATHWAY_REGISTRY_VERSION_MISMATCH",
+    }
+    present = {c.value for c in ReasonCode}
+    assert required.issubset(present)

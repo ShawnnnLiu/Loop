@@ -6,17 +6,24 @@ import type {
   CheckinResult,
   DraftAdjustment,
   DraftView,
+  EvidenceKind,
+  EvidenceVocabularyResult,
   ExtractResumePayload,
   ExtractResumeResult,
+  FitNotesPayload,
+  FitNotesResult,
   MeResult,
   OnboardPayload,
   OnboardResult,
+  PathwaysResult,
+  PreviewPathwaysPayload,
   ProposeRequest,
   ProposeResult,
   RecommitChoice,
   RecommitResult,
   RollbackResult,
   StatusResult,
+  StorySummaryResult,
   ThresholdsResult,
   TodayResult,
   WeeklyCheckinResult,
@@ -91,6 +98,41 @@ export const api = {
   // payload 422s. Nothing is stored until the wizard finishes via onboard.
   extractResume: (payload: ExtractResumePayload) =>
     request<ExtractResumeResult>('POST', '/onboard/extract', payload),
+  // Narrative pathways (NP-D/NP-E), all kernel-computed, no LLM. `pathways`
+  // reads coverage over the stored profile; `previewPathways` is the wizard's
+  // persistence-free draft coverage (nothing stored). `evidenceVocabulary`
+  // serves the closed kind/theme dropdowns (onboarding not required — the wizard
+  // passes its not-yet-saved target_role). `selectPathway` is a targeted
+  // selection mutation (a pathway change invalidates the plan server-side, like
+  // onboard) and `markEvidence` appends one confirmed evidence item; both return
+  // the refreshed me projection.
+  pathways: (track?: string) =>
+    request<PathwaysResult>('GET', track ? `/pathways?track=${encodeURIComponent(track)}` : '/pathways'),
+  previewPathways: (payload: PreviewPathwaysPayload) =>
+    request<PathwaysResult>('POST', '/onboard/pathways', payload),
+  evidenceVocabulary: (role?: string) =>
+    request<EvidenceVocabularyResult>(
+      'GET',
+      role ? `/evidence-vocabulary?role=${encodeURIComponent(role)}` : '/evidence-vocabulary',
+    ),
+  selectPathway: (pathwayId: string) =>
+    request<MeResult>('POST', '/pathways/select', { pathway_id: pathwayId }),
+  markEvidence: (item: {
+    title: string
+    organization?: string | null
+    summary?: string | null
+    kind: EvidenceKind
+    theme_tags: string[]
+  }) => request<MeResult>('POST', '/evidence', item),
+  // Story-layer LLM prose (NP-F), display-only — it decorates the deterministic
+  // pathway coverage, never re-ranks it. `pathwayFitNotes` is one batched call
+  // for the top cards' fit notes (draft-aware body like previewPathways; an LLM
+  // failure is a 200 with status "failed", inspected not caught). `storySummary`
+  // is the user-initiated "where your package stands" note over the selected
+  // pathway (409 when nothing is selected). Neither persists.
+  pathwayFitNotes: (payload: FitNotesPayload = {}) =>
+    request<FitNotesResult>('POST', '/pathways/fit-notes', payload),
+  storySummary: () => request<StorySummaryResult>('POST', '/story-summary', {}),
   propose: (body: ProposeRequest = {}) => request<ProposeResult>('POST', '/propose', body),
   // Approval gate (F-F). `approve` records the explicit decision and mints the
   // approval_event_id + hash the write requires; `write` is the only call that

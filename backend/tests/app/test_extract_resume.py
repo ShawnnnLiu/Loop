@@ -286,7 +286,7 @@ def test_extract_via_service_logs_haiku_rows_with_hashes_only() -> None:
     assert row.run_id == result.run_id
     assert row.run_id.startswith("intake-")
     assert row.model_name == "claude-haiku-4-5"
-    assert row.prompt_version == "resume-intake-v1-2026-07-06"
+    assert row.prompt_version == "resume-intake-v2-2026-07-20"
     assert row.cost_estimate_usd == (100 * 1.00 + 50 * 5.00) / 1_000_000
     assert row.prompt_hash is not None and row.response_hash is not None
     serialized = row.model_dump_json()

@@ -59,6 +59,19 @@ vocabulary; this contract imports it):
 | `title` | string | required, 1–120 chars |
 | `organization` | string or null | optional; 1–120 chars when present |
 | `summary` | string or null | optional; 1–280 chars when present |
+| `kind` | enum | default `work`; closed `EvidenceKind` enum (`work · project · volunteering · leadership · research · award · coursework`) |
+| `theme_tags` | `list[str]` | default empty; max 5, each 1–60 chars, case-insensitively unique |
+
+`kind` and `theme_tags` are proposals like every other field here (narrative
+pathways NP-A shape; the intake prompt starts proposing them in NP-C).
+`kind` is the node's classification of grounded evidence - the item itself
+stays groundedness-checked against the résumé text (invariant 1, unchanged);
+a wrong `kind` is a user edit away from correct and routes nothing.
+`theme_tags` must resolve to the `allowed_themes` vocabulary the input bundle
+carries (NP-C; membership enforced in the bounded repair loop like weak
+spots, surfacing as `REPAIR_LIMIT_EXCEEDED` when persistent - never a
+silently coined theme).
+Empty-over-fabrication carries over: no tags is a valid proposal.
 
 ## Provenance Is Structural
 
@@ -94,8 +107,17 @@ spec cannot drift):
    input's `allowed_weak_spots` (see `resume-intake-input.schema.md` and
    `skill-taxonomy.schema.md`). Membership is enforced in the repair loop;
    persistent violation surfaces as `REPAIR_LIMIT_EXCEEDED`.
+6. **Closed theme vocabulary.** Every `ExperienceItem.theme_tags` entry must
+   be a member (compared case-insensitively via `casefold_key`) of the
+   input's `allowed_themes` list — the pathway-registry theme vocabulary the
+   service resolved for the track (see `resume-intake-input.schema.md` and
+   `pathway-template.schema.md`). Empty `theme_tags` is always valid
+   (empty-over-fabrication). When `allowed_themes` is empty (no vocabulary
+   resolved) the check is skipped, exactly like invariant 5. Membership is
+   enforced in the repair loop; persistent violation surfaces as
+   `REPAIR_LIMIT_EXCEEDED` — never a silently coined theme.
 
-Invariants 1, 2, and 5 need the résumé text / allowed vocabulary and are
+Invariants 1, 2, 5, and 6 need the résumé text / allowed vocabulary and are
 checked by the adapter's post-validator inside the bounded repair loop
 (never silently dropped — typed `reason_code` on failure). Invariants 3 and
 4 are enforced by the Pydantic contract itself.
@@ -141,6 +163,7 @@ Reason: unknown field — confidence values are structurally rejected.
 
 - `../axioms/01-system-boundaries.md`
 - `../axioms/03-data-contracts.md`
+- `pathway-template.schema.md` (theme vocabulary ownership)
 - `resume-intake-input.schema.md`
 - `skill-taxonomy.schema.md`
 - `user-profile.schema.md`

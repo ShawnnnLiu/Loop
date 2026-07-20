@@ -1,0 +1,19 @@
+{
+  "pathway_id": "mystery-track",
+  "pathway_schema_version": "pathway-template-v1",
+  "career_track": "underwater_basket_weaving",
+  "display_name": "Mystery Track",
+  "spine": "A story for a track that does not exist.",
+  "audience_note": "Nobody yet.",
+  "evidence_slots": [
+    {
+      "slot_id": "depth",
+      "title": "Depth",
+      "required_kinds": ["work"],
+      "required_themes_any": ["backend-services"],
+      "min_items": 1,
+      "gap_module_hint": "Build a service",
+      "branch_skill_ids": ["skill.api-design"]
+    }
+  ]
+}

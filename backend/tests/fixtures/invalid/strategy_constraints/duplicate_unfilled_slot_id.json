@@ -1,0 +1,15 @@
+{
+  "pathway_id": "ai-integration-engineer",
+  "unfilled_slots": [
+    {
+      "slot_id": "public-artifact",
+      "title": "Public writeup or talk",
+      "gap_module_hint": "Write it up"
+    },
+    {
+      "slot_id": "public-artifact",
+      "title": "Public writeup or talk (again)",
+      "gap_module_hint": "Write it up again"
+    }
+  ]
+}

@@ -51,6 +51,24 @@ class Priority(StrEnum):
     LOW = "low"
 
 
+class EvidenceKind(StrEnum):
+    """Closed classification of one confirmed evidence item.
+
+    Shared by ``ExperienceItem.kind`` (user-profile spec) and
+    ``EvidenceSlot.required_kinds`` (pathway-template spec). Closed for humans
+    too: kinds are join keys for the deterministic ``narrative/`` kernel, so
+    the UI offers the same fixed dropdown the LLM proposal is bound to.
+    """
+
+    WORK = "work"
+    PROJECT = "project"
+    VOLUNTEERING = "volunteering"
+    LEADERSHIP = "leadership"
+    RESEARCH = "research"
+    AWARD = "award"
+    COURSEWORK = "coursework"
+
+
 class TaskCategory(StrEnum):
     """Allowed values for ``task.category`` (see task-plan spec)."""
 

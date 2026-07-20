@@ -95,6 +95,9 @@ def test_every_contract_registered() -> None:
         "placement_evidence",
         # Scheduler placement quality (P-I revealed preferences)
         "placement_preference",
+        # Narrative pathways (NP-A story layer)
+        "pathway_template",
+        "pathway_selection",
     }
     assert set(CONTRACTS.keys()) == expected
 

@@ -1,0 +1,51 @@
+{
+  "user_id": "user_123",
+  "profile_version": "profile_002",
+  "goal": "AI engineer interview prep",
+  "target_role": "AI Engineer",
+  "timeline_weeks": 12,
+  "weekly_hours": 10,
+  "experience_level": "intermediate",
+  "known_strengths": ["API design"],
+  "known_weaknesses": ["System design"],
+  "experience": [
+    {
+      "title": "Senior Backend Engineer",
+      "organization": "Acme Corp",
+      "summary": "Led the billing platform team; Python and Go services.",
+      "kind": "work",
+      "theme_tags": ["distributed-systems", "backend-services"]
+    },
+    {
+      "title": "RAG side project",
+      "organization": null,
+      "summary": "Retrieval-augmented search over personal notes.",
+      "kind": "project",
+      "theme_tags": ["applied-ml", "llm-integration"]
+    }
+  ],
+  "skills": ["Python", "Go", "PostgreSQL"],
+  "preferred_session_length_min": 60,
+  "max_session_length_min": 120,
+  "hard_constraints": {
+    "no_events_before": "08:00",
+    "no_events_after": "22:30",
+    "allow_weekends": true,
+    "max_daily_study_min": 180,
+    "min_break_between_deep_blocks_min": 30
+  },
+  "pathway_selection": {
+    "pathway_id": "ai-integration-engineer",
+    "pathway_registry_version": "pathway-registry-v1",
+    "selected_at": "2026-07-19T12:00:00-07:00",
+    "slot_overrides": [
+      {
+        "item_title": "RAG side project",
+        "item_organization": null,
+        "slot_id": "llm-feature-depth"
+      }
+    ]
+  },
+  "created_at": "2026-07-19T12:00:00-07:00",
+  "updated_at": "2026-07-19T12:00:00-07:00"
+}

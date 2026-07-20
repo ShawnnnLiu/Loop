@@ -66,8 +66,9 @@ from agentic_calendar.contracts.calendar_reconciliation import (
     ReconciliationDisposition,
     ReconciliationOutcome,
 )
+from agentic_calendar.contracts.career_track import CareerTrack
 from agentic_calendar.contracts.checkin_event import CheckinEvent, RecoveryAction
-from agentic_calendar.contracts.common_types import TaskCategory
+from agentic_calendar.contracts.common_types import EvidenceKind, TaskCategory
 from agentic_calendar.contracts.data_access_audit import (
     DataAccessor,
     DataAccessPurpose,
@@ -77,6 +78,8 @@ from agentic_calendar.contracts.drift_event import DriftEvent, RecommendedPolicy
 from agentic_calendar.contracts.hashing import canonical_payload_hash
 from agentic_calendar.contracts.motivation_profile import RecoveryPreference
 from agentic_calendar.contracts.notification_log import NotificationStatus
+from agentic_calendar.contracts.pathway_selection import PathwaySelection
+from agentic_calendar.contracts.pathway_template import PathwayTemplate
 from agentic_calendar.contracts.placement_evidence import (
     EVIDENCE_MULTIPLIER_MAX,
     EVIDENCE_MULTIPLIER_MIN,
@@ -100,6 +103,7 @@ from agentic_calendar.contracts.recommitment import RecommitmentChoice, Recommit
 from agentic_calendar.contracts.resume_intake_input import ResumeIntakeInput
 from agentic_calendar.contracts.scheduler_output import SchedulerOutput, ScheduleStatus
 from agentic_calendar.contracts.sponsor import SponsorStatus
+from agentic_calendar.contracts.strategy_constraints import StrategyConstraints, UnfilledSlot
 from agentic_calendar.contracts.syllabus_units import SyllabusUnits
 from agentic_calendar.contracts.task_disposition import (
     DispositionSource,
@@ -108,6 +112,7 @@ from agentic_calendar.contracts.task_disposition import (
 )
 from agentic_calendar.contracts.task_plan import TaskPlan
 from agentic_calendar.contracts.telemetry import TelemetryEvent
+from agentic_calendar.contracts.user_profile import UserProfile
 from agentic_calendar.contracts.validation_result import (
     MAX_REPAIR_ATTEMPTS_LLM,
     NextAction,
@@ -128,7 +133,13 @@ from agentic_calendar.llm_nodes.prose_attachment import (
     ProseAttachmentRecord,
 )
 from agentic_calendar.llm_nodes.reflection_summary import ReflectionSummary
-from agentic_calendar.llm_nodes.user_facing_explanation import UserExplanation
+from agentic_calendar.llm_nodes.user_facing_explanation import (
+    FitNoteRequest,
+    FitNoteSlot,
+    StorySummaryRequest,
+    UserExplanation,
+)
+from agentic_calendar.narrative import SlotState, slot_coverage
 from agentic_calendar.planning.diff import (
     PlanContentDiff,
     as_plan_diff,
@@ -160,6 +171,14 @@ from agentic_calendar.supervisor.state import SupervisorSignal as Sig
 from agentic_calendar.supervisor.state import SupervisorState as S
 from agentic_calendar.telemetry.calibration import calibrate
 from agentic_calendar.telemetry.metrics import completion_rate
+from agentic_calendar.templates import (
+    PATHWAY_REGISTRY_VERSION,
+    get_pathway,
+    is_theme_in_vocabulary,
+    list_pathways,
+    pathways_for_track,
+    theme_vocabulary,
+)
 from agentic_calendar.validation import validate_syllabus_units, validate_task_plan
 
 from .environment import AppEnvironment
@@ -172,16 +191,22 @@ from .results import (
     CanonicalSkill,
     DraftView,
     DropResult,
+    EvidenceVocabularyResult,
     ExtractResumeResult,
+    FitNotesResult,
     IngestResult,
     MeResult,
     OnboardResult,
+    PathwayCard,
+    PathwaySlotView,
+    PathwaysResult,
     PlanDiffView,
     ProposeResult,
     RecommitResult,
     ReflectionHistoryEntry,
     RollbackCycleResult,
     StatusResult,
+    StorySummaryResult,
     TelemetryItemOutcome,
     ThresholdFieldView,
     ThresholdSectionView,
@@ -323,6 +348,14 @@ class CycleService:
         default UTC), ``motivation_profile`` (optional). Re-onboarding the
         same user replaces the bundle (profile edits are expected during
         dogfooding) but keeps the original ``created_at``.
+
+        A ``pathway_selection`` on the profile is checked against the registry
+        (NP-D): an unknown pathway, a stale registry-version pin, or an override
+        naming a slot the pathway does not have is rejected with a typed
+        ``reason_code`` and nothing is persisted. When the selection *changes*
+        vs the stored profile, the syllabus, tasks, and schedule are invalidated
+        per the profile-update policy (the accountability contract is not
+        touched); evidence is never reset.
         """
         env = self._env
         now = env.clock.now()
@@ -338,6 +371,20 @@ class CycleService:
             }
         )
         prior = env.state.get_onboarding(record.user_id)
+
+        rejection = self._reject_invalid_selection(record.user_profile)
+        if rejection is not None:
+            reason, detail = rejection
+            return OnboardResult(
+                user_id=record.user_id,
+                created=prior is None,
+                timezone=record.timezone,
+                has_motivation_profile=record.motivation_profile is not None,
+                status="rejected",
+                reason_code=reason,
+                detail=detail,
+            )
+
         if prior is not None:
             # Re-onboarding (a profile edit) keeps the original created_at and the
             # user's inbound-calendar-sync preference (which onboarding never sets).
@@ -348,6 +395,10 @@ class CycleService:
                     "inbound_calendar_sync_enabled": prior.inbound_calendar_sync_enabled,
                 }
             )
+            if self._selection_id(prior.user_profile) != self._selection_id(
+                record.user_profile
+            ):
+                self._invalidate_for_pathway_change(record.user_id)
         env.state.save_onboarding(record)
         return OnboardResult(
             user_id=record.user_id,
@@ -355,6 +406,83 @@ class CycleService:
             timezone=record.timezone,
             has_motivation_profile=record.motivation_profile is not None,
         )
+
+    @staticmethod
+    def _selection_id(profile: UserProfile) -> str | None:
+        """The profile's selected ``pathway_id``, or ``None`` when unselected.
+
+        Slot-override edits keep the same ``pathway_id`` and never invalidate: a
+        pathway *change* is what the policy table gates, and coverage recomputes
+        against the new mapping on read (pathway-selection spec)."""
+        selection = profile.pathway_selection
+        return selection.pathway_id if selection is not None else None
+
+    def _reject_invalid_selection(
+        self, profile: UserProfile
+    ) -> tuple[ReasonCode, str] | None:
+        """Registry-membership check for the profile's selection (service layer).
+
+        Returns a typed ``(reason_code, detail)`` for an unknown pathway, a stale
+        registry-version pin, or an override naming a slot the pathway lacks;
+        ``None`` when there is no selection or it is fully valid. Shape is already
+        contract-checked (``PathwaySelection``); this is the semantic check the
+        contract cannot make (it cannot see the registry)."""
+        selection = profile.pathway_selection
+        if selection is None:
+            return None
+        template = get_pathway(selection.pathway_id)
+        if template is None:
+            return (
+                ReasonCode.UNKNOWN_PATHWAY_ID,
+                f"pathway {selection.pathway_id!r} is not in the registry",
+            )
+        if selection.pathway_registry_version != PATHWAY_REGISTRY_VERSION:
+            return (
+                ReasonCode.PATHWAY_REGISTRY_VERSION_MISMATCH,
+                f"selection pinned to registry version "
+                f"{selection.pathway_registry_version!r}; the registry serves "
+                f"{PATHWAY_REGISTRY_VERSION!r} — re-confirm on the current version",
+            )
+        slot_ids = {slot.slot_id for slot in template.evidence_slots}
+        unknown = sorted(
+            {o.slot_id for o in selection.slot_overrides if o.slot_id not in slot_ids}
+        )
+        if unknown:
+            return (
+                ReasonCode.UNKNOWN_EVIDENCE_SLOT,
+                f"slot_overrides reference slots not in pathway "
+                f"{selection.pathway_id!r}: {unknown}",
+            )
+        return None
+
+    def _invalidate_for_pathway_change(self, user_id: str) -> None:
+        """Invalidate syllabus + tasks + schedule after a pathway change (NP-D).
+
+        Full discard: every non-terminal plan version is moved to ``DISCARDED``
+        (so the tasks and schedule no longer reflect the superseded pathway and
+        the read projections go empty), the stored syllabus is dropped (the next
+        propose regenerates a fresh one against the new pathway), and a pending
+        awaiting-approval run is retired through the existing reject edge so its
+        stale draft can never be approved. The calendar is never touched here (no
+        silent writes): already-written events supersede on the next
+        approve→write, exactly like a replan. The accountability contract lives
+        on the motivation profile and is deliberately left intact (profile-update
+        policy)."""
+        env = self._env
+        now = env.clock.now()
+        for plan_version in env.plan_store.list_for_user(user_id):
+            if plan_version.state in (
+                LifecycleState.DRAFT,
+                LifecycleState.APPROVED,
+                LifecycleState.ACTIVE,
+            ):
+                env.plan_store.save(
+                    plan_version.transition_to(LifecycleState.DISCARDED, now=now)
+                )
+        env.state.delete_syllabus(user_id)
+        latest = env.state.latest_run_for_user(user_id)
+        if latest is not None and latest.state is S.AWAITING_USER_APPROVAL:
+            self._transition(latest, Sig.USER_REJECTED)
 
     # ------------------------------------------------------------------ #
     # extract (résumé intake — persistence-free)
@@ -400,9 +528,17 @@ class CycleService:
         entries = (
             registry.entries_for_track(track) if track is not None else registry.entries
         )
+        # Evidence-theme vocabulary is the pathway registry's per-track slice
+        # (NP-C); empty when no track resolved or the track seeds no themes,
+        # which the node treats as "propose no tags." Registry literals, not
+        # client input — the node never imports the registry.
+        allowed_themes = list(theme_vocabulary(track)) if track is not None else []
         intake = ResumeIntakeInput.model_validate(
             base.model_dump(mode="json")
-            | {"allowed_weak_spots": [entry.display_name for entry in entries]}
+            | {
+                "allowed_weak_spots": [entry.display_name for entry in entries],
+                "allowed_themes": allowed_themes,
+            }
         )
 
         run_id = f"intake-{env.id_generator.new_id('run')}"
@@ -486,6 +622,63 @@ class CycleService:
         return run
 
     # ------------------------------------------------------------------ #
+    # narrative pathways (NP-D) — deterministic selection resolution
+    # ------------------------------------------------------------------ #
+
+    def _resolve_selection_template(
+        self, profile: UserProfile
+    ) -> tuple[PathwayTemplate | None, bool]:
+        """The registry template a profile's selection resolves to, plus a
+        version-mismatch flag.
+
+        Returns ``(None, False)`` when there is no selection or the ``pathway_id``
+        is unknown, and ``(None, True)`` when the selection is pinned to a
+        ``pathway_registry_version`` the registry no longer serves — surfaced for
+        an explicit re-confirm, never silently re-mapped (pathway-selection spec).
+        Only a live, matching selection yields ``(template, False)``.
+        """
+        selection = profile.pathway_selection
+        if selection is None:
+            return None, False
+        template = get_pathway(selection.pathway_id)
+        if template is None:
+            return None, False
+        if selection.pathway_registry_version != PATHWAY_REGISTRY_VERSION:
+            return None, True
+        return template, False
+
+    def _pathway_constraints(
+        self, profile: UserProfile
+    ) -> tuple[StrategyConstraints | None, PathwayTemplate | None]:
+        """Story-layer ``StrategyConstraints`` for the profile's selection.
+
+        Returns ``(None, None)`` when nothing shapes generation (no selection, an
+        unknown pathway, or a stale version pin). Otherwise the kernel computes
+        the unfilled slots deterministically and they ride into the Strategist
+        bundle as typed constraints (``pathway_id`` + ``unfilled_slots``); the
+        resolved template is returned alongside so the validation gate disposes
+        exactly what the prompt was told to respect.
+        """
+        template, _mismatch = self._resolve_selection_template(profile)
+        if template is None:
+            return None, None
+        coverage = slot_coverage(profile, template)
+        filled = {c.slot_id for c in coverage if c.state is SlotState.FILLED}
+        unfilled = [
+            UnfilledSlot(
+                slot_id=slot.slot_id,
+                title=slot.title,
+                gap_module_hint=slot.gap_module_hint,
+            )
+            for slot in template.evidence_slots
+            if slot.slot_id not in filled
+        ]
+        constraints = StrategyConstraints(
+            pathway_id=template.pathway_id, unfilled_slots=unfilled
+        )
+        return constraints, template
+
+    # ------------------------------------------------------------------ #
     # propose
     # ------------------------------------------------------------------ #
 
@@ -518,7 +711,14 @@ class CycleService:
         if horizon_days is None:
             horizon_days = onboarding.user_profile.timeline_weeks * 7
         latest = self._env.state.latest_run_for_user(user_id)
-        if latest is not None and latest.state is S.REPLAN_REQUIRED:
+        if (
+            latest is not None
+            and latest.state is S.REPLAN_REQUIRED
+            # A pathway change (NP-D) discards the active plan out from under a
+            # queued replan; with no plan to recalibrate, fall through to a fresh
+            # cycle rather than dead-ending on "no plan is active".
+            and self._env.plan_store.get_active(user_id) is not None
+        ):
             return self._propose_replan(
                 onboarding,
                 latest,
@@ -571,11 +771,25 @@ class CycleService:
             )
         registry = {c.claim_id: c for c in claims}
 
+        # Narrative shaping (NP-D): when the profile carries a confirmed pathway
+        # selection that resolves against the pinned registry, the kernel
+        # computes the unfilled slots deterministically and the Strategist is
+        # *told* the gaps as typed constraints — never asked to find them. The
+        # same selected template + bound gate the output. No selection ⇒
+        # ``constraints`` is None and this is byte-identical to today.
+        constraints, selected_pathway = self._pathway_constraints(profile)
+        max_slot_modules = (
+            constraints.max_slot_modules if constraints is not None else 3
+        )
+
         syllabus: SyllabusUnits | None = None
         for attempt in range(MAX_REPAIR_ATTEMPTS_LLM + 1):
             try:
                 candidate = env.nodes.strategist.run(
-                    run_id=run.run_id, user_profile=profile, source_claims=claims
+                    run_id=run.run_id,
+                    user_profile=profile,
+                    source_claims=claims,
+                    strategy_constraints=constraints,
                 )
             except LLMNodeError as exc:
                 return self._propose_failure(self._llm_failure(run, exc))
@@ -585,6 +799,8 @@ class CycleService:
                 claim_registry=registry,
                 now=env.clock.now(),
                 run_id=run.run_id,
+                selected_pathway=selected_pathway,
+                max_slot_modules=max_slot_modules,
                 repair_attempt=attempt,
             )
             if result.valid:
@@ -3048,6 +3264,374 @@ class CycleService:
                 onboarding.inbound_calendar_sync_enabled if onboarding is not None else False
             ),
         )
+
+    def pathways_view(
+        self, user_id: str, *, track: str | None = None
+    ) -> PathwaysResult:
+        """Registry cards for a track plus the user's deterministic coverage (NP-D).
+
+        ``track`` is the optional query-param filter; an unknown value falls back
+        to the track resolved from the profile's ``target_role`` (and if that is
+        also unresolvable, every pathway is shown). Fit counts and slot states
+        are computed by the ``narrative/`` kernel over the *stored* profile — no
+        LLM participates — and the cards are ordered by ``filled_slots``
+        descending, ties broken by registry order (a stable sort).
+        """
+        profile = self._require_onboarding(user_id).user_profile
+        return self._pathways_result(profile, track)
+
+    def preview_pathways(
+        self, user_id: str, payload: Mapping[str, Any]
+    ) -> PathwaysResult:
+        """Pathway cards + coverage over a *draft* profile - persistence-free (NP-E).
+
+        The onboarding wizard's "Your story" step needs live slot coverage before
+        the profile is saved, so this mirrors :meth:`extract_resume`'s
+        persistence-free posture: the body's ``user_profile`` is validated (with
+        ``user_id`` forced to the acting user - the onboard trust boundary) and run
+        through the same :meth:`_pathways_result` the persisted
+        :meth:`pathways_view` uses, so a draft and a saved profile with identical
+        evidence produce byte-identical cards. Nothing is stored; the only profile
+        write path stays :meth:`onboard`. ``payload`` keys: ``user_profile``
+        (required), ``track`` (optional filter).
+        """
+        raw = payload.get("user_profile")
+        profile_dict = dict(raw) if isinstance(raw, Mapping) else {}
+        profile = UserProfile.model_validate({**profile_dict, "user_id": user_id})
+        track = payload.get("track")
+        return self._pathways_result(profile, track if isinstance(track, str) else None)
+
+    def _pathways_result(
+        self, profile: UserProfile, track: str | None
+    ) -> PathwaysResult:
+        """The registry cards + per-profile coverage, shared by the persisted and
+        draft-preview surfaces so both agree exactly (NP-E)."""
+        resolved_track = self._resolve_pathways_track(track, profile)
+        templates = (
+            pathways_for_track(resolved_track)
+            if resolved_track is not None
+            else list_pathways()
+        )
+        selection = profile.pathway_selection
+        selected_id = selection.pathway_id if selection is not None else None
+        _template, version_mismatch = self._resolve_selection_template(profile)
+        cards = [self._pathway_card(profile, t, selected_id) for t in templates]
+        cards.sort(key=lambda c: c.filled_slots, reverse=True)
+        return PathwaysResult(
+            track=resolved_track,
+            registry_version=PATHWAY_REGISTRY_VERSION,
+            selected_pathway_id=selected_id,
+            version_mismatch=version_mismatch,
+            cards=cards,
+        )
+
+    def evidence_vocabulary_view(
+        self, user_id: str, *, role: str | None = None
+    ) -> EvidenceVocabularyResult:
+        """The closed evidence-tagging vocabularies for the UI dropdowns (NP-E).
+
+        ``kinds`` is the fixed :class:`EvidenceKind` enum; ``themes`` is the
+        registry's per-track slice. The track resolves from ``role`` when given
+        (the wizard passes the not-yet-saved ``target_role`` - this endpoint does
+        not require onboarding), else from the stored profile's ``target_role``
+        when the user is onboarded, else ``None`` (empty theme slice). Registry
+        literals only - the same closed sets the intake node is bound to.
+        """
+        resolved_track: CareerTrack | None = None
+        if role is not None and role.strip():
+            resolved_track = resolve_track(role)
+        else:
+            onboarding = self._env.state.get_onboarding(user_id)
+            if onboarding is not None:
+                resolved_track = resolve_track(onboarding.user_profile.target_role)
+        themes = (
+            list(theme_vocabulary(resolved_track))
+            if resolved_track is not None
+            else []
+        )
+        return EvidenceVocabularyResult(
+            track=resolved_track,
+            registry_version=PATHWAY_REGISTRY_VERSION,
+            kinds=list(EvidenceKind),
+            themes=themes,
+        )
+
+    def select_pathway(
+        self,
+        user_id: str,
+        *,
+        pathway_id: str,
+        slot_overrides: Sequence[Mapping[str, Any]] = (),
+    ) -> MeResult:
+        """Set (or change) the profile's pathway selection - a targeted mutation (NP-E).
+
+        Unlike re-running :meth:`onboard`, this touches only ``pathway_selection``:
+        the accountability contract (motivation profile), ``created_at``, the
+        inbound-calendar-sync opt-in, evidence, and every other profile field are
+        preserved byte-for-byte - the profile-update policy row "Pathway changed →
+        Invalidate Accountability Contract? No", which a full re-onboard (whose
+        payload cannot carry the motivation profile back) could not honor. The
+        selection always pins the *current* registry version. Registry membership
+        is checked (``_reject_invalid_selection``); a bad ``pathway_id`` or override
+        slot is a command-precondition failure (``CycleError`` → HTTP 409). When
+        the ``pathway_id`` changes vs the stored selection, the syllabus, tasks,
+        and schedule are invalidated exactly as :meth:`onboard` does.
+        """
+        onboarding = self._require_onboarding(user_id)
+        prior_profile = onboarding.user_profile
+        selection = PathwaySelection.model_validate(
+            {
+                "pathway_id": pathway_id,
+                "pathway_registry_version": PATHWAY_REGISTRY_VERSION,
+                "selected_at": self._env.clock.now(),
+                "slot_overrides": list(slot_overrides),
+            }
+        )
+        new_profile = UserProfile.model_validate(
+            prior_profile.model_dump(mode="json")
+            | {"pathway_selection": selection.model_dump(mode="json")}
+        )
+        rejection = self._reject_invalid_selection(new_profile)
+        if rejection is not None:
+            _reason, detail = rejection
+            raise CycleError(detail)
+        record = OnboardingRecord.model_validate(
+            onboarding.model_dump()
+            | {
+                "user_profile": new_profile.model_dump(mode="json"),
+                "updated_at": self._env.clock.now(),
+            }
+        )
+        if self._selection_id(prior_profile) != self._selection_id(new_profile):
+            self._invalidate_for_pathway_change(user_id)
+        self._env.state.save_onboarding(record)
+        return self.me(user_id)
+
+    def _resolve_pathways_track(
+        self, track: str | None, profile: UserProfile
+    ) -> CareerTrack | None:
+        """Pick the track to draw cards for: an explicit valid query param wins,
+        else the track resolved from the profile's ``target_role`` (possibly
+        ``None`` when nothing resolves — the caller then shows every pathway)."""
+        if track is not None:
+            try:
+                return CareerTrack(track)
+            except ValueError:
+                pass  # unknown track string: fall back to the profile's track
+        return resolve_track(profile.target_role)
+
+    def _pathway_card(
+        self, profile: UserProfile, template: PathwayTemplate, selected_id: str | None
+    ) -> PathwayCard:
+        """One card: kernel coverage over ``template`` for ``profile``'s evidence."""
+        coverage = slot_coverage(profile, template)
+        slots = [
+            PathwaySlotView(
+                slot_id=cover.slot_id,
+                title=slot.title,
+                state=cover.state,
+                matched_item_indices=list(cover.matched_item_indices),
+            )
+            for slot, cover in zip(template.evidence_slots, coverage, strict=True)
+        ]
+        return PathwayCard(
+            pathway_id=template.pathway_id,
+            display_name=template.display_name,
+            spine=template.spine,
+            audience_note=template.audience_note,
+            career_track=template.career_track,
+            filled_slots=sum(1 for c in coverage if c.state is SlotState.FILLED),
+            total_slots=len(template.evidence_slots),
+            slots=slots,
+            selected=template.pathway_id == selected_id,
+        )
+
+    # ------------------------------------------------------------------ #
+    # story-layer LLM prose (NP-F) — fit notes + story summary
+    # ------------------------------------------------------------------ #
+    #
+    # Both targets live inside the UserFacingExplanationNode (the fifth-and-only
+    # explanation node; no new node class per 03-llm-surfaces). They DECORATE
+    # the deterministic ``narrative/`` coverage the kernel already computed:
+    # the structured input is that coverage (filled/open slot titles + matched
+    # evidence titles), never the raw résumé, so fit/gaps stay 100% deterministic
+    # (axiom 00) and the prose only explains them. Neither call persists prose —
+    # the client holds it for the session; only the append-only LLM call log is
+    # written (required per axiom 22).
+
+    #: The batched fit-note call covers the top-N cards by the kernel's ranking
+    #: (03-llm-surfaces: "one call returning notes for the top N cards, N <= 4").
+    _FIT_NOTE_MAX_CARDS = 4
+
+    def _card_fit_slots(
+        self, profile: UserProfile, card: PathwayCard
+    ) -> tuple[FitNoteSlot, ...]:
+        """Project a card's kernel coverage into the prose node's slot shape:
+        the pillar title, its opaque state label, and the confirmed evidence
+        titles the kernel matched to it (so the prose can name *why* a pillar is
+        filled without ever seeing the raw résumé)."""
+        titles = [item.title for item in profile.experience]
+        return tuple(
+            FitNoteSlot(
+                title=slot.title,
+                state=slot.state.value,
+                matched_titles=tuple(
+                    titles[i] for i in slot.matched_item_indices if 0 <= i < len(titles)
+                ),
+            )
+            for slot in card.slots
+        )
+
+    def pathway_fit_notes(
+        self, user_id: str, payload: Mapping[str, Any]
+    ) -> FitNotesResult:
+        """One batched LLM fit note per top pathway card (NP-F) — display-only.
+
+        Mirrors :meth:`preview_pathways`'s draft-or-saved posture: with a
+        ``user_profile`` in the body the wizard's not-yet-saved evidence is used
+        (persistence-free, onboarding not required); without it the stored
+        profile is read. The cards are ranked deterministically by
+        :meth:`_pathways_result` (no LLM), the top ``_FIT_NOTE_MAX_CARDS`` are
+        put to the explanation node in one call, and the notes come back keyed by
+        ``pathway_id``. A node failure returns a typed ``status="failed"`` result
+        (HTTP 200) so the UI simply shows no notes; the cards are never blocked
+        on this call. ``payload`` keys: ``user_profile`` (optional draft),
+        ``track`` (optional filter)."""
+        raw = payload.get("user_profile")
+        if isinstance(raw, Mapping):
+            profile = UserProfile.model_validate({**dict(raw), "user_id": user_id})
+        else:
+            profile = self._require_onboarding(user_id).user_profile
+        track = payload.get("track")
+        result = self._pathways_result(
+            profile, track if isinstance(track, str) else None
+        )
+        top = result.cards[: self._FIT_NOTE_MAX_CARDS]
+        if not top:
+            return FitNotesResult(
+                registry_version=result.registry_version, notes={}
+            )
+        requests = tuple(
+            FitNoteRequest(
+                pathway_id=card.pathway_id,
+                display_name=card.display_name,
+                spine=card.spine,
+                audience_note=card.audience_note,
+                slots=self._card_fit_slots(profile, card),
+            )
+            for card in top
+        )
+        run_id = f"story-{self._env.id_generator.new_id('run')}"
+        try:
+            notes = self._env.nodes.explanation.run_fit_notes(
+                run_id=run_id, requests=requests
+            )
+        except LLMNodeError as exc:
+            reason = getattr(exc, "reason_code", None) or ReasonCode.LLM_CALL_FAILED
+            return FitNotesResult(
+                status="failed",
+                registry_version=result.registry_version,
+                reason_code=reason,
+                detail=str(exc),
+            )
+        return FitNotesResult(
+            registry_version=result.registry_version,
+            notes={note.pathway_id: note.note for note in notes.notes},
+        )
+
+    def story_summary(self, user_id: str) -> StorySummaryResult:
+        """User-initiated "where your package stands" summary (NP-F) — display-only.
+
+        Requires a live pathway selection (a stale-pinned or missing selection is
+        a command-precondition failure → HTTP 409; the Story panel only offers
+        this in the selected branch). The input is the selected pathway's
+        deterministic slot coverage; a node failure is a typed
+        ``status="failed"`` result (HTTP 200). Nothing is persisted."""
+        profile = self._require_onboarding(user_id).user_profile
+        template, version_mismatch = self._resolve_selection_template(profile)
+        if template is None:
+            hint = (
+                " (its pinned registry version is stale — re-confirm it first)"
+                if version_mismatch
+                else ""
+            )
+            raise CycleError(
+                f"user {user_id!r} has no live pathway selection; choose a pathway "
+                f"before requesting a story summary{hint}"
+            )
+        card = self._pathway_card(profile, template, template.pathway_id)
+        request = StorySummaryRequest(
+            pathway_id=template.pathway_id,
+            display_name=template.display_name,
+            spine=template.spine,
+            slots=self._card_fit_slots(profile, card),
+        )
+        run_id = f"story-{self._env.id_generator.new_id('run')}"
+        try:
+            summary = self._env.nodes.explanation.run_story_summary(
+                run_id=run_id, request=request
+            )
+        except LLMNodeError as exc:
+            reason = getattr(exc, "reason_code", None) or ReasonCode.LLM_CALL_FAILED
+            return StorySummaryResult(status="failed", reason_code=reason)
+        return StorySummaryResult(
+            summary=summary.summary, detail=list(summary.detail)
+        )
+
+    def mark_evidence(
+        self,
+        user_id: str,
+        *,
+        title: str,
+        organization: str | None = None,
+        summary: str | None = None,
+        kind: EvidenceKind = EvidenceKind.WORK,
+        theme_tags: Sequence[str] = (),
+    ) -> MeResult:
+        """Append one confirmed evidence item to the profile (NP-D).
+
+        A plain profile edit: no LLM, and - unlike a pathway change - no
+        invalidation. Evidence is a pathway-independent fact; coverage recomputes
+        on read (profile-update policy: "Evidence item added/edited/marked" is
+        No/No/No/No), and a filled slot merely makes a planned module redundant,
+        which the next regular replan absorbs. ``theme_tags`` stay closed to the
+        track's registry vocabulary - they are join keys for the ``narrative/``
+        kernel, not free text - with an empty list always allowed; the list cap
+        (20) is contract-enforced when the profile is rebuilt.
+        """
+        onboarding = self._require_onboarding(user_id)
+        profile = onboarding.user_profile
+        tags = list(theme_tags)
+        track = resolve_track(profile.target_role)
+        if track is not None:
+            off_vocab = sorted(
+                {t for t in tags if not is_theme_in_vocabulary(track, t)}
+            )
+            if off_vocab:
+                raise CycleError(
+                    f"theme_tags not in the {track.value} theme vocabulary: "
+                    f"{off_vocab}"
+                )
+        profile_dump = profile.model_dump(mode="json")
+        new_item = {
+            "title": title,
+            "organization": organization,
+            "summary": summary,
+            "kind": kind.value,
+            "theme_tags": tags,
+        }
+        new_profile = UserProfile.model_validate(
+            profile_dump | {"experience": [*profile_dump["experience"], new_item]}
+        )
+        record = OnboardingRecord.model_validate(
+            onboarding.model_dump()
+            | {
+                "user_profile": new_profile.model_dump(mode="json"),
+                "updated_at": self._env.clock.now(),
+            }
+        )
+        self._env.state.save_onboarding(record)
+        return self.me(user_id)
 
     def inbound_calendar_sync_enabled(self, user_id: str) -> bool:
         """Whether the user opted in to inbound calendar reconciliation (off until

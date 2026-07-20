@@ -85,6 +85,7 @@ company-specific-claim rule).
 | `modules[].difficulty` | Integer in `1..5` |
 | `modules[].source_claim_ids` | Claims that justify the module |
 | `modules[].company_specific` | Whether the module is tailored to a specific target company (default `false`). The Strategist proposes it; the validator uses it to enforce the claim-reference rule below. |
+| `modules[].evidence_slot_id` | Optional typed link to an evidence slot of the selected pathway (default absent; narrative-pathways NP-A). The Strategist proposes it when `strategy_constraints.unfilled_slots` names gaps; the deterministic validator disposes (rules below). Downstream it is opaque module metadata: the Planner and Scheduler never behave differently because of story state. |
 
 ## Validation Rules
 
@@ -98,6 +99,10 @@ company-specific-claim rule).
 - `source_claim_ids` reference existing, non-expired `claim_id` values (checked in `validation/source_claims.py`; missing → `ORPHAN_SOURCE_CLAIM`, expired → `EXPIRED_SOURCE_CLAIM`).
 - Total estimated time must not exceed user capacity by an impossible margin.
 - A module with `company_specific: true` must reference at least one `source_claim_id` when `strategy_constraints.must_reference_claims_for_company_specific_modules` is true (else → `COMPANY_MODULE_MISSING_CLAIM`). "Company-specific" is the explicit `company_specific` flag, not inferred from prose.
+- A module with `evidence_slot_id` must carry a non-empty `reason` naming the pillar (user-facing honesty; checked as non-empty only - prose is never parsed). Contract-enforced, mirroring the high-priority rule.
+- `evidence_slot_id` set but no pathway selected → `PATHWAY_NOT_SELECTED` (validation layer, NP-D).
+- `evidence_slot_id` not a slot of the selected pathway → `UNKNOWN_EVIDENCE_SLOT` (validation layer, NP-D).
+- Slot-linked module count above `strategy_constraints.max_slot_modules` → `SLOT_MODULE_LIMIT_EXCEEDED` (validation layer, NP-D).
 
 ## Syllabus Staleness Rules
 
@@ -170,10 +175,30 @@ Reason: invalid duration and out-of-range difficulty.
 
 Reason: orphan source claim reference.
 
+```json
+{
+  "modules": [
+    {
+      "module_id": "artifact",
+      "title": "Public writeup",
+      "priority": "medium",
+      "target_outcomes": ["One published technical writeup"],
+      "estimated_total_min": 240,
+      "difficulty": 2,
+      "evidence_slot_id": "public-artifact"
+    }
+  ]
+}
+```
+
+Reason: slot-linked module with no `reason` naming the pillar.
+
 ## Related Docs
 
 - `../axioms/04-validation-layer.md`
 - `../axioms/08-rag-source-claims.md`
 - `../axioms/12-edge-case-policy-engine.md`
 - `source-claim.schema.md`
+- `pathway-template.schema.md`
+- `strategy-constraints.schema.md`
 - `../decisions/ADR-0005-structured-syllabus-not-prose.md`

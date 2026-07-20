@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 
 import { ApiError, api, errorMessage } from '../api/client'
-import type { MeResult, ThresholdsResult } from '../api/types'
+import type { MeResult, PathwaysResult, ThresholdsResult } from '../api/types'
 import { fmtWhen } from '../lib/datetime'
+import { PathwayCardView } from '../components/PathwayCard'
 
 // Thresholds: a read-only mirror of the effective deterministic tuning the
 // system serves, plus the append-only change journal. Display-only by design
@@ -19,20 +20,37 @@ function fmtValue(value: number | boolean): string {
 export function ThresholdsScreen() {
   const [result, setResult] = useState<ThresholdsResult | null>(null)
   const [me, setMe] = useState<MeResult | null>(null)
+  const [pathways, setPathways] = useState<PathwaysResult | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [syncing, setSyncing] = useState(false)
   const [syncError, setSyncError] = useState<string | null>(null)
+  // The pathway id the user is about to switch to, held for an explicit confirm
+  // because the change regenerates the plan (profile-update policy).
+  const [pendingPathway, setPendingPathway] = useState<string | null>(null)
+  const [pathwayBusy, setPathwayBusy] = useState(false)
+  const [pathwayError, setPathwayError] = useState<string | null>(null)
+
+  function loadPathways() {
+    api
+      .pathways()
+      .then(setPathways)
+      .catch((err: unknown) => {
+        if (!(err instanceof ApiError && err.status === 401)) setPathwayError(errorMessage(err))
+      })
+  }
 
   useEffect(() => {
     let active = true
     // The thresholds are read-only tuning; `me` carries the one writable knob on
-    // this screen — the inbound-calendar-sync opt-in.
-    Promise.all([api.thresholds(), api.me()])
-      .then(([r, m]) => {
+    // this screen — the inbound-calendar-sync opt-in — and the pathway cards are
+    // the story-layer "Change pathway" surface (a change here regenerates the plan).
+    Promise.all([api.thresholds(), api.me(), api.pathways()])
+      .then(([r, m, p]) => {
         if (!active) return
         setResult(r)
         setMe(m)
+        setPathways(p)
         setLoading(false)
       })
       .catch((err: unknown) => {
@@ -46,6 +64,21 @@ export function ThresholdsScreen() {
       active = false
     }
   }, [])
+
+  async function confirmPathwayChange() {
+    if (!pendingPathway) return
+    setPathwayBusy(true)
+    setPathwayError(null)
+    try {
+      await api.selectPathway(pendingPathway)
+      setPendingPathway(null)
+      loadPathways() // reflect the new selection (the plan was invalidated server-side)
+    } catch (err) {
+      if (!(err instanceof ApiError && err.status === 401)) setPathwayError(errorMessage(err))
+    } finally {
+      setPathwayBusy(false)
+    }
+  }
 
   // Flip the opt-in and re-render from the refreshed me the server returns —
   // server is the source of truth, never an optimistic local guess.
@@ -115,6 +148,60 @@ export function ThresholdsScreen() {
               Couldn’t update the setting — {syncError}
             </div>
           )}
+        </div>
+      )}
+
+      {pathways && (
+        <div style={{ marginTop: 26 }}>
+          <div className="label">Your story pathway</div>
+          <p className="muted" style={{ marginTop: 6, maxWidth: 600, lineHeight: 1.5 }}>
+            The narrative you&rsquo;re building toward. Changing it <b>regenerates your plan</b> around
+            the new pillars and re-runs planning — your evidence is never reset, only re-matched to the
+            new story. Pillar states below are computed deterministically from your confirmed evidence.
+          </p>
+
+          {pendingPathway && (
+            <div className="card" style={{ marginTop: 12, padding: '12px 16px', borderColor: 'var(--clay)' }}>
+              <span style={{ fontSize: 13.5 }}>
+                Switch to{' '}
+                <b>{pathways.cards.find((c) => c.pathway_id === pendingPathway)?.display_name}</b>? This
+                discards your current draft/active plan and regenerates it around the new pillars.
+              </span>
+              <div className="row" style={{ gap: 8, marginTop: 10 }}>
+                <button
+                  className="btn btn-primary sm"
+                  type="button"
+                  disabled={pathwayBusy}
+                  onClick={() => void confirmPathwayChange()}
+                >
+                  {pathwayBusy ? 'Switching…' : 'Switch and replan'}
+                </button>
+                <button
+                  className="btn btn-quiet sm"
+                  type="button"
+                  disabled={pathwayBusy}
+                  onClick={() => setPendingPathway(null)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+          {pathwayError && (
+            <div className="banner-error" style={{ marginTop: 12 }}>
+              Couldn’t change your pathway — {pathwayError}
+            </div>
+          )}
+
+          {pathways.cards.map((card) => (
+            <PathwayCardView
+              key={card.pathway_id}
+              card={card}
+              experienceTitles={(me?.profile?.experience ?? []).map((e) => e.title)}
+              onSelect={() => setPendingPathway(card.pathway_id)}
+              selectLabel="Switch to this story"
+            />
+          ))}
         </div>
       )}
 

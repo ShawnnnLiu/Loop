@@ -60,10 +60,14 @@ _UNGROUNDED_EXTRACTION: dict[str, Any] = {
 }
 
 
+_ALLOWED_THEMES = ["distributed-systems", "developer-experience"]
+
+
 def _intake(
     *,
     resume_text: str = _RESUME,
     allowed_weak_spots: list[str] | None = _ALLOWED_WEAK_SPOTS,
+    allowed_themes: list[str] | None = None,
 ) -> ResumeIntakeInput:
     return ResumeIntakeInput(
         user_id="user_t",
@@ -72,6 +76,7 @@ def _intake(
             goal="Backend SWE interview prep", target_role="Backend SWE"
         ),
         allowed_weak_spots=allowed_weak_spots or [],
+        allowed_themes=allowed_themes or [],
     )
 
 
@@ -106,7 +111,7 @@ def test_happy_path_returns_validated_extraction_and_logs_one_row() -> None:
     assert row.node.value == "resume_intake"
     assert row.run_id == "intake-t"
     assert row.plan_version is None  # intake precedes any plan
-    assert row.prompt_version == "resume-intake-v1-2026-07-06"
+    assert row.prompt_version == "resume-intake-v2-2026-07-20"
     assert row.model_name == "claude-haiku-4-5"
     assert row.cost_estimate_usd == (100 * 1.00 + 50 * 5.00) / 1_000_000
     assert row.prompt_hash is not None and row.response_hash is not None
@@ -175,6 +180,74 @@ def test_empty_allowed_vocabulary_skips_membership_check() -> None:
     node, _store, _ = _node([_ok(off_vocab)])
     extraction = node.run(run_id="intake-t", intake=_intake(allowed_weak_spots=[]))
     assert extraction.inferred_weak_spots == ["Quantum sorting"]
+
+
+# --- Theme-tag closed vocabulary (NP-C) ------------------------------------ #
+
+
+def _with_theme(*tags: str) -> dict[str, Any]:
+    """A valid extraction whose single experience item carries theme_tags."""
+    item = {**_VALID_EXTRACTION["experience"][0], "theme_tags": list(tags)}
+    return {**_VALID_EXTRACTION, "experience": [item]}
+
+
+def test_prompt_includes_theme_block_when_vocabulary_present() -> None:
+    node, _store, transport = _node([_ok(_VALID_EXTRACTION)])
+    node.run(run_id="intake-t", intake=_intake(allowed_themes=_ALLOWED_THEMES))
+    prompt = transport.requests[0]["user_prompt"]
+    assert "Allowed evidence themes for theme_tags" in prompt
+    assert "distributed-systems" in prompt
+
+
+def test_prompt_omits_theme_block_when_vocabulary_is_empty() -> None:
+    node, _store, transport = _node([_ok(_VALID_EXTRACTION)])
+    node.run(run_id="intake-t", intake=_intake(allowed_themes=[]))
+    assert "Allowed evidence themes" not in transport.requests[0]["user_prompt"]
+
+
+def test_in_vocabulary_theme_passes() -> None:
+    node, store, _ = _node([_ok(_with_theme("distributed-systems"))])
+    extraction = node.run(run_id="intake-t", intake=_intake(allowed_themes=_ALLOWED_THEMES))
+    assert extraction.experience[0].theme_tags == ["distributed-systems"]
+    assert store.list_all()[0].reason_code is None
+
+
+def test_out_of_vocabulary_theme_repairs_then_exhausts() -> None:
+    off_vocab = _with_theme("quantum-astrology")
+    node, store, transport = _node([_ok(off_vocab)] * 3)
+    with pytest.raises(LLMGenerationError) as exc_info:
+        node.run(run_id="intake-t", intake=_intake(allowed_themes=_ALLOWED_THEMES))
+    assert exc_info.value.reason_code is ReasonCode.REPAIR_LIMIT_EXCEEDED
+    repair_suffix = transport.requests[1]["repair_suffix"]
+    assert "quantum-astrology" in repair_suffix
+    assert "allowed theme vocabulary" in repair_suffix
+    assert all(
+        r.reason_code is ReasonCode.LLM_SCHEMA_REJECTED for r in store.list_all()
+    )
+
+
+def test_off_vocabulary_theme_recovers_on_repair() -> None:
+    node, store, _ = _node(
+        [_ok(_with_theme("quantum-astrology")), _ok(_with_theme("developer-experience"))]
+    )
+    extraction = node.run(run_id="intake-t", intake=_intake(allowed_themes=_ALLOWED_THEMES))
+    assert extraction.experience[0].theme_tags == ["developer-experience"]
+    assert [(r.attempt, r.reason_code) for r in store.list_all()] == [
+        (0, ReasonCode.LLM_SCHEMA_REJECTED),
+        (1, None),
+    ]
+
+
+def test_empty_theme_vocabulary_skips_theme_check() -> None:
+    node, _store, _ = _node([_ok(_with_theme("anything-goes"))])
+    extraction = node.run(run_id="intake-t", intake=_intake(allowed_themes=[]))
+    assert extraction.experience[0].theme_tags == ["anything-goes"]
+
+
+def test_theme_membership_is_case_insensitive() -> None:
+    node, _store, _ = _node([_ok(_with_theme("Distributed-Systems"))])
+    extraction = node.run(run_id="intake-t", intake=_intake(allowed_themes=_ALLOWED_THEMES))
+    assert extraction.experience[0].theme_tags == ["Distributed-Systems"]
 
 
 def test_refusal_is_terminal_and_never_retried() -> None:
@@ -332,6 +405,34 @@ def test_check_collects_multiple_violations_in_one_message() -> None:
     assert "Flurbo.js" in message
     assert "mid-tier" in message
     assert "Quantum sorting" in message
+
+
+def test_check_accepts_theme_in_allowed_vocabulary() -> None:
+    item = {**_VALID_EXTRACTION["experience"][0], "theme_tags": ["distributed-systems"]}
+    _check(_extraction(experience=[item]), allowed_themes=_ALLOWED_THEMES)  # no raise
+
+
+def test_check_rejects_theme_outside_allowed_vocabulary() -> None:
+    item = {**_VALID_EXTRACTION["experience"][0], "theme_tags": ["quantum-astrology"]}
+    with pytest.raises(LLMNodeError, match="allowed theme vocabulary"):
+        _check(_extraction(experience=[item]), allowed_themes=_ALLOWED_THEMES)
+
+
+def test_check_skips_theme_membership_when_no_vocabulary() -> None:
+    item = {**_VALID_EXTRACTION["experience"][0], "theme_tags": ["anything"]}
+    _check(_extraction(experience=[item]), allowed_themes=[])  # no raise
+
+
+def test_check_reports_index_of_offending_theme() -> None:
+    grounded = _VALID_EXTRACTION["experience"][0]
+    second = {
+        "title": "Software Engineer",
+        "organization": "Initech",
+        "summary": None,
+        "theme_tags": ["bogus-theme"],
+    }
+    with pytest.raises(LLMNodeError, match=r"experience\[1\].theme_tags"):
+        _check(_extraction(experience=[grounded, second]), allowed_themes=_ALLOWED_THEMES)
 
 
 def test_check_inferred_tiers_are_exempt_from_groundedness() -> None:

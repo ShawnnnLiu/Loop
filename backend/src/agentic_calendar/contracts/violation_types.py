@@ -71,3 +71,13 @@ class ViolationType(StrEnum):
     ORPHAN_SOURCE_CLAIM = "orphan_source_claim"
     EXPIRED_SOURCE_CLAIM = "expired_source_claim"
     COMPANY_MODULE_MISSING_CLAIM = "company_module_missing_claim"
+
+    # --- Narrative pathways (syllabus-units spec; NP-D) ---
+    #
+    # The slot-linkage checks that need external state (the selected pathway
+    # template + the ``max_slot_modules`` constraint), so they live in the
+    # validation layer rather than on the ``SyllabusModule`` contract. Each maps
+    # one-to-one onto the matching ``ReasonCode`` (see ``_summarize_reason``).
+    PATHWAY_NOT_SELECTED = "pathway_not_selected"
+    UNKNOWN_EVIDENCE_SLOT = "unknown_evidence_slot"
+    SLOT_MODULE_LIMIT_EXCEEDED = "slot_module_limit_exceeded"

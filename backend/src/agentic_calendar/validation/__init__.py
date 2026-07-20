@@ -19,6 +19,7 @@ from collections.abc import Mapping
 from datetime import datetime
 from typing import Any
 
+from agentic_calendar.contracts.pathway_template import PathwayTemplate
 from agentic_calendar.contracts.reason_codes import ReasonCode
 from agentic_calendar.contracts.source_claim import SourceClaim
 from agentic_calendar.contracts.syllabus_units import SyllabusUnits
@@ -36,6 +37,7 @@ from agentic_calendar.contracts.violation_types import ViolationType
 
 from .coverage import check_coverage
 from .graph import check_task_graph
+from .pathway import check_pathway_slots
 from .repair import RepairPayload, next_action_for
 from .scheduling_preconditions import check_scheduling_preconditions
 from .schema import check_syllabus_units_shape, check_task_plan_shape
@@ -112,15 +114,25 @@ def validate_syllabus_units(
     now: datetime,
     run_id: str,
     must_reference_claims_for_company_specific_modules: bool = True,
+    selected_pathway: PathwayTemplate | None = None,
+    max_slot_modules: int = 3,
     repair_attempt: int = 0,
 ) -> ValidationResult:
-    """Validate a ``SyllabusUnits`` proposal's source-claim integrity (axiom 08).
+    """Validate a ``SyllabusUnits`` proposal's source-claim + slot integrity.
 
     Checks that every referenced ``source_claim_id`` resolves to a known,
-    non-expired claim and that company-specific modules cite evidence when
-    required. A failure routes to a Strategist repair (the Strategist is the
-    artifact's producer); success is a benign ``NOOP`` — the orchestrator then
-    proceeds to the Planner outside this result.
+    non-expired claim (axiom 08), that company-specific modules cite evidence
+    when required, and that any ``evidence_slot_id`` links resolve to slots of
+    the selected pathway within the ``max_slot_modules`` bound (narrative
+    pathways, NP-D). A failure routes to a Strategist repair (the Strategist is
+    the artifact's producer); success is a benign ``NOOP`` — the orchestrator
+    then proceeds to the Planner outside this result.
+
+    ``selected_pathway`` / ``max_slot_modules`` come from the composition root:
+    the same ``StrategyConstraints`` the Strategist was handed, so the gate
+    disposes exactly what the prompt was told to respect. With no pathway
+    selected, ``selected_pathway`` is ``None`` and any slot link is rejected as
+    ``PATHWAY_NOT_SELECTED``.
     """
     # Shape first: a malformed raw dict becomes typed violations, never a raw
     # ValidationError (axiom 04 / 16), mirroring ``validate_task_plan``.
@@ -140,6 +152,13 @@ def validate_syllabus_units(
             must_reference_claims_for_company_specific_modules=(
                 must_reference_claims_for_company_specific_modules
             ),
+        )
+        violations.extend(
+            check_pathway_slots(
+                parsed,
+                selected_pathway=selected_pathway,
+                max_slot_modules=max_slot_modules,
+            )
         )
 
     valid = not violations
@@ -185,8 +204,9 @@ def _summarize_reason(violations: list[Violation]) -> ReasonCode:
        deadlocked plan reports the right reason)
     4. coverage
     5. source claims (axiom 08 — missing/expired evidence; syllabus stage)
-    6. user fit
-    7. generic schema invalid (fallback)
+    6. narrative-pathway slot linkage (NP-D — each type its own reason code)
+    7. user fit
+    8. generic schema invalid (fallback)
     """
     types = {v.type for v in violations}
 
@@ -223,6 +243,17 @@ def _summarize_reason(violations: list[Violation]) -> ReasonCode:
     }
     if types & source_claim_types:
         return ReasonCode.SOURCE_CLAIM_VALIDATION_FAILED
+
+    # Narrative-pathway slot linkage (NP-D). Each violation type maps to its own
+    # reason code (unlike the categories above, which collapse to one), so a
+    # single-issue syllabus surfaces the actionable code; ties break in the
+    # order below (selection missing is the most fundamental).
+    if ViolationType.PATHWAY_NOT_SELECTED in types:
+        return ReasonCode.PATHWAY_NOT_SELECTED
+    if ViolationType.UNKNOWN_EVIDENCE_SLOT in types:
+        return ReasonCode.UNKNOWN_EVIDENCE_SLOT
+    if ViolationType.SLOT_MODULE_LIMIT_EXCEEDED in types:
+        return ReasonCode.SLOT_MODULE_LIMIT_EXCEEDED
 
     user_fit_types = {
         ViolationType.DURATION_EXCEEDS_USER_MAX_SESSION,

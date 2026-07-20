@@ -1,0 +1,28 @@
+{
+  "pathway_id": "dup-slots",
+  "pathway_schema_version": "pathway-template-v1",
+  "career_track": "swe",
+  "display_name": "Duplicate Slots",
+  "spine": "Two pillars with one name.",
+  "audience_note": "Backend teams.",
+  "evidence_slots": [
+    {
+      "slot_id": "depth",
+      "title": "Depth A",
+      "required_kinds": ["work"],
+      "required_themes_any": ["backend-services"],
+      "min_items": 1,
+      "gap_module_hint": "Build a service",
+      "branch_skill_ids": ["skill.api-design"]
+    },
+    {
+      "slot_id": "depth",
+      "title": "Depth B",
+      "required_kinds": ["project"],
+      "required_themes_any": ["distributed-systems"],
+      "min_items": 1,
+      "gap_module_hint": "Build another service",
+      "branch_skill_ids": ["skill.databases"]
+    }
+  ]
+}

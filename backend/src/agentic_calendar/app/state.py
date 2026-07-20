@@ -162,6 +162,8 @@ class AppStateStore(Protocol):
 
     def get_syllabus(self, user_id: str) -> SyllabusUnits | None: ...
 
+    def delete_syllabus(self, user_id: str) -> None: ...
+
     def save_draft(self, user_id: str, draft: DraftSchedule) -> None: ...
 
     def get_draft(self, draft_schedule_id: str) -> DraftSchedule | None: ...
@@ -213,6 +215,10 @@ class InMemoryAppStateStore:
     def get_syllabus(self, user_id: str) -> SyllabusUnits | None:
         with self._lock:
             return self._syllabi.get(user_id)
+
+    def delete_syllabus(self, user_id: str) -> None:
+        with self._lock:
+            self._syllabi.pop(user_id, None)
 
     def save_draft(self, user_id: str, draft: DraftSchedule) -> None:
         del user_id  # kept for protocol parity; drafts are keyed by their id
@@ -314,6 +320,13 @@ class SqliteAppStateStore:
     def get_syllabus(self, user_id: str) -> SyllabusUnits | None:
         payload = self._get(_KIND_SYLLABUS, user_id)
         return None if payload is None else SyllabusUnits.model_validate_json(payload)
+
+    def delete_syllabus(self, user_id: str) -> None:
+        with self._db.transaction() as cur:
+            cur.execute(
+                "DELETE FROM app_documents WHERE kind = ? AND doc_key = ?",
+                (_KIND_SYLLABUS, user_id),
+            )
 
     def save_draft(self, user_id: str, draft: DraftSchedule) -> None:
         with self._db.transaction() as cur:

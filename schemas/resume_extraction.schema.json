@@ -1,9 +1,27 @@
 {
   "$defs": {
+    "EvidenceKind": {
+      "description": "Closed classification of one confirmed evidence item.\n\nShared by ``ExperienceItem.kind`` (user-profile spec) and\n``EvidenceSlot.required_kinds`` (pathway-template spec). Closed for humans\ntoo: kinds are join keys for the deterministic ``narrative/`` kernel, so\nthe UI offers the same fixed dropdown the LLM proposal is bound to.",
+      "enum": [
+        "work",
+        "project",
+        "volunteering",
+        "leadership",
+        "research",
+        "award",
+        "coursework"
+      ],
+      "title": "EvidenceKind",
+      "type": "string"
+    },
     "ExperienceItem": {
       "additionalProperties": false,
-      "description": "One confirmed work-experience entry.\n\nProfile vocabulary: lives here because the profile owns the confirmed\nvalues; ``resume_extraction`` (the ResumeIntakeNode proposal) imports it\nrather than redeclaring.",
+      "description": "One confirmed evidence entry (work, project, volunteering, ...).\n\nProfile vocabulary: lives here because the profile owns the confirmed\nvalues; ``resume_extraction`` (the ResumeIntakeNode proposal) imports it\nrather than redeclaring.\n\nThe field name (and the profile's ``experience`` list name) predates the\nstory layer and deliberately stays: ``kind`` / ``theme_tags`` landed as an\nadditive amendment, not a rename/migration (narrative-pathways NP-A).\n``theme_tags`` membership in the registry theme vocabulary is a\nservice-layer check, not a contract-shape check.",
       "properties": {
+        "kind": {
+          "$ref": "#/$defs/EvidenceKind",
+          "default": "work"
+        },
         "organization": {
           "anyOf": [
             {
@@ -31,6 +49,16 @@
           ],
           "default": null,
           "title": "Summary"
+        },
+        "theme_tags": {
+          "items": {
+            "maxLength": 60,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 5,
+          "title": "Theme Tags",
+          "type": "array"
         },
         "title": {
           "maxLength": 120,

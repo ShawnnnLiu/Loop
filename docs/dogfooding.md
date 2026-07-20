@@ -24,7 +24,8 @@ of a deterministic alias scan.
 
 ## Onboarding: the résumé extract step
 
-The wizard is four steps; **Résumé & profile** is step 2 (deep-linkable as
+The wizard is five steps (Goal → Time & constraints → **Résumé & profile** →
+**Your story** → Connect); **Résumé & profile** is step 2 (deep-linkable as
 `/app?step=2`).
 
 1. Paste a résumé into the textarea (minimum 50 characters). Nothing happens
@@ -63,3 +64,45 @@ entry is the contract; extraction is an enhancement, never a blocker.
 `GET /api/me` (or reloading the SPA) echoes the confirmed profile — useful
 for checking that an edit-then-finish round-trip stored your edits, not the
 raw proposal.
+
+## The story loop (narrative pathways)
+
+The story layer turns the confirmed profile into a **package**: curated
+pathways whose evidence slots (pillars) fill from confirmed evidence, with the
+gaps becoming what the plan builds toward.
+Every count, ranking, and slot state on screen is the deterministic
+`narrative/` kernel over your stored evidence — no LLM participates in any of
+them.
+The only LLM touches are two display-only prose notes that *decorate* that
+deterministic picture and can never change it.
+
+1. **Tag your evidence (step 2, Résumé & profile).** Extraction proposes a
+   `kind` and `theme_tags` for each experience item from the closed
+   vocabularies (`GET /api/evidence-vocabulary` is the oracle for the
+   dropdowns). Edit freely; "no tag" is always valid.
+2. **Your story (step 3).** The wizard ranks the pathway cards over your draft
+   evidence (`POST /api/onboard/pathways`, persistence-free), each showing its
+   honest "n of m pillars" count and per-pillar filled/partial/empty state.
+   A short **fit note** (`POST /api/pathways/fit-notes`) loads under each card
+   a moment later — 2–3 sentences on how your evidence carries the pillars. It
+   is supplementary: the cards render and rank without it, and an LLM failure
+   just omits it.
+3. **Choose a story.** Selecting a pathway (or skipping — skipping keeps
+   today's product, byte-identical) pins it to the registry version. On the
+   live server a change re-runs generation so up to `max_slot_modules` modules
+   name the pillars they build toward. Skipping stores nothing.
+4. **Watch the pillars fill.** On the Progress screen's **Your story** panel,
+   **Mark evidence** appends a confirmed artifact (`POST /api/evidence`) — the
+   story-layer analog of the approval gate. Finishing a study task never fills
+   a pillar; only confirming real work here does. The matching pillar flips to
+   filled on the next read, deterministically.
+5. **Story summary (user-initiated).** On the same panel, **Summarize** writes
+   a short "where your package stands" paragraph (`POST /api/story-summary`)
+   from the selected pathway's pillar states. It is generated only when you
+   ask, never persisted, and never restates the count as a score.
+
+On the keyless dev server the two prose notes come from the deterministic
+fixture twin (fast, offline); the hosted deployment runs them on
+`claude-haiku-4-5`, logged with prompt/response hashes only. Either way the
+prose is scanned before it is shown: no prestige/tier language, no
+psychological labels, and no numerals presented as a score.

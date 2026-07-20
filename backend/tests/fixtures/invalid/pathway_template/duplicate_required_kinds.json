@@ -1,0 +1,19 @@
+{
+  "pathway_id": "dup-kinds",
+  "pathway_schema_version": "pathway-template-v1",
+  "career_track": "mle",
+  "display_name": "Duplicate Kinds",
+  "spine": "One pillar listing the same kind twice.",
+  "audience_note": "ML teams.",
+  "evidence_slots": [
+    {
+      "slot_id": "modeling-depth",
+      "title": "Modeling depth",
+      "required_kinds": ["project", "project"],
+      "required_themes_any": ["applied-ml"],
+      "min_items": 1,
+      "gap_module_hint": "Ship one end-to-end modeling project",
+      "branch_skill_ids": ["skill.model-training"]
+    }
+  ]
+}

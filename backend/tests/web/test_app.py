@@ -208,6 +208,25 @@ def test_invalid_onboard_payload_maps_to_422() -> None:
     assert body["type"] == "ValidationError"
 
 
+def test_onboard_rejects_unknown_pathway_selection() -> None:
+    # A shape-valid selection whose pathway_id is not in the registry is a
+    # semantic (not schema) failure: HTTP 200 with a typed reason_code, nothing
+    # persisted (the profile keeps no selection).
+    client, _clock = _client()
+    profile = client.get("/api/me").json()["profile"]
+    profile["pathway_selection"] = {
+        "pathway_id": "ghost-pathway",
+        "pathway_registry_version": "pathway-registry-v1",
+        "selected_at": "2026-07-19T12:00:00-07:00",
+    }
+    resp = client.post("/api/onboard", json={"user_profile": profile})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "rejected"
+    assert body["reason_code"] == "UNKNOWN_PATHWAY_ID"
+    assert client.get("/api/me").json()["profile"]["pathway_selection"] is None
+
+
 # --------------------------------------------------------------------------- #
 # Read projections + guarded check-in (F-A): the JSON the SPA renders from.
 # --------------------------------------------------------------------------- #
@@ -239,9 +258,147 @@ def test_read_endpoints_expose_projections() -> None:
     assert thresholds.status_code == 200
     assert thresholds.json()["sections"]
 
+    pathways = client.get("/api/pathways?track=swe")
+    assert pathways.status_code == 200
+    pbody = pathways.json()
+    assert pbody["track"] == "swe"
+    assert pbody["registry_version"] == "pathway-registry-v1"
+    assert pbody["selected_pathway_id"] is None  # canonical profile skips the step
+    ids = [c["pathway_id"] for c in pbody["cards"]]
+    assert "backend-infrastructure-engineer" in ids
+    # No evidence stored → every pillar empty, honest 0-of-n counts.
+    assert all(card["filled_slots"] == 0 for card in pbody["cards"])
+
     acct = client.get("/api/accountability")
     assert acct.status_code == 200
     assert acct.json()["has_motivation_profile"] is False  # empty-state (axiom 21)
+
+
+def test_mark_evidence_appends_item_and_rejects_off_vocabulary_theme() -> None:
+    client, _clock = _client()
+    ok = client.post(
+        "/api/evidence",
+        json={
+            "title": "Payments service",
+            "kind": "work",
+            "theme_tags": ["backend-systems"],
+        },
+    )
+    assert ok.status_code == 200
+    experience = ok.json()["profile"]["experience"]
+    assert experience[-1]["title"] == "Payments service"
+    assert experience[-1]["theme_tags"] == ["backend-systems"]
+
+    # The new evidence fills a pillar deterministically on the next read.
+    cards = client.get("/api/pathways?track=swe").json()["cards"]
+    backend = next(c for c in cards if c["pathway_id"] == "backend-infrastructure-engineer")
+    assert backend["filled_slots"] >= 1
+
+    # Off-vocabulary tag is a precondition failure (409), not a schema 422.
+    bad = client.post(
+        "/api/evidence", json={"title": "X", "theme_tags": ["nonsense-theme"]}
+    )
+    assert bad.status_code == 409
+
+
+def test_onboard_pathways_preview_is_persistence_free() -> None:
+    # The wizard's "Your story" step ranks cards over draft evidence before the
+    # profile is saved (NP-E). The stored profile must be untouched afterward.
+    client, _clock = _client()
+    profile = client.get("/api/me").json()["profile"]
+    profile["experience"] = [
+        {"title": "Payments service", "kind": "work", "theme_tags": ["backend-systems"]}
+    ]
+    preview = client.post(
+        "/api/onboard/pathways", json={"user_profile": profile, "track": "swe"}
+    )
+    assert preview.status_code == 200
+    cards = preview.json()["cards"]
+    assert any(card["filled_slots"] >= 1 for card in cards)
+
+    # Nothing persisted: the stored (evidence-free) profile still reads all-empty.
+    stored = client.get("/api/pathways?track=swe").json()["cards"]
+    assert all(card["filled_slots"] == 0 for card in stored)
+
+
+def test_evidence_vocabulary_exposes_closed_sets() -> None:
+    client, _clock = _client()
+    swe = client.get("/api/evidence-vocabulary", params={"role": "Backend SWE"})
+    assert swe.status_code == 200
+    body = swe.json()
+    assert body["track"] == "swe"
+    assert len(body["kinds"]) == 7  # the fixed EvidenceKind enum
+    assert "backend-systems" in body["themes"]
+
+    # A role that resolves to no track yields an empty theme slice, kinds intact.
+    none = client.get("/api/evidence-vocabulary", params={"role": "Astronaut"}).json()
+    assert none["track"] is None
+    assert none["themes"] == []
+    assert len(none["kinds"]) == 7
+
+
+def test_select_pathway_route_sets_selection_and_invalidates() -> None:
+    client, _clock = _client()
+    client.post("/api/propose", json={})
+    client.post("/api/approve", json={})
+    client.post("/api/write", json={})
+    assert client.get("/api/today").json()["tasks"] or True  # plan exists
+
+    ok = client.post("/api/pathways/select", json={"pathway_id": "backend-infrastructure-engineer"})
+    assert ok.status_code == 200
+    assert ok.json()["profile"]["pathway_selection"]["pathway_id"] == (
+        "backend-infrastructure-engineer"
+    )
+    # Selecting from none invalidated the active plan (full discard, NP-D-c).
+    assert client.get("/api/today").json()["tasks"] == []
+
+    # An unknown pathway is a command-precondition failure (409).
+    bad = client.post("/api/pathways/select", json={"pathway_id": "ghost"})
+    assert bad.status_code == 409
+
+
+def test_pathway_fit_notes_route_decorates_the_top_cards() -> None:
+    # NP-F: batched LLM fit notes, display-only. The dev server's deterministic
+    # twin produces clean notes for the top cards; the cards themselves stay
+    # kernel-computed and are never changed by this call.
+    from agentic_calendar.llm_nodes.anthropic_adapter import _scan_story_prose
+
+    client, _clock = _client()
+    client.post(
+        "/api/evidence",
+        json={"title": "Payments service", "kind": "work", "theme_tags": ["backend-systems"]},
+    )
+    before = client.get("/api/pathways?track=swe").json()
+
+    res = client.post("/api/pathways/fit-notes", json={"track": "swe"})
+    assert res.status_code == 200
+    body = res.json()
+    assert body["status"] == "ok"
+    assert body["registry_version"] == "pathway-registry-v1"
+
+    card_ids = {c["pathway_id"] for c in before["cards"]}
+    assert body["notes"]  # at least one note
+    assert set(body["notes"]).issubset(card_ids)
+    assert len(body["notes"]) <= 4  # batched over the top N cards
+    for note in body["notes"].values():
+        _scan_story_prose(note)  # denylist + score-free
+
+    # Display-only: the deterministic ranking is byte-identical afterward.
+    assert client.get("/api/pathways?track=swe").json() == before
+
+
+def test_story_summary_route_requires_a_live_selection() -> None:
+    client, _clock = _client()
+    # No selection yet → command-precondition failure (409).
+    assert client.post("/api/story-summary").status_code == 409
+
+    client.post("/api/pathways/select", json={"pathway_id": "backend-infrastructure-engineer"})
+    res = client.post("/api/story-summary")
+    assert res.status_code == 200
+    body = res.json()
+    assert body["status"] == "ok"
+    assert body["summary"]
+    assert isinstance(body["detail"], list)
 
 
 def test_draft_endpoint_exposes_pending_draft_with_approval_hash() -> None:

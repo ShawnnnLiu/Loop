@@ -122,6 +122,86 @@ describe('api client request handling', () => {
     })
   })
 
+  it('pathways / evidenceVocabulary encode the optional query param, omitting it when absent', async () => {
+    const fetchMock = vi.fn(async () => jsonResponse(200, { cards: [], kinds: [], themes: [] }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await api.pathways()
+    await api.pathways('ai_engineer')
+    await api.evidenceVocabulary('Backend SWE')
+
+    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/pathways', expect.objectContaining({ method: 'GET' }))
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      '/api/pathways?track=ai_engineer',
+      expect.objectContaining({ method: 'GET' }),
+    )
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      3,
+      '/api/evidence-vocabulary?role=Backend%20SWE',
+      expect.objectContaining({ method: 'GET' }),
+    )
+  })
+
+  it('selectPathway posts the id and markEvidence posts the tagged item', async () => {
+    const fetchMock = vi.fn(async () => jsonResponse(200, { user_id: 'u_1', onboarded: true }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await api.selectPathway('backend-infrastructure-engineer')
+    await api.markEvidence({ title: 'Shelter app', kind: 'volunteering', theme_tags: ['community'] })
+
+    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/pathways/select', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pathway_id: 'backend-infrastructure-engineer' }),
+    })
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/evidence', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'Shelter app', kind: 'volunteering', theme_tags: ['community'] }),
+    })
+  })
+
+  it('pathwayFitNotes posts the draft profile and storySummary posts an empty body (NP-F)', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(200, { status: 'ok', registry_version: 'v1', notes: { a: 'note a' }, reason_code: null, detail: null }))
+      .mockResolvedValueOnce(jsonResponse(200, { status: 'ok', summary: 'Taking shape.', detail: ['Depth is backed.'], reason_code: null }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const notes = await api.pathwayFitNotes({ track: 'swe' })
+    const summary = await api.storySummary()
+
+    expect(notes.notes.a).toBe('note a')
+    expect(summary.summary).toBe('Taking shape.')
+    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/pathways/fit-notes', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ track: 'swe' }),
+    })
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/story-summary', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    })
+  })
+
+  it('pathwayFitNotes surfaces an LLM failure as a normal result (status failed)', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse(200, { status: 'failed', registry_version: 'v1', notes: {}, reason_code: 'LLM_CALL_FAILED', detail: 'boom' })),
+    )
+
+    const notes = await api.pathwayFitNotes()
+
+    expect(notes.status).toBe('failed')
+    expect(notes.notes).toEqual({})
+  })
+
   it('reconcile posts an empty body and returns the typed reconciliation result', async () => {
     const fetchMock = vi.fn(async () =>
       jsonResponse(200, { run_id: 'run_1', outcome: 'sync_disabled', deltas: [] }),

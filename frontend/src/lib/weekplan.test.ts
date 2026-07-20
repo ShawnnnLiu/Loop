@@ -94,6 +94,7 @@ const profileFixture = (): UserProfile => ({
     avoid_back_to_back_deep_work: true,
   },
   motivation_profile_id: null,
+  pathway_selection: null,
   resume_text: null,
   plan_direction: null,
   created_at: '2026-04-01T00:00:00Z',

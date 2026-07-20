@@ -44,6 +44,8 @@ from agentic_calendar.contracts.milestone_template import MilestoneTemplate
 from agentic_calendar.contracts.motivation_profile import MotivationProfile
 from agentic_calendar.contracts.notification_log import NotificationLog
 from agentic_calendar.contracts.nudge import NudgeRecord
+from agentic_calendar.contracts.pathway_selection import PathwaySelection
+from agentic_calendar.contracts.pathway_template import PathwayTemplate
 from agentic_calendar.contracts.placement_evidence import PlacementEvidence
 from agentic_calendar.contracts.placement_preference import (
     PlacementPreferenceObservation,
@@ -133,6 +135,8 @@ CONTRACTS: dict[str, type[BaseModel]] = {
     "per_user_refinement": PerUserRefinement,
     "placement_evidence": PlacementEvidence,
     "placement_preference": PlacementPreferenceObservation,
+    "pathway_template": PathwayTemplate,
+    "pathway_selection": PathwaySelection,
     "llm_call_log": LlmCallLog,
     "prose_attachment": ProseAttachmentRecord,
     "threshold_change_log": ThresholdChange,

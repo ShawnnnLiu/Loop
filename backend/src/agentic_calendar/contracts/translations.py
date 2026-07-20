@@ -83,6 +83,18 @@ USER_FACING: dict[ViolationType, str] = {
     ViolationType.COMPANY_MODULE_MISSING_CLAIM: (
         "A company-specific module had no supporting source. Adding evidence."
     ),
+    ViolationType.PATHWAY_NOT_SELECTED: (
+        "A module was linked to a story pillar, but no pathway is selected. "
+        "Unlinking it."
+    ),
+    ViolationType.UNKNOWN_EVIDENCE_SLOT: (
+        "A module pointed at a pillar that isn't part of your pathway. "
+        "Re-aligning it."
+    ),
+    ViolationType.SLOT_MODULE_LIMIT_EXCEEDED: (
+        "Too many modules were building toward story pillars at once. "
+        "Trimming to the limit."
+    ),
 }
 
 

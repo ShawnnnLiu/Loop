@@ -9,6 +9,7 @@ import {
   weeklyCheckinOutcomeMessage,
 } from '../lib/accountability'
 import { fmtDate } from '../lib/datetime'
+import { StoryPanel } from '../components/StoryPanel'
 
 // Accountability: the projection of completion telemetry + weekly check-in
 // against the user's accountability contract, plus the two answerable asks
@@ -144,6 +145,7 @@ export function AccountabilityScreen() {
           </p>
         </div>
         <ReflectionHistory entries={data?.reflection_history ?? []} />
+        <StoryPanel />
       </section>
     )
   }
@@ -296,6 +298,7 @@ export function AccountabilityScreen() {
       )}
 
       <ReflectionHistory entries={data?.reflection_history ?? []} />
+      <StoryPanel />
     </section>
   )
 }

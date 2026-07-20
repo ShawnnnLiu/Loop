@@ -15,17 +15,27 @@ from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
-from .common_types import HHMM, Day, ExperienceLevel
+from ._dedup import casefold_key, find_duplicates
+from .common_types import HHMM, Day, EvidenceKind, ExperienceLevel
+from .pathway_selection import PathwaySelection
 
 PLAN_DIRECTION_MAX_CHARS = 4_000
 
+THEME_TAGS_MAX_PER_ITEM = 5
+
 
 class ExperienceItem(BaseModel):
-    """One confirmed work-experience entry.
+    """One confirmed evidence entry (work, project, volunteering, ...).
 
     Profile vocabulary: lives here because the profile owns the confirmed
     values; ``resume_extraction`` (the ResumeIntakeNode proposal) imports it
     rather than redeclaring.
+
+    The field name (and the profile's ``experience`` list name) predates the
+    story layer and deliberately stays: ``kind`` / ``theme_tags`` landed as an
+    additive amendment, not a rename/migration (narrative-pathways NP-A).
+    ``theme_tags`` membership in the registry theme vocabulary is a
+    service-layer check, not a contract-shape check.
     """
 
     model_config = ConfigDict(extra="forbid", frozen=True)
@@ -33,6 +43,19 @@ class ExperienceItem(BaseModel):
     title: str = Field(min_length=1, max_length=120)
     organization: str | None = Field(default=None, min_length=1, max_length=120)
     summary: str | None = Field(default=None, min_length=1, max_length=280)
+    kind: EvidenceKind = EvidenceKind.WORK
+    theme_tags: list[Annotated[str, StringConstraints(min_length=1, max_length=60)]] = (
+        Field(default_factory=list, max_length=THEME_TAGS_MAX_PER_ITEM)
+    )
+
+    @model_validator(mode="after")
+    def _theme_tags_unique(self) -> ExperienceItem:
+        dupes = find_duplicates([casefold_key(t) for t in self.theme_tags])
+        if dupes:
+            raise ValueError(
+                f"theme_tags must be case-insensitively unique; duplicates: {dupes}"
+            )
+        return self
 
 
 class DeepWorkWindow(BaseModel):
@@ -144,6 +167,14 @@ class UserProfile(BaseModel):
     validation. ``None`` when the user skips the box. Stored on the user's
     own profile only, hashed (never raw) in the LLM call log, never used
     for training."""
+    pathway_selection: PathwaySelection | None = None
+    """Optional confirmed pathway choice (``pathway-selection.schema.md``).
+
+    ``None`` = the user skipped the Your-story step; every downstream surface
+    behaves exactly as today. Reaches the Strategist as typed constraints
+    only (``pathway_id`` + computed ``unfilled_slots`` in
+    ``StrategyConstraints``), never through the profile bundle - see the
+    spec's Prompt Exposure table."""
     created_at: datetime
     updated_at: datetime
 
@@ -163,9 +194,8 @@ class UserProfile(BaseModel):
 
     @model_validator(mode="after")
     def _skills_unique(self) -> UserProfile:
-        lowered = [s.lower() for s in self.skills]
-        if len(set(lowered)) != len(lowered):
-            dupes = sorted({s for s in lowered if lowered.count(s) > 1})
+        dupes = find_duplicates([casefold_key(s) for s in self.skills])
+        if dupes:
             raise ValueError(f"skills must be case-insensitively unique; duplicates: {dupes}")
         return self
 
@@ -185,4 +215,37 @@ class UserProfile(BaseModel):
             raise ValueError("created_at and updated_at must be timezone-aware")
         if self.updated_at < self.created_at:
             raise ValueError("updated_at must not precede created_at")
+        return self
+
+    @model_validator(mode="after")
+    def _slot_overrides_reference_experience(self) -> UserProfile:
+        """Every slot override must name an experience item that exists here.
+
+        Referential integrity the profile can enforce because it owns both
+        halves: ``PathwaySelection`` alone cannot see the ``experience`` list,
+        so a ``SlotOverride`` pointing at an item the user never entered is
+        caught at parse time rather than surfacing later in the kernel. Uses
+        the same case-insensitive ``(title, organization)`` identity as the
+        override-uniqueness check.
+        """
+        if self.pathway_selection is None:
+            return self
+        item_keys = {
+            (casefold_key(item.title), casefold_key(item.organization or ""))
+            for item in self.experience
+        }
+        missing = sorted(
+            f"({override.item_title!r}, {override.item_organization!r})"
+            for override in self.pathway_selection.slot_overrides
+            if (
+                casefold_key(override.item_title),
+                casefold_key(override.item_organization or ""),
+            )
+            not in item_keys
+        )
+        if missing:
+            raise ValueError(
+                "pathway_selection.slot_overrides reference experience items that "
+                f"do not exist in this profile: {missing}"
+            )
         return self

@@ -18,6 +18,7 @@ from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
+from ._dedup import casefold_key, find_duplicates
 from .common_types import ExperienceLevel
 
 RESUME_TEXT_MIN_CHARS = 50
@@ -53,6 +54,13 @@ class ResumeIntakeInput(BaseModel):
     ] = Field(default_factory=list)
     """Track-relevant taxonomy slice, filled by the service — the node never
     imports the taxonomy kernel; the vocabulary arrives as plain data."""
+    allowed_themes: list[
+        Annotated[str, StringConstraints(min_length=1, max_length=60)]
+    ] = Field(default_factory=list)
+    """Track-relevant pathway-registry theme vocabulary, filled by the service
+    — the node never imports the registry; the vocabulary arrives as plain
+    data. Proposed ``ExperienceItem.theme_tags`` must be members of it
+    (resume-extraction invariant 6, enforced in the repair loop)."""
 
     @model_validator(mode="after")
     def _weak_spots_unique(self) -> ResumeIntakeInput:
@@ -61,5 +69,16 @@ class ResumeIntakeInput(BaseModel):
             dupes = sorted({s for s in lowered if lowered.count(s) > 1})
             raise ValueError(
                 f"allowed_weak_spots must be case-insensitively unique; duplicates: {dupes}"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _themes_unique(self) -> ResumeIntakeInput:
+        # Themes join item↔slot via ``casefold_key`` (narrative-pathways NP-A
+        # follow-up), so bundle-hygiene uniqueness uses the same key.
+        dupes = find_duplicates([casefold_key(t) for t in self.allowed_themes])
+        if dupes:
+            raise ValueError(
+                f"allowed_themes must be case-insensitively unique; duplicates: {dupes}"
             )
         return self

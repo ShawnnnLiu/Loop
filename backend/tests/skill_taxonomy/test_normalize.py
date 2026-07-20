@@ -100,8 +100,19 @@ def test_resolve_is_total_on_arbitrary_strings(garbage: str) -> None:
         ("AI Engineer", CareerTrack.AI_ENGINEER),
         ("LLM engineer", CareerTrack.AI_ENGINEER),
         ("GenAI application developer", CareerTrack.AI_ENGINEER),
+        ("Data Analyst", CareerTrack.DATA_ANALYST),
+        ("Senior Data Analyst", CareerTrack.DATA_ANALYST),
+        ("Business Intelligence Analyst", CareerTrack.DATA_ANALYST),
+        ("BI Analyst", CareerTrack.DATA_ANALYST),
+        ("Reporting Analyst", CareerTrack.DATA_ANALYST),
+        ("Product Analyst", CareerTrack.DATA_ANALYST),
+        ("Marketing Analytics Manager", CareerTrack.DATA_ANALYST),
         ("Chef", None),
         ("Product Manager", None),
+        # "business analyst" is ruled to the future business_analyst track
+        # (career-track-expansion 02-shared-entries.md); until it lands the
+        # role falls to the union fallback, NOT to data_analyst.
+        ("Business Analyst", None),
         (None, None),
     ],
 )
@@ -119,3 +130,17 @@ def test_resolve_track_precedence_ml_beats_swe() -> None:
 
 def test_genai_developer_precedence_ai_beats_swe() -> None:
     assert resolve_track("GenAI developer") is CareerTrack.AI_ENGINEER
+
+
+def test_data_analyst_precedence_beats_swe() -> None:
+    """"analytics" precedes the SWE tuple, so an analytics title naming an
+    engineering-flavored word still resolves to data_analyst."""
+    assert resolve_track("Data Analytics Developer") is CareerTrack.DATA_ANALYST
+
+
+def test_analytics_engineer_temporarily_resolves_to_data_analyst() -> None:
+    """Pins the interim ruling: "analytics engineer" belongs to the future
+    data_engineer track (career-track-expansion README); until that track
+    lands, the bare "analytics" marker claims it for data_analyst. The
+    data_engineer increment must re-home this title and update this test."""
+    assert resolve_track("Analytics Engineer") is CareerTrack.DATA_ANALYST

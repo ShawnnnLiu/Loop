@@ -79,6 +79,10 @@
       .lock{font-size:12px;color:var(--muted)}
       /* Confirmed overlay: the post-approval sage state fades in over a dashed draft (opacity only). Base = visible so the no-JS / reduced-motion final frame reads written+verified. */
       .okov{position:absolute;inset:-2px;border-radius:8px;background:var(--sage-soft);border:1px solid var(--sage);border-left:3px solid var(--sage-deep);color:var(--sage-deep);padding:7px 8px;font-size:11px;line-height:1.3}
+      /* Reserve the approved-state "✓" width in the base title so the block is
+         sized for the overlay's wrapping too; otherwise the overlay's time line
+         spills past the block's bottom border once " ✓" adds a wrap. */
+      [data-scene="3"] .blk-p>.t::after{content:" ✓";visibility:hidden}
       .approve .okov{inset:0;border-radius:9px;background:var(--sage-deep);border:none;color:#fff;display:grid;place-items:center;padding:0;font-weight:600;font-size:12.5px}
       /* --- Scroll scenes --- */
       .scene{padding:clamp(40px,9vh,96px) 0}

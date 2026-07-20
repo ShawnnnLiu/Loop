@@ -329,7 +329,7 @@ export function OnboardingScreen({ me }: { me: MeResult }) {
                 className="input"
                 value={form.target_role}
                 onChange={(e) => set('target_role', e.target.value)}
-                placeholder="Backend SWE"
+                placeholder="e.g. Backend SWE or Data Analyst"
               />
             </div>
             <div className="field">

@@ -19,6 +19,7 @@ def test_member_values_are_pinned() -> None:
         "quant_dev",
         "data_scientist",
         "product_manager",
+        "data_analyst",
     ]
 
 

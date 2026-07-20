@@ -66,6 +66,24 @@ _TRACK_MARKERS: tuple[tuple[CareerTrack, tuple[str, ...]], ...] = (
         ("ai engineer", "ai engineering", "llm", "genai", "generative ai", "applied ai"),
     ),
     (
+        # Precedes SWE so BI/analytics titles never fall through to
+        # engineering markers. "business analyst" is deliberately absent —
+        # it is ruled to the future business_analyst track. Bare
+        # "analytics" means "analytics engineer" resolves here until the
+        # data_engineer track lands and re-homes it (ruling in
+        # docs/implementation-plans/career-track-expansion/README.md).
+        CareerTrack.DATA_ANALYST,
+        (
+            "data analyst",
+            "data analytics",
+            "business intelligence",
+            "bi analyst",
+            "analytics",
+            "reporting analyst",
+            "product analyst",
+        ),
+    ),
+    (
         CareerTrack.SWE,
         (
             "software",

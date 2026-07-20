@@ -69,7 +69,7 @@ from agentic_calendar.tools.refresh_claims import (
 )
 from tests._fixture_loader import iter_valid
 
-_REPO_QUERIES = Path(__file__).parents[2] / "corpus" / "claim_queries_v2.json"
+_REPO_QUERIES = Path(__file__).parents[2] / "corpus" / "claim_queries_v3.json"
 _REPO_MANIFEST = Path(__file__).parents[2] / "corpus" / "manifest_v1.json"
 
 #: Matches the golden-suite HAPPY_NOW anchor so the end-to-end propose flow
@@ -482,7 +482,7 @@ def test_cli_rejects_invalid_query_set(tmp_path: Path) -> None:
 
 def test_repo_claim_query_set_is_valid_and_covers_all_tracks() -> None:
     query_set = load_claim_queries(_REPO_QUERIES)
-    assert query_set.query_set_version == "claim-queries-v2"
+    assert query_set.query_set_version == "claim-queries-v3"
     assert {q.track for q in query_set.queries} == set(CareerTrack)
 
 

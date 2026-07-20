@@ -13,11 +13,13 @@ system design) and distinct from `mle` (BI tools and business casework vs
 modeling).
 
 **Resolver markers:** `"data analyst"`, `"data analytics"`,
-`"business analyst"`, `"business intelligence"`, `"bi analyst"`,
-`"analytics"`, `"reporting analyst"`, `"product analyst"`. Insert before
-any data-scientist markers only if none collide; "product analyst" is a
+`"business intelligence"`, `"bi analyst"`, `"analytics"`,
+`"reporting analyst"`, `"product analyst"`. Insert before any
+data-scientist markers only if none collide; "product analyst" is a
 judgment call (some are DS-shaped) — precedence review needed at
-implementation time.
+implementation time. Ruled 2026-07-19: `"business analyst"` re-homed to
+the `business_analyst` track (business-analyst.md) — its marker tuple
+must precede this one; DA keeps the BI-flavored markers.
 
 ## Role snapshot
 

@@ -8,7 +8,8 @@
         "ai_engineer",
         "quant_dev",
         "data_scientist",
-        "product_manager"
+        "product_manager",
+        "data_analyst"
       ],
       "title": "CareerTrack",
       "type": "string"

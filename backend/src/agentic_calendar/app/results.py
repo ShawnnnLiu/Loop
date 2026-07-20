@@ -16,7 +16,9 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from agentic_calendar.contracts.accountability_intervention import InterventionDecision
 from agentic_calendar.contracts.accountability_state import AccountabilityState
+from agentic_calendar.contracts.career_track import CareerTrack
 from agentic_calendar.contracts.checkin_event import RecoveryAction
+from agentic_calendar.contracts.common_types import EvidenceKind
 from agentic_calendar.contracts.draft_schedule import DraftSchedule
 from agentic_calendar.contracts.drift_event import DriftEvent
 from agentic_calendar.contracts.plan_diff import PlanDiff
@@ -29,6 +31,7 @@ from agentic_calendar.contracts.user_profile import UserProfile
 from agentic_calendar.contracts.validation_result import Violation
 from agentic_calendar.llm_nodes.reflection_summary import ReflectionSummary
 from agentic_calendar.llm_nodes.user_facing_explanation import UserExplanation
+from agentic_calendar.narrative import SlotState
 from agentic_calendar.supervisor.state import SupervisorState
 
 from .state import ReplanKind
@@ -42,6 +45,13 @@ class OnboardResult(BaseModel):
     """``True`` on first onboarding, ``False`` when an existing record was updated."""
     timezone: str
     has_motivation_profile: bool
+    status: Literal["ok", "rejected"] = "ok"
+    """``"rejected"`` when the bundle carried a ``pathway_selection`` the registry
+    could not honor (NP-D); nothing was persisted and ``reason_code`` says why —
+    the typed-failure axiom, surfaced without a Pydantic 422 (the shape was
+    valid; the selection was a *semantic* mismatch against the registry)."""
+    reason_code: ReasonCode | None = None
+    detail: str | None = None
 
 
 class CanonicalSkill(BaseModel):
@@ -83,6 +93,125 @@ class ExtractResumeResult(BaseModel):
     taxonomy_version: str | None = None
     reason_code: ReasonCode | None = None
     detail: str | None = None
+
+
+class PathwaySlotView(BaseModel):
+    """One evidence slot with its deterministic coverage state (NP-D).
+
+    ``state`` and ``matched_item_indices`` come straight from the ``narrative/``
+    kernel over the user's stored evidence — no LLM assigns them. The indices
+    point into ``UserProfile.experience`` so the UI can say *why* a pillar is
+    filled without inventing an item id the contract does not carry.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    slot_id: str
+    title: str
+    state: SlotState
+    matched_item_indices: list[int] = Field(default_factory=list)
+
+
+class PathwayCard(BaseModel):
+    """One pathway offered to the user, with kernel-computed fit (NP-D).
+
+    ``filled_slots`` / ``total_slots`` are the honest "n of m pillars" count -
+    never a score - and are the card-ordering key (``pathways_view`` sorts by
+    ``filled_slots`` descending, ties broken by registry order).
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    pathway_id: str
+    display_name: str
+    spine: str
+    audience_note: str
+    career_track: CareerTrack
+    filled_slots: int = Field(ge=0)
+    total_slots: int = Field(ge=1)
+    slots: list[PathwaySlotView]
+    selected: bool = False
+    """Whether this is the user's current ``pathway_selection`` (independent of
+    version match — a stale-pinned selection still highlights its card, with
+    ``PathwaysResult.version_mismatch`` prompting a re-confirm)."""
+
+
+class PathwaysResult(BaseModel):
+    """Pathway cards for a track plus per-user coverage (NP-D).
+
+    Every ranking and slot state here is reproducible by calling the
+    ``narrative/`` kernel on the stored profile; no LLM output participates.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    track: CareerTrack | None
+    """The track the cards were drawn for (from the query param, else resolved
+    from the profile's ``target_role``); ``None`` means every pathway is shown."""
+    registry_version: str
+    selected_pathway_id: str | None = None
+    version_mismatch: bool = False
+    """The stored selection is pinned to a ``pathway_registry_version`` the
+    registry no longer serves - surfaced for an explicit re-confirm, never
+    silently re-mapped (pathway-selection spec)."""
+    cards: list[PathwayCard] = Field(default_factory=list)
+
+
+class EvidenceVocabularyResult(BaseModel):
+    """The closed vocabularies the UI binds evidence tagging to (NP-E).
+
+    ``kinds`` is the fixed :class:`EvidenceKind` enum (identical for every user);
+    ``themes`` is the pathway registry's per-track slice, resolved from the query
+    ``role`` (else the stored profile's ``target_role``, else empty when no track
+    resolves). Both are registry/enum literals - the same closed sets the résumé
+    intake node is bound to (axiom 08) - so the human picks from exactly what the
+    ``narrative/`` kernel joins on, never free text.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    track: CareerTrack | None
+    registry_version: str
+    kinds: list[EvidenceKind]
+    themes: list[str] = Field(default_factory=list)
+
+
+class FitNotesResult(BaseModel):
+    """Batched LLM fit notes for the top pathway cards (NP-F).
+
+    Display-only prose that *decorates* the deterministic ``pathways_view``
+    ranking — it participates in no card ordering or slot state. ``notes`` maps
+    ``pathway_id`` -> the 2-3 sentence note (present only for the top N cards the
+    batch covered). An LLM failure is a normal ``status="failed"`` result with a
+    typed ``reason_code`` (HTTP 200, like résumé extraction) so the UI degrades
+    to no notes; the cards themselves are always kernel-computed and never
+    blocked on this call.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    status: Literal["ok", "failed"] = "ok"
+    registry_version: str
+    notes: dict[str, str] = Field(default_factory=dict)
+    reason_code: ReasonCode | None = None
+    detail: str | None = None
+
+
+class StorySummaryResult(BaseModel):
+    """User-initiated "where your package stands" summary (NP-F).
+
+    Display-only prose over the selected pathway's deterministic slot states.
+    ``summary`` / ``detail`` are the node's prose (empty on failure); an LLM
+    failure is a ``status="failed"`` result carrying the typed ``reason_code``
+    (HTTP 200). Nothing is persisted — the client holds it for the session.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    status: Literal["ok", "failed"] = "ok"
+    summary: str = ""
+    detail: list[str] = Field(default_factory=list)
+    reason_code: ReasonCode | None = None
 
 
 class ProposeResult(BaseModel):

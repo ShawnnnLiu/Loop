@@ -162,7 +162,7 @@ def test_happy_path_returns_validated_plan_and_logs_one_complete_row() -> None:
     assert row.run_id == "run_t"
     assert row.plan_version == "v1"
     assert row.node.value == "planner"
-    assert row.prompt_version == "planner-v5-2026-07-05"
+    assert row.prompt_version == "planner-v5-2026-07-20"
     assert row.model_name == "claude-sonnet-5"
     assert (row.attempt, row.sdk_retry) == (0, 0)
     assert (row.input_tokens, row.output_tokens) == (100, 50)

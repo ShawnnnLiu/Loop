@@ -40,7 +40,9 @@ const profile: UserProfile = {
   experience_level: 'intermediate',
   known_strengths: ['SQL'],
   known_weaknesses: ['graphs'],
-  experience: [{ title: 'Backend intern', organization: 'Acme', summary: null }],
+  experience: [
+    { title: 'Backend intern', organization: 'Acme', summary: null, kind: 'work', theme_tags: [] },
+  ],
   skills: ['Python'],
   preferred_session_length_min: 60,
   max_session_length_min: 180,
@@ -58,6 +60,7 @@ const profile: UserProfile = {
     avoid_back_to_back_deep_work: false,
   },
   motivation_profile_id: null,
+  pathway_selection: null,
   resume_text: null,
   plan_direction: null,
   created_at: '2026-07-06T00:00:00Z',
@@ -72,8 +75,14 @@ const okResult: ExtractResumeResult = {
   user_id: 'u_1',
   proposal: {
     experience: [
-      { title: 'Backend intern', organization: 'Stripe', summary: 'Built billing services' },
-      { title: 'Research assistant', organization: null, summary: null },
+      {
+        title: 'Backend intern',
+        organization: 'Stripe',
+        summary: 'Built billing services',
+        kind: 'work',
+        theme_tags: ['backend-systems'],
+      },
+      { title: 'Research assistant', organization: null, summary: null, kind: 'research', theme_tags: [] },
     ],
     skills: ['python', 'Postgres', 'Flurbo.js'],
     known_strengths: ['backend services', 'API design'],
@@ -102,23 +111,30 @@ const failedResult: ExtractResumeResult = {
   detail: 'transport failed after retries',
 }
 
-describe('step mapping (5 -> 4 consolidation)', () => {
-  it('is the 4-step layout with the Skills step absorbed into Résumé & profile', () => {
-    expect(STEP_LABELS).toEqual(['Goal', 'Time & constraints', 'Résumé & profile', 'Connect'])
+describe('step mapping (5-step story layout)', () => {
+  it('is the 5-step layout with "Your story" inserted before Connect', () => {
+    expect(STEP_LABELS).toEqual([
+      'Goal',
+      'Time & constraints',
+      'Résumé & profile',
+      'Your story',
+      'Connect',
+    ])
   })
 
   it('keeps the reason-aware deep link pointed at Time & constraints', () => {
-    // lib/review.ts sends capacity/fit failures to this URL; if the step
-    // layout shifts under it again, this is the test that must break.
+    // lib/review.ts sends capacity/fit failures to this URL; NP-E left indices
+    // 0–2 unchanged so this still lands, but this is the test that guards it.
     const link = setupDeepLink('INSUFFICIENT_WEEKLY_CAPACITY')
     const raw = new URLSearchParams(link.split('?')[1]).get('step')
     expect(STEP_LABELS[stepFromParam(raw)]).toBe('Time & constraints')
   })
 
-  it('clamps stale 5-step-era indices instead of opening a missing step', () => {
-    // Old index 4 was Connect; it clamps onto the new last step — still Connect.
-    expect(stepFromParam('4')).toBe(3)
-    expect(stepFromParam('9')).toBe(3)
+  it('clamps out-of-range indices onto the last step (Connect)', () => {
+    // Index 4 is now the valid last step (Connect); 9 clamps down to it.
+    expect(stepFromParam('4')).toBe(4)
+    expect(stepFromParam('9')).toBe(4)
+    expect(STEP_LABELS[stepFromParam('9')]).toBe('Connect')
   })
 
   it('falls back to the first step on junk', () => {
@@ -142,11 +158,13 @@ describe('payload round-trip (experience + skills)', () => {
   it('prefills both fields from a saved profile and round-trips them', () => {
     const form = initialForm({ ...bareMe, onboarded: true, profile })
     // '' in the editor row stands for the contract's null.
-    expect(form.experience).toEqual([{ title: 'Backend intern', organization: 'Acme', summary: '' }])
+    expect(form.experience).toEqual([
+      { title: 'Backend intern', organization: 'Acme', summary: '', kind: 'work', theme_tags: [] },
+    ])
     expect(form.skills).toEqual(['Python'])
     const payload = buildPayload(form, 'UTC')
     expect(payload.user_profile.experience).toEqual([
-      { title: 'Backend intern', organization: 'Acme', summary: null },
+      { title: 'Backend intern', organization: 'Acme', summary: null, kind: 'work', theme_tags: [] },
     ])
     expect(payload.user_profile.skills).toEqual(['Python'])
   })
@@ -154,12 +172,12 @@ describe('payload round-trip (experience + skills)', () => {
   it('drops title-less editor rows and maps blank optionals back to null', () => {
     const form = initialForm(bareMe)
     form.experience = [
-      { title: '  Backend intern ', organization: '  ', summary: 'Shipped stuff ' },
-      { title: '   ', organization: 'Ghost Corp', summary: 'row without a title' },
+      { title: '  Backend intern ', organization: '  ', summary: 'Shipped stuff ', kind: 'work', theme_tags: [] },
+      { title: '   ', organization: 'Ghost Corp', summary: 'row without a title', kind: 'work', theme_tags: [] },
     ]
     const payload = buildPayload(form, 'UTC')
     expect(payload.user_profile.experience).toEqual([
-      { title: 'Backend intern', organization: null, summary: 'Shipped stuff' },
+      { title: 'Backend intern', organization: null, summary: 'Shipped stuff', kind: 'work', theme_tags: [] },
     ])
   })
 
@@ -180,6 +198,66 @@ describe('payload round-trip (experience + skills)', () => {
       timeline_weeks: 10,
       weekly_hours: 8,
     })
+  })
+})
+
+describe('story-layer round-trip (NP-E)', () => {
+  it('emits no selection when the Your-story step was skipped', () => {
+    const form = initialForm(bareMe)
+    expect(form.pathway_id).toBeNull()
+    expect(buildPayload(form, 'UTC').user_profile.pathway_selection).toBeNull()
+  })
+
+  it('emits a version-pinned selection once a card is picked', () => {
+    const form = {
+      ...initialForm(bareMe),
+      pathway_id: 'backend-infrastructure-engineer',
+      pathway_registry_version: 'pathway-registry-v1',
+    }
+    const selection = buildPayload(form, 'UTC').user_profile.pathway_selection
+    expect(selection).toMatchObject({
+      pathway_id: 'backend-infrastructure-engineer',
+      pathway_registry_version: 'pathway-registry-v1',
+      slot_overrides: [],
+    })
+    expect(selection?.selected_at).toBeTruthy()
+  })
+
+  it('refuses a bare id with no pinned version (would be contract-invalid)', () => {
+    const form = { ...initialForm(bareMe), pathway_id: 'x', pathway_registry_version: null }
+    expect(buildPayload(form, 'UTC').user_profile.pathway_selection).toBeNull()
+  })
+
+  it('prefills the selection from a saved profile on re-onboard', () => {
+    const withPathway = {
+      ...profile,
+      pathway_selection: {
+        pathway_id: 'backend-infrastructure-engineer',
+        pathway_registry_version: 'pathway-registry-v1',
+        selected_at: '2026-07-19T12:00:00Z',
+        slot_overrides: [],
+      },
+    }
+    const form = initialForm({ ...bareMe, onboarded: true, profile: withPathway })
+    expect(form.pathway_id).toBe('backend-infrastructure-engineer')
+    expect(form.pathway_registry_version).toBe('pathway-registry-v1')
+  })
+
+  it('carries evidence kind and deduped, capped theme tags through the payload', () => {
+    const form = initialForm(bareMe)
+    form.experience = [
+      {
+        title: 'Shelter app',
+        organization: '',
+        summary: '',
+        kind: 'volunteering',
+        theme_tags: ['Community', 'community', 'a', 'b', 'c', 'd', 'e'],
+      },
+    ]
+    const [item] = buildPayload(form, 'UTC').user_profile.experience
+    expect(item.kind).toBe('volunteering')
+    // Case-insensitive dedupe (first spelling wins) + the contract's 5-tag cap.
+    expect(item.theme_tags).toEqual(['Community', 'a', 'b', 'c', 'd'])
   })
 })
 
@@ -225,8 +303,14 @@ describe('merge policy on Extract', () => {
     const next = applyProposal(form, okResult)
 
     expect(next.experience).toEqual([
-      { title: 'Backend intern', organization: 'Stripe', summary: 'Built billing services' },
-      { title: 'Research assistant', organization: '', summary: '' },
+      {
+        title: 'Backend intern',
+        organization: 'Stripe',
+        summary: 'Built billing services',
+        kind: 'work',
+        theme_tags: ['backend-systems'],
+      },
+      { title: 'Research assistant', organization: '', summary: '', kind: 'research', theme_tags: [] },
     ])
     // Canonical display names — never the raw surfaces, never the unmatched one.
     expect(next.skills).toEqual(['Python', 'PostgreSQL'])
@@ -249,14 +333,14 @@ describe('merge policy on Extract', () => {
     expect(
       sectionsHaveContent({
         ...pristine,
-        experience: [{ title: '', organization: 'Acme', summary: '' }],
+        experience: [{ title: '', organization: 'Acme', summary: '', kind: 'work', theme_tags: [] }],
       }),
     ).toBe(true)
     // An empty editor row alone is not content.
     expect(
       sectionsHaveContent({
         ...pristine,
-        experience: [{ title: '', organization: '', summary: '' }],
+        experience: [{ title: '', organization: '', summary: '', kind: 'work', theme_tags: [] }],
       }),
     ).toBe(false)
   })

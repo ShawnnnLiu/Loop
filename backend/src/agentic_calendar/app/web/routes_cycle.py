@@ -27,6 +27,7 @@ from pydantic import BaseModel, ConfigDict
 
 from agentic_calendar.app.cycle import DEFAULT_TARGET_CALENDAR_ID, CycleService
 from agentic_calendar.contracts.checkin_event import RecoveryAction
+from agentic_calendar.contracts.common_types import EvidenceKind
 from agentic_calendar.contracts.recommitment import RecommitmentChoice
 from agentic_calendar.scheduler.adjustment import DraftAdjustment
 
@@ -98,6 +99,25 @@ class CheckinRequest(BaseModel):
 
     task_id: str
     outcome: Literal["complete", "missed"]
+
+
+class MarkEvidenceRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    title: str
+    organization: str | None = None
+    summary: str | None = None
+    kind: EvidenceKind = EvidenceKind.WORK
+    theme_tags: list[str] = []
+
+
+class SelectPathwayRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    pathway_id: str
+    # Slot-override editing has no NP-E UI yet; the field is accepted (and
+    # registry-validated by the service) so the shape is forward-compatible.
+    slot_overrides: list[dict[str, Any]] = []
 
 
 class CalendarSyncRequest(BaseModel):
@@ -470,6 +490,106 @@ def accountability(service: Service, user_id: ActingUser) -> JSONResponse:
 @router.get("/thresholds")
 def thresholds(service: Service, user_id: ActingUser) -> JSONResponse:
     return _json(service.thresholds_view())
+
+
+@router.post("/evidence")
+def mark_evidence(
+    service: Service, user_id: ActingUser, body: MarkEvidenceRequest
+) -> JSONResponse:
+    """Append one confirmed evidence item to the profile (NP-D) — a plain profile
+    edit (no LLM, no plan invalidation); returns the refreshed ``me`` projection.
+    An off-vocabulary ``theme_tag`` is a command-precondition failure (HTTP 409);
+    exceeding the evidence cap is the standard contract 422 on rebuild."""
+    return _json(
+        service.mark_evidence(
+            user_id,
+            title=body.title,
+            organization=body.organization,
+            summary=body.summary,
+            kind=body.kind,
+            theme_tags=body.theme_tags,
+        )
+    )
+
+
+@router.get("/pathways")
+def pathways(
+    service: Service, user_id: ActingUser, track: str | None = None
+) -> JSONResponse:
+    """Narrative pathway cards for a track plus this user's deterministic slot
+    coverage (NP-D). Read-only, kernel-computed, no LLM; ``track`` is an optional
+    filter that falls back to the profile's resolved track."""
+    return _json(service.pathways_view(user_id, track=track))
+
+
+@router.post("/onboard/pathways")
+def onboard_pathways(
+    service: Service,
+    user_id: ActingUser,
+    payload: Annotated[dict[str, Any], Body()],
+) -> JSONResponse:
+    """Persistence-free pathway cards + coverage over a *draft* profile (NP-E).
+
+    Powers the onboarding wizard's "Your story" step, which needs live slot
+    coverage before anything is saved. Body: ``{user_profile, track?}``; the
+    acting user is session-derived (the onboard trust boundary). Nothing persists
+    - the only profile write path stays ``POST /api/onboard``. A contract-invalid
+    draft profile is the standard 422."""
+    return _json(service.preview_pathways(user_id, payload))
+
+
+@router.get("/evidence-vocabulary")
+def evidence_vocabulary(
+    service: Service, user_id: ActingUser, role: str | None = None
+) -> JSONResponse:
+    """The closed evidence-tagging vocabularies for the UI dropdowns (NP-E).
+
+    Returns the fixed ``EvidenceKind`` enum plus the registry's per-track theme
+    slice, resolved from ``role`` (the wizard's not-yet-saved ``target_role``) or,
+    absent that, the stored profile. Onboarding is not required; registry/enum
+    literals only, no LLM."""
+    return _json(service.evidence_vocabulary_view(user_id, role=role))
+
+
+@router.post("/pathways/select")
+def select_pathway(
+    service: Service, user_id: ActingUser, body: SelectPathwayRequest
+) -> JSONResponse:
+    """Set or change the profile's pathway selection (NP-E) - a targeted mutation
+    preserving every other profile field (the accountability contract included).
+    A ``pathway_id`` change invalidates the syllabus/tasks/schedule like ``onboard``;
+    an unknown pathway or override slot is a command-precondition failure (409).
+    Returns the refreshed ``me`` projection."""
+    return _json(
+        service.select_pathway(
+            user_id, pathway_id=body.pathway_id, slot_overrides=body.slot_overrides
+        )
+    )
+
+
+@router.post("/pathways/fit-notes")
+def pathway_fit_notes(
+    service: Service,
+    user_id: ActingUser,
+    payload: Annotated[dict[str, Any], Body()],
+) -> JSONResponse:
+    """Batched LLM fit notes for the top pathway cards (NP-F) — display-only prose
+    that decorates the deterministic ``pathways`` ranking (it participates in no
+    card ordering or slot state). Body mirrors ``/onboard/pathways``:
+    ``{user_profile?, track?}`` — a draft profile for the wizard's Your-story
+    step, or none to use the stored profile. An LLM failure is a 200 with
+    ``status: "failed"`` + typed ``reason_code`` (inspected, not caught); the
+    cards are never blocked on this call. Nothing persists."""
+    return _json(service.pathway_fit_notes(user_id, payload))
+
+
+@router.post("/story-summary")
+def story_summary(service: Service, user_id: ActingUser) -> JSONResponse:
+    """User-initiated "where your package stands" summary over the selected
+    pathway (NP-F) — display-only prose. Requires a live selection (409
+    otherwise); an LLM failure is a 200 with ``status: "failed"`` + typed
+    ``reason_code``. Nothing persists — the client holds it for the session."""
+    return _json(service.story_summary(user_id))
 
 
 @router.get("/me")

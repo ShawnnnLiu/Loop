@@ -59,6 +59,11 @@ from agentic_calendar.llm_nodes.anthropic_adapter import (
     AnthropicUserFacingExplanation,
 )
 from agentic_calendar.llm_nodes.call_log import InMemoryLlmCallLogStore
+from agentic_calendar.llm_nodes.user_facing_explanation import (
+    FitNoteRequest,
+    FitNoteSlot,
+    StorySummaryRequest,
+)
 from tests._fixture_loader import iter_valid
 from tests.llm_nodes.test_anthropic_adapter import (
     _INVALID_PLAN,
@@ -72,6 +77,7 @@ from tests.llm_nodes.test_anthropic_adapter import (
     _profile_with_plan_direction,
 )
 from tests.llm_nodes.test_anthropic_resume_intake import (
+    _ALLOWED_THEMES,
     _UNGROUNDED_EXTRACTION,
     _VALID_EXTRACTION,
     _intake,
@@ -83,15 +89,18 @@ _PINNED: list[tuple[str, object, str, str]] = [
         "_STRATEGIST_SYSTEM",
         adapter.STRATEGIST_CONFIG,
         # v5 (PD-B): plan-direction translate rule + hedge extension changed
-        # the system-prompt bytes; the labeled-block assembly change is
-        # covered by the full-rendered pin below.
-        "strategist-v5-2026-07-19",
-        "15910b0550ab2bc28fe45d4761b3ef207762fc6163bac58e61ceeac94e3c0b41",
+        # the system-prompt bytes. v6 (NP-D): system-prompt rule 7 (link up to
+        # max_slot_modules modules to unfilled_slots via evidence_slot_id) +
+        # the seven-rule self-check line changed the bytes again.
+        "strategist-v6-2026-07-20",
+        "b3fbf12f2a90065f998a086171bc44bfb288c924d21c45d01bbe9bd73581e174",
     ),
     (
         "_PLANNER_SYSTEM",
         adapter.PLANNER_CONFIG,
-        "planner-v5-2026-07-05",
+        # Version date bumped to 2026-07-20 (NP-A) for the SyllabusModule
+        # evidence_slot_id field — system-prompt bytes unchanged, hash same.
+        "planner-v5-2026-07-20",
         "71cb5b40315ec2f2ef0411c03928a27518f1a6df05903f4c5c4a46e9a0626513",
     ),
     (
@@ -109,8 +118,24 @@ _PINNED: list[tuple[str, object, str, str]] = [
     (
         "_RESUME_INTAKE_SYSTEM",
         adapter.RESUME_INTAKE_CONFIG,
-        "resume-intake-v1-2026-07-06",
-        "b66507979c492488688bb77c0860518e7ade3e8de91eb65f6d88326971aa4076",
+        # v2 (NP-C): rule 7 (evidence `kind` + closed-vocabulary `theme_tags`)
+        # and the exemplar's two new fields changed the system-prompt bytes.
+        "resume-intake-v2-2026-07-20",
+        "b525603a35121c1c98dff419c3b34f90b0967abb30614804a4c963f849690fc5",
+    ),
+    (
+        # NP-F: the pathway fit-note target, inside the explanation node.
+        "_FIT_NOTE_SYSTEM",
+        adapter.FIT_NOTE_CONFIG,
+        "story-fit-note-v1-2026-07-20",
+        "aa92078400896a86b5e30b68f684ba68205dfb0d7ce7ff5916ae15e9857d7207",
+    ),
+    (
+        # NP-F: the story-summary target, inside the explanation node.
+        "_STORY_SUMMARY_SYSTEM",
+        adapter.STORY_SUMMARY_CONFIG,
+        "story-summary-v1-2026-07-20",
+        "f2098d6fb5225f9a4492cc831ac6f9014b4b39bb7a84ea219f56dd70427fd21c",
     ),
 ]
 
@@ -319,19 +344,145 @@ def _explanation_full() -> tuple[adapter.AdapterConfig, FakeTransport]:
 
 
 def _resume_intake_full() -> tuple[adapter.AdapterConfig, FakeTransport]:
-    """Optional sections: allowed weak-spot vocabulary block + labeled résumé
-    block; engine repair suffix (the first response carries an ungrounded
-    skill, so round 2 carries the typed groundedness rejection)."""
+    """Optional sections: allowed weak-spot vocabulary block + allowed-themes
+    block (NP-C) + labeled résumé block; engine repair suffix (the first
+    response carries an ungrounded skill, so round 2 carries the typed
+    groundedness rejection)."""
     transport = FakeTransport([_ok(_UNGROUNDED_EXTRACTION), _ok(_VALID_EXTRACTION)])
     node = AnthropicResumeIntake(transport=transport, **_node_kwargs())  # type: ignore[arg-type]
-    node.run(run_id="intake-pin", intake=_intake())
+    node.run(run_id="intake-pin", intake=_intake(allowed_themes=_ALLOWED_THEMES))
     # Guard: the pin must actually cover what it claims (builder-rot check).
     prompt = transport.requests[0]["user_prompt"]
     assert "Allowed weak-spot vocabulary (choose only from this list):" in prompt
+    assert "Allowed evidence themes for theme_tags" in prompt
     assert "Candidate résumé" in prompt
     assert '"resume_text"' not in prompt
     assert transport.requests[1]["repair_suffix"] is not None
     return adapter.RESUME_INTAKE_CONFIG, transport
+
+
+def _fit_notes_full() -> tuple[adapter.AdapterConfig, FakeTransport]:
+    """Two pathway cards (NP-F); the first response trips the numeric-score
+    post-check, so round 2 carries the rejection. Covers the batched
+    ``Pathway cards:`` assembly and the story-prose repair formatting."""
+    transport = FakeTransport(
+        [
+            _ok(
+                {
+                    "notes": [
+                        {
+                            "pathway_id": "pw-a",
+                            "note": "You cover 3 of 4 pillars here — the best match.",
+                        },
+                        {"pathway_id": "pw-b", "note": "A weaker option overall."},
+                    ]
+                }
+            ),
+            _ok(
+                {
+                    "notes": [
+                        {
+                            "pathway_id": "pw-a",
+                            "note": (
+                                "Your shipped work already anchors the depth pillar; "
+                                "the public artifact pillar is still open, so your "
+                                "plan can build toward it."
+                            ),
+                        },
+                        {
+                            "pathway_id": "pw-b",
+                            "note": (
+                                "None of these pillars are backed yet — a clean start "
+                                "your plan can build from."
+                            ),
+                        },
+                    ]
+                }
+            ),
+        ]
+    )
+    node = AnthropicUserFacingExplanation(transport=transport, **_node_kwargs())  # type: ignore[arg-type]
+    node.run_fit_notes(
+        run_id="story-pin",
+        requests=(
+            FitNoteRequest(
+                pathway_id="pw-a",
+                display_name="Backend Engineer",
+                spine="Depth-first services and production ops.",
+                audience_note="Backend and infrastructure teams.",
+                slots=(
+                    FitNoteSlot(
+                        title="Depth services",
+                        state="filled",
+                        matched_titles=("Payments API",),
+                    ),
+                    FitNoteSlot(title="Public artifact", state="empty"),
+                ),
+            ),
+            FitNoteRequest(
+                pathway_id="pw-b",
+                display_name="Full-Stack Engineer",
+                spine="Frontend surface through backend depth.",
+                audience_note="Product teams.",
+                slots=(FitNoteSlot(title="Frontend surface", state="empty"),),
+            ),
+        ),
+    )
+    # Guard: the pin must actually cover what it claims (builder-rot check).
+    prompt = transport.requests[0]["user_prompt"]
+    assert prompt.startswith("Pathway cards:")
+    assert '"pw-a"' in prompt and '"pw-b"' in prompt
+    assert transport.requests[1]["repair_suffix"] is not None
+    return adapter.FIT_NOTE_CONFIG, transport
+
+
+def _story_summary_full() -> tuple[adapter.AdapterConfig, FakeTransport]:
+    """The story summary (NP-F); the first response trips both the score and
+    psych-label post-checks, so round 2 carries the rejection."""
+    transport = FakeTransport(
+        [
+            _ok(
+                {
+                    "summary": "You're 60% there but undisciplined about the rest.",
+                    "detail": [],
+                }
+            ),
+            _ok(
+                {
+                    "summary": (
+                        "Your package is taking shape — depth is backed, and your "
+                        "plan is building toward the public artifact."
+                    ),
+                    "detail": [
+                        "Depth is backed by your confirmed evidence.",
+                        "The public artifact is still open — your plan is building "
+                        "toward it.",
+                    ],
+                }
+            ),
+        ]
+    )
+    node = AnthropicUserFacingExplanation(transport=transport, **_node_kwargs())  # type: ignore[arg-type]
+    node.run_story_summary(
+        run_id="story-pin",
+        request=StorySummaryRequest(
+            pathway_id="pw-a",
+            display_name="Backend Engineer",
+            spine="Depth-first services and production ops.",
+            slots=(
+                FitNoteSlot(
+                    title="Depth services",
+                    state="filled",
+                    matched_titles=("Payments API",),
+                ),
+                FitNoteSlot(title="Public artifact", state="empty"),
+            ),
+        ),
+    )
+    # Guard: the pin must actually cover what it claims (builder-rot check).
+    assert transport.requests[0]["user_prompt"].startswith("Selected pathway:")
+    assert transport.requests[1]["repair_suffix"] is not None
+    return adapter.STORY_SUMMARY_CONFIG, transport
 
 
 #: (node id, builder, pinned prompt_version, pinned full-prompt SHA-256).
@@ -341,14 +492,19 @@ _FULL_PROMPT_PINS: list[
     (
         "strategist",
         _strategist_full,
-        "strategist-v5-2026-07-19",
-        "4a20259d39b5e81886a6bde255930ce851da96f31856c89b48217511528f2d1d",
+        # 2026-07-20 (NP-A): StrategyConstraints story-layer default fields now
+        # serialize into the input bundle — rendered bytes changed, rehashed.
+        # v6 (NP-D): system-prompt rule 7 changed the system frame, rehashed.
+        "strategist-v6-2026-07-20",
+        "498d544a77d4effb8a3e7604fb5ed0a4d37ab0431d845b7a46f89ffe2575e3c6",
     ),
     (
         "planner",
         _planner_full,
-        "planner-v5-2026-07-05",
-        "aedc154d046d5f775b053df23f84095b3a93266ed824bdde3142254a5ae8bca7",
+        # 2026-07-20 (NP-A): SyllabusModule evidence_slot_id serializes into the
+        # validated-syllabus block — rendered bytes changed, rehashed.
+        "planner-v5-2026-07-20",
+        "c7097dbd61a824ec973191de62d083e2385d48d520c036e1fc5b8217b8782290",
     ),
     (
         "reflection_summary",
@@ -365,8 +521,23 @@ _FULL_PROMPT_PINS: list[
     (
         "resume_intake",
         _resume_intake_full,
-        "resume-intake-v1-2026-07-06",
-        "2cba92a5bddaa29fe09302742003418026f579e69f415656a5de2da0fa1865dc",
+        # v2 (NP-C): system-prompt rule 7, plus the rendered bundle now carries
+        # allowed_themes and a labeled allowed-evidence-themes block — bytes
+        # changed, rehashed.
+        "resume-intake-v2-2026-07-20",
+        "19134eacda83dd8b88677c8885e09ba11fc58520c97fcbfa0c68311ac757d1ed",
+    ),
+    (
+        "story_fit_notes",
+        _fit_notes_full,
+        "story-fit-note-v1-2026-07-20",
+        "daccaea50be6603d65a3ea998e0eb2e016089a4ad30816e74b004336c49abe0d",
+    ),
+    (
+        "story_summary",
+        _story_summary_full,
+        "story-summary-v1-2026-07-20",
+        "afe747bea81e2a17b9b2ed55712fb0987e1335f6c9adf434133210ec7b2ef96a",
     ),
 ]
 

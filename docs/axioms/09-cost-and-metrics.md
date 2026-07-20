@@ -24,6 +24,18 @@ If pricing changes by more than 25%, the cost tables below must be regenerated a
 
 Change log:
 
+- **2026-07-20**: story-layer explanation targets (narrative pathways, NP-F)
+  implemented and first exercised. The pathway fit note and story summary are
+  two prompt targets inside `UserFacingExplanationNode`, both on the Haiku tier
+  (`claude-haiku-4-5`, $1.00/$5.00) — a deliberate per-target divergence from
+  that node's Sonnet-tier validation-explanation target (see the model-tiering
+  line below). They match the NP-A "Story Layer" budget row (~$0.005 each);
+  no figure moved, tables not regenerated.
+- **2026-07-19**: story-layer (narrative pathways, NP-A) budget lines added.
+  Evidence tagging rides the existing résumé-extraction call (+~300-600 input, +~200 output tokens on the Haiku tier; extraction stays ~$0.01, user-initiated).
+  Pathway fit notes are one batched Haiku-tier call per Your-story visit (~$0.005); story summaries are user-initiated Haiku-tier calls (~$0.005).
+  No background LLM calls anywhere in the feature.
+  Tables NOT regenerated - the "Story Layer" table below is additive and no existing figure moved.
 - **2026-07-06**: embedding line exercised for the first time (grounding
   G-E): provider decision recorded as Voyage `voyage-3.5` at $0.06 per 1M
   tokens, replacing the dormant ~$0.02 assumption (a >25% change, but
@@ -96,6 +108,18 @@ Hard-capped at **2 repair attempts** per cycle. Maximum additional cost: **$0.21
 
 Approximately 3–5 explanations per active week → **~$0.030 / week**.
 
+### Story Layer (Narrative Pathways)
+
+| Operation | Model | Input tokens | Output tokens | Cost |
+| --- | --- | --- | --- | --- |
+| Evidence tagging (rides the résumé-extraction call) | Haiku-tier | +500 | +200 | +$0.002 |
+| Pathway fit notes (one batched call per Your-story visit) | Haiku-tier | 1,500 | 400 | $0.005 |
+| Story summary (user-initiated refresh) | Haiku-tier | 1,500 | 400 | $0.005 |
+
+Every story-layer call is user-initiated; the feature makes no background LLM calls.
+Fit, gaps, and slot states are computed deterministically at zero LLM cost (axiom 00).
+These are heuristic priors like every figure here; they are excluded from the monthly totals above, which predate the story layer and were deliberately not regenerated.
+
 ## Per-User Monthly LLM Cost Estimate (Active User)
 
 | Component | Frequency | Monthly Cost |
@@ -161,7 +185,7 @@ this section whenever the cost tables are regenerated.
 - **Per-user hourly cap:** 5 LLM calls per hour. Call-count-based, so unaffected by the pricing change; re-checked 2026-07-04 and kept.
 - **Per-user monthly cap:** $8.00 LLM spend (~5× the expected ~$1.70; alert at 80%). Raised from $4.00 in the 2026-07-04 regeneration (and from $2.00 in the 2026-06-11 one) to preserve the 5× headroom intent.
 - **Per-user retry caps:** 2 validation repair attempts; 2 Scheduler-Planner iterations.
-- **Model tiering:** frontier model only for `StrategistNode`; Sonnet-tier for `PlannerNode`, `ReflectionSummaryNode`, and `UserFacingExplanationNode` (upgraded from small-tier 2026-07-04 — these nodes write every task title and user-facing sentence, so perceived quality lives here); Haiku-tier for `ResumeIntakeNode` (structured extraction against a deterministic post-validator, user-reviewed before any write — the cheapest tier is sufficient).
+- **Model tiering:** frontier model only for `StrategistNode`; Sonnet-tier for `PlannerNode`, `ReflectionSummaryNode`, and `UserFacingExplanationNode`'s validation-explanation target (upgraded from small-tier 2026-07-04 — these nodes write every task title and user-facing sentence, so perceived quality lives here); Haiku-tier for `ResumeIntakeNode` and, since NP-F, `UserFacingExplanationNode`'s two story-layer targets (pathway fit note + story summary) — short decorative prose derived from already-confirmed structured state (kernel coverage), user-initiated, held to a deterministic post-check; the cheapest tier is sufficient.
 - **Aggressive caching:** identical `user_profile` inputs hit cache for 7 days; see `18-caching-strategy.md`. (Status: realized but unwired — no production composition root constructs the object cache; see 18's wiring-status note. Not an active enforcement mechanism.)
 
 ## Scheduling Quality Metrics

@@ -45,3 +45,44 @@ def test_empty_modules_rejected() -> None:
         SyllabusUnits.model_validate(
             {"syllabus_version": "v1", "goal_summary": "g", "modules": []}
         )
+
+
+def test_evidence_slot_id_defaults_to_none() -> None:
+    from agentic_calendar.contracts.syllabus_units import SyllabusModule
+
+    module = SyllabusModule(
+        module_id="m",
+        title="Module",
+        priority="low",
+        target_outcomes=["Do a thing"],
+        estimated_total_min=60,
+        difficulty=1,
+    )
+    assert module.evidence_slot_id is None
+
+
+def test_slot_linked_module_requires_reason() -> None:
+    from agentic_calendar.contracts.syllabus_units import SyllabusModule
+
+    with pytest.raises(ValidationError):
+        SyllabusModule(
+            module_id="artifact",
+            title="Public writeup",
+            priority="medium",
+            target_outcomes=["One writeup"],
+            estimated_total_min=60,
+            difficulty=1,
+            evidence_slot_id="public-artifact",
+        )
+    # With a reason naming the pillar it is valid.
+    ok = SyllabusModule(
+        module_id="artifact",
+        title="Public writeup",
+        priority="medium",
+        reason="Builds the Public writeup pillar.",
+        target_outcomes=["One writeup"],
+        estimated_total_min=60,
+        difficulty=1,
+        evidence_slot_id="public-artifact",
+    )
+    assert ok.evidence_slot_id == "public-artifact"

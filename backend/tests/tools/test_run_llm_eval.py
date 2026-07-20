@@ -14,8 +14,12 @@ EVAL_SET = str(BACKEND_ROOT / "evalsets" / "eval_set_v1.json")
 BASELINE = str(BACKEND_ROOT / "evalsets" / "recordings" / "fixture_baseline.json")
 IMPROVED = str(BACKEND_ROOT / "evalsets" / "recordings" / "fixture_improved.json")
 EVAL_SET_V3 = str(BACKEND_ROOT / "evalsets" / "eval_set_v3.json")
+EVAL_SET_V8 = str(BACKEND_ROOT / "evalsets" / "eval_set_v8.json")
 RESUME_RECORDING = str(
     BACKEND_ROOT / "evalsets" / "recordings" / "fixture_resume_intake.json"
+)
+RESUME_RECORDING_V8 = str(
+    BACKEND_ROOT / "evalsets" / "recordings" / "fixture_resume_intake_v8.json"
 )
 
 
@@ -141,6 +145,43 @@ def test_strict_v3_resume_recording_is_green_at_measured_floors() -> None:
             ]
         )
         == 0
+    )
+
+
+def test_strict_v8_tagging_recording_is_green(tmp_path: Path) -> None:
+    """NP-C re-pin: the v8 twin adds evidence-tagging cases, one of which is
+    off-vocabulary on attempt 0 and fixed on repair. The strict gate passes
+    because nothing stays invalid after repair (post_repair_invalid_rate 0),
+    and a floor of 0.9 on first-attempt validity clears the 15/16 twin."""
+    assert (
+        main(
+            [
+                "--eval-set",
+                EVAL_SET_V8,
+                "--recording",
+                RESUME_RECORDING_V8,
+                "--strict",
+                "--min-schema-validity-rate",
+                "0.9",
+            ]
+        )
+        == 0
+    )
+
+
+def test_strict_v8_fails_on_planted_off_vocabulary_theme(tmp_path: Path) -> None:
+    """Guards the theme-membership wiring end to end: a theme outside the
+    allowed vocabulary planted into an otherwise-valid single-attempt case
+    trips the strict gate — theme membership is part of resume_intake validity,
+    not just contract shape."""
+    recording = json.loads(Path(RESUME_RECORDING_V8).read_text(encoding="utf-8"))
+    attempt = recording["outputs"]["resume_tagged_project_volunteer_split"][0]
+    attempt["experience"][0]["theme_tags"] = ["quantum-astrology"]  # off-vocabulary
+    tampered = tmp_path / "tampered_v8.json"
+    tampered.write_text(json.dumps(recording), encoding="utf-8")
+    assert (
+        main(["--eval-set", EVAL_SET_V8, "--recording", str(tampered), "--strict"])
+        == 3
     )
 
 

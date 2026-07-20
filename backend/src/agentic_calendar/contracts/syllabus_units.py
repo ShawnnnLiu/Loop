@@ -37,6 +37,16 @@ class SyllabusModule(BaseModel):
     (syllabus-units spec; checked in ``validation/source_claims.py``, not here,
     because the rule needs the claim registry + the constraint flag). An explicit
     flag keeps "company-specific" deterministic rather than inferred from prose."""
+    evidence_slot_id: str | None = Field(default=None, min_length=1)
+    """Optional typed link to an evidence slot of the selected pathway
+    (narrative-pathways NP-A; pathway-template spec).
+
+    The Strategist proposes it when ``strategy_constraints.unfilled_slots``
+    names gaps; the deterministic validator disposes (``PATHWAY_NOT_SELECTED``,
+    ``UNKNOWN_EVIDENCE_SLOT``, ``SLOT_MODULE_LIMIT_EXCEEDED`` - those checks
+    need the selection + constraints, so they live in the validation layer,
+    NP-D). Downstream it is opaque module metadata: the Planner and Scheduler
+    never behave differently because of story state."""
 
     @model_validator(mode="after")
     def _high_priority_needs_reason(self) -> SyllabusModule:
@@ -45,6 +55,17 @@ class SyllabusModule(BaseModel):
         ):
             raise ValueError(
                 f"high-priority module {self.module_id!r} must include a non-empty 'reason'"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _slot_linked_needs_reason(self) -> SyllabusModule:
+        if self.evidence_slot_id is not None and (
+            self.reason is None or not self.reason.strip()
+        ):
+            raise ValueError(
+                f"slot-linked module {self.module_id!r} must include a non-empty "
+                "'reason' naming the pillar it builds toward"
             )
         return self
 

@@ -8,6 +8,7 @@
 
 import type {
   DraftProfileContext,
+  EvidenceKind,
   ExperienceLevel,
   ExtractResumeResult,
   MeResult,
@@ -15,15 +16,21 @@ import type {
   Weekday,
 } from '../api/types'
 
-/** The 4-step wizard (RI-D consolidated the old Skills step into
- *  "Résumé & profile"). Index 1 must stay "Time & constraints" — the
- *  reason-aware deep link in lib/review.ts points capacity/fit failures at
- *  ?step=1; the mapping test pins that. */
-export const STEP_LABELS = ['Goal', 'Time & constraints', 'Résumé & profile', 'Connect']
+/** The 5-step wizard. NP-E inserted "Your story" (index 3) between the résumé
+ *  step and Connect. Indices 0–2 are unchanged so the reason-aware deep link in
+ *  lib/review.ts (capacity/fit failures → ?step=1, "Time & constraints") still
+ *  lands correctly; the mapping test pins that. */
+export const STEP_LABELS = [
+  'Goal',
+  'Time & constraints',
+  'Résumé & profile',
+  'Your story',
+  'Connect',
+]
 
 /** Parse a ?step= deep link. Junk becomes the first step; out-of-range
- *  indices clamp, so a stale link from the 5-step era can never open a
- *  step that no longer exists. */
+ *  indices clamp to the last step, so a stale link can never open a step that
+ *  no longer exists. */
 export function stepFromParam(raw: string | null): number {
   const requested = Number.parseInt(raw ?? '0', 10)
   if (Number.isNaN(requested)) return 0
@@ -40,11 +47,15 @@ export const RESUME_MAX_CHARS = 40_000
 export const PLAN_DIRECTION_MAX_CHARS = 4000
 
 /** One experience row as the form edits it — '' where the contract has null,
- *  because controlled inputs want strings. buildPayload converts back. */
+ *  because controlled inputs want strings. buildPayload converts back. `kind`
+ *  and `theme_tags` are the story-layer tags (NP-E): a closed-vocab kind (default
+ *  `work`) and 0–5 closed-vocab themes the user edits from dropdowns. */
 export interface ExperienceRow {
   title: string
   organization: string
   summary: string
+  kind: EvidenceKind
+  theme_tags: string[]
 }
 
 export interface FormState {
@@ -75,6 +86,12 @@ export interface FormState {
   prefer_evening_sessions: boolean
   prefer_weekend_long_blocks: boolean
   avoid_back_to_back_deep_work: boolean
+  // Story layer (NP-E): the chosen pathway, or null when the user skips the
+  // "Your story" step. `pathway_registry_version` pins the version the cards were
+  // drawn against (from the preview result), so the stored selection carries the
+  // same version discipline the taxonomy uses.
+  pathway_id: string | null
+  pathway_registry_version: string | null
 }
 
 export function browserTimezone(): string {
@@ -121,6 +138,8 @@ export function initialForm(me: MeResult): FormState {
       title: item.title,
       organization: item.organization ?? '',
       summary: item.summary ?? '',
+      kind: item.kind ?? 'work',
+      theme_tags: item.theme_tags ?? [],
     })),
     skills: profile?.skills ?? [],
     known_strengths: profile?.known_strengths ?? [],
@@ -129,6 +148,8 @@ export function initialForm(me: MeResult): FormState {
     plan_direction: profile?.plan_direction ?? '',
     target_companies: profile?.target_companies ?? [],
     target_level: profile?.target_level ?? '',
+    pathway_id: profile?.pathway_selection?.pathway_id ?? null,
+    pathway_registry_version: profile?.pathway_selection?.pathway_registry_version ?? null,
   }
 }
 
@@ -152,8 +173,24 @@ export function addChips(list: string[], raw: string): string[] {
   return cleanList([...list, ...raw.split(',')])
 }
 
+/** The theme-vocabulary cap the contract enforces (max 5 per item), mirrored so
+ *  the UI stops adding a sixth chip instead of round-tripping to a 422. */
+export const MAX_THEME_TAGS = 5
+
 export function buildPayload(form: FormState, timezone: string): OnboardPayload {
   const now = new Date().toISOString()
+  // Emit a selection only when both the id and its pinned registry version are
+  // present (they are set together when the user picks a card); a bare id would
+  // be a contract-invalid selection.
+  const pathwaySelection =
+    form.pathway_id && form.pathway_registry_version
+      ? {
+          pathway_id: form.pathway_id,
+          pathway_registry_version: form.pathway_registry_version,
+          selected_at: now,
+          slot_overrides: [],
+        }
+      : null
   const windows =
     form.dwwDays.length > 0 && form.dwwStart && form.dwwEnd
       ? form.dwwDays.map((day) => ({ day, start: form.dwwStart, end: form.dwwEnd }))
@@ -179,6 +216,10 @@ export function buildPayload(form: FormState, timezone: string): OnboardPayload 
           title: row.title.trim(),
           organization: row.organization.trim() || null,
           summary: row.summary.trim() || null,
+          kind: row.kind,
+          // Closed-vocab tags, deduped case-insensitively and capped like the
+          // contract; the dropdowns already constrain membership.
+          theme_tags: cleanList(row.theme_tags).slice(0, MAX_THEME_TAGS),
         }))
         .filter((row) => row.title.length > 0),
       skills: cleanList(form.skills),
@@ -197,6 +238,7 @@ export function buildPayload(form: FormState, timezone: string): OnboardPayload 
         prefer_weekend_long_blocks: form.prefer_weekend_long_blocks,
         avoid_back_to_back_deep_work: form.avoid_back_to_back_deep_work,
       },
+      pathway_selection: pathwaySelection,
       resume_text: form.resume_text.trim() || null,
       // Trimmed-empty becomes null, never "" — the contract rejects "" by
       // design (min_length=1).
@@ -256,6 +298,10 @@ export function applyProposal(form: FormState, result: ExtractResumeResult): For
       title: item.title,
       organization: item.organization ?? '',
       summary: item.summary ?? '',
+      // Carry the node's proposed tags into the editable form (NP-C proposes
+      // them); the user reviews and can change both in the review step.
+      kind: item.kind ?? 'work',
+      theme_tags: item.theme_tags ?? [],
     })),
     skills: cleanList(result.skills_canonical.map((skill) => skill.display_name)),
     known_strengths: cleanList(proposal.known_strengths),

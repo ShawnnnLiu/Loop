@@ -85,6 +85,15 @@
   "additionalProperties": false,
   "description": "Validated input bundle for the ResumeIntakeNode.",
   "properties": {
+    "allowed_themes": {
+      "items": {
+        "maxLength": 60,
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Allowed Themes",
+      "type": "array"
+    },
     "allowed_weak_spots": {
       "items": {
         "maxLength": 60,

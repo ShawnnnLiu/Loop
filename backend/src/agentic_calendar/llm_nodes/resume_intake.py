@@ -13,7 +13,11 @@ zero network, honest about what it fakes —
   (``.importlinter`` enforces it).
 - ``experience``: the first ≤3 lines matching a trivial
   ``<title> at|·|— <org>`` pattern — a real parser is exactly what the LLM
-  node exists to replace.
+  node exists to replace. Each item's ``kind`` comes from a small
+  title-keyword map (default ``work``), and its ``theme_tags`` are the
+  ``allowed_themes`` whose text is a grounded substring of the résumé —
+  grounded by construction like ``skills``, never coined. When
+  ``allowed_themes`` is empty the fixture proposes no tags.
 - ``known_strengths`` / ``inferred_weak_spots`` /
   ``target_company_categories``: canned lists keyed by
   ``draft_context.target_role`` with a generic fallback (the fixture
@@ -32,9 +36,11 @@ from __future__ import annotations
 import re
 from collections.abc import Mapping
 
+from agentic_calendar.contracts._dedup import casefold_key
+from agentic_calendar.contracts.common_types import EvidenceKind
 from agentic_calendar.contracts.resume_extraction import ResumeExtraction
 from agentic_calendar.contracts.resume_intake_input import ResumeIntakeInput
-from agentic_calendar.contracts.user_profile import ExperienceItem
+from agentic_calendar.contracts.user_profile import THEME_TAGS_MAX_PER_ITEM, ExperienceItem
 
 #: Canned inferred/suggested lists per normalized ``target_role``; the twin's
 #: analogue of the fixture Strategist's canned syllabi. Weak-spot values are
@@ -70,6 +76,22 @@ _EXPERIENCE_LINE = re.compile(
 
 _MAX_EXPERIENCE_ITEMS = 3
 _MAX_SKILLS = 40
+
+#: Title-keyword → evidence ``kind``, first match wins (default ``work``).
+#: A deliberately shallow heuristic: the deterministic twin does not read the
+#: whole résumé, so it classifies from the title alone — the real Haiku node
+#: is exactly what replaces this.
+_KIND_KEYWORDS: tuple[tuple[str, EvidenceKind], ...] = (
+    ("volunteer", EvidenceKind.VOLUNTEERING),
+    ("research", EvidenceKind.RESEARCH),
+    ("project", EvidenceKind.PROJECT),
+    ("coursework", EvidenceKind.COURSEWORK),
+    ("scholar", EvidenceKind.AWARD),
+    ("award", EvidenceKind.AWARD),
+    ("president", EvidenceKind.LEADERSHIP),
+    ("captain", EvidenceKind.LEADERSHIP),
+    ("lead", EvidenceKind.LEADERSHIP),
+)
 
 
 def _normalize_key(text: str) -> str:
@@ -109,8 +131,9 @@ class FixtureResumeIntake:
 
         # Constructing through the contract re-validates the output at the
         # boundary (bounds, uniqueness) before it leaves this method.
+        theme_tags = _pick_theme_tags(intake.resume_text, intake.allowed_themes)
         return ResumeExtraction(
-            experience=_scan_experience(intake.resume_text),
+            experience=_scan_experience(intake.resume_text, theme_tags),
             skills=_scan_skills(intake.resume_text, self._aliases),
             known_strengths=list(canned["known_strengths"]),
             inferred_weak_spots=_pick_weak_spots(
@@ -140,7 +163,41 @@ def _scan_skills(resume_text: str, aliases: Mapping[str, str]) -> list[str]:
     return [surface for _position, surface in ordered][:_MAX_SKILLS]
 
 
-def _scan_experience(resume_text: str) -> list[ExperienceItem]:
+def _classify_kind(title: str) -> EvidenceKind:
+    """Shallow title-keyword classification; ``work`` when nothing matches."""
+    lowered = title.lower()
+    for keyword, kind in _KIND_KEYWORDS:
+        if keyword in lowered:
+            return kind
+    return EvidenceKind.WORK
+
+
+def _pick_theme_tags(resume_text: str, allowed: list[str]) -> list[str]:
+    """Allowed themes whose text is a grounded substring of the résumé.
+
+    Grounded by construction (like ``skills``): a theme is proposed only when
+    its literal string appears in the résumé, so the fake never coins one.
+    Capped at the per-item maximum and de-duplicated case-insensitively; the
+    same résumé-wide set is attached to every extracted item, since the
+    trivial parser has no per-item text to distinguish them.
+    """
+    if not allowed:
+        return []
+    lowered = resume_text.lower()
+    picked: list[str] = []
+    seen: set[str] = set()
+    for theme in allowed:
+        key = casefold_key(theme)
+        if key in seen or theme.lower() not in lowered:
+            continue
+        seen.add(key)
+        picked.append(theme)
+        if len(picked) == THEME_TAGS_MAX_PER_ITEM:
+            break
+    return picked
+
+
+def _scan_experience(resume_text: str, theme_tags: list[str]) -> list[ExperienceItem]:
     items: list[ExperienceItem] = []
     seen: set[tuple[str, str]] = set()
     for line in resume_text.splitlines():
@@ -157,7 +214,14 @@ def _scan_experience(resume_text: str) -> list[ExperienceItem]:
         if key in seen:
             continue
         seen.add(key)
-        items.append(ExperienceItem(title=title, organization=organization))
+        items.append(
+            ExperienceItem(
+                title=title,
+                organization=organization,
+                kind=_classify_kind(title),
+                theme_tags=list(theme_tags),
+            )
+        )
         if len(items) == _MAX_EXPERIENCE_ITEMS:
             break
     return items

@@ -1,0 +1,9 @@
+{
+  "pathway_id": "empty-pathway",
+  "pathway_schema_version": "pathway-template-v1",
+  "career_track": "swe",
+  "display_name": "Empty Pathway",
+  "spine": "A story with no pillars.",
+  "audience_note": "Nobody.",
+  "evidence_slots": []
+}

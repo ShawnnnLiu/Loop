@@ -101,7 +101,13 @@ from agentic_calendar.llm_nodes.prose_attachment import (
 from agentic_calendar.llm_nodes.reflection_summary import ReflectionSummary
 from agentic_calendar.llm_nodes.sqlite_call_log import SqliteLlmCallLogStore
 from agentic_calendar.llm_nodes.sqlite_prose_store import SqliteProseAttachmentStore
-from agentic_calendar.llm_nodes.user_facing_explanation import UserExplanation
+from agentic_calendar.llm_nodes.user_facing_explanation import (
+    FitNoteRequest,
+    PathwayFitNotes,
+    StorySummary,
+    StorySummaryRequest,
+    UserExplanation,
+)
 from agentic_calendar.planning.sqlite_store import SqlitePlanVersionStore
 from agentic_calendar.planning.store import InMemoryPlanVersionStore, PlanVersionStore
 from agentic_calendar.source_claims.ingestion import (
@@ -194,11 +200,26 @@ class ReflectionNode(Protocol):
 
 @runtime_checkable
 class ExplanationNode(Protocol):
-    """Structural surface shared by the deterministic and Anthropic explanation nodes."""
+    """Structural surface shared by the deterministic and Anthropic explanation nodes.
+
+    Beyond the validation explanation, this node carries the two story-layer
+    prose targets (NP-F): batched pathway fit notes and the story summary. They
+    stay *inside* this already-allowed node (03-llm-surfaces: no new LLM node
+    class) — both twins implement all three methods, and the ``LlmNodeBundle``
+    keeps five slots. Story prose is display-only: it decorates the
+    ``narrative/`` kernel's deterministic coverage and never re-ranks it."""
 
     def run(
         self, *, run_id: str, validation_result: ValidationResult
     ) -> UserExplanation: ...
+
+    def run_fit_notes(
+        self, *, run_id: str, requests: tuple[FitNoteRequest, ...]
+    ) -> PathwayFitNotes: ...
+
+    def run_story_summary(
+        self, *, run_id: str, request: StorySummaryRequest
+    ) -> StorySummary: ...
 
 
 @runtime_checkable

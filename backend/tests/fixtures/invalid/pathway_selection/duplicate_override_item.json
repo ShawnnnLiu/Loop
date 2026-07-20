@@ -1,0 +1,17 @@
+{
+  "pathway_id": "backend-infrastructure",
+  "pathway_registry_version": "pathway-registry-v1",
+  "selected_at": "2026-07-19T12:00:00-07:00",
+  "slot_overrides": [
+    {
+      "item_title": "Senior Backend Engineer",
+      "item_organization": "Acme Corp",
+      "slot_id": "depth-services"
+    },
+    {
+      "item_title": "senior backend engineer",
+      "item_organization": "acme corp",
+      "slot_id": "public-artifact"
+    }
+  ]
+}

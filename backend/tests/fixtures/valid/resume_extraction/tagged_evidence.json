@@ -1,0 +1,20 @@
+{
+  "experience": [
+    {
+      "title": "Senior Backend Engineer",
+      "organization": "Acme Corp",
+      "summary": "Led the billing platform rebuild; Python and Go services.",
+      "kind": "work",
+      "theme_tags": ["distributed-systems", "backend-services"]
+    },
+    {
+      "title": "RAG side project",
+      "kind": "project",
+      "theme_tags": ["applied-ml", "llm-integration"]
+    }
+  ],
+  "skills": ["Python", "Go"],
+  "known_strengths": ["API design"],
+  "inferred_weak_spots": ["System design"],
+  "target_company_categories": ["fintech"]
+}

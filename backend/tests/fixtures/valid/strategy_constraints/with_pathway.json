@@ -1,0 +1,15 @@
+{
+  "max_modules": 12,
+  "required_priority_values": ["high", "medium", "low"],
+  "max_total_estimated_minutes": 4800,
+  "must_reference_claims_for_company_specific_modules": true,
+  "pathway_id": "ai-integration-engineer",
+  "unfilled_slots": [
+    {
+      "slot_id": "public-artifact",
+      "title": "Public writeup or talk",
+      "gap_module_hint": "Write up one project as a technical narrative"
+    }
+  ],
+  "max_slot_modules": 3
+}

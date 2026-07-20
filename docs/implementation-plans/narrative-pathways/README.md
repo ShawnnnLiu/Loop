@@ -1,8 +1,32 @@
 # Narrative Pathways — Character Sheet → Chosen Story → Evidence-Slotted Plan
 
-Written 2026-07-15. Status: **planning docs only — nothing here is
-implemented.** No axiom, spec, contract, or code changes have landed; every
-schema and reason code below is a proposal until the spec-first workflow runs.
+Written 2026-07-15. Status: **implemented in Loop (NP-A … NP-F).** The
+career-pathway story layer is built on branch `narrative-pathways`: curated
+`PathwayTemplate` registry, the deterministic `narrative/` fit/gap kernel,
+evidence tagging inside `ResumeIntakeNode`, pathway selection + syllabus
+invalidation, the story frontend, and the two `UserFacingExplanationNode` prose
+targets. The knowledge-map (KT-A … KT-D, `06-…`) and mastery-memory
+(MM-A … MM-C, `08-…`) series remain planning docs. This document's original
+proposals below are preserved as the design record; the per-increment landings
+are the table that follows.
+
+## Increment landings (Loop, NP-A … NP-F)
+
+One commit per lettered increment, spec/axiom-first, `uv run make check` green
+per commit (frontend four gates for NP-E/NP-F).
+
+| Increment | Commit(s) | What landed |
+|---|---|---|
+| NP-A | `f9e2d82` (+ `5bd0e6d` follow-up) | Axioms, two new specs (`pathway-template`, `pathway-selection`), Pydantic contracts + amendments, valid/invalid fixtures, five reason codes, `EvidenceKind` enum; shared dedup helper + slot-override referential integrity. |
+| NP-B | `3f23c6e` | `narrative/` kernel (`slot_coverage`/`pathway_fit`/`story_progress`), curated pathway registry in `templates/`, five seed pathways for swe/mle/ai_engineer, track-scoped theme vocabulary. |
+| NP-C | `0b71bee` | `ResumeIntakeNode` proposes evidence `kind` + closed-vocabulary `theme_tags`; `allowed_themes` bundle + repair-loop membership; eval set v8, prompt-version bump. |
+| NP-D | `a5554a8`, `98d774b`, `f43fdf4`, `ca36203` | Validation-layer slot gate (3 reason codes); `GET /api/pathways` + `StrategyConstraints` unfilled-slot plumbing + Strategist prompt v6; onboard selection validation + pathway-change invalidation; `POST /api/evidence`. |
+| NP-E | `2416ef8` | Story frontend: wizard "Your story" step, evidence tag editors, Progress story panel + mark-evidence, Tuning change-pathway; three supporting endpoints (draft preview, evidence-vocabulary, select_pathway). |
+| NP-F | *(this increment)* | The two `UserFacingExplanationNode` prose targets — batched pathway **fit notes** and the user-initiated **story summary** (Haiku tier, deterministic post-checks: prestige denylist + psych-label denylist + no-numerals-as-scores) with a deterministic twin; `POST /api/pathways/fit-notes` + `POST /api/story-summary`; call-log/axiom-09 observability; this README + `docs/dogfooding.md` story loop. |
+
+The design proposals below predate implementation. Where a schema or reason code
+was refined during the spec-first workflow, the landed spec in `docs/specs/` and
+the axioms are authoritative.
 
 Provenance: product design session 2026-07-15, grounded in the shipped résumé
 intake (`../resume-intake-onboarding/`), the career-track expansion research

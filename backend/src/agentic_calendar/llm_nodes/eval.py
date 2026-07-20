@@ -408,12 +408,14 @@ def _resume_intake_checker(case: EvalCase) -> Callable[[ResumeExtraction], None]
         )
     resume_text = str(intake.get("resume_text", ""))
     allowed_weak_spots = [str(s) for s in intake.get("allowed_weak_spots", [])]
+    allowed_themes = [str(s) for s in intake.get("allowed_themes", [])]
 
     def check(extraction: ResumeExtraction) -> None:
         _check_resume_extraction(
             extraction,
             resume_text=resume_text,
             allowed_weak_spots=allowed_weak_spots,
+            allowed_themes=allowed_themes,
         )
 
     return check

@@ -44,12 +44,14 @@ def _intake(
     resume_text: str = _RESUME,
     target_role: str | None = "Backend SWE",
     allowed_weak_spots: list[str] | None = None,
+    allowed_themes: list[str] | None = None,
 ) -> ResumeIntakeInput:
     return ResumeIntakeInput(
         user_id="user_t",
         resume_text=resume_text,
         draft_context=DraftProfileContext(target_role=target_role),
         allowed_weak_spots=allowed_weak_spots or [],
+        allowed_themes=allowed_themes or [],
     )
 
 
@@ -171,6 +173,53 @@ def test_weak_spots_fall_back_to_first_allowed_entries_when_canned_miss() -> Non
 def test_empty_allowed_vocabulary_passes_canned_through() -> None:
     extraction = _node().run(run_id="intake-t", intake=_intake(allowed_weak_spots=[]))
     assert extraction.inferred_weak_spots == ["System design", "Dynamic programming"]
+
+
+# --- Evidence kind + theme tags (NP-C) ------------------------------------- #
+
+
+def test_kind_defaults_to_work_and_classifies_from_title_keywords() -> None:
+    resume = "\n".join(
+        [
+            "Backend Engineer at Acme",
+            "Volunteer Tutor at Code Club",
+            "Research Assistant at State Lab",
+        ]
+    ) + "\nPadding so the résumé clears the contract's minimum length."
+    extraction = _node().run(run_id="intake-t", intake=_intake(resume_text=resume))
+    kinds = {item.title: item.kind.value for item in extraction.experience}
+    assert kinds["Backend Engineer"] == "work"
+    assert kinds["Volunteer Tutor"] == "volunteering"
+    assert kinds["Research Assistant"] == "research"
+
+
+def test_theme_tags_are_grounded_members_of_allowed_vocabulary() -> None:
+    # "distributed-systems" appears verbatim in the résumé; "frontend-ux" does
+    # not, so only the grounded, in-vocabulary theme is proposed.
+    resume = (
+        "Backend Engineer at Acme\n"
+        "Built distributed-systems services with Python.\n"
+        "Padding so the résumé clears the contract's minimum length."
+    )
+    allowed = ["distributed-systems", "frontend-ux"]
+    extraction = _node().run(
+        run_id="intake-t", intake=_intake(resume_text=resume, allowed_themes=allowed)
+    )
+    assert extraction.experience
+    for item in extraction.experience:
+        assert item.theme_tags == ["distributed-systems"]
+
+
+def test_no_theme_vocabulary_yields_no_tags() -> None:
+    extraction = _node().run(run_id="intake-t", intake=_intake(allowed_themes=[]))
+    assert all(item.theme_tags == [] for item in extraction.experience)
+
+
+def test_ungrounded_allowed_theme_is_not_proposed() -> None:
+    extraction = _node().run(
+        run_id="intake-t", intake=_intake(allowed_themes=["never-in-this-resume"])
+    )
+    assert all(item.theme_tags == [] for item in extraction.experience)
 
 
 def test_boundary_revalidation_rejects_contract_violating_input() -> None:

@@ -1,0 +1,15 @@
+{
+  "syllabus_version": "syl_011",
+  "goal_summary": "Slot-linked module missing its pillar reason.",
+  "modules": [
+    {
+      "module_id": "artifact",
+      "title": "Public technical writeup",
+      "priority": "medium",
+      "target_outcomes": ["One published technical writeup"],
+      "estimated_total_min": 240,
+      "difficulty": 2,
+      "evidence_slot_id": "public-artifact"
+    }
+  ]
+}

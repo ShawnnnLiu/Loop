@@ -23,6 +23,7 @@
     "intercom.com",
     "langchain.com",
     "man.com",
+    "montecarlodata.com",
     "multithreaded.stitchfix.com",
     "netflixtechblog.com",
     "optiver.com",
@@ -2175,6 +2176,146 @@
       "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
       "title": "DataCamp: Data Scientist interview questions",
       "comment": "canonical question set; refreshed yearly; curator reads this as interview_report-class content; host unknown to the classifier kernel"
+    },
+    {
+      "url": "https://roadmap.sh/data-engineer",
+      "expected_type": "unclassified",
+      "track_tags": [
+        "data_engineer"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "roadmap.sh: Data Engineer roadmap",
+      "comment": "open-source skill tree; stable; curator reads this as role_taxonomy-class content; host unknown to the classifier kernel"
+    },
+    {
+      "url": "https://docs.aws.amazon.com/aws-certification/latest/examguides/data-engineer-associate-01.html",
+      "expected_type": "unclassified",
+      "track_tags": [
+        "data_engineer"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "AWS Certified Data Engineer - Associate (DEA-C01) exam guide",
+      "comment": "official domains and weights (ingestion & transformation 34%, store management 26%, ops 22%, security 18%); ~3-yr revision cycle; curator reads this as role_taxonomy-class content; host unknown to the classifier kernel"
+    },
+    {
+      "url": "https://learn.microsoft.com/en-us/credentials/certifications/fabric-data-engineer-associate/",
+      "expected_type": "unclassified",
+      "track_tags": [
+        "data_engineer"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Microsoft Fabric Data Engineer Associate (DP-700)",
+      "comment": "official cert scope; supersedes DP-203 (retired 2025-03); curator reads this as role_taxonomy-class content; host unknown to the classifier kernel"
+    },
+    {
+      "url": "https://cloud.google.com/learn/certification/data-engineer",
+      "expected_type": "unclassified",
+      "track_tags": [
+        "data_engineer"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "GCP Professional Data Engineer certification",
+      "comment": "official cert scope plus exam-guide PDF pointer; curator reads this as role_taxonomy-class content; host unknown to the classifier kernel"
+    },
+    {
+      "url": "https://www.databricks.com/learn/certification/data-engineer-associate",
+      "expected_type": "unclassified",
+      "track_tags": [
+        "data_engineer"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Databricks Data Engineer Associate certification",
+      "comment": "lakehouse-stack skill definition; curator reads this as role_taxonomy-class content; host unknown to the classifier kernel"
+    },
+    {
+      "url": "https://learn.snowflake.com/en/certifications/",
+      "expected_type": "unclassified",
+      "track_tags": [
+        "data_engineer"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "SnowPro certification domain lists",
+      "comment": "SnowPro cert domain lists; curator reads this as role_taxonomy-class content; host unknown to the classifier kernel"
+    },
+    {
+      "url": "https://github.com/DataTalksClub/data-engineering-zoomcamp",
+      "expected_type": "unclassified",
+      "track_tags": [
+        "data_engineer"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Data Engineering Zoomcamp (DataTalksClub)",
+      "comment": "free canonical ~9-week curriculum (Docker/Terraform -> orchestration -> BigQuery -> dbt -> Spark -> Kafka); open-source, very stable; curator reads this as role_taxonomy-class content; host unknown to the classifier kernel"
+    },
+    {
+      "url": "https://dataintensive.net/",
+      "expected_type": "unclassified",
+      "track_tags": [
+        "data_engineer"
+      ],
+      "license_note": "Public book landing page; snapshot held for research/retrieval quotation with attribution; excerpts bounded; the book text itself is copyrighted and not ingested.",
+      "title": "Designing Data-Intensive Applications (DDIA) book site",
+      "comment": "DDIA scope at TOC level (2nd ed. 2026); curator reads this as role_taxonomy-class content; host unknown to the classifier kernel"
+    },
+    {
+      "url": "https://www.interviewquery.com/p/data-engineer-interview-questions",
+      "expected_type": "unclassified",
+      "track_tags": [
+        "data_engineer"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Interview Query: Data Engineer interview questions",
+      "comment": "150+ categorized questions; partial paywall - only the open portion is ingested; curator reads this as interview_report-class content; host unknown to the classifier kernel"
+    },
+    {
+      "url": "https://www.interviewquery.com/interview-guides/amazon-data-engineer",
+      "expected_type": "unclassified",
+      "track_tags": [
+        "data_engineer"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Interview Query: Amazon Data Engineer interview guide",
+      "comment": "Amazon-specific round breakdown; curator reads this as interview_report-class content; host unknown to the classifier kernel"
+    },
+    {
+      "url": "https://medium.com/@rasterroo/meta-data-engineer-interview-experience-2025-c26d23f995ce",
+      "expected_type": "unclassified",
+      "track_tags": [
+        "data_engineer"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Meta Data Engineer interview experience 2025",
+      "comment": "first-person Meta DE onsite; Medium volatility; curator reads this as interview_postmortem-class content, but medium.com is deliberately not declared a postmortem host (it would sweep all of Medium)"
+    },
+    {
+      "url": "https://medium.com/towards-data-engineering/my-amazon-data-engineering-interview-experience-what-i-learned-from-getting-rejected-2025-fd2f88f40a17",
+      "expected_type": "unclassified",
+      "track_tags": [
+        "data_engineer"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Amazon Data Engineering interview rejection postmortem",
+      "comment": "honest rejection postmortem incl. the exact 8-week prep plan; Medium volatility; curator reads this as interview_postmortem-class content, but medium.com is deliberately not declared a postmortem host"
+    },
+    {
+      "url": "https://www.getdbt.com/resources/state-of-analytics-engineering-2025",
+      "expected_type": "unclassified",
+      "track_tags": [
+        "data_engineer"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "dbt Labs: State of Analytics Engineering 2025",
+      "comment": "annual practitioner survey (dbt 61% / Airflow 58% posting frequencies); download may be email-gated, blog summary open; curator reads this as role_taxonomy-class content; host unknown to the classifier kernel"
+    },
+    {
+      "url": "https://www.montecarlodata.com/blog-data-engineering-architecture/",
+      "expected_type": "company_engineering_blog",
+      "track_tags": [
+        "data_engineer"
+      ],
+      "license_note": "Public web page; snapshot held for research/retrieval quotation with attribution; excerpts bounded.",
+      "title": "Monte Carlo: data engineering architecture digest",
+      "comment": "digest of Netflix/Uber/Airbnb data-platform posts; vendor framing caveat (data-observability vendor); host declared in engineering_blog_hosts"
     }
   ]
 }

@@ -122,4 +122,4 @@ Reason: bucket inconsistent with score.
 - `../axioms/08-rag-source-claims.md`
 - `../axioms/18-caching-strategy.md`
 - `syllabus-units.schema.md`
-- `../implementation-plans/phase-5-rag-caching.md`
+- `../implementation-plans/completed/phase-5-rag-caching.md`

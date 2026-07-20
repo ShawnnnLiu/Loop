@@ -21,7 +21,7 @@ Deferred to the Frontend MVP phase (not yet scheduled):
 - Structured onboarding UI.
 - Basic draft plan UI.
 
-See `../implementation-plans/phase-frontend-mvp.md` for the full deferred-items tracker.
+See `../implementation-plans/completed/phase-frontend-mvp.md` for the full deferred-items tracker.
 
 Excluded:
 
@@ -31,7 +31,7 @@ Excluded:
 - Sponsor reporting.
 - Advanced RAG.
 
-See `../implementation-plans/phase-1-core-planning.md`.
+See `../implementation-plans/completed/phase-1-core-planning.md`.
 
 ## Phase 2: Calendar Safety
 
@@ -53,7 +53,7 @@ Deferred to the Frontend MVP phase (not yet scheduled):
 
 The deferral is intentional: the deterministic core had to prove out first. The Frontend MVP phase will land the three UI/integration items above plus a real Google Calendar adapter; until then, every Phase 2 flow is exercised via operator CLIs.
 
-See `../implementation-plans/phase-2-calendar-safety.md` and `../implementation-plans/phase-frontend-mvp.md`.
+See `../implementation-plans/completed/phase-2-calendar-safety.md` and `../implementation-plans/completed/phase-frontend-mvp.md`.
 
 ## Phase 3: Sponsor and Parent Reporting
 
@@ -77,7 +77,7 @@ Excluded:
 - Essay draft sharing by default.
 - Sponsor control over the user's plan without user approval.
 
-See `../implementation-plans/phase-3-sponsor-reporting.md`.
+See `../implementation-plans/completed/phase-3-sponsor-reporting.md`.
 
 ## Phase 4: Telemetry and Calibration
 
@@ -92,7 +92,7 @@ Deliverables:
 - Accountability effectiveness metrics.
 - Replan suggestion flow.
 
-See `../implementation-plans/phase-4-telemetry-drift.md`.
+See `../implementation-plans/completed/phase-4-telemetry-drift.md`.
 
 ## Phase 5: RAG Quality and Caching
 
@@ -108,7 +108,7 @@ Deliverables:
 - Topic module cache.
 - Admissions / application milestone templates.
 
-See `../implementation-plans/phase-5-rag-caching.md`.
+See `../implementation-plans/completed/phase-5-rag-caching.md`.
 
 ## Phase 6: Advanced Personalization
 
@@ -122,7 +122,7 @@ Deliverables:
 - More granular user modeling.
 - Advanced accountability personalization.
 
-See `../implementation-plans/phase-6-advanced-personalization.md`.
+See `../implementation-plans/completed/phase-6-advanced-personalization.md`.
 
 ## Phase 7: Accountability MVP
 
@@ -147,7 +147,7 @@ Excluded:
 - AI therapy or personality diagnosis.
 - Fully autonomous replanning.
 
-See `../implementation-plans/phase-7-accountability-mvp.md`.
+See `../implementation-plans/completed/phase-7-accountability-mvp.md`.
 
 ## Phase 8: LLM Evaluation, Structured Generation, and Observability
 
@@ -169,7 +169,7 @@ Excluded:
 - Eval results feeding runtime decisions; observability is write-only.
 - A hosted dashboard UI; per-commit gating on non-deterministic eval runs.
 
-See `../implementation-plans/phase-8-llm-eval-observability.md`, `22-llm-evaluation-and-observability.md`, and `../decisions/ADR-0006-llm-never-touches-the-calendar.md`.
+See `../implementation-plans/completed/phase-8-llm-eval-observability.md`, `22-llm-evaluation-and-observability.md`, and `../decisions/ADR-0006-llm-never-touches-the-calendar.md`.
 
 ## Explicitly Out of Scope (MVP)
 

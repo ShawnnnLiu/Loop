@@ -56,7 +56,7 @@ its inputs exist.
    [02](02-interim-unverified-beta.md): B-then-A if beta starts before
    verification lands and the early cohort is small).
 2. [ ] **[user]** Buy the custom domain and run the cutover — the existing
-   runbook is `docs/implementation-plans/loop-recruiter-readiness/REMAINING.md`
+   runbook is `docs/implementation-plans/completed/loop-recruiter-readiness/REMAINING.md`
    §2 (fly certs → Console redirect URI → `CANONICAL_HOST`). A `*.fly.dev`
    host **cannot** pass Google's domain-ownership check, so this is
    load-bearing for verification, not just branding.

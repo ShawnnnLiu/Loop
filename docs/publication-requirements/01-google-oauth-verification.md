@@ -45,7 +45,7 @@ scopes are both a better review story and less to justify.
    account that owns the Cloud project. `*.fly.dev` cannot pass this —
    you can't prove ownership of a shared apex. The custom-domain cutover
    runbook already exists:
-   `docs/implementation-plans/loop-recruiter-readiness/REMAINING.md` §2.
+   `docs/implementation-plans/completed/loop-recruiter-readiness/REMAINING.md` §2.
    Every domain Google sees — homepage, privacy policy URL, authorized
    redirect URIs — must belong to you and be listed as an authorized domain.
 3. **App homepage** on that domain that genuinely describes what the app

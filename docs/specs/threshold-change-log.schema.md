@@ -153,5 +153,5 @@ change either.
 ## Related Docs
 
 - `../axioms/07-telemetry-and-drift.md` (Threshold Change Log, MVP Disclosure)
-- `../implementation-plans/phase-9-dogfood-backbone.md`
+- `../implementation-plans/completed/phase-9-dogfood-backbone.md`
 - `llm-call-log.schema.md` (the sibling append-only audit log pattern)

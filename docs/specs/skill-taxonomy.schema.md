@@ -23,7 +23,7 @@ returned visibly flagged and never become canonical skills.
 slice, membership-enforced in the repair loop.
 
 The taxonomy shares the `CareerTrack` enum with the grounding-RAG corpus
-(`../implementation-plans/loop-grounding-rag/`): corpus documents are
+(`../implementation-plans/completed/loop-grounding-rag`): corpus documents are
 track-tagged with the same closed enum, so corpus-derived evidence can
 later annotate taxonomy entries deterministically.
 

@@ -105,7 +105,7 @@ rework of one screen plus new pure helpers.
 
 ## Concurrency guardrails — user-plan-direction runs in parallel
 
-`docs/implementation-plans/user-plan-direction/` is being executed
+`docs/implementation-plans/completed/user-plan-direction/` is being executed
 concurrently in a different session **in this same checkout** (branch
 `user-plan-direction` has its uncommitted work). Hard rules:
 

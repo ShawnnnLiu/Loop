@@ -187,7 +187,7 @@ serialized into the Strategist prompt. Change record, axiom 07 style:
 | `new_value` | 0.25 |
 | `effective_at` | 2026-07-14 |
 | `justification` | 0.30 was derived from the `personal_anecdote` *base* (0.35) and overlooked the flat −0.10 anecdotal penalty, so it silently banned every ingested anecdote — contradicting both this axiom's "anecdotal reports only when labeled low confidence" and the floor's own docstring. 0.25 is the exact post-penalty anecdote score; `unclassified` (0.10 post-penalty) still needs the saturated corroboration bonus (+0.15) to serve. Lowering the *penalty* instead was rejected: at −0.05 a maxed-out anecdote reaches 0.55 — the `medium` bucket boundary — breaking the anecdotes-ceiling-at-`low` invariant above. |
-| `dataset_reference` | First real claim store (117 claims assembled 2026-07-07 from `snap_26c44499e582a96a`): anecdotes uniformly 0.25, unclassified uniformly 0.10; serving simulations at floors 0.30/0.25/0.20 × penalties 0.10/0.05 recorded in `docs/implementation-plans/loop-grounding-rag/05-production-operations.md`. |
+| `dataset_reference` | First real claim store (117 claims assembled 2026-07-07 from `snap_26c44499e582a96a`): anecdotes uniformly 0.25, unclassified uniformly 0.10; serving simulations at floors 0.30/0.25/0.20 × penalties 0.10/0.05 recorded in `docs/implementation-plans/completed/loop-grounding-rag/05-production-operations.md`. |
 
 This is a change to the shipped *default*, disclosed here because per-store
 threshold journals (axiom 07) only record runtime `tuning.toml` overrides — a

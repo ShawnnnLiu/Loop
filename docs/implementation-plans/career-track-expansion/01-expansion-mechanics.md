@@ -5,7 +5,7 @@ assumes this mechanism; none of them re-explains it. Grounded in the
 contracts as they exist today: `contracts/career_track.py`,
 `contracts/skill_taxonomy.py`, `skill_taxonomy/normalize.py`,
 `docs/specs/skill-taxonomy.schema.md`, and the grounding-RAG plan
-(`../loop-grounding-rag/01-corpus-and-contracts.md`).
+(`../completed/loop-grounding-rag/01-corpus-and-contracts.md`).
 
 ## The three requirements (recap)
 

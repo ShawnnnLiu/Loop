@@ -133,7 +133,12 @@ from agentic_calendar.llm_nodes.prose_attachment import (
     ProseAttachmentRecord,
 )
 from agentic_calendar.llm_nodes.reflection_summary import ReflectionSummary
-from agentic_calendar.llm_nodes.user_facing_explanation import UserExplanation
+from agentic_calendar.llm_nodes.user_facing_explanation import (
+    FitNoteRequest,
+    FitNoteSlot,
+    StorySummaryRequest,
+    UserExplanation,
+)
 from agentic_calendar.narrative import SlotState, slot_coverage
 from agentic_calendar.planning.diff import (
     PlanContentDiff,
@@ -188,6 +193,7 @@ from .results import (
     DropResult,
     EvidenceVocabularyResult,
     ExtractResumeResult,
+    FitNotesResult,
     IngestResult,
     MeResult,
     OnboardResult,
@@ -200,6 +206,7 @@ from .results import (
     ReflectionHistoryEntry,
     RollbackCycleResult,
     StatusResult,
+    StorySummaryResult,
     TelemetryItemOutcome,
     ThresholdFieldView,
     ThresholdSectionView,
@@ -3437,6 +3444,138 @@ class CycleService:
             total_slots=len(template.evidence_slots),
             slots=slots,
             selected=template.pathway_id == selected_id,
+        )
+
+    # ------------------------------------------------------------------ #
+    # story-layer LLM prose (NP-F) — fit notes + story summary
+    # ------------------------------------------------------------------ #
+    #
+    # Both targets live inside the UserFacingExplanationNode (the fifth-and-only
+    # explanation node; no new node class per 03-llm-surfaces). They DECORATE
+    # the deterministic ``narrative/`` coverage the kernel already computed:
+    # the structured input is that coverage (filled/open slot titles + matched
+    # evidence titles), never the raw résumé, so fit/gaps stay 100% deterministic
+    # (axiom 00) and the prose only explains them. Neither call persists prose —
+    # the client holds it for the session; only the append-only LLM call log is
+    # written (required per axiom 22).
+
+    #: The batched fit-note call covers the top-N cards by the kernel's ranking
+    #: (03-llm-surfaces: "one call returning notes for the top N cards, N <= 4").
+    _FIT_NOTE_MAX_CARDS = 4
+
+    def _card_fit_slots(
+        self, profile: UserProfile, card: PathwayCard
+    ) -> tuple[FitNoteSlot, ...]:
+        """Project a card's kernel coverage into the prose node's slot shape:
+        the pillar title, its opaque state label, and the confirmed evidence
+        titles the kernel matched to it (so the prose can name *why* a pillar is
+        filled without ever seeing the raw résumé)."""
+        titles = [item.title for item in profile.experience]
+        return tuple(
+            FitNoteSlot(
+                title=slot.title,
+                state=slot.state.value,
+                matched_titles=tuple(
+                    titles[i] for i in slot.matched_item_indices if 0 <= i < len(titles)
+                ),
+            )
+            for slot in card.slots
+        )
+
+    def pathway_fit_notes(
+        self, user_id: str, payload: Mapping[str, Any]
+    ) -> FitNotesResult:
+        """One batched LLM fit note per top pathway card (NP-F) — display-only.
+
+        Mirrors :meth:`preview_pathways`'s draft-or-saved posture: with a
+        ``user_profile`` in the body the wizard's not-yet-saved evidence is used
+        (persistence-free, onboarding not required); without it the stored
+        profile is read. The cards are ranked deterministically by
+        :meth:`_pathways_result` (no LLM), the top ``_FIT_NOTE_MAX_CARDS`` are
+        put to the explanation node in one call, and the notes come back keyed by
+        ``pathway_id``. A node failure returns a typed ``status="failed"`` result
+        (HTTP 200) so the UI simply shows no notes; the cards are never blocked
+        on this call. ``payload`` keys: ``user_profile`` (optional draft),
+        ``track`` (optional filter)."""
+        raw = payload.get("user_profile")
+        if isinstance(raw, Mapping):
+            profile = UserProfile.model_validate({**dict(raw), "user_id": user_id})
+        else:
+            profile = self._require_onboarding(user_id).user_profile
+        track = payload.get("track")
+        result = self._pathways_result(
+            profile, track if isinstance(track, str) else None
+        )
+        top = result.cards[: self._FIT_NOTE_MAX_CARDS]
+        if not top:
+            return FitNotesResult(
+                registry_version=result.registry_version, notes={}
+            )
+        requests = tuple(
+            FitNoteRequest(
+                pathway_id=card.pathway_id,
+                display_name=card.display_name,
+                spine=card.spine,
+                audience_note=card.audience_note,
+                slots=self._card_fit_slots(profile, card),
+            )
+            for card in top
+        )
+        run_id = f"story-{self._env.id_generator.new_id('run')}"
+        try:
+            notes = self._env.nodes.explanation.run_fit_notes(
+                run_id=run_id, requests=requests
+            )
+        except LLMNodeError as exc:
+            reason = getattr(exc, "reason_code", None) or ReasonCode.LLM_CALL_FAILED
+            return FitNotesResult(
+                status="failed",
+                registry_version=result.registry_version,
+                reason_code=reason,
+                detail=str(exc),
+            )
+        return FitNotesResult(
+            registry_version=result.registry_version,
+            notes={note.pathway_id: note.note for note in notes.notes},
+        )
+
+    def story_summary(self, user_id: str) -> StorySummaryResult:
+        """User-initiated "where your package stands" summary (NP-F) — display-only.
+
+        Requires a live pathway selection (a stale-pinned or missing selection is
+        a command-precondition failure → HTTP 409; the Story panel only offers
+        this in the selected branch). The input is the selected pathway's
+        deterministic slot coverage; a node failure is a typed
+        ``status="failed"`` result (HTTP 200). Nothing is persisted."""
+        profile = self._require_onboarding(user_id).user_profile
+        template, version_mismatch = self._resolve_selection_template(profile)
+        if template is None:
+            hint = (
+                " (its pinned registry version is stale — re-confirm it first)"
+                if version_mismatch
+                else ""
+            )
+            raise CycleError(
+                f"user {user_id!r} has no live pathway selection; choose a pathway "
+                f"before requesting a story summary{hint}"
+            )
+        card = self._pathway_card(profile, template, template.pathway_id)
+        request = StorySummaryRequest(
+            pathway_id=template.pathway_id,
+            display_name=template.display_name,
+            spine=template.spine,
+            slots=self._card_fit_slots(profile, card),
+        )
+        run_id = f"story-{self._env.id_generator.new_id('run')}"
+        try:
+            summary = self._env.nodes.explanation.run_story_summary(
+                run_id=run_id, request=request
+            )
+        except LLMNodeError as exc:
+            reason = getattr(exc, "reason_code", None) or ReasonCode.LLM_CALL_FAILED
+            return StorySummaryResult(status="failed", reason_code=reason)
+        return StorySummaryResult(
+            summary=summary.summary, detail=list(summary.detail)
         )
 
     def mark_evidence(

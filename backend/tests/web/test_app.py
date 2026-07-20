@@ -357,6 +357,50 @@ def test_select_pathway_route_sets_selection_and_invalidates() -> None:
     assert bad.status_code == 409
 
 
+def test_pathway_fit_notes_route_decorates_the_top_cards() -> None:
+    # NP-F: batched LLM fit notes, display-only. The dev server's deterministic
+    # twin produces clean notes for the top cards; the cards themselves stay
+    # kernel-computed and are never changed by this call.
+    from agentic_calendar.llm_nodes.anthropic_adapter import _scan_story_prose
+
+    client, _clock = _client()
+    client.post(
+        "/api/evidence",
+        json={"title": "Payments service", "kind": "work", "theme_tags": ["backend-systems"]},
+    )
+    before = client.get("/api/pathways?track=swe").json()
+
+    res = client.post("/api/pathways/fit-notes", json={"track": "swe"})
+    assert res.status_code == 200
+    body = res.json()
+    assert body["status"] == "ok"
+    assert body["registry_version"] == "pathway-registry-v1"
+
+    card_ids = {c["pathway_id"] for c in before["cards"]}
+    assert body["notes"]  # at least one note
+    assert set(body["notes"]).issubset(card_ids)
+    assert len(body["notes"]) <= 4  # batched over the top N cards
+    for note in body["notes"].values():
+        _scan_story_prose(note)  # denylist + score-free
+
+    # Display-only: the deterministic ranking is byte-identical afterward.
+    assert client.get("/api/pathways?track=swe").json() == before
+
+
+def test_story_summary_route_requires_a_live_selection() -> None:
+    client, _clock = _client()
+    # No selection yet → command-precondition failure (409).
+    assert client.post("/api/story-summary").status_code == 409
+
+    client.post("/api/pathways/select", json={"pathway_id": "backend-infrastructure-engineer"})
+    res = client.post("/api/story-summary")
+    assert res.status_code == 200
+    body = res.json()
+    assert body["status"] == "ok"
+    assert body["summary"]
+    assert isinstance(body["detail"], list)
+
+
 def test_draft_endpoint_exposes_pending_draft_with_approval_hash() -> None:
     client, _clock = _client()
     proposed = client.post("/api/propose", json={})

@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import time
 from collections.abc import Callable, Collection, Sequence
 from typing import Any, Protocol, cast, runtime_checkable
@@ -59,7 +60,13 @@ from .base import LLMNodeError
 from .call_log import LlmCallLog, LlmCallLogStore, LlmNodeName, ValidationOutcome
 from .reflection_summary import ReflectionSummary, _ensure_no_psychological_labels
 from .strategist import _check_against_constraints
-from .user_facing_explanation import UserExplanation
+from .user_facing_explanation import (
+    FitNoteRequest,
+    PathwayFitNotes,
+    StorySummary,
+    StorySummaryRequest,
+    UserExplanation,
+)
 
 
 class TransportError(AgenticCalendarError):
@@ -413,6 +420,28 @@ RESUME_INTAKE_CONFIG = AdapterConfig(
     # labeled choose-only block — all three shift the prompt bytes.
     prompt_version="resume-intake-v2-2026-07-20",
     max_tokens=4096,
+    input_price_per_mtok=1.00,
+    output_price_per_mtok=5.00,
+)
+# Story-layer explanation targets (NP-F) run on Haiku, not the Sonnet tier the
+# validation-explanation target uses: they are short decorative prose derived
+# from already-confirmed structured state (kernel coverage), user-initiated, and
+# held to a deterministic post-check — the cheapest tier is sufficient. Axiom
+# 09's "Story Layer" cost table pins them to `claude-haiku-4-5` at ~$0.005 each;
+# the model-tiering line records this per-target divergence. 1024 output tokens
+# comfortably fits a batch of short notes and is only safe because the transport
+# pins thinking off (see complete()).
+FIT_NOTE_CONFIG = AdapterConfig(
+    model_name="claude-haiku-4-5",
+    prompt_version="story-fit-note-v1-2026-07-20",
+    max_tokens=1024,
+    input_price_per_mtok=1.00,
+    output_price_per_mtok=5.00,
+)
+STORY_SUMMARY_CONFIG = AdapterConfig(
+    model_name="claude-haiku-4-5",
+    prompt_version="story-summary-v1-2026-07-20",
+    max_tokens=1024,
     input_price_per_mtok=1.00,
     output_price_per_mtok=5.00,
 )
@@ -1460,7 +1489,16 @@ class AnthropicReflectionSummary:
 
 
 class AnthropicUserFacingExplanation:
-    """Real explanation node. Words a deterministic outcome; never alters it."""
+    """Real explanation node. Words a deterministic outcome; never alters it.
+
+    Carries three prompt targets, all logged under
+    ``LlmNodeName.USER_FACING_EXPLANATION`` and distinguished by their
+    ``prompt_version`` (no call-log schema change): the validation explanation
+    (Sonnet tier) plus the two story-layer targets (NP-F, Haiku tier) — the
+    batched pathway fit notes and the story summary. Each target has its own
+    ``_GenerationEngine`` (one contract per engine); all share the transport,
+    store, clock, and id generator.
+    """
 
     def __init__(
         self,
@@ -1470,21 +1508,34 @@ class AnthropicUserFacingExplanation:
         clock: Clock,
         id_generator: IdGenerator,
         config: AdapterConfig | None = None,
+        fit_note_config: AdapterConfig | None = None,
+        story_summary_config: AdapterConfig | None = None,
         debug_raw_sink: Callable[[str], None] | None = None,
         sleeper: Callable[[float], None] | None = None,
         attempt_recorder: Callable[[int, dict[str, Any] | None], None] | None = None,
     ) -> None:
+        shared: dict[str, Any] = {
+            "node": LlmNodeName.USER_FACING_EXPLANATION,
+            "transport": transport,
+            "store": store,
+            "clock": clock,
+            "id_generator": id_generator,
+            "debug_raw_sink": debug_raw_sink,
+            "sleeper": sleeper,
+            "attempt_recorder": attempt_recorder,
+        }
         self._engine = _GenerationEngine(
-            node=LlmNodeName.USER_FACING_EXPLANATION,
-            contract=UserExplanation,
-            config=config or EXPLANATION_CONFIG,
-            transport=transport,
-            store=store,
-            clock=clock,
-            id_generator=id_generator,
-            debug_raw_sink=debug_raw_sink,
-            sleeper=sleeper,
-            attempt_recorder=attempt_recorder,
+            contract=UserExplanation, config=config or EXPLANATION_CONFIG, **shared
+        )
+        self._fit_note_engine = _GenerationEngine(
+            contract=PathwayFitNotes,
+            config=fit_note_config or FIT_NOTE_CONFIG,
+            **shared,
+        )
+        self._summary_engine = _GenerationEngine(
+            contract=StorySummary,
+            config=story_summary_config or STORY_SUMMARY_CONFIG,
+            **shared,
         )
 
     def run(
@@ -1507,6 +1558,63 @@ class AnthropicUserFacingExplanation:
         )
         return cast(UserExplanation, result)
 
+    def run_fit_notes(
+        self, *, run_id: str, requests: tuple[FitNoteRequest, ...]
+    ) -> PathwayFitNotes:
+        """One batched call producing a fit note per requested card (NP-F).
+
+        The post-check enforces exactly-one-note-per-requested-id (the model
+        can neither add, drop, nor duplicate a pathway) and scans every note
+        for prestige terms, psychological labels, and score-shaped numerals —
+        so the prose can only ever decorate the kernel's ranking, never
+        replace it."""
+        requested_ids = [r.pathway_id for r in requests]
+        cards_json = json.dumps(
+            [r.model_dump(mode="json") for r in requests], sort_keys=True
+        )
+
+        def _check(model: BaseModel) -> None:
+            out = cast(PathwayFitNotes, model)
+            got = [n.pathway_id for n in out.notes]
+            if sorted(got) != sorted(requested_ids) or len(got) != len(set(got)):
+                raise LLMNodeError(
+                    "fit notes must cover exactly the requested pathway ids "
+                    f"{requested_ids!r} (one each), got {got!r}"
+                )
+            for note in out.notes:
+                _scan_story_prose(note.note)
+
+        result = self._fit_note_engine.generate(
+            run_id=run_id,
+            plan_version=None,
+            system=_FIT_NOTE_SYSTEM,
+            user_prompt=f"Pathway cards:\n{cards_json}",
+            post_validate=_check,
+        )
+        return cast(PathwayFitNotes, result)
+
+    def run_story_summary(
+        self, *, run_id: str, request: StorySummaryRequest
+    ) -> StorySummary:
+        """A "where your package stands" summary over the selected pathway (NP-F)."""
+
+        def _check(model: BaseModel) -> None:
+            summary = cast(StorySummary, model)
+            _scan_story_prose(summary.summary)
+            for line in summary.detail:
+                _scan_story_prose(line)
+
+        result = self._summary_engine.generate(
+            run_id=run_id,
+            plan_version=None,
+            system=_STORY_SUMMARY_SYSTEM,
+            user_prompt=(
+                f"Selected pathway:\n{json.dumps(request.model_dump(mode='json'), sort_keys=True)}"
+            ),
+            post_validate=_check,
+        )
+        return cast(StorySummary, result)
+
 
 #: Prestige-ranking terms forbidden in ``target_company_categories`` (locked
 #: decision 5). Single source of truth for the code; quoted verbatim in
@@ -1518,6 +1626,144 @@ _CATEGORY_DENYLIST: tuple[str, ...] = (
     "mediocre",
     "second-rate",
     "b-tier",
+)
+
+
+# --------------------------------------------------------------------------- #
+# Story-layer prose post-checks (NP-F)
+# --------------------------------------------------------------------------- #
+#
+# The fit-note and story-summary targets are held to three deterministic checks
+# (03-llm-surfaces §Surface 2): the prestige denylist (the SAME constant the
+# extraction adapter uses, `_CATEGORY_DENYLIST`), the psychological-label
+# denylist (`_ensure_no_psychological_labels`, reused from the reflection node),
+# and a no-numerals-as-scores guard. Honest "n of m pillars" counts are rendered
+# by the frontend from the kernel's coverage — the prose must never restate a
+# ranking as a number, so score-shaped numerals are rejected and repaired. Plain
+# years or version tags ("v2", "2026") are not score shapes and pass.
+
+#: Score-shaped numerals: percentages, ratios, and "n of m" / "n out of m".
+_STORY_SCORE_RE = re.compile(
+    r"\d+\s*%|\d+\s*/\s*\d+|\d+\s+of\s+\d+|\d+\s+out\s+of\s+\d+",
+    re.IGNORECASE,
+)
+
+
+def _ensure_no_prestige_terms(text: str) -> None:
+    lowered = text.lower()
+    for term in _CATEGORY_DENYLIST:
+        if term in lowered:
+            raise LLMNodeError(
+                f"story prose contains forbidden prestige-ranking term {term!r} "
+                f"(pathways are chosen, never ranked by tier)"
+            )
+
+
+def _ensure_no_numeric_scores(text: str) -> None:
+    match = _STORY_SCORE_RE.search(text)
+    if match is not None:
+        raise LLMNodeError(
+            f"story prose presents a numeric score {match.group(0)!r}; the honest "
+            f"pillar count is shown deterministically, so the note must not "
+            f"restate it as a percentage, ratio, or 'n of m'"
+        )
+
+
+def _scan_story_prose(text: str) -> None:
+    """The three story-prose post-checks, applied to one string."""
+    _ensure_no_psychological_labels(text)
+    _ensure_no_prestige_terms(text)
+    _ensure_no_numeric_scores(text)
+
+
+# One synthetic card whose correct fit note demonstrates the voice without
+# leaning on any real pathway's content (copied-not-derived output stays
+# detectable), mirroring the other nodes' exemplars.
+_FIT_NOTE_EXEMPLAR: dict[str, Any] = {
+    "notes": [
+        {
+            "pathway_id": "example-pathway",
+            "note": (
+                "Your shipped internship work already carries the depth and "
+                "breadth pillars of this story. The public-artifact pillar is "
+                "still open, so your plan can focus there next."
+            ),
+        }
+    ]
+}
+
+_FIT_NOTE_SYSTEM = (
+    "You are the product voice of a deterministic career-preparation engine. "
+    "For each narrative pathway the user is considering, you write a short note "
+    "explaining how their ALREADY-CONFIRMED evidence carries that story's "
+    "pillars. The engine has already computed which pillars are filled and "
+    "ordered the pathways; you only put words to it.\n\n"
+    "Audience and tone: a candidate deciding which story to build toward. Write "
+    "like an encouraging coach — plain, honest, concrete; two to three sentences "
+    "per pathway.\n\n"
+    "A deterministic validator checks your output and rejects it on any "
+    "violation, so satisfy every rule below before returning:\n"
+    "1. Ground every sentence in the coverage you are given — the filled and "
+    "open pillars, named by their titles. Never invent evidence the user did "
+    "not confirm, and never describe the raw résumé (you are not given it).\n"
+    "2. Never rank the pathways, recommend one over another, or say one is a "
+    "better fit — the user chooses. You explain each on its own terms.\n"
+    "3. Never present a score, percentage, letter grade, or a count like "
+    "'3 of 5' — the honest pillar count is shown elsewhere by the system. No "
+    "numerals presented as a score.\n"
+    "4. Never use prestige or tier language, and never attach a psychological "
+    "label, diagnosis, or identity judgment to the person — describe evidence, "
+    "not character.\n"
+    "5. Return exactly one note per pathway_id you are given, using those same "
+    "ids — add none, drop none.\n"
+    "6. Return only the structured object.\n\n"
+    "GOOD: \"Your shipped billing work already anchors the depth and breadth "
+    "pillars of this story. Leadership is the open pillar, so your plan can "
+    "build toward it next.\"\n"
+    "BAD — ranks and scores; never write this: \"This is your best match at "
+    "4 of 6 pillars, clearly stronger than the others.\"\n\n"
+    "Illustrative example of a valid output SHAPE only — every value must be "
+    "derived from the actual cards, never copied from this example:\n"
+    + json.dumps(_FIT_NOTE_EXEMPLAR, sort_keys=True)
+)
+
+_STORY_SUMMARY_EXEMPLAR: dict[str, Any] = {
+    "summary": (
+        "Your package is taking shape — some pillars are already backed by your "
+        "evidence, and your plan is building toward the rest."
+    ),
+    "detail": [
+        "Depth is backed by your confirmed evidence.",
+        "The public artifact is still open — your plan is building toward it.",
+    ],
+}
+
+_STORY_SUMMARY_SYSTEM = (
+    "You are the product voice of a deterministic career-preparation engine. The "
+    "user has chosen a narrative pathway; you write a short 'where your package "
+    "stands' summary from the pillar states the engine computed. You never "
+    "change which pillars are filled.\n\n"
+    "Audience and tone: the candidate building this story. Write like an "
+    "encouraging coach — plain, honest, forward-looking. The summary is at most "
+    "two sentences; each detail line is one short sentence about one pillar.\n\n"
+    "A deterministic validator checks your output and rejects it on any "
+    "violation, so satisfy every rule below before returning:\n"
+    "1. Ground every sentence in the pillar states you are given: filled "
+    "pillars are backed by confirmed evidence, open pillars are what the plan "
+    "builds toward. Never invent evidence or describe a raw résumé.\n"
+    "2. Never present a score, percentage, letter grade, or a count like "
+    "'3 of 5' — the honest pillar count is shown elsewhere. No numerals "
+    "presented as a score.\n"
+    "3. Never use prestige or tier language, and never attach a psychological "
+    "label, diagnosis, or identity judgment to the person.\n"
+    "4. Return only the structured object.\n\n"
+    "GOOD: \"Your package is taking shape — depth and breadth are backed by your "
+    "evidence, and your plan is building toward the public artifact.\"\n"
+    "BAD — scores and labels; never write this: \"You're 60% there but have "
+    "been undisciplined about the rest.\"\n\n"
+    "Illustrative example of a valid output SHAPE only — every value must be "
+    "derived from the actual pillar states, never copied from this example:\n"
+    + json.dumps(_STORY_SUMMARY_EXEMPLAR, sort_keys=True)
 )
 
 

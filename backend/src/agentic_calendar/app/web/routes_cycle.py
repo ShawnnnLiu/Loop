@@ -567,6 +567,31 @@ def select_pathway(
     )
 
 
+@router.post("/pathways/fit-notes")
+def pathway_fit_notes(
+    service: Service,
+    user_id: ActingUser,
+    payload: Annotated[dict[str, Any], Body()],
+) -> JSONResponse:
+    """Batched LLM fit notes for the top pathway cards (NP-F) — display-only prose
+    that decorates the deterministic ``pathways`` ranking (it participates in no
+    card ordering or slot state). Body mirrors ``/onboard/pathways``:
+    ``{user_profile?, track?}`` — a draft profile for the wizard's Your-story
+    step, or none to use the stored profile. An LLM failure is a 200 with
+    ``status: "failed"`` + typed ``reason_code`` (inspected, not caught); the
+    cards are never blocked on this call. Nothing persists."""
+    return _json(service.pathway_fit_notes(user_id, payload))
+
+
+@router.post("/story-summary")
+def story_summary(service: Service, user_id: ActingUser) -> JSONResponse:
+    """User-initiated "where your package stands" summary over the selected
+    pathway (NP-F) — display-only prose. Requires a live selection (409
+    otherwise); an LLM failure is a 200 with ``status: "failed"`` + typed
+    ``reason_code``. Nothing persists — the client holds it for the session."""
+    return _json(service.story_summary(user_id))
+
+
 @router.get("/me")
 def me(service: Service, user_id: ActingUser) -> JSONResponse:
     return _json(service.me(user_id))

@@ -59,6 +59,11 @@ from agentic_calendar.llm_nodes.anthropic_adapter import (
     AnthropicUserFacingExplanation,
 )
 from agentic_calendar.llm_nodes.call_log import InMemoryLlmCallLogStore
+from agentic_calendar.llm_nodes.user_facing_explanation import (
+    FitNoteRequest,
+    FitNoteSlot,
+    StorySummaryRequest,
+)
 from tests._fixture_loader import iter_valid
 from tests.llm_nodes.test_anthropic_adapter import (
     _INVALID_PLAN,
@@ -117,6 +122,20 @@ _PINNED: list[tuple[str, object, str, str]] = [
         # and the exemplar's two new fields changed the system-prompt bytes.
         "resume-intake-v2-2026-07-20",
         "b525603a35121c1c98dff419c3b34f90b0967abb30614804a4c963f849690fc5",
+    ),
+    (
+        # NP-F: the pathway fit-note target, inside the explanation node.
+        "_FIT_NOTE_SYSTEM",
+        adapter.FIT_NOTE_CONFIG,
+        "story-fit-note-v1-2026-07-20",
+        "aa92078400896a86b5e30b68f684ba68205dfb0d7ce7ff5916ae15e9857d7207",
+    ),
+    (
+        # NP-F: the story-summary target, inside the explanation node.
+        "_STORY_SUMMARY_SYSTEM",
+        adapter.STORY_SUMMARY_CONFIG,
+        "story-summary-v1-2026-07-20",
+        "f2098d6fb5225f9a4492cc831ac6f9014b4b39bb7a84ea219f56dd70427fd21c",
     ),
 ]
 
@@ -342,6 +361,130 @@ def _resume_intake_full() -> tuple[adapter.AdapterConfig, FakeTransport]:
     return adapter.RESUME_INTAKE_CONFIG, transport
 
 
+def _fit_notes_full() -> tuple[adapter.AdapterConfig, FakeTransport]:
+    """Two pathway cards (NP-F); the first response trips the numeric-score
+    post-check, so round 2 carries the rejection. Covers the batched
+    ``Pathway cards:`` assembly and the story-prose repair formatting."""
+    transport = FakeTransport(
+        [
+            _ok(
+                {
+                    "notes": [
+                        {
+                            "pathway_id": "pw-a",
+                            "note": "You cover 3 of 4 pillars here — the best match.",
+                        },
+                        {"pathway_id": "pw-b", "note": "A weaker option overall."},
+                    ]
+                }
+            ),
+            _ok(
+                {
+                    "notes": [
+                        {
+                            "pathway_id": "pw-a",
+                            "note": (
+                                "Your shipped work already anchors the depth pillar; "
+                                "the public artifact pillar is still open, so your "
+                                "plan can build toward it."
+                            ),
+                        },
+                        {
+                            "pathway_id": "pw-b",
+                            "note": (
+                                "None of these pillars are backed yet — a clean start "
+                                "your plan can build from."
+                            ),
+                        },
+                    ]
+                }
+            ),
+        ]
+    )
+    node = AnthropicUserFacingExplanation(transport=transport, **_node_kwargs())  # type: ignore[arg-type]
+    node.run_fit_notes(
+        run_id="story-pin",
+        requests=(
+            FitNoteRequest(
+                pathway_id="pw-a",
+                display_name="Backend Engineer",
+                spine="Depth-first services and production ops.",
+                audience_note="Backend and infrastructure teams.",
+                slots=(
+                    FitNoteSlot(
+                        title="Depth services",
+                        state="filled",
+                        matched_titles=("Payments API",),
+                    ),
+                    FitNoteSlot(title="Public artifact", state="empty"),
+                ),
+            ),
+            FitNoteRequest(
+                pathway_id="pw-b",
+                display_name="Full-Stack Engineer",
+                spine="Frontend surface through backend depth.",
+                audience_note="Product teams.",
+                slots=(FitNoteSlot(title="Frontend surface", state="empty"),),
+            ),
+        ),
+    )
+    # Guard: the pin must actually cover what it claims (builder-rot check).
+    prompt = transport.requests[0]["user_prompt"]
+    assert prompt.startswith("Pathway cards:")
+    assert '"pw-a"' in prompt and '"pw-b"' in prompt
+    assert transport.requests[1]["repair_suffix"] is not None
+    return adapter.FIT_NOTE_CONFIG, transport
+
+
+def _story_summary_full() -> tuple[adapter.AdapterConfig, FakeTransport]:
+    """The story summary (NP-F); the first response trips both the score and
+    psych-label post-checks, so round 2 carries the rejection."""
+    transport = FakeTransport(
+        [
+            _ok(
+                {
+                    "summary": "You're 60% there but undisciplined about the rest.",
+                    "detail": [],
+                }
+            ),
+            _ok(
+                {
+                    "summary": (
+                        "Your package is taking shape — depth is backed, and your "
+                        "plan is building toward the public artifact."
+                    ),
+                    "detail": [
+                        "Depth is backed by your confirmed evidence.",
+                        "The public artifact is still open — your plan is building "
+                        "toward it.",
+                    ],
+                }
+            ),
+        ]
+    )
+    node = AnthropicUserFacingExplanation(transport=transport, **_node_kwargs())  # type: ignore[arg-type]
+    node.run_story_summary(
+        run_id="story-pin",
+        request=StorySummaryRequest(
+            pathway_id="pw-a",
+            display_name="Backend Engineer",
+            spine="Depth-first services and production ops.",
+            slots=(
+                FitNoteSlot(
+                    title="Depth services",
+                    state="filled",
+                    matched_titles=("Payments API",),
+                ),
+                FitNoteSlot(title="Public artifact", state="empty"),
+            ),
+        ),
+    )
+    # Guard: the pin must actually cover what it claims (builder-rot check).
+    assert transport.requests[0]["user_prompt"].startswith("Selected pathway:")
+    assert transport.requests[1]["repair_suffix"] is not None
+    return adapter.STORY_SUMMARY_CONFIG, transport
+
+
 #: (node id, builder, pinned prompt_version, pinned full-prompt SHA-256).
 _FULL_PROMPT_PINS: list[
     tuple[str, Callable[[], tuple[adapter.AdapterConfig, FakeTransport]], str, str]
@@ -383,6 +526,18 @@ _FULL_PROMPT_PINS: list[
         # changed, rehashed.
         "resume-intake-v2-2026-07-20",
         "19134eacda83dd8b88677c8885e09ba11fc58520c97fcbfa0c68311ac757d1ed",
+    ),
+    (
+        "story_fit_notes",
+        _fit_notes_full,
+        "story-fit-note-v1-2026-07-20",
+        "daccaea50be6603d65a3ea998e0eb2e016089a4ad30816e74b004336c49abe0d",
+    ),
+    (
+        "story_summary",
+        _story_summary_full,
+        "story-summary-v1-2026-07-20",
+        "afe747bea81e2a17b9b2ed55712fb0987e1335f6c9adf434133210ec7b2ef96a",
     ),
 ]
 

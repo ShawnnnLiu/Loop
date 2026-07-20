@@ -207,7 +207,8 @@ export interface PathwaySlotView {
 /** Mirror of app/results.py::PathwayCard — one pathway with kernel-computed fit.
  *  `filled_slots`/`total_slots` are the honest "n of m pillars" count (never a
  *  score) and the card-ordering key (sorted filled_slots desc, ties by registry
- *  order server-side). No LLM fit note yet — that is NP-F. */
+ *  order server-side). The optional LLM fit note (NP-F) is served separately by
+ *  POST /api/pathways/fit-notes so this card stays kernel-only. */
 export interface PathwayCard {
   pathway_id: string
   display_name: string
@@ -246,6 +247,36 @@ export interface EvidenceVocabularyResult {
   registry_version: string
   kinds: EvidenceKind[]
   themes: string[]
+}
+
+/** Body of POST /api/pathways/fit-notes. `user_profile` is the wizard's
+ *  not-yet-saved draft (persistence-free); omit it to note the stored profile. */
+export interface FitNotesPayload {
+  user_profile?: UserProfile
+  track?: string | null
+}
+
+/** Mirror of app/results.py::FitNotesResult — batched LLM fit notes keyed by
+ *  `pathway_id`, display-only prose that decorates the deterministic `pathways`
+ *  ranking (present only for the top cards the batch covered). An LLM failure is
+ *  a 200 with status "failed" + reason_code (inspected, not caught); the cards
+ *  are never blocked on it. */
+export interface FitNotesResult {
+  status: 'ok' | 'failed'
+  registry_version: string
+  notes: Record<string, string>
+  reason_code: string | null
+  detail: string | null
+}
+
+/** Mirror of app/results.py::StorySummaryResult — the user-initiated "where your
+ *  package stands" summary over the selected pathway's deterministic slot states.
+ *  Display-only; `summary`/`detail` are empty on a "failed" status. */
+export interface StorySummaryResult {
+  status: 'ok' | 'failed'
+  summary: string
+  detail: string[]
+  reason_code: string | null
 }
 
 export interface MeResult {

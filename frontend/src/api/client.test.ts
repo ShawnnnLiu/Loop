@@ -164,6 +164,44 @@ describe('api client request handling', () => {
     })
   })
 
+  it('pathwayFitNotes posts the draft profile and storySummary posts an empty body (NP-F)', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(200, { status: 'ok', registry_version: 'v1', notes: { a: 'note a' }, reason_code: null, detail: null }))
+      .mockResolvedValueOnce(jsonResponse(200, { status: 'ok', summary: 'Taking shape.', detail: ['Depth is backed.'], reason_code: null }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const notes = await api.pathwayFitNotes({ track: 'swe' })
+    const summary = await api.storySummary()
+
+    expect(notes.notes.a).toBe('note a')
+    expect(summary.summary).toBe('Taking shape.')
+    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/pathways/fit-notes', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ track: 'swe' }),
+    })
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/story-summary', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    })
+  })
+
+  it('pathwayFitNotes surfaces an LLM failure as a normal result (status failed)', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse(200, { status: 'failed', registry_version: 'v1', notes: {}, reason_code: 'LLM_CALL_FAILED', detail: 'boom' })),
+    )
+
+    const notes = await api.pathwayFitNotes()
+
+    expect(notes.status).toBe('failed')
+    expect(notes.notes).toEqual({})
+  })
+
   it('reconcile posts an empty body and returns the typed reconciliation result', async () => {
     const fetchMock = vi.fn(async () =>
       jsonResponse(200, { run_id: 'run_1', outcome: 'sync_disabled', deltas: [] }),

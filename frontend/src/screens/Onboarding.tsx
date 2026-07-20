@@ -212,6 +212,9 @@ export function OnboardingScreen({ me }: { me: MeResult }) {
   const [pathways, setPathways] = useState<PathwaysResult | null>(null)
   const [pathwaysLoading, setPathwaysLoading] = useState(false)
   const [pathwaysError, setPathwaysError] = useState<string | null>(null)
+  // Supplementary LLM fit notes (NP-F) over the draft evidence — fetched after
+  // the deterministic cards so they never block them; a failure just omits them.
+  const [fitNotes, setFitNotes] = useState<Record<string, string>>({})
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -284,9 +287,11 @@ export function OnboardingScreen({ me }: { me: MeResult }) {
   function loadPathways() {
     setPathwaysLoading(true)
     setPathwaysError(null)
+    setFitNotes({})
     const tz = form.timezone.trim() || browserTimezone() || 'UTC'
+    const draftProfile = buildPayload(form, tz).user_profile
     api
-      .previewPathways({ user_profile: buildPayload(form, tz).user_profile })
+      .previewPathways({ user_profile: draftProfile })
       .then((result) => {
         setPathways(result)
         setPathwaysLoading(false)
@@ -296,6 +301,10 @@ export function OnboardingScreen({ me }: { me: MeResult }) {
         setPathwaysError(errorMessage(err))
         setPathwaysLoading(false)
       })
+    api
+      .pathwayFitNotes({ user_profile: draftProfile })
+      .then((res) => setFitNotes(res.status === 'ok' ? res.notes : {}))
+      .catch(() => setFitNotes({}))
   }
 
   const selectPathway = (pathwayId: string, registryVersion: string) => {
@@ -999,6 +1008,7 @@ export function OnboardingScreen({ me }: { me: MeResult }) {
                 key={card.pathway_id}
                 card={{ ...card, selected: card.pathway_id === form.pathway_id }}
                 experienceTitles={experienceTitles}
+                fitNote={fitNotes[card.pathway_id]}
                 onSelect={() => selectPathway(card.pathway_id, pathways.registry_version)}
               />
             ))}

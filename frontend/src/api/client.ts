@@ -10,6 +10,8 @@ import type {
   EvidenceVocabularyResult,
   ExtractResumePayload,
   ExtractResumeResult,
+  FitNotesPayload,
+  FitNotesResult,
   MeResult,
   OnboardPayload,
   OnboardResult,
@@ -21,6 +23,7 @@ import type {
   RecommitResult,
   RollbackResult,
   StatusResult,
+  StorySummaryResult,
   ThresholdsResult,
   TodayResult,
   WeeklyCheckinResult,
@@ -121,6 +124,15 @@ export const api = {
     kind: EvidenceKind
     theme_tags: string[]
   }) => request<MeResult>('POST', '/evidence', item),
+  // Story-layer LLM prose (NP-F), display-only — it decorates the deterministic
+  // pathway coverage, never re-ranks it. `pathwayFitNotes` is one batched call
+  // for the top cards' fit notes (draft-aware body like previewPathways; an LLM
+  // failure is a 200 with status "failed", inspected not caught). `storySummary`
+  // is the user-initiated "where your package stands" note over the selected
+  // pathway (409 when nothing is selected). Neither persists.
+  pathwayFitNotes: (payload: FitNotesPayload = {}) =>
+    request<FitNotesResult>('POST', '/pathways/fit-notes', payload),
+  storySummary: () => request<StorySummaryResult>('POST', '/story-summary', {}),
   propose: (body: ProposeRequest = {}) => request<ProposeResult>('POST', '/propose', body),
   // Approval gate (F-F). `approve` records the explicit decision and mints the
   // approval_event_id + hash the write requires; `write` is the only call that

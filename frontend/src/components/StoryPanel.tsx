@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { ApiError, api, errorMessage } from '../api/client'
-import type { EvidenceKind, PathwaysResult, UserProfile } from '../api/types'
+import type { EvidenceKind, PathwaysResult, StorySummaryResult, UserProfile } from '../api/types'
 import { EVIDENCE_KINDS } from '../api/types'
 import { MAX_THEME_TAGS } from '../lib/intake'
 import { kindLabel } from '../lib/story'
@@ -36,8 +36,15 @@ export function StoryPanel() {
   const [pathways, setPathways] = useState<PathwaysResult | null>(null)
   const [themes, setThemes] = useState<string[]>([])
   const [experienceTitles, setExperienceTitles] = useState<string[]>([])
+  const [fitNotes, setFitNotes] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Story summary (NP-F): user-initiated, display-only. Kept out of `load` so a
+  // slow LLM call never blocks the deterministic panel; cleared on reload.
+  const [summary, setSummary] = useState<StorySummaryResult | null>(null)
+  const [summaryBusy, setSummaryBusy] = useState(false)
+  const [summaryError, setSummaryError] = useState<string | null>(null)
 
   const [form, setForm] = useState<EvidenceForm>(EMPTY_FORM)
   const [adding, setAdding] = useState(false)
@@ -46,6 +53,8 @@ export function StoryPanel() {
 
   function load(initial = false) {
     if (initial) setLoading(true)
+    setSummary(null) // stale evidence => stale summary; the user re-requests it
+    setSummaryError(null)
     Promise.all([api.pathways(), api.evidenceVocabulary(), api.me()])
       .then(([p, vocab, me]) => {
         setPathways(p)
@@ -58,6 +67,25 @@ export function StoryPanel() {
         setError(errorMessage(err))
         setLoading(false)
       })
+    // Fit notes are supplementary LLM prose over the stored profile: fetched
+    // separately so the deterministic cards never wait on them, and a failure
+    // just leaves the cards note-less.
+    api
+      .pathwayFitNotes()
+      .then((res) => setFitNotes(res.status === 'ok' ? res.notes : {}))
+      .catch(() => setFitNotes({}))
+  }
+
+  async function refreshSummary() {
+    setSummaryBusy(true)
+    setSummaryError(null)
+    try {
+      setSummary(await api.storySummary())
+    } catch (err) {
+      if (!(err instanceof ApiError && err.status === 401)) setSummaryError(errorMessage(err))
+    } finally {
+      setSummaryBusy(false)
+    }
   }
 
   useEffect(() => {
@@ -153,7 +181,12 @@ export function StoryPanel() {
             plan around the gaps).
           </p>
           {(pathways?.cards ?? []).map((card) => (
-            <PathwayCardView key={card.pathway_id} card={card} experienceTitles={experienceTitles} />
+            <PathwayCardView
+              key={card.pathway_id}
+              card={card}
+              experienceTitles={experienceTitles}
+              fitNote={fitNotes[card.pathway_id]}
+            />
           ))}
         </>
       ) : (
@@ -162,7 +195,48 @@ export function StoryPanel() {
             Your pillars fill from confirmed evidence only. Finishing study tasks never claims an
             artifact — mark a pillar filled here when you actually have the work to show.
           </p>
-          <PathwayCardView card={selected} experienceTitles={experienceTitles} />
+          <PathwayCardView card={selected} experienceTitles={experienceTitles} fitNote={fitNotes[selected.pathway_id]} />
+
+          <div className="card" style={{ marginTop: 12, padding: '12px 16px' }}>
+            <div className="row" style={{ justifyContent: 'space-between', alignItems: 'baseline', gap: 10 }}>
+              <span className="label">Where your package stands</span>
+              <button
+                className="btn btn-quiet sm"
+                type="button"
+                disabled={summaryBusy}
+                onClick={() => void refreshSummary()}
+              >
+                {summaryBusy ? 'Writing…' : summary ? 'Refresh' : 'Summarize'}
+              </button>
+            </div>
+            {summary?.status === 'ok' && summary.summary && (
+              <>
+                <p style={{ fontSize: 13.5, marginTop: 8, lineHeight: 1.5 }}>{summary.summary}</p>
+                {summary.detail.length > 0 && (
+                  <ul className="muted" style={{ fontSize: 12.5, marginTop: 6, paddingLeft: 18, lineHeight: 1.5 }}>
+                    {summary.detail.map((line, i) => (
+                      <li key={i}>{line}</li>
+                    ))}
+                  </ul>
+                )}
+              </>
+            )}
+            {summary?.status === 'failed' && (
+              <p className="muted" style={{ fontSize: 12.5, marginTop: 8 }}>
+                Couldn&rsquo;t write a summary just now — your pillars above are unaffected. Try again in a moment.
+              </p>
+            )}
+            {summaryError && (
+              <div className="banner-error" style={{ marginTop: 8 }}>
+                {summaryError}
+              </div>
+            )}
+            {!summary && !summaryError && !summaryBusy && (
+              <p className="muted" style={{ fontSize: 12.5, marginTop: 8, lineHeight: 1.5 }}>
+                A short written recap of your package, from the pillars above. Generated only when you ask.
+              </p>
+            )}
+          </div>
 
           {!adding ? (
             <button className="btn btn-primary sm" type="button" style={{ marginTop: 12 }} onClick={() => setAdding(true)}>

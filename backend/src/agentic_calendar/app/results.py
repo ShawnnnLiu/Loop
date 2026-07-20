@@ -176,6 +176,44 @@ class EvidenceVocabularyResult(BaseModel):
     themes: list[str] = Field(default_factory=list)
 
 
+class FitNotesResult(BaseModel):
+    """Batched LLM fit notes for the top pathway cards (NP-F).
+
+    Display-only prose that *decorates* the deterministic ``pathways_view``
+    ranking — it participates in no card ordering or slot state. ``notes`` maps
+    ``pathway_id`` -> the 2-3 sentence note (present only for the top N cards the
+    batch covered). An LLM failure is a normal ``status="failed"`` result with a
+    typed ``reason_code`` (HTTP 200, like résumé extraction) so the UI degrades
+    to no notes; the cards themselves are always kernel-computed and never
+    blocked on this call.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    status: Literal["ok", "failed"] = "ok"
+    registry_version: str
+    notes: dict[str, str] = Field(default_factory=dict)
+    reason_code: ReasonCode | None = None
+    detail: str | None = None
+
+
+class StorySummaryResult(BaseModel):
+    """User-initiated "where your package stands" summary (NP-F).
+
+    Display-only prose over the selected pathway's deterministic slot states.
+    ``summary`` / ``detail`` are the node's prose (empty on failure); an LLM
+    failure is a ``status="failed"`` result carrying the typed ``reason_code``
+    (HTTP 200). Nothing is persisted — the client holds it for the session.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    status: Literal["ok", "failed"] = "ok"
+    summary: str = ""
+    detail: list[str] = Field(default_factory=list)
+    reason_code: ReasonCode | None = None
+
+
 class ProposeResult(BaseModel):
     """Outcome of one propose (or replan-continuation) pipeline run."""
 

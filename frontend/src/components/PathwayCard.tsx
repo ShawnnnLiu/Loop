@@ -3,14 +3,16 @@ import { SLOT_STATE_LABEL, fitLine, matchedTitles, slotStateTone } from '../lib/
 
 // One narrative pathway rendered as a card (NP-E), shared by the onboarding
 // "Your story" step, the Progress story panel, and the Tuning change-pathway
-// list. Everything shown here is deterministic: the fit line is the kernel's
-// honest "n of m pillars" count (never a score), slot states come straight from
-// slot_coverage, and the matched item titles name *why* a pillar is filled. No
-// LLM fit note yet — that is NP-F.
+// list. Everything structural here is deterministic: the fit line is the
+// kernel's honest "n of m pillars" count (never a score), slot states come
+// straight from slot_coverage, and the matched item titles name *why* a pillar
+// is filled. The optional `fitNote` (NP-F) is LLM prose fetched separately; it
+// only decorates the card — the card renders and ranks fine without it.
 
 export function PathwayCardView({
   card,
   experienceTitles = [],
+  fitNote,
   onSelect,
   selectLabel = 'Choose this story',
   busy = false,
@@ -18,6 +20,10 @@ export function PathwayCardView({
   card: PathwayCard
   /** Stored evidence titles, so filled pillars can name their items. */
   experienceTitles?: string[]
+  /** Optional LLM fit note (NP-F): 2-3 sentences on how existing evidence
+   *  carries this story's pillars. Display-only; absent until it loads (or if
+   *  the call fails). */
+  fitNote?: string
   /** When provided, renders a select control; omit for a read-only card. */
   onSelect?: () => void
   selectLabel?: string
@@ -43,6 +49,20 @@ export function PathwayCardView({
       <div className="muted" style={{ fontSize: 12.5, marginTop: 2 }}>
         For: {card.audience_note}
       </div>
+
+      {fitNote && (
+        <p
+          style={{
+            fontSize: 12.5,
+            marginTop: 10,
+            lineHeight: 1.5,
+            fontStyle: 'italic',
+            color: 'var(--ink-soft, inherit)',
+          }}
+        >
+          {fitNote}
+        </p>
+      )}
 
       <div className="col" style={{ gap: 6, marginTop: 12 }}>
         {card.slots.map((slot) => {

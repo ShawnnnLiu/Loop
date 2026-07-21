@@ -32,7 +32,11 @@ uses to gate the output. All fields have spec defaults, so `{}` is valid.
       "gap_module_hint": "Write up one project as a technical narrative"
     }
   ],
-  "max_slot_modules": 3
+  "max_slot_modules": 3,
+  "knowledge_nodes": [
+    { "node_id": "kn-rag", "title": "Retrieval fundamentals" },
+    { "node_id": "kn-embeddings", "title": "Embeddings" }
+  ]
 }
 ```
 
@@ -47,10 +51,12 @@ uses to gate the output. All fields have spec defaults, so `{}` is valid.
 | `pathway_id` | The selected pathway (default absent = no pathway shaping; narrative-pathways NP-A) |
 | `unfilled_slots` | List of `{slot_id, title, gap_module_hint}` computed deterministically by the `narrative/` kernel from confirmed evidence - the Strategist is told the gaps, never asked to find them (default empty) |
 | `max_slot_modules` | Upper bound on slot-linked modules per syllabus (`> 0`, `<= 10`; default 3; heuristic prior) |
+| `knowledge_nodes` | The closed skill-node vocabulary the Strategist may tag modules against (`{node_id, title}`; narrative-pathways KT-C). The account's *pathway content* only - generated skill nodes plus taxonomy-anchored additions - projected by the composition root onto the account's knowledge map. `title` is a curated taxonomy display name, never user free text; personal custom content never appears here (the injection wall, `06-knowledge-tree.md`). A module tags the skills it trains via `SyllabusModule.knowledge_node_ids` (`syllabus-units.schema.md`), and the deterministic gate rejects any tag outside this vocabulary as `UNKNOWN_KNOWLEDGE_NODE`. Default empty (no selection = no map = today's bundle). |
 
 The composition root fills the pathway fields from the profile's
-`pathway_selection` (NP-D); a profile without a selection produces the
-defaults, and the constraint bundle is byte-identical to today's.
+`pathway_selection` (NP-D) and the knowledge vocabulary from the account's
+knowledge map plus overlay additions (KT-C); a profile without a selection
+produces the defaults, and the constraint bundle is byte-identical to today's.
 
 ## Invariants
 
@@ -60,6 +66,9 @@ defaults, and the constraint bundle is byte-identical to today's.
 - `unfilled_slots` requires `pathway_id`: a non-empty gap list with no
   selected pathway is contradictory and rejected.
 - `unfilled_slots[].slot_id` values are unique.
+- `knowledge_nodes` requires `pathway_id`: a vocabulary with no selected
+  pathway is contradictory and rejected (a map requires a selection).
+- `knowledge_nodes[].node_id` values are unique and match `^kn-[a-z0-9-]+$`.
 - Unknown fields are rejected (`extra="forbid"`).
 
 ## Invalid Examples
@@ -85,6 +94,14 @@ Reason: duplicate priority values.
 ```
 
 Reason: `unfilled_slots` without `pathway_id`.
+
+```json
+{
+  "knowledge_nodes": [{ "node_id": "kn-rag", "title": "Retrieval fundamentals" }]
+}
+```
+
+Reason: `knowledge_nodes` without `pathway_id`.
 
 ## Related Docs
 

@@ -200,7 +200,8 @@
         "company_module_missing_claim",
         "pathway_not_selected",
         "unknown_evidence_slot",
-        "slot_module_limit_exceeded"
+        "slot_module_limit_exceeded",
+        "unknown_knowledge_node"
       ],
       "title": "ViolationType",
       "type": "string"

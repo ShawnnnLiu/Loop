@@ -11,6 +11,7 @@ computes over whichever template it is handed.
 
 from __future__ import annotations
 
+from .account_map import pathway_node_vocabulary
 from .coverage import (
     PathwayFit,
     SlotCoverage,
@@ -46,6 +47,7 @@ __all__ = [
     "generate_map",
     "map_state",
     "pathway_fit",
+    "pathway_node_vocabulary",
     "slot_coverage",
     "story_progress",
 ]

@@ -55,9 +55,15 @@ class MapGenerationError(AgenticCalendarError):
         super().__init__(f"{reason_code.value}: {detail}")
 
 
-def _node_id_for(skill_id: str) -> str:
+def node_id_for(skill_id: str) -> str:
     """``skill.rag`` -> ``kn-rag`` (``07-…`` step 5). Skill ids are already
-    ``[a-z0-9-]`` after the ``skill.`` prefix, so the result matches ``^kn-``."""
+    ``[a-z0-9-]`` after the ``skill.`` prefix, so the result matches ``^kn-``.
+
+    The single source of truth for the generated node id of a skill: the
+    generator uses it, and the runtime account-map projection (KT-C) reuses it so
+    a taxonomy-anchored ``NodeAddition`` lands on the same node id the committed
+    map would have used had the skill been seeded.
+    """
     return "kn-" + skill_id.removeprefix("skill.")
 
 
@@ -118,7 +124,7 @@ def generate_map(
                     f"{template.pathway_id}: grouping skill {entry.skill_id!r} does "
                     f"not resolve against taxonomy {taxonomy.taxonomy_version}",
                 )
-            node_id = _node_id_for(entry.skill_id)
+            node_id = node_id_for(entry.skill_id)
             skill_nodes.append(
                 KnowledgeNode(
                     node_id=node_id,

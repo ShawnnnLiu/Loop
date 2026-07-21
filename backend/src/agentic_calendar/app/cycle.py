@@ -103,7 +103,11 @@ from agentic_calendar.contracts.recommitment import RecommitmentChoice, Recommit
 from agentic_calendar.contracts.resume_intake_input import ResumeIntakeInput
 from agentic_calendar.contracts.scheduler_output import SchedulerOutput, ScheduleStatus
 from agentic_calendar.contracts.sponsor import SponsorStatus
-from agentic_calendar.contracts.strategy_constraints import StrategyConstraints, UnfilledSlot
+from agentic_calendar.contracts.strategy_constraints import (
+    KnowledgeNodeRef,
+    StrategyConstraints,
+    UnfilledSlot,
+)
 from agentic_calendar.contracts.syllabus_units import SyllabusUnits
 from agentic_calendar.contracts.task_disposition import (
     DispositionSource,
@@ -139,7 +143,11 @@ from agentic_calendar.llm_nodes.user_facing_explanation import (
     StorySummaryRequest,
     UserExplanation,
 )
-from agentic_calendar.narrative import SlotState, slot_coverage
+from agentic_calendar.narrative import (
+    SlotState,
+    pathway_node_vocabulary,
+    slot_coverage,
+)
 from agentic_calendar.planning.diff import (
     PlanContentDiff,
     as_plan_diff,
@@ -175,6 +183,7 @@ from agentic_calendar.templates import (
     PATHWAY_REGISTRY_VERSION,
     get_pathway,
     is_theme_in_vocabulary,
+    knowledge_map_for,
     list_pathways,
     pathways_for_track,
     theme_vocabulary,
@@ -674,9 +683,43 @@ class CycleService:
             if slot.slot_id not in filled
         ]
         constraints = StrategyConstraints(
-            pathway_id=template.pathway_id, unfilled_slots=unfilled
+            pathway_id=template.pathway_id,
+            unfilled_slots=unfilled,
+            knowledge_nodes=self._knowledge_node_vocabulary(profile, template),
         )
         return constraints, template
+
+    def _knowledge_node_vocabulary(
+        self, profile: UserProfile, template: PathwayTemplate
+    ) -> list[KnowledgeNodeRef]:
+        """The account's pathway-content skill nodes as a Strategist vocabulary.
+
+        The selected pathway's committed knowledge map (skill nodes) plus the
+        account's taxonomy-anchored ``NodeAddition``s (KT-C), each resolved to its
+        ``(node_id, title)``. Personal custom content is excluded categorically -
+        it never enters a prompt (the ``06-…`` injection wall). Empty when the
+        pathway has no committed map, so the constraint bundle stays valid.
+        """
+        generated_map = knowledge_map_for(template.pathway_id)
+        if generated_map is None:
+            return []
+        additions = self._env.knowledge_overlay_store.node_additions_for_user(
+            profile.user_id
+        )
+        registry = self._taxonomy_registry()
+        display_names = {
+            skill_id: entry.display_name
+            for skill_id in {a.skill_id for a in additions}
+            if (entry := registry.by_id(skill_id)) is not None
+        }
+        return [
+            KnowledgeNodeRef(node_id=node_id, title=title)
+            for node_id, title in pathway_node_vocabulary(
+                generated_map,
+                additions=additions,
+                display_names=display_names,
+            )
+        ]
 
     # ------------------------------------------------------------------ #
     # propose
@@ -781,6 +824,13 @@ class CycleService:
         max_slot_modules = (
             constraints.max_slot_modules if constraints is not None else 3
         )
+        # The gate's allowed set is exactly the vocabulary the Strategist was
+        # handed (KT-C), so prompt and gate can never drift.
+        knowledge_node_ids = (
+            [n.node_id for n in constraints.knowledge_nodes]
+            if constraints is not None
+            else []
+        )
 
         syllabus: SyllabusUnits | None = None
         for attempt in range(MAX_REPAIR_ATTEMPTS_LLM + 1):
@@ -801,6 +851,7 @@ class CycleService:
                 run_id=run.run_id,
                 selected_pathway=selected_pathway,
                 max_slot_modules=max_slot_modules,
+                knowledge_node_ids=knowledge_node_ids,
                 repair_attempt=attempt,
             )
             if result.valid:

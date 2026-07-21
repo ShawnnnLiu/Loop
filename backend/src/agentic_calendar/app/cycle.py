@@ -166,6 +166,7 @@ from agentic_calendar.narrative import (
     NodeCompletion,
     SlotState,
     map_state,
+    mastery_memory,
     merge_additions,
     node_id_for,
     pathway_node_vocabulary,
@@ -764,12 +765,46 @@ class CycleService:
             for slot in template.evidence_slots
             if slot.slot_id not in filled
         ]
+        vocabulary = self._knowledge_node_vocabulary(profile, template)
+        mastered, review = self._mastery_slice(profile, vocabulary)
         constraints = StrategyConstraints(
             pathway_id=template.pathway_id,
             unfilled_slots=unfilled,
-            knowledge_nodes=self._knowledge_node_vocabulary(profile, template),
+            knowledge_nodes=vocabulary,
+            mastered_node_ids=mastered,
+            review_node_ids=review,
         )
         return constraints, template
+
+    def _mastery_slice(
+        self, profile: UserProfile, vocabulary: list[KnowledgeNodeRef]
+    ) -> tuple[list[str], list[str]]:
+        """The account's mastered / review-flagged node ids for the slice (MM-C).
+
+        Folds the account's overlay records plus projected completion telemetry
+        into skill mastery (:func:`narrative.mastery_memory`) so a fresh
+        generation stops re-assigning honed skills and bounds review of
+        low-confidence ones. The result is intersected with ``vocabulary`` (the
+        Strategist's ``knowledge_nodes``) so every projected id resolves to the
+        account map - the composition-time guarantee the ``StrategyConstraints``
+        subset invariant also enforces. Sorted for a deterministic bundle.
+        """
+        account = self._account_map(profile)
+        if account.map is None:
+            return [], []
+        env = self._env
+        user_id = profile.user_id
+        memory = mastery_memory(
+            account.map,
+            grants=env.knowledge_overlay_store.mastery_grants_for_user(user_id),
+            setpoints=env.knowledge_overlay_store.setpoints_for_user(user_id),
+            completions=self._completed_minutes_by_node(profile),
+            tuning=env.tuning.mastery,
+        )
+        allowed = {ref.node_id for ref in vocabulary}
+        mastered = sorted(memory.mastered_node_ids & allowed)
+        review = sorted(memory.review_node_ids & allowed)
+        return mastered, review
 
     def _knowledge_node_vocabulary(
         self, profile: UserProfile, template: PathwayTemplate
@@ -1560,6 +1595,22 @@ class CycleService:
             if constraints is not None
             else []
         )
+        # Mastery slice (MM-C): the same mastered / review ids + review bounds the
+        # Strategist was told, so the output gate disposes exactly what the prompt
+        # was asked to respect. Absent a selection ⇒ empty lists ⇒ no review
+        # module can form ⇒ byte-identical to today.
+        mastered_node_ids = (
+            list(constraints.mastered_node_ids) if constraints is not None else []
+        )
+        review_node_ids = (
+            list(constraints.review_node_ids) if constraints is not None else []
+        )
+        max_review_modules = (
+            constraints.max_review_modules if constraints is not None else 2
+        )
+        max_review_minutes = (
+            constraints.max_review_minutes if constraints is not None else 60
+        )
 
         syllabus: SyllabusUnits | None = None
         for attempt in range(MAX_REPAIR_ATTEMPTS_LLM + 1):
@@ -1581,6 +1632,10 @@ class CycleService:
                 selected_pathway=selected_pathway,
                 max_slot_modules=max_slot_modules,
                 knowledge_node_ids=knowledge_node_ids,
+                mastered_node_ids=mastered_node_ids,
+                review_node_ids=review_node_ids,
+                max_review_modules=max_review_modules,
+                max_review_minutes=max_review_minutes,
                 repair_attempt=attempt,
             )
             if result.valid:

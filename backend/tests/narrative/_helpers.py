@@ -126,21 +126,32 @@ def slot_linked_syllabus(slot_ids: list[str | None]) -> SyllabusUnits:
 
 def node_tagged_syllabus(tag_lists: list[list[str]]) -> SyllabusUnits:
     """A syllabus whose modules tag the given ``knowledge_node_ids`` (KT-C)."""
-    modules = [
-        SyllabusModule(
-            module_id=f"m{i}",
-            title=f"Module {i}",
-            priority=Priority.MEDIUM,
-            reason=None,
-            target_outcomes=["outcome"],
-            estimated_total_min=60,
-            difficulty=2,
-            knowledge_node_ids=tags,
-        )
-        for i, tags in enumerate(tag_lists)
-    ]
+    return mastery_tagged_syllabus([(tags, 60) for tags in tag_lists])
+
+
+def mastery_tagged_syllabus(
+    modules: list[tuple[list[str], int]],
+) -> SyllabusUnits:
+    """A syllabus of ``(knowledge_node_ids, estimated_total_min)`` modules (MM-C).
+
+    Lets a test set both a module's tags and its minutes, which the mastery
+    output gate reads together (an all-mastered module over the minutes cap is a
+    ``MASTERY_REVIEW_BOUND_EXCEEDED``).
+    """
     return SyllabusUnits(
         syllabus_version="syllabus-v1",
         goal_summary="Test goal.",
-        modules=modules,
+        modules=[
+            SyllabusModule(
+                module_id=f"m{i}",
+                title=f"Module {i}",
+                priority=Priority.MEDIUM,
+                reason=None,
+                target_outcomes=["outcome"],
+                estimated_total_min=minutes,
+                difficulty=2,
+                knowledge_node_ids=tags,
+            )
+            for i, (tags, minutes) in enumerate(modules)
+        ],
     )

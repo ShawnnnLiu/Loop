@@ -203,7 +203,9 @@
         "pathway_not_selected",
         "unknown_evidence_slot",
         "slot_module_limit_exceeded",
-        "unknown_knowledge_node"
+        "unknown_knowledge_node",
+        "mastery_review_bound_exceeded",
+        "review_module_limit_exceeded"
       ],
       "title": "ViolationType",
       "type": "string"

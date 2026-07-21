@@ -99,6 +99,14 @@ USER_FACING: dict[ViolationType, str] = {
         "A module was tagged with a skill that isn't on your knowledge map. "
         "Unlinking it."
     ),
+    ViolationType.MASTERY_REVIEW_BOUND_EXCEEDED: (
+        "A review of skills you've already mastered ran too long. "
+        "Shortening it to a quick refresher."
+    ),
+    ViolationType.REVIEW_MODULE_LIMIT_EXCEEDED: (
+        "The plan spent too much time reviewing skills you already have. "
+        "Trimming the review to make room for new work."
+    ),
 }
 
 

@@ -117,3 +117,64 @@ def check_knowledge_node_tags(
                     )
                 )
     return violations
+
+
+def check_mastery_review(
+    syllabus: SyllabusUnits,
+    *,
+    mastered_node_ids: Collection[str],
+    review_node_ids: Collection[str],
+    max_review_modules: int,
+    max_review_minutes: int,
+) -> list[Violation]:
+    """Return mastery-review-bound violations for ``syllabus`` (MM-C).
+
+    The deterministic output gate for the ``StrategyConstraints`` mastery slice
+    (``08-mastery-memory.md``). A module whose ``knowledge_node_ids`` are
+    *non-empty and all* mastered or review-flagged is a **review module**: old
+    skills the user has, revisited briefly, not re-studied at full length. Two
+    bounds hold:
+
+    * each review module's ``estimated_total_min`` must be
+      ``<= max_review_minutes`` → else ``MASTERY_REVIEW_BOUND_EXCEEDED``;
+    * the count of review modules must be ``<= max_review_modules`` → else
+      ``REVIEW_MODULE_LIMIT_EXCEEDED``.
+
+    A **mixed** module (any tag outside the mastered/review sets) is legitimate
+    and unbounded - new work naturally touches old skills. An **untagged** module
+    is never a review module (the mastery instruction is advisory; only
+    all-mastered modules are review-bounded). With both sets empty (no mastery
+    data) nothing is a review module, so this is inert - today's behavior.
+
+    ``mastered_node_ids`` / ``review_node_ids`` / the bounds come from the same
+    ``StrategyConstraints`` the composition root handed the Strategist, so the
+    gate disposes exactly what the prompt was told to respect.
+    """
+    review_targets = frozenset(mastered_node_ids) | frozenset(review_node_ids)
+    violations: list[Violation] = []
+    review_module_count = 0
+    for module in syllabus.modules:
+        tags = module.knowledge_node_ids
+        if not tags or not all(node_id in review_targets for node_id in tags):
+            continue
+        review_module_count += 1
+        if module.estimated_total_min > max_review_minutes:
+            violations.append(
+                make_violation(
+                    ViolationType.MASTERY_REVIEW_BOUND_EXCEEDED,
+                    module_id=module.module_id,
+                    estimated_total_min=module.estimated_total_min,
+                    max_review_minutes=max_review_minutes,
+                )
+            )
+
+    if review_module_count > max_review_modules:
+        violations.append(
+            make_violation(
+                ViolationType.REVIEW_MODULE_LIMIT_EXCEEDED,
+                review_module_count=review_module_count,
+                max_review_modules=max_review_modules,
+            )
+        )
+
+    return violations

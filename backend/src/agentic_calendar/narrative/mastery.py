@@ -19,12 +19,12 @@ Events are folded in ``created_at`` order (grants before set-points on an exact
 tie - a total, deterministic order). The honed bar is
 ``honed_fraction x expected_minutes``.
 
-Scope (KT-B): the fold covers **grants + set-points**; the *telemetry-minutes*
-term and its ``solve_confidence`` weighting are added in MM-B onto this same
-``folded_basis`` implementation. ``training`` is still surfaced here via active-
-plan linkage. ``proven`` is computed for **capstones** (evidence-slot filled);
-skill-node ``proven`` (a confirmed evidence anchor) lands with the mark-evidence
-wiring in KT-C, so skill nodes cap at ``honed`` here.
+Scope: the fold covers **grants + set-points**; the *telemetry-minutes* term and
+its ``solve_confidence`` weighting are added in MM-B onto this same
+``folded_basis`` implementation. ``training`` is surfaced via active-plan
+linkage. ``proven`` is computed for **capstones** (evidence-slot filled) and, as
+of KT-C, for **skill nodes**: honed **and** carrying an ``evidence``-source grant
+(the mark-evidence anchor - user-gated, never automatic).
 """
 
 from __future__ import annotations
@@ -32,7 +32,11 @@ from __future__ import annotations
 from collections.abc import Collection, Sequence
 from dataclasses import dataclass
 
-from agentic_calendar.contracts.common_types import KnowledgeNodeKind, MasteryTier
+from agentic_calendar.contracts.common_types import (
+    KnowledgeNodeKind,
+    MasteryGrantSource,
+    MasteryTier,
+)
 from agentic_calendar.contracts.knowledge_map import KnowledgeMap, KnowledgeNode
 from agentic_calendar.contracts.knowledge_map_overlay import (
     CustomNode,
@@ -110,7 +114,13 @@ def _skill_tier(
     basis = folded_basis(expected, grants, setpoints, tuning)
     honed_bar = tuning.honed_fraction * expected
     if expected > 0 and basis >= honed_bar:
-        return MasteryTier.HONED  # skill `proven` is evidence-gated (KT-C)
+        # A skill node is `proven` when it is honed AND a confirmed evidence item
+        # carries a matching anchor - modeled (KT-C) as an ``evidence``-source
+        # grant on the node (``06-…`` tiers; user-gated via "mark evidence",
+        # never automatic).
+        if any(g.source is MasteryGrantSource.EVIDENCE for g in grants):
+            return MasteryTier.PROVEN
+        return MasteryTier.HONED
     if basis > 0 or in_training:
         return MasteryTier.TRAINING
     return MasteryTier.DISCOVERED

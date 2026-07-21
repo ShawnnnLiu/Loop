@@ -736,3 +736,28 @@ def test_knowledge_map_crud_over_http() -> None:
     bad = client.post("/api/knowledge-map/add-node", json={"skill_id": "skill.nope"})
     assert bad.status_code == 409
     assert bad.json()["reason_code"] == "SKILL_NOT_IN_TRACK_VOCABULARY"
+
+
+def test_knowledge_map_mark_evidence_over_http() -> None:
+    client, _clock = _client()
+    client.post("/api/pathways/select", json={"pathway_id": _BACKEND})
+    view = client.get("/api/knowledge-map").json()
+    skill = next(n for n in view["nodes"] if n["kind"] == "skill")
+
+    # Before honed -> 409.
+    early = client.post(
+        "/api/knowledge-map/mark-evidence", json={"node_id": skill["node_id"]}
+    )
+    assert early.status_code == 409
+
+    # Hone it, then mark evidence -> proven.
+    client.post(
+        "/api/knowledge-map/setpoint",
+        json={"node_id": skill["node_id"], "target_tier": "honed"},
+    )
+    proven = client.post(
+        "/api/knowledge-map/mark-evidence", json={"node_id": skill["node_id"]}
+    )
+    assert proven.status_code == 200
+    node = next(n for n in proven.json()["nodes"] if n["node_id"] == skill["node_id"])
+    assert node["tier"] == "proven"

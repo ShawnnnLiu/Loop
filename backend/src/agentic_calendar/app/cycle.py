@@ -71,6 +71,7 @@ from agentic_calendar.contracts.checkin_event import CheckinEvent, RecoveryActio
 from agentic_calendar.contracts.common_types import (
     EvidenceKind,
     KnowledgeNodeKind,
+    MasteryGrantSource,
     MasteryTier,
     PersonalContentKind,
     TaskCategory,
@@ -86,6 +87,7 @@ from agentic_calendar.contracts.knowledge_map import KnowledgeMap
 from agentic_calendar.contracts.knowledge_map_overlay import (
     CustomGroup,
     CustomNode,
+    MasteryGrant,
     MasterySetPoint,
     NodeAddition,
     NodeNote,
@@ -1312,6 +1314,46 @@ class CycleService:
         if node_id not in account.valid_node_ids:
             raise CycleError(f"node {node_id!r} is not on the account's knowledge map")
         self._tombstone(user_id, PersonalContentKind.NOTE, node_id)
+        return self.knowledge_map_view(user_id)
+
+    def mark_node_evidence(self, user_id: str, *, node_id: str) -> KnowledgeMapView:
+        """Mark a honed skill node ``proven`` with a real artifact (KT-C).
+
+        The only path to skill ``proven`` (``06-…``): user-gated, never automatic.
+        Appends an ``evidence``-source :class:`MasteryGrant`, which the
+        ``map_state`` fold reads as the proven anchor. Available only on a
+        generated / added **skill** node (capstones prove via their slot; custom
+        nodes have no anchor) that is already ``honed`` - so ``proven`` stays
+        "honed **and** an artifact", never a shortcut past the work.
+        """
+        profile = self._require_onboarding(user_id).user_profile
+        account = self._require_map(profile)
+        assert account.map is not None
+        node = next(
+            (
+                n
+                for n in account.map.nodes
+                if n.node_id == node_id and n.kind is KnowledgeNodeKind.SKILL
+            ),
+            None,
+        )
+        if node is None:
+            raise CycleError(
+                f"{node_id!r} is not a skill node on the account's knowledge map"
+            )
+        if self._map_tiers(profile, account).get(node_id) not in _MASTERED_TIERS:
+            raise CycleError(
+                f"mark evidence is available once {node_id!r} is honed"
+            )
+        self._env.knowledge_overlay_store.append(
+            MasteryGrant(
+                user_id=user_id,
+                node_id=node_id,
+                credit_minutes=node.expected_minutes or 1,
+                source=MasteryGrantSource.EVIDENCE,
+                created_at=self._env.clock.now(),
+            )
+        )
         return self.knowledge_map_view(user_id)
 
     def _tombstone(

@@ -392,3 +392,47 @@ def test_delete_note_then_readd_works() -> None:
     clock.advance(minutes=1)
     again = service.upsert_note(USER_ID, node_id=skill.node_id, text="second")
     assert next(n for n in again.nodes if n.node_id == skill.node_id).note == "second"
+
+
+# --------------------------------------------------------------------------- #
+# skill-proven mark-evidence (KT-C-d)
+# --------------------------------------------------------------------------- #
+
+
+def test_mark_evidence_lifts_a_honed_skill_to_proven() -> None:
+    service = _service_with_selection()
+    skill = _first_skill(service.knowledge_map_view(USER_ID))
+    service.set_mastery(USER_ID, node_id=skill.node_id, target_tier=MasteryTier.HONED)
+    view = service.mark_node_evidence(USER_ID, node_id=skill.node_id)
+    assert (
+        next(n for n in view.nodes if n.node_id == skill.node_id).tier
+        is MasteryTier.PROVEN
+    )
+
+
+def test_mark_evidence_before_honed_is_rejected() -> None:
+    service = _service_with_selection()
+    skill = _first_skill(service.knowledge_map_view(USER_ID))
+    with pytest.raises(CycleError, match="honed"):
+        service.mark_node_evidence(USER_ID, node_id=skill.node_id)
+
+
+def test_mark_evidence_on_capstone_rejected() -> None:
+    service = _service_with_selection()
+    capstone = next(
+        n for n in service.knowledge_map_view(USER_ID).nodes if n.kind == "capstone"
+    )
+    with pytest.raises(CycleError, match="not a skill node"):
+        service.mark_node_evidence(USER_ID, node_id=capstone.node_id)
+
+
+def test_mark_evidence_proven_survives_a_downward_setpoint_on_another_node() -> None:
+    # proven is skill-keyed to its own grant; unrelated set-points don't touch it.
+    service = _service_with_selection()
+    skills = [n for n in service.knowledge_map_view(USER_ID).nodes if n.kind == "skill"]
+    a, b = skills[0], skills[1]
+    service.set_mastery(USER_ID, node_id=a.node_id, target_tier=MasteryTier.HONED)
+    service.mark_node_evidence(USER_ID, node_id=a.node_id)
+    service.set_mastery(USER_ID, node_id=b.node_id, target_tier=MasteryTier.DISCOVERED)
+    view = service.knowledge_map_view(USER_ID)
+    assert next(n for n in view.nodes if n.node_id == a.node_id).tier is MasteryTier.PROVEN

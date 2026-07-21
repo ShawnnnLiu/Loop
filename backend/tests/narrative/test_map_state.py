@@ -111,6 +111,38 @@ def test_grant_at_or_over_bar_is_honed() -> None:
     assert _skill(grants=[_grant(120, _at(1))]) is MasteryTier.HONED
 
 
+def _evidence_grant(minutes: int, at: datetime) -> MasteryGrant:
+    return MasteryGrant(
+        user_id="u1",
+        node_id="kn-a",
+        credit_minutes=minutes,
+        source=MasteryGrantSource.EVIDENCE,
+        created_at=at,
+    )
+
+
+def test_evidence_grant_at_the_bar_is_proven() -> None:
+    # honed AND an evidence-source grant (the mark-evidence anchor) -> proven.
+    assert _skill(grants=[_evidence_grant(80, _at(1))]) is MasteryTier.PROVEN
+
+
+def test_evidence_grant_below_the_bar_is_only_training() -> None:
+    # proven requires honed first; an evidence grant that doesn't reach the bar
+    # does not shortcut it.
+    assert _skill(grants=[_evidence_grant(40, _at(1))]) is MasteryTier.TRAINING
+
+
+def test_honed_by_setpoint_plus_evidence_grant_is_proven() -> None:
+    # honed can come from a set-point; the evidence grant on top marks it proven.
+    assert (
+        _skill(
+            setpoints=[_setpoint(MasteryTier.HONED, _at(1))],
+            grants=[_evidence_grant(1, _at(2))],
+        )
+        is MasteryTier.PROVEN
+    )
+
+
 def test_grants_accumulate() -> None:
     grants = [_grant(40, _at(1)), _grant(40, _at(2))]
     assert _skill(grants=grants) is MasteryTier.HONED  # 40 + 40 = 80 = bar

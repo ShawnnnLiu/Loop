@@ -140,6 +140,12 @@ class CreateCustomNodeRequest(BaseModel):
     description: str | None = None
 
 
+class NodeRefRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    node_id: str
+
+
 class SetMasteryRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -645,6 +651,17 @@ def knowledge_map_delete_note(
 ) -> JSONResponse:
     """Delete the note on a node (tombstone). Unknown node -> 409."""
     return _json(service.delete_note(user_id, node_id=node_id))
+
+
+@router.post("/knowledge-map/mark-evidence")
+def knowledge_map_mark_evidence(
+    service: Service, user_id: ActingUser, body: NodeRefRequest
+) -> JSONResponse:
+    """Mark a honed skill node ``proven`` with a real artifact (KT-C).
+
+    The only path to skill ``proven`` - user-gated, never automatic. Available
+    only on a honed generated / added skill node (409 otherwise)."""
+    return _json(service.mark_node_evidence(user_id, node_id=body.node_id))
 
 
 @router.post("/knowledge-map/add-node")

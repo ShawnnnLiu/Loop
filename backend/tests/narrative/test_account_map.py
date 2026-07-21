@@ -17,7 +17,10 @@ from agentic_calendar.contracts.knowledge_map import (
     KnowledgeNode,
 )
 from agentic_calendar.contracts.knowledge_map_overlay import NodeAddition
-from agentic_calendar.narrative import pathway_node_vocabulary
+from agentic_calendar.narrative import merge_additions, pathway_node_vocabulary
+from agentic_calendar.narrative.generation import generate_map, node_id_for
+from agentic_calendar.skill_taxonomy import load_skill_grouping, load_taxonomy
+from agentic_calendar.templates import get_pathway
 
 _T0 = datetime(2026, 7, 20, 12, 0, tzinfo=UTC)
 
@@ -102,3 +105,63 @@ def test_addition_without_display_name_is_skipped_defensively() -> None:
         _map(), additions=[_addition("skill.unknown")], display_names={}
     )
     assert [node_id for node_id, _ in vocab] == ["kn-rag", "kn-embeddings"]
+
+
+# --------------------------------------------------------------------------- #
+# merge_additions (account map = generated map + placed additions)
+# --------------------------------------------------------------------------- #
+
+_BACKEND = "backend-infrastructure-engineer"
+
+
+def _backend_map():
+    grouping = load_skill_grouping()
+    taxonomy = load_taxonomy()
+    template = get_pathway(_BACKEND)
+    assert template is not None
+    return generate_map(template, grouping, taxonomy), grouping, taxonomy
+
+
+def test_addition_lands_as_a_node_and_map_stays_valid() -> None:
+    generated, grouping, taxonomy = _backend_map()
+    on_map = {n.skill_id for n in generated.nodes if n.skill_id is not None}
+    # A skill the grouping can place that is not already on the pathway's map.
+    extra = next(e.skill_id for e in grouping.entries if e.skill_id not in on_map)
+
+    merged = merge_additions(
+        generated,
+        [_addition(extra)],
+        grouping=grouping,
+        taxonomy=taxonomy,
+    )
+    node_id = node_id_for(extra)
+    node = next(n for n in merged.nodes if n.node_id == node_id)
+    # Placed in the group its grouping row names, both-way membership (re-validated).
+    group = next(g for g in merged.groups if g.group_id == node.group_id)
+    assert node_id in group.member_node_ids
+    assert len(merged.nodes) == len(generated.nodes) + 1
+
+
+def test_duplicate_addition_is_idempotent() -> None:
+    generated, grouping, taxonomy = _backend_map()
+    extra = next(
+        e.skill_id
+        for e in grouping.entries
+        if e.skill_id not in {n.skill_id for n in generated.nodes if n.skill_id}
+    )
+    merged = merge_additions(
+        generated,
+        [_addition(extra), _addition(extra)],
+        grouping=grouping,
+        taxonomy=taxonomy,
+    )
+    assert len(merged.nodes) == len(generated.nodes) + 1
+
+
+def test_addition_of_seeded_skill_is_absorbed_not_duplicated() -> None:
+    generated, grouping, taxonomy = _backend_map()
+    already = next(n.skill_id for n in generated.nodes if n.skill_id is not None)
+    merged = merge_additions(
+        generated, [_addition(already)], grouping=grouping, taxonomy=taxonomy
+    )
+    assert len(merged.nodes) == len(generated.nodes)

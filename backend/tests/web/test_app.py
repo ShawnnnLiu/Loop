@@ -655,3 +655,57 @@ def test_extract_route_persists_nothing(tmp_path: Path) -> None:
     before = row_count()
     assert client.post("/api/onboard/extract", json=_EXTRACT_BODY).status_code == 200
     assert row_count() == before
+
+
+# --------------------------------------------------------------------------- #
+# Knowledge map (KT-C-b): read + set-point + note over HTTP
+# --------------------------------------------------------------------------- #
+
+_BACKEND = "backend-infrastructure-engineer"
+
+
+def test_knowledge_map_empty_before_selection() -> None:
+    client, _clock = _client()
+    body = client.get("/api/knowledge-map").json()
+    assert body["has_selection"] is False
+    assert body["nodes"] == []
+
+
+def test_knowledge_map_populates_after_selection_and_mutations() -> None:
+    client, _clock = _client()
+    selected = client.post("/api/pathways/select", json={"pathway_id": _BACKEND})
+    assert selected.status_code == 200
+
+    view = client.get("/api/knowledge-map").json()
+    assert view["has_selection"] is True
+    assert view["pathway_id"] == _BACKEND
+    assert view["nodes"]
+    skill = next(n for n in view["nodes"] if n["kind"] == "skill")
+
+    honed = client.post(
+        "/api/knowledge-map/setpoint",
+        json={"node_id": skill["node_id"], "target_tier": "honed"},
+    )
+    assert honed.status_code == 200
+    node = next(n for n in honed.json()["nodes"] if n["node_id"] == skill["node_id"])
+    assert node["tier"] == "honed"
+
+    noted = client.post(
+        "/api/knowledge-map/note",
+        json={"node_id": skill["node_id"], "text": "revisit this"},
+    )
+    assert noted.status_code == 200
+    node = next(n for n in noted.json()["nodes"] if n["node_id"] == skill["node_id"])
+    assert node["note"] == "revisit this"
+
+
+def test_knowledge_map_proven_setpoint_is_409() -> None:
+    client, _clock = _client()
+    client.post("/api/pathways/select", json={"pathway_id": _BACKEND})
+    view = client.get("/api/knowledge-map").json()
+    skill = next(n for n in view["nodes"] if n["kind"] == "skill")
+    resp = client.post(
+        "/api/knowledge-map/setpoint",
+        json={"node_id": skill["node_id"], "target_tier": "proven"},
+    )
+    assert resp.status_code == 409

@@ -18,7 +18,7 @@ from agentic_calendar.contracts.accountability_intervention import InterventionD
 from agentic_calendar.contracts.accountability_state import AccountabilityState
 from agentic_calendar.contracts.career_track import CareerTrack
 from agentic_calendar.contracts.checkin_event import RecoveryAction
-from agentic_calendar.contracts.common_types import EvidenceKind
+from agentic_calendar.contracts.common_types import EvidenceKind, MasteryTier
 from agentic_calendar.contracts.draft_schedule import DraftSchedule
 from agentic_calendar.contracts.drift_event import DriftEvent
 from agentic_calendar.contracts.plan_diff import PlanDiff
@@ -155,6 +155,87 @@ class PathwaysResult(BaseModel):
     registry no longer serves - surfaced for an explicit re-confirm, never
     silently re-mapped (pathway-selection spec)."""
     cards: list[PathwayCard] = Field(default_factory=list)
+
+
+class KnowledgeNodeView(BaseModel):
+    """One node on the account's knowledge map with its deterministic tier (KT-C).
+
+    ``tier`` is computed by the ``narrative/`` ``map_state`` fold over stored
+    overlay records + active-plan/coverage signals - never an LLM (axiom 00). A
+    ``skill`` node carries its taxonomy chips + blurb + the active-plan modules
+    training it; a ``capstone`` heads its branch; a ``custom`` node is the
+    personal layer (``is_personal``) and counts toward nothing.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    node_id: str
+    title: str
+    kind: Literal["skill", "capstone", "custom"]
+    tier: MasteryTier
+    group_id: str | None = None
+    branch: str | None = None
+    skill_id: str | None = None
+    expected_minutes: int | None = None
+    blurb: str | None = None
+    description: str | None = None
+    note: str | None = None
+    linked_module_ids: list[str] = Field(default_factory=list)
+    is_personal: bool = False
+
+
+class KnowledgeGroupView(BaseModel):
+    """A group waypoint: its member nodes plus honest pathway-skill counts (KT-C).
+
+    ``honed_count`` / ``total_count`` cover *pathway* skill members only - a
+    custom node inside a group counts toward nothing (``06-…``). No average, no
+    percentage: an honest "2/5 honed" chip.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    group_id: str
+    title: str
+    branch: str
+    blurb: str | None = None
+    member_node_ids: list[str] = Field(default_factory=list)
+    honed_count: int = Field(ge=0)
+    total_count: int = Field(ge=0)
+    is_personal: bool = False
+
+
+class KnowledgeBranchView(BaseModel):
+    """One evidence-slot branch: its capstone tier plus pathway-skill counts (KT-C)."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    slot_id: str
+    title: str
+    capstone_node_id: str
+    capstone_tier: MasteryTier
+    honed_count: int = Field(ge=0)
+    total_count: int = Field(ge=0)
+
+
+class KnowledgeMapView(BaseModel):
+    """The account's knowledge map: groups, nodes, tiers, and per-branch counts (KT-C).
+
+    Every tier here is reproducible by calling ``map_state`` on the stored overlay
+    records - the map is a presentation/memory layer that never gates anything
+    (axiom 11 non-interference). ``has_selection`` is false when no pathway is
+    selected (v1 requires a selection to instantiate a map, ``06-…`` d6);
+    ``version_mismatch`` surfaces a stale pin for re-confirm without re-mapping.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    has_selection: bool
+    pathway_id: str | None = None
+    registry_version: str
+    version_mismatch: bool = False
+    branches: list[KnowledgeBranchView] = Field(default_factory=list)
+    groups: list[KnowledgeGroupView] = Field(default_factory=list)
+    nodes: list[KnowledgeNodeView] = Field(default_factory=list)
 
 
 class EvidenceVocabularyResult(BaseModel):

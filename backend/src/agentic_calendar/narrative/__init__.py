@@ -11,7 +11,7 @@ computes over whichever template it is handed.
 
 from __future__ import annotations
 
-from .account_map import pathway_node_vocabulary
+from .account_map import merge_additions, pathway_node_vocabulary
 from .coverage import (
     PathwayFit,
     SlotCoverage,
@@ -46,6 +46,7 @@ __all__ = [
     "folded_basis",
     "generate_map",
     "map_state",
+    "merge_additions",
     "pathway_fit",
     "pathway_node_vocabulary",
     "slot_coverage",

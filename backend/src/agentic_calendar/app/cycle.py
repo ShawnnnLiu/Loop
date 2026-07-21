@@ -68,7 +68,12 @@ from agentic_calendar.contracts.calendar_reconciliation import (
 )
 from agentic_calendar.contracts.career_track import CareerTrack
 from agentic_calendar.contracts.checkin_event import CheckinEvent, RecoveryAction
-from agentic_calendar.contracts.common_types import EvidenceKind, TaskCategory
+from agentic_calendar.contracts.common_types import (
+    EvidenceKind,
+    KnowledgeNodeKind,
+    MasteryTier,
+    TaskCategory,
+)
 from agentic_calendar.contracts.data_access_audit import (
     DataAccessor,
     DataAccessPurpose,
@@ -76,6 +81,13 @@ from agentic_calendar.contracts.data_access_audit import (
 from agentic_calendar.contracts.draft_schedule import DraftSchedule, DraftScheduleEntry
 from agentic_calendar.contracts.drift_event import DriftEvent, RecommendedPolicyAction
 from agentic_calendar.contracts.hashing import canonical_payload_hash
+from agentic_calendar.contracts.knowledge_map import KnowledgeMap
+from agentic_calendar.contracts.knowledge_map_overlay import (
+    CustomGroup,
+    CustomNode,
+    MasterySetPoint,
+    NodeNote,
+)
 from agentic_calendar.contracts.motivation_profile import RecoveryPreference
 from agentic_calendar.contracts.notification_log import NotificationStatus
 from agentic_calendar.contracts.pathway_selection import PathwaySelection
@@ -102,6 +114,8 @@ from agentic_calendar.contracts.reason_codes import ReasonCode
 from agentic_calendar.contracts.recommitment import RecommitmentChoice, RecommitmentRequest
 from agentic_calendar.contracts.resume_intake_input import ResumeIntakeInput
 from agentic_calendar.contracts.scheduler_output import SchedulerOutput, ScheduleStatus
+from agentic_calendar.contracts.skill_grouping import SkillGrouping
+from agentic_calendar.contracts.skill_taxonomy import SkillTaxonomy
 from agentic_calendar.contracts.sponsor import SponsorStatus
 from agentic_calendar.contracts.strategy_constraints import (
     KnowledgeNodeRef,
@@ -145,8 +159,11 @@ from agentic_calendar.llm_nodes.user_facing_explanation import (
 )
 from agentic_calendar.narrative import (
     SlotState,
+    map_state,
+    merge_additions,
     pathway_node_vocabulary,
     slot_coverage,
+    story_progress,
 )
 from agentic_calendar.planning.diff import (
     PlanContentDiff,
@@ -170,6 +187,8 @@ from agentic_calendar.scheduler.policy import policy_from_user_profile
 from agentic_calendar.skill_taxonomy import (
     SkillTaxonomyRegistry,
     load_registry,
+    load_skill_grouping,
+    load_taxonomy,
     resolve,
     resolve_track,
 )
@@ -204,6 +223,10 @@ from .results import (
     ExtractResumeResult,
     FitNotesResult,
     IngestResult,
+    KnowledgeBranchView,
+    KnowledgeGroupView,
+    KnowledgeMapView,
+    KnowledgeNodeView,
     MeResult,
     OnboardResult,
     PathwayCard,
@@ -336,6 +359,39 @@ class _ReplanDecision:
         return self.kind is not None
 
 
+#: Tiers that count a skill node as "mastered" for honest group/branch counts
+#: (``06-…``: proven ⊃ honed). No average, no percentage - a "2/5 honed" chip.
+_MASTERED_TIERS = frozenset({MasteryTier.HONED, MasteryTier.PROVEN})
+
+
+@dataclass(frozen=True)
+class _AccountMap:
+    """The assembled account knowledge map (KT-C), pre-tier.
+
+    ``map`` is the generated map of the selected pathway with the account's
+    taxonomy-anchored additions merged in (``None`` when there is no live
+    selection or no committed map); ``custom_groups`` / ``custom_nodes`` are the
+    personal layer, kept separate because their ``kcg-`` / ``kcn-`` ids are not
+    ``KnowledgeMap`` content. ``valid_node_ids`` is every node the account may
+    act on - the guard for set-point / note writes.
+    """
+
+    has_selection: bool
+    version_mismatch: bool
+    template: PathwayTemplate | None
+    map: KnowledgeMap | None
+    custom_groups: list[CustomGroup]
+    custom_nodes: list[CustomNode]
+
+    @property
+    def valid_node_ids(self) -> set[str]:
+        ids: set[str] = set()
+        if self.map is not None:
+            ids |= {node.node_id for node in self.map.nodes}
+        ids |= {node.custom_node_id for node in self.custom_nodes}
+        return ids
+
+
 class CycleService:
     """Drives the full loop over one :class:`AppEnvironment`."""
 
@@ -345,6 +401,10 @@ class CycleService:
         # checked-in JSON never changes at runtime; a vocabulary change is a
         # new file version behind a new deploy).
         self._skill_registry: SkillTaxonomyRegistry | None = None
+        # The pinned skill grouping + taxonomy behind knowledge-map assembly,
+        # loaded lazily once (same rationale as the registry above).
+        self._skill_grouping: SkillGrouping | None = None
+        self._skill_taxonomy: SkillTaxonomy | None = None
 
     # ------------------------------------------------------------------ #
     # onboard
@@ -720,6 +780,340 @@ class CycleService:
                 display_names=display_names,
             )
         ]
+
+    # ------------------------------------------------------------------ #
+    # knowledge map (KT-C)
+    # ------------------------------------------------------------------ #
+
+    def _grouping(self) -> SkillGrouping:
+        if self._skill_grouping is None:
+            self._skill_grouping = load_skill_grouping()
+        return self._skill_grouping
+
+    def _taxonomy(self) -> SkillTaxonomy:
+        if self._skill_taxonomy is None:
+            self._skill_taxonomy = load_taxonomy()
+        return self._skill_taxonomy
+
+    def _account_map(self, profile: UserProfile) -> _AccountMap:
+        """Assemble the account's knowledge map from the registry + overlay store.
+
+        The selected pathway's committed map with the account's taxonomy-anchored
+        additions merged in (deterministic placement, ``06-…``), plus the personal
+        custom layer. No tiers here - ``map_state`` folds those on read
+        (:meth:`knowledge_map_view`). Returns an empty-map shell when there is no
+        live selection (``06-…`` d6: a map needs a selection).
+        """
+        store = self._env.knowledge_overlay_store
+        user_id = profile.user_id
+        template, version_mismatch = self._resolve_selection_template(profile)
+        has_selection = profile.pathway_selection is not None
+        custom_groups = store.custom_groups_for_user(user_id)
+        custom_nodes = store.custom_nodes_for_user(user_id)
+
+        generated = (
+            knowledge_map_for(template.pathway_id) if template is not None else None
+        )
+        if template is None or generated is None:
+            return _AccountMap(
+                has_selection=has_selection,
+                version_mismatch=version_mismatch,
+                template=template,
+                map=None,
+                custom_groups=custom_groups,
+                custom_nodes=custom_nodes,
+            )
+
+        merged = merge_additions(
+            generated,
+            store.node_additions_for_user(user_id),
+            grouping=self._grouping(),
+            taxonomy=self._taxonomy(),
+        )
+        return _AccountMap(
+            has_selection=True,
+            version_mismatch=version_mismatch,
+            template=template,
+            map=merged,
+            custom_groups=custom_groups,
+            custom_nodes=custom_nodes,
+        )
+
+    def _map_tiers(
+        self, profile: UserProfile, account: _AccountMap
+    ) -> dict[str, MasteryTier]:
+        """The deterministic per-node tier via ``map_state`` (KT-C)."""
+        if account.map is None or account.template is None:
+            return {}
+        env = self._env
+        user_id = profile.user_id
+        # Training signal: skill nodes trained by a module that has >= 1 task in
+        # the active plan (the map is a projection of the active plan's work).
+        training_node_ids: set[str] = set()
+        syllabus = env.state.get_syllabus(user_id)
+        active = env.plan_store.get_active(user_id)
+        if syllabus is not None and active is not None:
+            active_module_ids = {task.module_id for task in active.plan.tasks}
+            for module in syllabus.modules:
+                if module.module_id in active_module_ids:
+                    training_node_ids.update(module.knowledge_node_ids)
+        # Coverage signals: filled slots (confirmed evidence) + in-progress slots
+        # (an active-plan module links the slot) - the capstone tier basis.
+        coverage = slot_coverage(profile, account.template)
+        filled_slot_ids = {c.slot_id for c in coverage if c.state is SlotState.FILLED}
+        in_progress_slot_ids: set[str] = set()
+        if syllabus is not None:
+            in_progress_slot_ids = {
+                p.slot_id
+                for p in story_progress(profile, syllabus, account.template)
+                if p.in_progress
+            }
+        return map_state(
+            account.map,
+            grants=env.knowledge_overlay_store.mastery_grants_for_user(user_id),
+            setpoints=env.knowledge_overlay_store.setpoints_for_user(user_id),
+            custom_nodes=account.custom_nodes,
+            training_node_ids=training_node_ids,
+            filled_slot_ids=filled_slot_ids,
+            in_progress_slot_ids=in_progress_slot_ids,
+            tuning=env.tuning.mastery,
+        )
+
+    def knowledge_map_view(self, user_id: str) -> KnowledgeMapView:
+        """The account's knowledge map with deterministic tiers (KT-C).
+
+        Read-only projection: structure from the registry + append-only overlay,
+        tiers from the ``map_state`` fold - no LLM, reproducible by calling the
+        kernel on stored data (axiom 00 / 11). Personal custom content renders as
+        a separate layer and counts toward nothing.
+        """
+        profile = self._require_onboarding(user_id).user_profile
+        account = self._account_map(profile)
+        if account.map is None:
+            return KnowledgeMapView(
+                has_selection=account.has_selection,
+                pathway_id=(
+                    profile.pathway_selection.pathway_id
+                    if profile.pathway_selection is not None
+                    else None
+                ),
+                registry_version=PATHWAY_REGISTRY_VERSION,
+                version_mismatch=account.version_mismatch,
+            )
+
+        tiers = self._map_tiers(profile, account)
+        notes = self._latest_notes(user_id)
+        linked = self._linked_modules(user_id)
+        skill_tiers = {
+            n.node_id: tiers.get(n.node_id, MasteryTier.DISCOVERED)
+            for n in account.map.nodes
+            if n.kind is KnowledgeNodeKind.SKILL
+        }
+
+        nodes: list[KnowledgeNodeView] = []
+        for node in account.map.nodes:
+            if node.kind is KnowledgeNodeKind.SKILL:
+                nodes.append(
+                    KnowledgeNodeView(
+                        node_id=node.node_id,
+                        title=node.title,
+                        kind="skill",
+                        tier=tiers.get(node.node_id, MasteryTier.DISCOVERED),
+                        group_id=node.group_id,
+                        skill_id=node.skill_id,
+                        expected_minutes=node.expected_minutes,
+                        blurb=node.blurb,
+                        note=notes.get(node.node_id),
+                        linked_module_ids=linked.get(node.node_id, []),
+                    )
+                )
+            else:  # capstone
+                nodes.append(
+                    KnowledgeNodeView(
+                        node_id=node.node_id,
+                        title=node.title,
+                        kind="capstone",
+                        tier=tiers.get(node.node_id, MasteryTier.DISCOVERED),
+                        branch=node.branch,
+                        note=notes.get(node.node_id),
+                    )
+                )
+        for custom in account.custom_nodes:
+            nodes.append(
+                KnowledgeNodeView(
+                    node_id=custom.custom_node_id,
+                    title=custom.name,
+                    kind="custom",
+                    tier=tiers.get(custom.custom_node_id, MasteryTier.DISCOVERED),
+                    group_id=custom.group_id,
+                    description=custom.description,
+                    note=notes.get(custom.custom_node_id),
+                    is_personal=True,
+                )
+            )
+
+        groups = [
+            KnowledgeGroupView(
+                group_id=g.group_id,
+                title=g.title,
+                branch=g.branch,
+                blurb=g.blurb,
+                member_node_ids=list(g.member_node_ids),
+                honed_count=sum(
+                    1
+                    for nid in g.member_node_ids
+                    if skill_tiers.get(nid) in _MASTERED_TIERS
+                ),
+                total_count=len(g.member_node_ids),
+            )
+            for g in account.map.groups
+        ]
+        groups.extend(
+            KnowledgeGroupView(
+                group_id=c.custom_group_id,
+                title=c.name,
+                branch="personal",
+                member_node_ids=[
+                    n.custom_node_id
+                    for n in account.custom_nodes
+                    if n.group_id == c.custom_group_id
+                ],
+                honed_count=0,  # personal content counts toward nothing (06-…)
+                total_count=0,
+                is_personal=True,
+            )
+            for c in account.custom_groups
+        )
+
+        branches = self._branch_views(account.map, tiers, skill_tiers)
+        assert account.template is not None  # map is not None ⇒ template resolved
+        return KnowledgeMapView(
+            has_selection=True,
+            pathway_id=account.template.pathway_id,
+            registry_version=PATHWAY_REGISTRY_VERSION,
+            version_mismatch=account.version_mismatch,
+            branches=branches,
+            groups=groups,
+            nodes=nodes,
+        )
+
+    def _branch_views(
+        self,
+        account_map: KnowledgeMap,
+        tiers: dict[str, MasteryTier],
+        skill_tiers: dict[str, MasteryTier],
+    ) -> list[KnowledgeBranchView]:
+        """Per-slot header counts: capstone tier + honest pathway-skill counts."""
+        branch_of_group = {g.group_id: g.branch for g in account_map.groups}
+        honed: dict[str, int] = {}
+        total: dict[str, int] = {}
+        for node in account_map.nodes:
+            if node.kind is not KnowledgeNodeKind.SKILL:
+                continue
+            branch = branch_of_group.get(node.group_id or "", "")
+            total[branch] = total.get(branch, 0) + 1
+            if skill_tiers.get(node.node_id) in _MASTERED_TIERS:
+                honed[branch] = honed.get(branch, 0) + 1
+        return [
+            KnowledgeBranchView(
+                slot_id=node.evidence_slot_id or "",
+                title=node.title,
+                capstone_node_id=node.node_id,
+                capstone_tier=tiers.get(node.node_id, MasteryTier.DISCOVERED),
+                honed_count=honed.get(node.evidence_slot_id or "", 0),
+                total_count=total.get(node.evidence_slot_id or "", 0),
+            )
+            for node in account_map.nodes
+            if node.kind is KnowledgeNodeKind.CAPSTONE
+        ]
+
+    def _latest_notes(self, user_id: str) -> dict[str, str]:
+        """Latest note text per node (append-only upsert: newest wins)."""
+        latest: dict[str, NodeNote] = {}
+        for note in self._env.knowledge_overlay_store.notes_for_user(user_id):
+            current = latest.get(note.node_id)
+            if current is None or note.updated_at >= current.updated_at:
+                latest[note.node_id] = note
+        return {node_id: note.text for node_id, note in latest.items()}
+
+    def _linked_modules(self, user_id: str) -> dict[str, list[str]]:
+        """node_id -> active-plan module ids training it (drawer context)."""
+        syllabus = self._env.state.get_syllabus(user_id)
+        active = self._env.plan_store.get_active(user_id)
+        if syllabus is None or active is None:
+            return {}
+        active_module_ids = {task.module_id for task in active.plan.tasks}
+        linked: dict[str, list[str]] = {}
+        for module in syllabus.modules:
+            if module.module_id not in active_module_ids:
+                continue
+            for node_id in module.knowledge_node_ids:
+                linked.setdefault(node_id, []).append(module.module_id)
+        return linked
+
+    def set_mastery(
+        self, user_id: str, *, node_id: str, target_tier: MasteryTier
+    ) -> KnowledgeMapView:
+        """Set a per-node mastery set-point - the only control that lowers a tier.
+
+        Appends a :class:`MasterySetPoint` for a node on the account map (any
+        node, including custom). ``proven`` is not settable - it stays
+        evidence-gated (``06-…``) - so it is rejected here. An unknown node is a
+        command-precondition failure (409). Returns the refreshed map.
+        """
+        if target_tier is MasteryTier.PROVEN:
+            raise CycleError(
+                "proven is not settable; it is earned through evidence"
+            )
+        profile = self._require_onboarding(user_id).user_profile
+        account = self._account_map(profile)
+        if node_id not in account.valid_node_ids:
+            raise CycleError(f"node {node_id!r} is not on the account's knowledge map")
+        self._env.knowledge_overlay_store.append(
+            MasterySetPoint(
+                user_id=user_id,
+                node_id=node_id,
+                target_tier=target_tier,
+                created_at=self._env.clock.now(),
+            )
+        )
+        return self.knowledge_map_view(user_id)
+
+    def upsert_note(
+        self, user_id: str, *, node_id: str, text: str
+    ) -> KnowledgeMapView:
+        """Upsert the single note on a node (append-only: newest wins on read).
+
+        Personal, display-only content: a note never enters any prompt, coverage
+        metric, or sponsor report (``06-…`` injection wall). An unknown node is a
+        409; the length cap (<= 2000) is contract-enforced on the record.
+        """
+        profile = self._require_onboarding(user_id).user_profile
+        account = self._account_map(profile)
+        if node_id not in account.valid_node_ids:
+            raise CycleError(f"node {node_id!r} is not on the account's knowledge map")
+        now = self._env.clock.now()
+        prior = self._latest_note_record(user_id, node_id)
+        created_at = prior.created_at if prior is not None else now
+        self._env.knowledge_overlay_store.append(
+            NodeNote(
+                user_id=user_id,
+                node_id=node_id,
+                text=text,
+                created_at=created_at,
+                updated_at=now,
+            )
+        )
+        return self.knowledge_map_view(user_id)
+
+    def _latest_note_record(self, user_id: str, node_id: str) -> NodeNote | None:
+        latest: NodeNote | None = None
+        for note in self._env.knowledge_overlay_store.notes_for_user(user_id):
+            if note.node_id != node_id:
+                continue
+            if latest is None or note.updated_at >= latest.updated_at:
+                latest = note
+        return latest
 
     # ------------------------------------------------------------------ #
     # propose

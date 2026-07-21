@@ -27,7 +27,7 @@ from pydantic import BaseModel, ConfigDict
 
 from agentic_calendar.app.cycle import DEFAULT_TARGET_CALENDAR_ID, CycleService
 from agentic_calendar.contracts.checkin_event import RecoveryAction
-from agentic_calendar.contracts.common_types import EvidenceKind
+from agentic_calendar.contracts.common_types import EvidenceKind, MasteryTier
 from agentic_calendar.contracts.recommitment import RecommitmentChoice
 from agentic_calendar.scheduler.adjustment import DraftAdjustment
 
@@ -118,6 +118,20 @@ class SelectPathwayRequest(BaseModel):
     # Slot-override editing has no NP-E UI yet; the field is accepted (and
     # registry-validated by the service) so the shape is forward-compatible.
     slot_overrides: list[dict[str, Any]] = []
+
+
+class SetMasteryRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    node_id: str
+    target_tier: MasteryTier
+
+
+class UpsertNoteRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    node_id: str
+    text: str
 
 
 class CalendarSyncRequest(BaseModel):
@@ -564,6 +578,44 @@ def select_pathway(
         service.select_pathway(
             user_id, pathway_id=body.pathway_id, slot_overrides=body.slot_overrides
         )
+    )
+
+
+@router.get("/knowledge-map")
+def knowledge_map(service: Service, user_id: ActingUser) -> JSONResponse:
+    """The account's knowledge map with deterministic per-node mastery tiers (KT-C).
+
+    Read-only: structure from the pathway registry + the append-only overlay, tiers
+    from the ``map_state`` kernel fold - no LLM, reproducible on stored data. Empty
+    (``has_selection=false``) until a pathway is selected. Personal custom content
+    renders as a separate layer and counts toward nothing."""
+    return _json(service.knowledge_map_view(user_id))
+
+
+@router.post("/knowledge-map/setpoint")
+def knowledge_map_setpoint(
+    service: Service, user_id: ActingUser, body: SetMasteryRequest
+) -> JSONResponse:
+    """Set a per-node mastery set-point - the only control that lowers a tier (KT-C).
+
+    ``proven`` is evidence-gated, not settable (409); an unknown node is a 409.
+    Returns the refreshed map."""
+    return _json(
+        service.set_mastery(user_id, node_id=body.node_id, target_tier=body.target_tier)
+    )
+
+
+@router.post("/knowledge-map/note")
+def knowledge_map_note(
+    service: Service, user_id: ActingUser, body: UpsertNoteRequest
+) -> JSONResponse:
+    """Upsert the single private note on a node (KT-C).
+
+    Display-only personal content - never enters a prompt, coverage metric, or
+    sponsor report. An unknown node is a 409; the length cap is contract-enforced.
+    Returns the refreshed map."""
+    return _json(
+        service.upsert_note(user_id, node_id=body.node_id, text=body.text)
     )
 
 

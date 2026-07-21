@@ -35,11 +35,18 @@ from agentic_calendar.contracts.knowledge_map_overlay import (
     MasterySetPoint,
     NodeAddition,
     NodeNote,
+    PersonalContentTombstone,
 )
 
-#: Any of the six overlay record types (all ``frozen``, all carry ``user_id``).
+#: Any of the seven overlay record types (all ``frozen``, all carry ``user_id``).
 OverlayRecord = (
-    NodeAddition | CustomGroup | CustomNode | NodeNote | MasteryGrant | MasterySetPoint
+    NodeAddition
+    | CustomGroup
+    | CustomNode
+    | NodeNote
+    | MasteryGrant
+    | MasterySetPoint
+    | PersonalContentTombstone
 )
 
 _R = TypeVar("_R", bound=OverlayRecord)
@@ -66,6 +73,10 @@ class KnowledgeOverlayStore(Protocol):
     def mastery_grants_for_user(self, user_id: str) -> list[MasteryGrant]: ...
 
     def setpoints_for_user(self, user_id: str) -> list[MasterySetPoint]: ...
+
+    def tombstones_for_user(
+        self, user_id: str
+    ) -> list[PersonalContentTombstone]: ...
 
     def delete_for_user(self, user_id: str) -> int: ...
 
@@ -106,6 +117,9 @@ class InMemoryKnowledgeOverlayStore:
 
     def setpoints_for_user(self, user_id: str) -> list[MasterySetPoint]:
         return self._typed(user_id, MasterySetPoint)
+
+    def tombstones_for_user(self, user_id: str) -> list[PersonalContentTombstone]:
+        return self._typed(user_id, PersonalContentTombstone)
 
     def delete_for_user(self, user_id: str) -> int:
         """Remove every record for ``user_id`` (ADR-0007 data-delete control)."""

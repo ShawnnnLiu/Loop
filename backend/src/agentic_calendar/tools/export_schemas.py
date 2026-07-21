@@ -48,6 +48,7 @@ from agentic_calendar.contracts.knowledge_map_overlay import (
     MasterySetPoint,
     NodeAddition,
     NodeNote,
+    PersonalContentTombstone,
 )
 from agentic_calendar.contracts.milestone_template import MilestoneTemplate
 from agentic_calendar.contracts.motivation_profile import MotivationProfile
@@ -155,6 +156,7 @@ CONTRACTS: dict[str, type[BaseModel]] = {
     "knowledge_node_note": NodeNote,
     "knowledge_mastery_grant": MasteryGrant,
     "knowledge_mastery_setpoint": MasterySetPoint,
+    "knowledge_personal_tombstone": PersonalContentTombstone,
     "llm_call_log": LlmCallLog,
     "prose_attachment": ProseAttachmentRecord,
     "threshold_change_log": ThresholdChange,

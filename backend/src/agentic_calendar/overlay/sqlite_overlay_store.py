@@ -20,6 +20,7 @@ from agentic_calendar.contracts.knowledge_map_overlay import (
     MasterySetPoint,
     NodeAddition,
     NodeNote,
+    PersonalContentTombstone,
 )
 
 from .overlay_store import OverlayRecord
@@ -50,6 +51,7 @@ _TYPE_BY_CLASS: dict[type[OverlayRecord], str] = {
     NodeNote: "node_note",
     MasteryGrant: "mastery_grant",
     MasterySetPoint: "mastery_setpoint",
+    PersonalContentTombstone: "personal_tombstone",
 }
 
 
@@ -97,6 +99,13 @@ class SqliteKnowledgeOverlayStore:
     def setpoints_for_user(self, user_id: str) -> list[MasterySetPoint]:
         return [
             r for r in self._load(user_id, MasterySetPoint) if isinstance(r, MasterySetPoint)
+        ]
+
+    def tombstones_for_user(self, user_id: str) -> list[PersonalContentTombstone]:
+        return [
+            r
+            for r in self._load(user_id, PersonalContentTombstone)
+            if isinstance(r, PersonalContentTombstone)
         ]
 
     def delete_for_user(self, user_id: str) -> int:

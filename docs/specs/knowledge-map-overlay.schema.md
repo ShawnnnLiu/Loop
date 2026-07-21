@@ -11,9 +11,9 @@ The `narrative/` map-state kernel (KT-B `map_state`, which folds these records o
 
 ## Purpose
 
-An account's knowledge map = the generated `KnowledgeMap`(s) of its selected pathway(s) (`pathway-template.schema.md`) **plus** an append-only overlay of the six record types below.
-The overlay is how onboarding grants mastery, how a user adds skills we missed, and how a user builds a personal layer (their own groups, nodes, notes) and adjusts their own mastery.
-All six records are `frozen`, deterministic, and never LLM-touched: no record carries model output, and no free-text field on any record ever enters a prompt.
+An account's knowledge map = the generated `KnowledgeMap`(s) of its selected pathway(s) (`pathway-template.schema.md`) **plus** an append-only overlay of the seven record types below.
+The overlay is how onboarding grants mastery, how a user adds skills we missed, how a user builds a personal layer (their own groups, nodes, notes) and adjusts their own mastery, and how a user deletes their own personal content (tombstones).
+All seven records are `frozen`, deterministic, and never LLM-touched: no record carries model output, and no free-text field on any record ever enters a prompt.
 
 Like everything in this folder: **curated knowledge, deterministic structure, LLM-free state.**
 
@@ -113,6 +113,19 @@ The explicit per-node user control - the **only** record that can lower mastery.
 | `created_at` | Timezone-aware instant |
 
 The mastery-basis fold over grants, set-points, and telemetry, and the tier ladder, are specified in `06-knowledge-tree.md` / `08-mastery-memory.md`; the kernel lands in KT-B.
+
+### `PersonalContentTombstone` (personal)
+
+The disposition-pattern delete for personal content (KT-C): an append-only "deleted" marker, since the store has no single-record delete. A user may delete only their **own** personal content - custom groups, custom nodes, and notes; pathway content (generated nodes, additions, grants) is never deletable, only mastery-adjusted.
+
+| Field | Purpose |
+| --- | --- |
+| `user_id` | Account owner |
+| `target_kind` | `PersonalContentKind`: `custom_group` / `custom_node` / `note` |
+| `target_id` | The `kcg-` / `kcn-` id (group / node) or the note's `node_id` |
+| `created_at` | Timezone-aware instant |
+
+Read semantics (store/API, KT-C): a custom group / node with **any** tombstone for its id is deleted (ids are minted once, never reused). A node's note is deleted only when a `note` tombstone for that `node_id` is newer than the latest `NodeNote.updated_at` - so delete-then-re-add works. Deleting a node whose note exists tombstones nothing extra; the note is orphaned harmlessly (it renders on no node).
 
 ## Contract vs. Store Responsibility
 

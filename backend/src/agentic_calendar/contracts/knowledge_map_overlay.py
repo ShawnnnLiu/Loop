@@ -23,7 +23,7 @@ from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
-from .common_types import MasteryGrantSource, MasteryTier
+from .common_types import MasteryGrantSource, MasteryTier, PersonalContentKind
 
 # A generated (taxonomy-anchored / capstone) map node.
 GeneratedNodeId = Annotated[str, StringConstraints(pattern=r"^kn-[a-z0-9-]+$")]
@@ -150,5 +150,28 @@ class MasterySetPoint(BaseModel):
 
     @model_validator(mode="after")
     def _created_at_aware(self) -> MasterySetPoint:
+        _require_aware(self.created_at, "created_at")
+        return self
+
+
+class PersonalContentTombstone(BaseModel):
+    """The append-only delete marker for personal content (KT-C).
+
+    The store has no single-record delete, so a user deletes their **own**
+    personal content - a custom group, a custom node, or a note - by appending a
+    tombstone. Pathway content is never deletable. ``target_id`` is the ``kcg-`` /
+    ``kcn-`` id for a group / node, or the note's ``node_id`` for a note; the
+    ``target_kind`` disambiguates. Read semantics live in the store / API.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    user_id: str = Field(min_length=1)
+    target_kind: PersonalContentKind
+    target_id: str = Field(min_length=1)
+    created_at: datetime
+
+    @model_validator(mode="after")
+    def _created_at_aware(self) -> PersonalContentTombstone:
         _require_aware(self.created_at, "created_at")
         return self

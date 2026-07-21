@@ -72,6 +72,7 @@ from agentic_calendar.contracts.common_types import (
     EvidenceKind,
     KnowledgeNodeKind,
     MasteryTier,
+    PersonalContentKind,
     TaskCategory,
 )
 from agentic_calendar.contracts.data_access_audit import (
@@ -86,7 +87,9 @@ from agentic_calendar.contracts.knowledge_map_overlay import (
     CustomGroup,
     CustomNode,
     MasterySetPoint,
+    NodeAddition,
     NodeNote,
+    PersonalContentTombstone,
 )
 from agentic_calendar.contracts.motivation_profile import RecoveryPreference
 from agentic_calendar.contracts.notification_log import NotificationStatus
@@ -161,6 +164,7 @@ from agentic_calendar.narrative import (
     SlotState,
     map_state,
     merge_additions,
+    node_id_for,
     pathway_node_vocabulary,
     slot_coverage,
     story_progress,
@@ -319,7 +323,15 @@ class CycleError(AgenticCalendarError):
     Distinct from workflow failures: those land the run in
     ``ERROR_REQUIRES_USER`` with a typed ``reason_code``; this exception means
     the command itself was not applicable (e.g. ``approve`` before ``propose``).
+
+    ``reason_code`` optionally carries a typed rejection (KT-C map API:
+    ``SKILL_NOT_IN_TRACK_VOCABULARY`` etc.) so the 409 body names it; ``None``
+    for the plain precondition failures that predate typed command rejections.
     """
+
+    def __init__(self, message: str, *, reason_code: ReasonCode | None = None) -> None:
+        super().__init__(message)
+        self.reason_code = reason_code
 
 
 @dataclass(frozen=True, slots=True)
@@ -362,6 +374,11 @@ class _ReplanDecision:
 #: Tiers that count a skill node as "mastered" for honest group/branch counts
 #: (``06-…``: proven ⊃ honed). No average, no percentage - a "2/5 honed" chip.
 _MASTERED_TIERS = frozenset({MasteryTier.HONED, MasteryTier.PROVEN})
+
+#: Personal-content per-account count caps (``06-…``; heuristic priors). Exceeding
+#: one is ``CUSTOM_CONTENT_LIMIT_EXCEEDED`` with the specific bound in the detail.
+_MAX_CUSTOM_GROUPS = 5
+_MAX_CUSTOM_NODES = 20
 
 
 @dataclass(frozen=True)
@@ -808,8 +825,27 @@ class CycleService:
         user_id = profile.user_id
         template, version_mismatch = self._resolve_selection_template(profile)
         has_selection = profile.pathway_selection is not None
-        custom_groups = store.custom_groups_for_user(user_id)
-        custom_nodes = store.custom_nodes_for_user(user_id)
+        tombstones = store.tombstones_for_user(user_id)
+        deleted_groups = {
+            t.target_id
+            for t in tombstones
+            if t.target_kind is PersonalContentKind.CUSTOM_GROUP
+        }
+        deleted_nodes = {
+            t.target_id
+            for t in tombstones
+            if t.target_kind is PersonalContentKind.CUSTOM_NODE
+        }
+        custom_groups = [
+            g
+            for g in store.custom_groups_for_user(user_id)
+            if g.custom_group_id not in deleted_groups
+        ]
+        custom_nodes = [
+            n
+            for n in store.custom_nodes_for_user(user_id)
+            if n.custom_node_id not in deleted_nodes
+        ]
 
         generated = (
             knowledge_map_for(template.pathway_id) if template is not None else None
@@ -1028,13 +1064,28 @@ class CycleService:
         ]
 
     def _latest_notes(self, user_id: str) -> dict[str, str]:
-        """Latest note text per node (append-only upsert: newest wins)."""
+        """Latest note text per node (append-only upsert: newest wins).
+
+        A note is deleted when a ``note`` tombstone for its node is newer than the
+        latest ``NodeNote.updated_at`` - so delete-then-re-add works.
+        """
+        store = self._env.knowledge_overlay_store
+        deleted_at: dict[str, datetime] = {}
+        for t in store.tombstones_for_user(user_id):
+            if t.target_kind is PersonalContentKind.NOTE:
+                prior = deleted_at.get(t.target_id)
+                if prior is None or t.created_at > prior:
+                    deleted_at[t.target_id] = t.created_at
         latest: dict[str, NodeNote] = {}
-        for note in self._env.knowledge_overlay_store.notes_for_user(user_id):
+        for note in store.notes_for_user(user_id):
             current = latest.get(note.node_id)
             if current is None or note.updated_at >= current.updated_at:
                 latest[note.node_id] = note
-        return {node_id: note.text for node_id, note in latest.items()}
+        return {
+            node_id: note.text
+            for node_id, note in latest.items()
+            if node_id not in deleted_at or note.updated_at > deleted_at[node_id]
+        }
 
     def _linked_modules(self, user_id: str) -> dict[str, list[str]]:
         """node_id -> active-plan module ids training it (drawer context)."""
@@ -1114,6 +1165,166 @@ class CycleService:
             if latest is None or note.updated_at >= latest.updated_at:
                 latest = note
         return latest
+
+    def _mint_custom_id(self, prefix: str) -> str:
+        """A ``kcg-`` / ``kcn-`` id: the id generator's token behind a hyphen.
+
+        ``IdGenerator.new_id`` yields ``"<prefix>_<token>"`` (token is lowercase
+        hex or a counter); reformatting to ``"<prefix>-<token>"`` matches the
+        ``^kc[gn]-[a-z0-9-]+$`` custom-id pattern the overlay contract enforces.
+        """
+        token = self._env.id_generator.new_id(prefix).rsplit("_", 1)[-1]
+        return f"{prefix}-{token}"
+
+    def _require_map(self, profile: UserProfile) -> _AccountMap:
+        account = self._account_map(profile)
+        if account.map is None:
+            raise CycleError(
+                "no pathway is selected; select one before editing the knowledge map"
+            )
+        return account
+
+    def add_knowledge_node(self, user_id: str, *, skill_id: str) -> KnowledgeMapView:
+        """Add a taxonomy skill we did not seed to the account map (pathway content).
+
+        The user picks *what* from the closed add-picker vocabulary - the account
+        track's taxonomy slice, restricted to skills the grouping can place - and
+        code decides *where* (``06-…``). Typed rejections:
+        ``SKILL_NOT_IN_TRACK_VOCABULARY`` (outside the slice / unplaceable),
+        ``KNOWLEDGE_NODE_ALREADY_PRESENT`` (already a node on the map). Returns the
+        refreshed map.
+        """
+        profile = self._require_onboarding(user_id).user_profile
+        account = self._require_map(profile)
+        track = resolve_track(profile.target_role)
+        in_slice = track is not None and any(
+            e.skill_id == skill_id
+            for e in self._taxonomy_registry().entries_for_track(track)
+        )
+        placeable = any(e.skill_id == skill_id for e in self._grouping().entries)
+        if not in_slice or not placeable:
+            raise CycleError(
+                f"skill {skill_id!r} is not in this account's add-picker vocabulary",
+                reason_code=ReasonCode.SKILL_NOT_IN_TRACK_VOCABULARY,
+            )
+        assert account.map is not None  # _require_map guarantees it
+        if node_id_for(skill_id) in {n.node_id for n in account.map.nodes}:
+            raise CycleError(
+                f"skill {skill_id!r} is already on the account's knowledge map",
+                reason_code=ReasonCode.KNOWLEDGE_NODE_ALREADY_PRESENT,
+            )
+        self._env.knowledge_overlay_store.append(
+            NodeAddition(
+                user_id=user_id, skill_id=skill_id, created_at=self._env.clock.now()
+            )
+        )
+        return self.knowledge_map_view(user_id)
+
+    def create_custom_group(self, user_id: str, *, name: str) -> KnowledgeMapView:
+        """Create a personal group (personal content; counts toward nothing).
+
+        Bounded at ``_MAX_CUSTOM_GROUPS`` per account
+        (``CUSTOM_CONTENT_LIMIT_EXCEEDED``); the ``1..60`` name cap is
+        contract-enforced (a 422 on rebuild).
+        """
+        profile = self._require_onboarding(user_id).user_profile
+        account = self._require_map(profile)
+        if len(account.custom_groups) >= _MAX_CUSTOM_GROUPS:
+            raise CycleError(
+                f"custom-group limit reached (max {_MAX_CUSTOM_GROUPS})",
+                reason_code=ReasonCode.CUSTOM_CONTENT_LIMIT_EXCEEDED,
+            )
+        self._env.knowledge_overlay_store.append(
+            CustomGroup(
+                user_id=user_id,
+                custom_group_id=self._mint_custom_id("kcg"),
+                name=name,
+                created_at=self._env.clock.now(),
+            )
+        )
+        return self.knowledge_map_view(user_id)
+
+    def create_custom_node(
+        self,
+        user_id: str,
+        *,
+        name: str,
+        group_id: str,
+        description: str | None = None,
+    ) -> KnowledgeMapView:
+        """Create a personal node in any group, curated or custom (counts nothing).
+
+        Bounded at ``_MAX_CUSTOM_NODES`` (``CUSTOM_CONTENT_LIMIT_EXCEEDED``);
+        ``group_id`` must name a group on the account map (409 otherwise); name /
+        description caps are contract-enforced.
+        """
+        profile = self._require_onboarding(user_id).user_profile
+        account = self._require_map(profile)
+        if len(account.custom_nodes) >= _MAX_CUSTOM_NODES:
+            raise CycleError(
+                f"custom-node limit reached (max {_MAX_CUSTOM_NODES})",
+                reason_code=ReasonCode.CUSTOM_CONTENT_LIMIT_EXCEEDED,
+            )
+        assert account.map is not None
+        known_groups = {g.group_id for g in account.map.groups} | {
+            c.custom_group_id for c in account.custom_groups
+        }
+        if group_id not in known_groups:
+            raise CycleError(f"group {group_id!r} is not on the account's knowledge map")
+        self._env.knowledge_overlay_store.append(
+            CustomNode(
+                user_id=user_id,
+                custom_node_id=self._mint_custom_id("kcn"),
+                name=name,
+                description=description,
+                group_id=group_id,
+                created_at=self._env.clock.now(),
+            )
+        )
+        return self.knowledge_map_view(user_id)
+
+    def delete_custom_group(
+        self, user_id: str, *, custom_group_id: str
+    ) -> KnowledgeMapView:
+        """Delete one of the user's own custom groups (tombstone; 409 if unknown)."""
+        profile = self._require_onboarding(user_id).user_profile
+        account = self._account_map(profile)
+        if custom_group_id not in {g.custom_group_id for g in account.custom_groups}:
+            raise CycleError(f"custom group {custom_group_id!r} not found")
+        self._tombstone(user_id, PersonalContentKind.CUSTOM_GROUP, custom_group_id)
+        return self.knowledge_map_view(user_id)
+
+    def delete_custom_node(
+        self, user_id: str, *, custom_node_id: str
+    ) -> KnowledgeMapView:
+        """Delete one of the user's own custom nodes (tombstone; 409 if unknown)."""
+        profile = self._require_onboarding(user_id).user_profile
+        account = self._account_map(profile)
+        if custom_node_id not in {n.custom_node_id for n in account.custom_nodes}:
+            raise CycleError(f"custom node {custom_node_id!r} not found")
+        self._tombstone(user_id, PersonalContentKind.CUSTOM_NODE, custom_node_id)
+        return self.knowledge_map_view(user_id)
+
+    def delete_note(self, user_id: str, *, node_id: str) -> KnowledgeMapView:
+        """Delete the note on a node (tombstone; 409 if the node is unknown)."""
+        profile = self._require_onboarding(user_id).user_profile
+        account = self._account_map(profile)
+        if node_id not in account.valid_node_ids:
+            raise CycleError(f"node {node_id!r} is not on the account's knowledge map")
+        self._tombstone(user_id, PersonalContentKind.NOTE, node_id)
+        return self.knowledge_map_view(user_id)
+
+    def _tombstone(
+        self, user_id: str, kind: PersonalContentKind, target_id: str
+    ) -> None:
+        self._env.knowledge_overlay_store.append(
+            PersonalContentTombstone(
+                user_id=user_id,
+                target_kind=kind,
+                target_id=target_id,
+                created_at=self._env.clock.now(),
+            )
+        )
 
     # ------------------------------------------------------------------ #
     # propose

@@ -13,7 +13,11 @@ from pathlib import Path
 import pytest
 
 from agentic_calendar.common.sqlite import SqliteDatabase
-from agentic_calendar.contracts.common_types import MasteryGrantSource, MasteryTier
+from agentic_calendar.contracts.common_types import (
+    MasteryGrantSource,
+    MasteryTier,
+    PersonalContentKind,
+)
 from agentic_calendar.contracts.knowledge_map_overlay import (
     CustomGroup,
     CustomNode,
@@ -21,6 +25,7 @@ from agentic_calendar.contracts.knowledge_map_overlay import (
     MasterySetPoint,
     NodeAddition,
     NodeNote,
+    PersonalContentTombstone,
 )
 from agentic_calendar.overlay.overlay_store import (
     InMemoryKnowledgeOverlayStore,
@@ -82,6 +87,16 @@ def _note(user_id: str = "u1", node_id: str = "kn-rag", text: str = "note") -> N
     )
 
 
+def _tombstone(
+    user_id: str = "u1",
+    kind: PersonalContentKind = PersonalContentKind.CUSTOM_NODE,
+    target_id: str = "kcn-mine",
+) -> PersonalContentTombstone:
+    return PersonalContentTombstone(
+        user_id=user_id, target_kind=kind, target_id=target_id, created_at=_NOW
+    )
+
+
 def test_each_record_type_round_trips_under_its_reader(
     store: KnowledgeOverlayStore,
 ) -> None:
@@ -91,6 +106,7 @@ def test_each_record_type_round_trips_under_its_reader(
     store.append(_note())
     store.append(_grant())
     store.append(_setpoint())
+    store.append(_tombstone())
 
     assert store.node_additions_for_user("u1") == [_addition()]
     assert store.custom_groups_for_user("u1") == [_group()]
@@ -98,6 +114,7 @@ def test_each_record_type_round_trips_under_its_reader(
     assert store.notes_for_user("u1") == [_note()]
     assert store.mastery_grants_for_user("u1") == [_grant()]
     assert store.setpoints_for_user("u1") == [_setpoint()]
+    assert store.tombstones_for_user("u1") == [_tombstone()]
 
 
 def test_reads_preserve_insertion_order(store: KnowledgeOverlayStore) -> None:

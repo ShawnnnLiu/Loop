@@ -107,6 +107,7 @@ def test_every_contract_registered() -> None:
         "knowledge_node_note",
         "knowledge_mastery_grant",
         "knowledge_mastery_setpoint",
+        "knowledge_personal_tombstone",
     }
     assert set(CONTRACTS.keys()) == expected
 

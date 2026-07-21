@@ -24,6 +24,7 @@ from .generation import (
     LOOP_SKILL_NODE_CEILING,
     MapGenerationError,
     generate_map,
+    node_id_for,
 )
 from .mastery import (
     DEFAULT_MASTERY_TUNING,
@@ -47,6 +48,7 @@ __all__ = [
     "generate_map",
     "map_state",
     "merge_additions",
+    "node_id_for",
     "pathway_fit",
     "pathway_node_vocabulary",
     "slot_coverage",

@@ -709,3 +709,30 @@ def test_knowledge_map_proven_setpoint_is_409() -> None:
         json={"node_id": skill["node_id"], "target_tier": "proven"},
     )
     assert resp.status_code == 409
+
+
+def test_knowledge_map_crud_over_http() -> None:
+    client, _clock = _client()
+    client.post("/api/pathways/select", json={"pathway_id": _BACKEND})
+
+    # Create a custom group, then a custom node inside it.
+    g = client.post("/api/knowledge-map/custom-group", json={"name": "My cluster"})
+    assert g.status_code == 200
+    gid = next(gr["group_id"] for gr in g.json()["groups"] if gr["is_personal"])
+
+    n = client.post(
+        "/api/knowledge-map/custom-node",
+        json={"name": "My node", "group_id": gid, "description": "d"},
+    )
+    assert n.status_code == 200
+    nid = next(nd["node_id"] for nd in n.json()["nodes"] if nd["is_personal"])
+
+    # Delete the custom node -> gone.
+    d = client.delete(f"/api/knowledge-map/custom-node/{nid}")
+    assert d.status_code == 200
+    assert nid not in {nd["node_id"] for nd in d.json()["nodes"]}
+
+    # Off-vocabulary add-node -> 409 with the typed reason code.
+    bad = client.post("/api/knowledge-map/add-node", json={"skill_id": "skill.nope"})
+    assert bad.status_code == 409
+    assert bad.json()["reason_code"] == "SKILL_NOT_IN_TRACK_VOCABULARY"

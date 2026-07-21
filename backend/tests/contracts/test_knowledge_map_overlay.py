@@ -14,6 +14,7 @@ from agentic_calendar.contracts.knowledge_map_overlay import (
     MasterySetPoint,
     NodeAddition,
     NodeNote,
+    PersonalContentTombstone,
 )
 from tests._fixture_loader import iter_invalid, iter_valid
 
@@ -25,6 +26,7 @@ RECORDS: dict[str, type[BaseModel]] = {
     "knowledge_node_note": NodeNote,
     "knowledge_mastery_grant": MasteryGrant,
     "knowledge_mastery_setpoint": MasterySetPoint,
+    "knowledge_personal_tombstone": PersonalContentTombstone,
 }
 
 _VALID = [
@@ -160,6 +162,12 @@ def test_timestamps_must_be_aware(model: type[BaseModel]) -> None:
             "user_id": "u1",
             "node_id": "kn-rag",
             "target_tier": "honed",
+            "created_at": NAIVE,
+        },
+        PersonalContentTombstone: {
+            "user_id": "u1",
+            "target_kind": "custom_node",
+            "target_id": "kcn-a",
             "created_at": NAIVE,
         },
     }[model]

@@ -107,6 +107,15 @@ class MasteryGrantSource(StrEnum):
     EVIDENCE = "evidence"
 
 
+class PersonalContentKind(StrEnum):
+    """What a ``PersonalContentTombstone`` deletes (knowledge-map-overlay spec,
+    KT-C). Only personal content is deletable; pathway content never is."""
+
+    CUSTOM_GROUP = "custom_group"
+    CUSTOM_NODE = "custom_node"
+    NOTE = "note"
+
+
 class TaskCategory(StrEnum):
     """Allowed values for ``task.category`` (see task-plan spec)."""
 

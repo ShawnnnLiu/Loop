@@ -218,6 +218,8 @@ from agentic_calendar.validation import validate_syllabus_units, validate_task_p
 from .environment import AppEnvironment
 from .results import (
     AccountabilityResult,
+    AddableSkill,
+    AddSkillVocabularyResult,
     AdjustResult,
     AdjustViolation,
     AdjustWarning,
@@ -1221,6 +1223,31 @@ class CycleService:
             )
         )
         return self.knowledge_map_view(user_id)
+
+    def add_skill_vocabulary_view(self, user_id: str) -> AddSkillVocabularyResult:
+        """The closed vocabulary the "Add a skill" picker binds to (KT-D).
+
+        Read-only mirror of :meth:`add_knowledge_node`'s acceptance predicates so
+        the picker can only offer what the mutation accepts (no dead options):
+        the account track's taxonomy slice, restricted to grouping-placeable
+        skills, minus skills already on the map. Empty when no pathway is
+        selected (a map needs a selection, ``06-…`` d6) or no track resolves.
+        """
+        profile = self._require_onboarding(user_id).user_profile
+        account = self._account_map(profile)
+        track = resolve_track(profile.target_role)
+        if account.map is None or track is None:
+            return AddSkillVocabularyResult(track=track, skills=[])
+        present = {n.node_id for n in account.map.nodes}
+        placeable = {e.skill_id for e in self._grouping().entries}
+        skills = [
+            AddableSkill(skill_id=entry.skill_id, title=entry.display_name)
+            for entry in self._taxonomy_registry().entries_for_track(track)
+            if entry.skill_id in placeable
+            and node_id_for(entry.skill_id) not in present
+        ]
+        skills.sort(key=lambda s: s.title)
+        return AddSkillVocabularyResult(track=track, skills=skills)
 
     def create_custom_group(self, user_id: str, *, name: str) -> KnowledgeMapView:
         """Create a personal group (personal content; counts toward nothing).

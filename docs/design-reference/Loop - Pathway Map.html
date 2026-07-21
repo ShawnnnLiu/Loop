@@ -9,7 +9,8 @@
 --ink:#16212e; --ink-2:#22303f; --ink-soft:#38485a; --muted:#6c7886; --muted-2:#97a0ab;
 --paper:#fbf8f2; --paper-2:#f4ece0; --paper-3:#ece2d3; --card:#ffffff;
 --clay:#bd5a39; --clay-deep:#9c4527; --clay-soft:#f1ddd1; --clay-tint:#faeee6;
---sage:#5f7a64; --sage-deep:#496650; --sage-soft:#e3ebe2; --gold:#c08a3e; --gold-deep:#9a6d2f; --gold-soft:#f6e6cf;
+--sage:#5f7a64; --sage-deep:#496650; --sage-soft:#e3ebe2;
+--gold:#c08a3e; --gold-deep:#9a6d2f; --gold-soft:#f6e6cf;
 --line:#e9e0d2; --line-2:#ddd2bf; --line-3:#cdbfa8;
 --serif:'Newsreader','Noto Serif SC',Georgia,serif;
 --sans:'Hanken Grotesk','Noto Sans SC',system-ui,-apple-system,sans-serif;
@@ -55,60 +56,72 @@ a:hover{color:var(--clay);text-decoration:underline}
 .brand .word{font-family:var(--serif);font-size:19px;font-weight:600;letter-spacing:-.01em}
 .tb-nav{display:flex;gap:2px;margin-left:10px}
 .tb-nav a{padding:6px 12px;border-radius:9px;font-size:13.5px;font-weight:600;color:var(--ink-soft);cursor:default}
-.tb-nav a:hover{color:var(--ink-soft);text-decoration:none}
 .tb-nav a.on{background:var(--ink);color:var(--paper)}
 .sync{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line-2);border-radius:999px;padding:5px 12px 5px 10px;background:var(--card);font-size:12px;font-weight:500;color:var(--ink-soft)}
 .sync .dot{width:7px;height:7px;border-radius:50%;background:var(--sage);flex:none;box-shadow:0 0 0 3px var(--sage-soft)}
 .avatar{width:33px;height:33px;border-radius:50%;background:linear-gradient(150deg,var(--clay),var(--clay-deep));color:#fff;display:grid;place-items:center;font-family:var(--serif);font-size:15px;font-weight:600;flex:none}
-.ph{display:flex;align-items:flex-end;gap:22px;padding:18px 26px 14px}
+.ph{display:flex;align-items:flex-end;gap:22px;padding:18px 26px 6px}
 .ph h1{margin:0;font-family:var(--serif);font-weight:500;font-size:30px;letter-spacing:-.015em;line-height:1.06}
 .ph .tagline{font-family:var(--serif);font-style:italic;font-size:14.5px;color:var(--muted);margin-top:3px}
 .counts{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .counts .chip{font-family:var(--mono);font-size:11.5px;cursor:default;padding:5px 11px}
 .counts .chip b{font-weight:700;color:var(--ink)}
 .counts .chip .cdot{width:7px;height:7px;border-radius:50%;flex:none}
-/* ---- chart ---- */
-.chart-wrap{position:relative;padding:2px 24px 24px}
-.chart-wrap svg{display:block;width:100%;height:auto}
-svg text{font-family:var(--sans)}
-.nlab{font-size:12px;font-weight:600;fill:var(--ink-soft);paint-order:stroke;stroke:var(--paper);stroke-width:3.5px;stroke-linejoin:round}
-.t0 .nlab{fill:var(--muted-2)}.t3 .nlab,.t4 .nlab{fill:var(--ink)}
-.sublab{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;fill:var(--muted);paint-order:stroke;stroke:var(--paper);stroke-width:3px}
-.t4 .sublab{fill:var(--gold-deep)}
-.banner-n{font-size:11px;font-weight:700;letter-spacing:.12em;fill:var(--ink-soft)}
-.banner-c{font-family:var(--mono);font-size:10px;fill:var(--muted)}
-.keyt{font-size:9.5px;font-weight:700;letter-spacing:.11em;fill:var(--muted)}
-.keyn{font-size:10px;font-weight:700;fill:var(--ink-soft)}
-.keyd{font-size:9px;fill:var(--muted)}
-.cart-n{font-size:10.5px;font-weight:700;letter-spacing:.14em;fill:var(--ink-2)}
-.cart-c{font-family:var(--mono);font-size:9.5px;fill:var(--muted)}
-.t0 .body{fill:var(--paper-2);stroke:var(--line-3);stroke-width:1.3;stroke-dasharray:2 3.5}
-.t1 .body{fill:#fff;stroke:var(--muted);stroke-width:1.5}
-.t2 .body{fill:var(--clay-tint);stroke:var(--clay);stroke-width:1.6}
-.t3 .body{fill:var(--gold-soft);stroke:var(--gold);stroke-width:1.8}
-.t4 .body{fill:var(--gold);stroke:var(--gold-deep);stroke-width:1.8}
-.node{cursor:pointer}
-.node .hit{fill:transparent;stroke:none}
-.node.dim{opacity:.28}.edge.dim{opacity:.18}
-.node,.edge{transition:opacity .15s}
-.node.sel .selring{stroke:var(--clay);stroke-width:1.5;fill:none;stroke-dasharray:3 3}
-.pulse{animation:breathe 3.4s ease-in-out infinite}
-@keyframes breathe{0%,100%{opacity:.5}50%{opacity:.85}}
-.bloom circle{transform-box:fill-box;transform-origin:center;animation:bloom .95s ease-out forwards}
-.bloom circle:nth-child(2){animation-delay:.18s}
-@keyframes bloom{0%{transform:scale(.25);opacity:.85}100%{transform:scale(2.4);opacity:0}}
-/* tooltip / toast / overlays */
-#tt{position:absolute;z-index:30;pointer-events:none;background:var(--ink);color:var(--paper);border-radius:9px;padding:7px 11px;font-size:12px;line-height:1.45;max-width:250px;box-shadow:var(--shadow);display:none}
-#tt .tname{font-weight:700}#tt .tmeta{font-family:var(--mono);font-size:10.5px;color:rgba(251,248,242,.72);margin-top:2px}
-.toast{position:absolute;left:22px;top:14px;z-index:25;display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--gold);border-radius:999px;padding:7px 14px;font-family:var(--mono);font-size:11.5px;color:var(--gold-deep);box-shadow:var(--shadow);opacity:0;transition:opacity .4s}
-.toast.show{opacity:1}
-.empty-note{position:absolute;left:50%;top:36%;transform:translate(-50%,-50%);width:340px;text-align:center;padding:20px 22px;z-index:10}
-.empty-note h3{margin:0 0 6px;font-family:var(--serif);font-weight:500;font-size:19px}
-.empty-note p{margin:0 0 13px;font-size:13px;color:var(--muted);line-height:1.5}
-.nopath{position:absolute;inset:0;display:grid;place-items:center;z-index:10}
-.nopath .inner{width:380px;text-align:center;padding:26px 26px 24px}
-.nopath h3{margin:8px 0 7px;font-family:var(--serif);font-weight:500;font-size:22px}
-.nopath p{margin:0 0 16px;font-size:13.5px;color:var(--muted);line-height:1.55}
+/* ---- map body ---- */
+.mapwrap{position:relative;padding:8px 26px 26px}
+.maptools{display:flex;gap:8px;align-items:center;margin:6px 0 16px}
+.branch{margin-bottom:14px}
+.bhead{display:flex;align-items:center;gap:12px;padding:11px 15px;border-radius:var(--r-sm) var(--r-sm) 0 0;background:var(--paper-2);border:1px solid var(--line-2);border-bottom:none}
+.shield{width:34px;height:40px;flex:none;display:grid;place-items:center;font-family:var(--serif);font-weight:600;font-size:15px;border-radius:6px 6px 10px 10px;position:relative}
+.shield.unproven{background:var(--card);border:1px dashed var(--line-3);color:var(--ink-soft)}
+.shield.proven{background:var(--gold);border:1px solid var(--gold-deep);color:#fff;box-shadow:0 0 0 4px var(--gold-soft)}
+.bhead .bname{font-family:var(--serif);font-size:17px;font-weight:500}
+.bhead .bmeta{font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-top:2px;letter-spacing:.02em}
+.bhead .cshield-cap{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;margin-top:3px}
+.unproven .lbl{color:var(--muted)}.proven .lbl{color:var(--gold-deep)}
+.groups{border:1px solid var(--line-2);border-top:none;border-radius:0 0 var(--r-sm) var(--r-sm);background:var(--card);padding:12px 14px;display:flex;flex-direction:column;gap:9px}
+/* group waypoint */
+.gw{border:1px solid var(--line-2);border-radius:10px;background:var(--paper);overflow:hidden}
+.gw .ghead{display:flex;align-items:center;gap:12px;padding:11px 13px;cursor:pointer}
+.gw .ghead:hover{background:var(--paper-2)}
+.gw .waypoint{width:30px;height:30px;border-radius:50%;flex:none;position:relative;display:grid;place-items:center;font-family:var(--mono);font-size:10px;font-weight:700}
+.gw .gtitle{font-weight:600;font-size:14px;color:var(--ink)}
+.gw .gcount{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:1px}
+.gw .caret{margin-left:auto;color:var(--muted-2);font-family:var(--mono);font-size:12px;transition:transform .2s}
+.gw.open .caret{transform:rotate(90deg)}
+.members{display:none;padding:2px 13px 13px 55px;flex-direction:column;gap:4px}
+.gw.open .members{display:flex}
+/* skill node row */
+.node{display:flex;align-items:center;gap:11px;padding:8px 11px;border:1px solid transparent;border-radius:9px;cursor:pointer;text-align:left;background:none;width:100%;font-family:var(--sans)}
+.node:hover{background:var(--paper-2);border-color:var(--line-2)}
+.node.sel{border-color:var(--clay);background:var(--clay-tint)}
+.node .dot{width:16px;height:16px;border-radius:50%;flex:none}
+.node .nname{font-size:13.5px;font-weight:600;color:var(--ink-soft)}
+.node .ntier{margin-left:auto;font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-2);font-weight:600}
+.node.custom{border-style:dashed;border-color:var(--line-3)}
+.node.custom .dot{background:var(--card);border:1.5px solid var(--ink-soft)}
+/* tier ramp on the dot */
+.t-discovered .dot{background:#fff;border:1.5px solid var(--muted)}
+.t-training .dot{background:var(--clay-tint);border:1.5px solid var(--clay);box-shadow:0 0 0 3px var(--clay-soft)}
+.t-training .dot.pulse{animation:breathe 3.4s ease-in-out infinite}
+.t-honed .dot{background:var(--gold-soft);border:1.5px solid var(--gold)}
+.t-proven .dot{background:var(--gold);border:1.5px solid var(--gold-deep);box-shadow:0 0 0 3px var(--gold-soft)}
+.t-honed .ntier{color:var(--gold-deep)}.t-proven .ntier{color:var(--gold-deep)}
+@keyframes breathe{0%,100%{opacity:.6}50%{opacity:1}}
+/* waypoint fill by member ratio */
+.wp-0{background:var(--paper-2);border:1.5px solid var(--line-3);color:var(--muted)}
+.wp-part{background:var(--gold-soft);border:1.5px solid var(--gold);color:var(--gold-deep)}
+.wp-full{background:var(--gold);border:1.5px solid var(--gold-deep);color:#fff}
+/* personal layer */
+.additions{margin-top:22px}
+.additions .ahead{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.additions .ahead .label{color:var(--ink-soft)}
+.additions .agroups{display:flex;flex-direction:column;gap:9px}
+/* empty states */
+.empty{position:absolute;inset:0;display:grid;place-items:center;z-index:10;background:color-mix(in srgb,var(--paper) 70%,transparent)}
+.empty .inner{width:380px;text-align:center;padding:26px}
+.empty h3{margin:8px 0 7px;font-family:var(--serif);font-weight:500;font-size:22px}
+.empty p{margin:0 0 16px;font-size:13.5px;color:var(--muted);line-height:1.55}
 /* ---- drawer ---- */
 .drawer{position:absolute;top:0;right:0;bottom:0;width:352px;background:var(--card);border-left:1px solid var(--line-2);box-shadow:var(--shadow-lg);transform:translateX(105%);transition:transform .32s cubic-bezier(.3,.9,.3,1);z-index:40;display:flex;flex-direction:column}
 .drawer.open{transform:translateX(0)}
@@ -127,23 +140,19 @@ svg text{font-family:var(--sans)}
 .ladder .st.cur .sl{color:var(--clay-deep);font-weight:700}
 .ladder .st.done .sl{color:var(--gold-deep)}
 .ddesc{font-size:13.5px;color:var(--ink-soft);line-height:1.55;margin:0}
-.dcounts{border-radius:var(--r-sm);padding:12px 14px;display:flex;flex-direction:column;gap:7px}
-.dcounts .cr{display:flex;justify-content:space-between;gap:12px;font-size:12.5px;color:var(--muted)}
-.dcounts .cr b{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--ink);text-align:right}
-.plist{display:flex;flex-direction:column;gap:6px;margin-top:7px}
-.pitem{display:flex;align-items:center;gap:9px;border:1px solid var(--line-2);border-radius:9px;padding:7px 11px;font-size:12.5px;font-weight:600;color:var(--ink-soft);background:var(--card);cursor:pointer;text-align:left}
-.pitem:hover{border-color:var(--line-3);background:var(--paper)}
-.pitem .tdot{width:9px;height:9px;border-radius:50%;flex:none}
-.pitem .tw{margin-left:auto;font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-2);font-weight:500}
-.evfile{display:flex;align-items:center;gap:11px;border:1px solid var(--line-2);border-radius:var(--r-sm);padding:11px 13px;background:var(--paper)}
-.evfile .fg{width:34px;height:42px;border-radius:6px;flex:none;background:var(--card);border:1px solid var(--line-2);display:grid;place-items:center;font-family:var(--mono);font-size:9px;font-weight:700;color:var(--clay-deep);box-shadow:var(--shadow-sm)}
-.evfile .fn{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--ink)}
-.evfile .fd{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--sage-deep);font-weight:600;margin-top:2px}
-.evform{border:1px dashed var(--clay);background:var(--clay-tint);border-radius:var(--r-sm);padding:12px 13px}
-.evform input{width:100%;border:1px solid var(--line-2);border-radius:8px;padding:8px 10px;font-family:var(--mono);font-size:12px;color:var(--ink);background:var(--card);outline:none;margin:8px 0 10px}
-.evform input:focus{border-color:var(--clay)}
+.chipwrap{display:flex;flex-wrap:wrap;gap:6px}
+.tchip{font-family:var(--mono);font-size:11px;padding:3px 9px;border:1px solid var(--line-2);border-radius:999px;color:var(--ink-soft);background:var(--paper)}
+.mlist{display:flex;flex-direction:column;gap:6px;margin-top:7px}
+.mitem{display:flex;align-items:center;gap:9px;border:1px solid var(--line-2);border-radius:9px;padding:7px 11px;font-size:12.5px;font-weight:600;color:var(--ink-soft);background:var(--card)}
+.mitem .ms{margin-left:auto;font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--sage-deep)}
+.setrow{display:flex;gap:6px;flex-wrap:wrap}
+.setrow .chip{cursor:pointer}
+.setrow .chip.cur{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.noteed textarea{width:100%;min-height:64px;border:1px solid var(--line-2);border-radius:9px;padding:9px 11px;font-family:var(--sans);font-size:12.5px;color:var(--ink);background:var(--paper);outline:none;resize:vertical}
+.noteed textarea:focus{border-color:var(--clay)}
 .dfoot{display:flex;gap:8px;flex-wrap:wrap}
 .hint{font-size:11.5px;color:var(--muted);line-height:1.5;margin:0}
+.selfassessed{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:600}
 /* ---- phone ---- */
 .phone{width:396px;background:var(--ink);border-radius:46px;padding:10px;box-shadow:var(--shadow-lg);flex:none}
 .phone .screen{background:var(--paper);border-radius:37px;overflow:hidden;position:relative;height:748px;display:flex;flex-direction:column}
@@ -151,245 +160,147 @@ svg text{font-family:var(--sans)}
 .m-status .notch{width:86px;height:24px;background:var(--ink);border-radius:999px}
 .m-head{padding:8px 18px 10px;border-bottom:1px solid var(--line)}
 .m-head h2{margin:2px 0 1px;font-family:var(--serif);font-weight:500;font-size:20px}
-.m-counts{display:flex;gap:6px;overflow-x:auto;padding:8px 18px 10px;scrollbar-width:none}
-.m-counts::-webkit-scrollbar{display:none}
-.m-counts .chip{font-family:var(--mono);font-size:10px;padding:4px 10px;flex:none;cursor:default}
-.m-chart{flex:1;overflow:auto;position:relative;background:var(--paper)}
-.m-chart svg{width:1010px;height:auto;display:block}
-.m-hint{position:absolute;top:10px;left:18px;z-index:5;font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:color-mix(in srgb,var(--paper) 82%,transparent);padding:3px 8px;border-radius:999px;border:1px solid var(--line-2)}
-.sheet{position:absolute;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line-2);border-radius:22px 22px 37px 37px;box-shadow:0 -18px 44px -18px rgba(22,33,46,.3);z-index:20;padding:8px 18px 20px;transform:translateY(105%);transition:transform .32s cubic-bezier(.3,.9,.3,1)}
+.m-body{flex:1;overflow:auto;padding:12px 16px 20px}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line-2);border-radius:22px 22px 37px 37px;box-shadow:0 -18px 44px -18px rgba(22,33,46,.3);z-index:20;padding:8px 18px 20px;transform:translateY(105%);transition:transform .32s cubic-bezier(.3,.9,.3,1);max-height:78%;overflow:auto}
 .sheet.open{transform:translateY(0)}
 .sheet .grab{width:38px;height:4px;border-radius:2px;background:var(--line-3);margin:4px auto 12px}
 .sheet h3{margin:1px 0 2px;font-family:var(--serif);font-weight:500;font-size:19px}
-.sheet .scount{font-family:var(--mono);font-size:11px;color:var(--muted);margin:7px 0 12px}
-.sheet .btn{width:100%;min-height:46px}
-.sheet .srow{display:flex;gap:8px;margin-top:8px}
-.sheet .srow .btn{min-height:44px}
 @media (prefers-reduced-motion:reduce){
-.pulse{animation:none;opacity:.65}
-.bloom circle{animation:none;opacity:0}
-.node,.edge,.drawer,.sheet,.toast{transition:none}
+.t-training .dot.pulse{animation:none;opacity:.85}
+.gw .caret,.drawer,.sheet,.node{transition:none}
+.gw .members{transition:none}
 }
 </style>
 </head>
 <body>
-<div class="demo-strip"><span class="tag">Loop · Pathway map — demo states</span><button class="chip sm on" data-scn="mixed" id="scn-mixed">Mixed progress</button><button class="chip sm" data-scn="fresh" id="scn-fresh">Fresh start (empty)</button><button class="chip sm" data-scn="none" id="scn-none">No pathway (empty)</button><span class="spacer"></span><span>hover = lineage · click = drawer · counts only, no percentages · reduced-motion respected</span></div>
+<div class="demo-strip"><span class="tag">Loop · Pathway map — groups re-pass (KT-D)</span><button class="chip sm on" data-scn="mixed">Mixed progress</button><button class="chip sm" data-scn="fresh">Fresh selection</button><button class="chip sm" data-scn="none">No pathway</button><span class="spacer"></span><span>click a group to expand · click a node for the drawer · honest counts, no percentages · reduced-motion respected</span></div>
 <div class="stage">
 <div>
-<div class="app" data-screen-label="Desktop · Pathway map" id="app">
-<div class="tb"><div class="brand"><div class="glyph">L</div><div class="word">Loop</div></div><nav class="tb-nav"><a>Today</a><a>Schedule</a><a class="on">Pathway</a><a>Check-ins</a></nav><span class="spacer"></span><span class="sync"><span class="dot"></span>Plan v4 · synced</span><div class="avatar">M</div></div>
+<div class="app" id="app">
+<div class="tb"><div class="brand"><div class="glyph">L</div><div class="word">Loop</div></div><nav class="tb-nav"><a>Today</a><a>Week</a><a>Plan</a><a>Progress</a><a class="on">Pathway</a><a>Tuning</a></nav><span class="spacer"></span><span class="sync"><span class="dot"></span>Plan v4 · synced</span><div class="avatar">M</div></div>
 <div class="ph"><div><div class="eyebrow">Pathway</div><h1 id="pname">AI-Integration Engineer</h1><div class="tagline">“Ships LLM-powered features into real products, end to end.”</div></div><span class="spacer"></span><div class="counts" id="counts"></div></div>
-<div class="chart-wrap" id="chartwrap"><div id="chart"></div><div id="tt"></div><div class="toast" id="toast"></div><div id="overlay"></div></div>
+<div class="mapwrap" id="mapwrap"><div class="maptools" id="maptools"></div><div id="map"></div><div id="empty"></div></div>
 <aside class="drawer" id="drawer"></aside>
 </div>
-<div class="frame-cap">Desktop · 1240 — hover a node to trace its lineage to the roots; click for the drawer. Study lights a branch from the roots; proof crowns it.</div>
+<div class="frame-cap">Desktop · 1240 — branches fan from the spine; each group waypoint expands in place to its skill nodes. Study lights a branch from the roots; proof crowns it.</div>
 </div>
 <div>
-<div class="phone" data-screen-label="Mobile · Pathway map">
+<div class="phone">
 <div class="screen"><div class="m-status"><span>9:41</span><span class="notch"></span><span>◐ 71</span></div>
 <div class="m-head"><div class="eyebrow" style="font-size:10px">Pathway</div><h2>AI-Integration Engineer</h2></div>
-<div class="m-counts" id="mcounts"></div>
-<div class="m-chart" id="mchartsc"><div class="m-hint">Drag to pan the chart</div><div id="mchart"></div><div id="moverlay"></div></div>
+<div class="m-body" id="mbody"></div>
 <div class="sheet" id="sheet"></div>
 </div></div>
-<div class="frame-cap">Mobile · 396 — the chart pans; the drawer becomes a sheet. Same honest counts, same five tiers.</div>
+<div class="frame-cap">Mobile · 396 — the same branches stack; the drawer becomes a bottom sheet. Same honest counts, same four tiers.</div>
 </div>
 </div>
 <script>
-const TW=['Locked','Discovered','Training','Honed','Proven'];
-const TMEAN=['Groundwork untouched. Nothing is blocked — this just isn\u2019t charted through yet.','Reachable now. No study logged yet.','Study is scheduled or under way.','The planned study minutes are complete.','Honed, with a real artifact you confirmed.'];
-const TCOL=['#cdbfa8','#97a0ab','#bd5a39','#c08a3e','#9a6d2f'];
-const BR=[{name:'LLM feature depth',cap:'c1'},{name:'Integration breadth',cap:'c2'},{name:'Public artifact',cap:'c3'}];
-const CART={x:590,y:548};
-const N=[
-{id:'r1',b:0,name:'Retrieval fundamentals',x:368,y:448,req:[],lp:'r',desc:'Chunking, embeddings and grounding — how a model answers from your data instead of guessing.'},
-{id:'p1',b:0,name:'Prompt & schema design',x:212,y:430,req:[],lp:'l',desc:'Stable prompts with typed, validated outputs the rest of the system can trust.'},
-{id:'e1',b:0,name:'Eval harness basics',x:170,y:318,req:['p1'],lp:'b',desc:'A small, repeatable eval set that tells you when a change makes things worse.'},
-{id:'t1',b:0,name:'Tool use & orchestration',x:310,y:330,req:['p1','r1'],lp:'r',desc:'Letting the model call tools — and keeping the call chain observable.'},
-{id:'g1',b:0,name:'Guardrails & failure paths',x:224,y:212,req:['e1','t1'],lp:'l',desc:'Timeouts, fallbacks and refusals: what the feature does when the model is wrong.'},
-{id:'c1',b:0,cap:1,name:'LLM feature shipped',x:210,y:100,req:['g1'],lp:'b',desc:'The pillar itself: a real LLM-powered feature, shipped to real users.'},
-{id:'a2',b:1,name:'API surface design',x:812,y:448,req:[],lp:'r',desc:'Endpoints and contracts that stay sane as the feature grows.'},
-{id:'u2',b:1,name:'Auth & rate limits',x:952,y:400,req:['a2'],lp:'r',desc:'Keys, quotas and abuse cases — the unglamorous edges of a public surface.'},
-{id:'s2',b:1,name:'Streaming UX',x:760,y:348,req:['a2'],lp:'l',desc:'Tokens on screen fast: partial results, cancellation, retry.'},
-{id:'l2',b:1,name:'Cost & latency budgets',x:916,y:282,req:['u2','s2'],lp:'r',desc:'Knowing what a request costs and where the milliseconds go.'},
-{id:'o2',b:1,name:'LLM observability',x:846,y:192,req:['l2'],lp:'l',desc:'Traces, token counts and failure taxonomies you can actually query.'},
-{id:'c2',b:1,cap:1,name:'Integration shipped',x:912,y:100,req:['o2'],lp:'b',desc:'The pillar itself: an LLM integration running in production, end to end.'},
-{id:'n3',b:2,name:'Technical narrative',x:585,y:398,req:['r1'],lp:'t',desc:'The write-up of what you built and why — drawn from your grounding work.'},
-{id:'d3',b:2,name:'Talk or deep-dive post',x:598,y:278,req:['n3'],lp:'r',desc:'One artifact in public: a talk given or a deep-dive published.'},
-{id:'c3',b:2,cap:1,name:'Public artifact live',x:592,y:152,req:['d3'],lp:'b',desc:'The pillar itself: something public a stranger can read or watch.'}
-];
-const byId=Object.fromEntries(N.map(n=>[n.id,n]));
-const MIXED={
-r1:{plan:180,done:180,sd:4,st:4,evidence:{file:'grounding-writeup.md',date:'confirmed 12 Jul'}},
-p1:{plan:240,done:240,sd:5,st:5},
-e1:{plan:150,done:150,sd:3,st:3},
-t1:{plan:180,done:90,sd:2,st:4,next:'Thu 17 Jul · 09:00 · 45 min'},
-a2:{plan:200,done:200,sd:4,st:4},
-u2:{plan:120,done:0,sd:0,st:3,next:'Fri 18 Jul · 08:30 · 40 min'}
-};
-let scenario='mixed', work=JSON.parse(JSON.stringify(MIXED));
-let sel='t1', msel='t1', evOpen=false, reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
-function tiers(){const t={};for(const n of N){const w=work[n.id];const reach=n.req.every(r=>t[r]>=2);
-if(n.cap){t[n.id]=w&&w.evidence?4:(reach?1:0);continue}
-if(w){if(w.evidence&&w.done>=w.plan)t[n.id]=4;else if(w.plan>0&&w.done>=w.plan)t[n.id]=3;else t[n.id]=2}
-else t[n.id]=n.req.length===0||reach?1:0}return t}
-function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;')}
-function anc(id){const s=new Set();const go=i=>{for(const r of byId[i].req){if(!s.has(r)){s.add(r);go(r)}}};go(id);return s}
-function edges(){const E=[];for(const n of N){if(n.req.length===0)E.push({a:null,b:n.id});for(const r of n.req)E.push({a:r,b:n.id})}return E}
-function epath(a,b){const p=a?byId[a]:CART,q=byId[b],dx=q.x-p.x;return `M${p.x} ${p.y}C${(p.x+dx*.18).toFixed(0)} ${p.y-24},${(q.x-dx*.18).toFixed(0)} ${q.y+40},${q.x} ${q.y}`}
-function arcp(cx,cy,r,a0,a1){const P=a=>[(cx+r*Math.cos(a)).toFixed(1),(cy+r*Math.sin(a)).toFixed(1)];const[x0,y0]=P(a0),[x1,y1]=P(a1);return `M${x0} ${y0}A${r} ${r} 0 ${a1-a0>Math.PI?1:0} 1 ${x1} ${y1}`}
-function sessRing(n,w){let out='';const T=w.st,g=.16,span=Math.PI*2/T;for(let i=0;i<T;i++){const a0=-Math.PI/2+i*span+g/2,a1=-Math.PI/2+(i+1)*span-g/2;out+=`<path d="${arcp(n.x,n.y,19.5,a0,a1)}" fill="none" stroke="${i<w.sd?'var(--clay)':'var(--line-3)'}" stroke-width="2.4" stroke-linecap="round"/>`}return out}
-function branchStats(t){return BR.map((b,i)=>{const study=N.filter(n=>n.b===i&&!n.cap);const h=study.filter(n=>t[n.id]>=3).length;const cp=t[b.cap]===4;return {h,n:study.length,cp}})}
-function chartSVG(t,bloomId){
-let s=`<svg viewBox="0 0 1180 630" xmlns="http://www.w3.org/2000/svg">`;
-s+=`<defs><radialGradient id="hGold"><stop offset="0%" stop-color="#c08a3e" stop-opacity=".38"/><stop offset="55%" stop-color="#c08a3e" stop-opacity=".14"/><stop offset="100%" stop-color="#c08a3e" stop-opacity="0"/></radialGradient>
-<radialGradient id="hClay"><stop offset="0%" stop-color="#bd5a39" stop-opacity=".34"/><stop offset="60%" stop-color="#bd5a39" stop-opacity=".12"/><stop offset="100%" stop-color="#bd5a39" stop-opacity="0"/></radialGradient>
-<radialGradient id="lamp"><stop offset="0%" stop-color="#c08a3e" stop-opacity=".13"/><stop offset="100%" stop-color="#c08a3e" stop-opacity="0"/></radialGradient></defs>`;
-s+=`<rect x="14" y="10" width="1152" height="606" rx="10" fill="none" stroke="var(--line-3)" stroke-width="1.5"/><rect x="22" y="18" width="1136" height="590" rx="6" fill="none" stroke="var(--line-2)" stroke-width="1"/>`;
-for(let x=102;x<1140;x+=80){s+=`<line x1="${x}" y1="18" x2="${x}" y2="23" stroke="var(--line-2)"/><line x1="${x}" y1="603" x2="${x}" y2="608" stroke="var(--line-2)"/>`}
-for(let y=98;y<600;y+=80){s+=`<line x1="22" y1="${y}" x2="27" y2="${y}" stroke="var(--line-2)"/><line x1="1153" y1="${y}" x2="1158" y2="${y}" stroke="var(--line-2)"/>`}
-s+=`<g opacity=".55">`;for(let r=120;r<=560;r+=74)s+=`<circle cx="590" cy="580" r="${r}" fill="none" stroke="var(--line)" stroke-width="1"/>`;s+=`</g>`;
-s+=`<g transform="translate(58,52)"><circle r="13" fill="none" stroke="var(--line-3)"/><path d="M0 -19V-8M0 8V19M-19 0H-8M8 0H19" stroke="var(--line-3)"/><path d="M0 -8L3 3L0 1L-3 3Z" fill="var(--gold)"/><text y="-24" text-anchor="middle" class="keyd" style="letter-spacing:.1em">N</text></g>`;
-if(t){
-const bs=branchStats(t);
-bs.forEach((b,i)=>{const cx=byId[BR[i].cap].x;s+=`<text x="${cx}" y="36" text-anchor="middle" class="banner-n">${esc(BR[i].name.toUpperCase())}</text><text x="${cx}" y="51" text-anchor="middle" class="banner-c">${b.h}/${b.n} honed · capstone ${b.cp?'proven ✦':'unproven'}</text>`});
-for(const n of N)if(t[n.id]>=3)s+=`<circle cx="${n.x}" cy="${n.y}" r="115" fill="url(#lamp)"/>`;
-const trunkLit=N.filter(n=>n.req.length===0).some(n=>t[n.id]>=3);
-for(const e of edges()){const src=e.a?t[e.a]:(trunkLit?3:1),tgt=t[e.b];const lit=tgt>=3&&src>=3;let st;
-if(lit)st=`<path d="${epath(e.a,e.b)}" fill="none" stroke="var(--gold-soft)" stroke-width="7" opacity=".6"/><path d="${epath(e.a,e.b)}" fill="none" stroke="var(--gold)" stroke-width="2.2"/>`;
-else if(tgt===2)st=`<path d="${epath(e.a,e.b)}" fill="none" stroke="var(--clay)" stroke-width="1.6" stroke-dasharray="7 5" opacity=".75"/>`;
-else if(tgt===1)st=`<path d="${epath(e.a,e.b)}" fill="none" stroke="var(--line-3)" stroke-width="1.4" stroke-dasharray="6 4"/>`;
-else st=`<path d="${epath(e.a,e.b)}" fill="none" stroke="var(--line-2)" stroke-width="1.2" stroke-dasharray="2 5"/>`;
-s+=`<g class="edge" data-a="${e.a||'root'}" data-b="${e.b}">${st}</g>`}
-for(const n of N){const tr=t[n.id],r=n.cap?23:13,w=work[n.id];
-s+=`<g class="node t${tr}${n.cap?' cap':''}" data-nid="${n.id}">`;
-if(tr===3||tr===4)s+=`<circle cx="${n.x}" cy="${n.y}" r="${n.cap?54:36}" fill="url(#hGold)"/>`;
-if(tr===2)s+=`<circle class="pulse" cx="${n.x}" cy="${n.y}" r="32" fill="url(#hClay)"/>`;
-s+=`<circle class="selring" cx="${n.x}" cy="${n.y}" r="${r+8}" fill="none" stroke="none"/>`;
-if(n.cap)s+=`<circle cx="${n.x}" cy="${n.y}" r="${r+5.5}" fill="none" stroke="${tr===4?'var(--gold)':'var(--line-3)'}" stroke-width="1" stroke-dasharray="1.5 3"/>`;
-s+=`<circle class="body" cx="${n.x}" cy="${n.y}" r="${r}"/>`;
-if(tr===2&&w)s+=sessRing(n,w);
-if(n.cap)s+=`<text x="${n.x}" y="${n.y+5.5}" text-anchor="middle" font-family="var(--serif)" font-size="16" font-weight="600" fill="${tr===4?'#fff':tr===0?'var(--muted-2)':'var(--ink-soft)'}">${['I','II','III'][n.b]}</text>`;
-if(tr===4){s+=`<path d="M${n.x} ${n.y-r-13}l2.6 5.8 5.8 2.6-5.8 2.6-2.6 5.8-2.6-5.8-5.8-2.6 5.8-2.6Z" fill="var(--gold)" stroke="var(--gold-deep)" stroke-width=".6"/>`;
-if(!n.cap)s+=`<circle cx="${n.x+10}" cy="${n.y+10}" r="7.5" fill="var(--sage)" stroke="var(--paper)" stroke-width="1.6"/><text x="${n.x+10}" y="${n.y+13}" text-anchor="middle" font-size="9" font-weight="800" fill="#fff">✓</text>`}
-const L={l:[n.x-(r+9),n.y+4,'end'],r:[n.x+r+9,n.y+4,'start'],b:[n.x,n.y+r+19,'middle'],t:[n.x,n.y-(r+11),'middle']}[n.lp];
-s+=`<text class="nlab" x="${L[0]}" y="${L[1]}" text-anchor="${L[2]}">${esc(n.name)}</text>`;
-if(n.cap)s+=`<text class="sublab" x="${n.x}" y="${n.y+r+35}" text-anchor="middle">${t[n.id]===4?'CAPSTONE ✦ PROVEN':'CAPSTONE — UNPROVEN'}</text>`;
-s+=`<circle class="hit" cx="${n.x}" cy="${n.y}" r="${r+13}"/></g>`}
-if(bloomId&&!reduced){const n=byId[bloomId];s+=`<g class="bloom" pointer-events="none"><circle cx="${n.x}" cy="${n.y}" r="26" fill="none" stroke="var(--gold)" stroke-width="2.5"/><circle cx="${n.x}" cy="${n.y}" r="26" fill="none" stroke="var(--gold-deep)" stroke-width="1.2"/></g>`}
-}else{
-for(const n of N)s+=`<circle cx="${n.x}" cy="${n.y}" r="${n.cap?23:13}" fill="none" stroke="var(--line-2)" stroke-width="1.2" stroke-dasharray="2 4"/>`;
-for(const e of edges())s+=`<path d="${epath(e.a,e.b)}" fill="none" stroke="var(--line-2)" stroke-width="1" stroke-dasharray="2 5" opacity=".7"/>`}
-s+=`<g><rect x="460" y="548" width="260" height="56" rx="9" fill="var(--paper)" stroke="var(--line-3)" stroke-width="1.3"/><rect x="465" y="553" width="250" height="46" rx="6" fill="none" stroke="var(--line-2)" stroke-width="1" stroke-dasharray="2 3"/>
-<text x="590" y="573" text-anchor="middle" class="cart-n">${t?'AI-INTEGRATION ENGINEER':'— UNCHARTED —'}</text><text x="590" y="589" text-anchor="middle" class="cart-c">${t?'3 pillars · 12 study nodes · 3 capstones':'no pathway chosen'}</text></g>`;
-s+=`<g><rect x="944" y="464" width="214" height="144" rx="8" fill="var(--paper)" stroke="var(--line-2)"/><text x="958" y="484" class="keyt">KEY — HOW NODES LIGHT</text>`;
-[['t0','Locked','groundwork untouched'],['t1','Discovered','reachable, unstudied'],['t2','Training','study scheduled'],['t3','Honed','minutes complete'],['t4','Proven','+ confirmed artifact']].forEach((k,i)=>{const y=502+i*21;s+=`<g class="${k[0]}"><circle class="body" cx="966" cy="${y}" r="6.5"/></g><text x="982" y="${y+3.5}" class="keyn">${k[1]}</text><text x="1052" y="${y+3.5}" class="keyd">${k[2]}</text>`});
-s+=`</g></svg>`;return s}
+const TIERS=['discovered','training','honed','proven'];
+const TW={discovered:'Discovered',training:'Training',honed:'Honed',proven:'Proven'};
+const TMEAN={discovered:'On the map, no work logged yet.',training:'Study is scheduled or under way.',honed:'The planned study minutes are complete — or you marked it done.',proven:'Honed, with a real artifact you confirmed.'};
+const RANK={discovered:0,training:1,honed:2,proven:3};
+// --- demo account map (mirrors KnowledgeMapView) ---
+const BRANCHES=[
+{slot_id:'llm-feature-depth',title:'LLM feature depth',capstone_tier:'discovered'},
+{slot_id:'integration-breadth',title:'Integration breadth',capstone_tier:'discovered'},
+{slot_id:'public-artifact',title:'Public artifact',capstone_tier:'proven'}];
+const GROUPS=[
+{group_id:'kg-grounding',title:'Retrieval & Grounding',branch:'llm-feature-depth',blurb:'Finding and feeding the right context to a model.',members:['kn-rag','kn-embeddings','kn-chunking']},
+{group_id:'kg-orchestration',title:'Tool use & Guardrails',branch:'llm-feature-depth',blurb:'Letting the model act — and staying safe when it is wrong.',members:['kn-tools','kn-guardrails']},
+{group_id:'kg-surface',title:'API & Delivery',branch:'integration-breadth',blurb:'The public edges of an LLM feature.',members:['kn-api','kn-streaming','kn-cost']},
+{group_id:'kg-observability',title:'Observability',branch:'integration-breadth',blurb:'Traces and failure taxonomies you can query.',members:['kn-traces']},
+{group_id:'kg-narrative',title:'Writing & Talks',branch:'public-artifact',blurb:'Turning the work into something a stranger can read.',members:['kn-writeup','kn-talk']}];
+const NODES={
+'kn-rag':{title:'Retrieval fundamentals',blurb:'How dense and lexical retrieval differ, and when each wins.',skills:['skill.rag','skill.embeddings'],modules:[{id:'m1',title:'RAG basics',status:'complete'}]},
+'kn-embeddings':{title:'Embeddings',blurb:'Vector representations and similarity search.',skills:['skill.embeddings']},
+'kn-chunking':{title:'Chunking strategies',blurb:'Splitting documents so retrieval stays coherent.',skills:['skill.rag']},
+'kn-tools':{title:'Tool use & orchestration',blurb:'Letting the model call tools, keeping the chain observable.',skills:['skill.agents'],modules:[{id:'m2',title:'Tool loop',status:'scheduled'}]},
+'kn-guardrails':{title:'Guardrails & failure paths',blurb:'Timeouts, fallbacks and refusals when the model is wrong.',skills:['skill.safety']},
+'kn-api':{title:'API surface design',blurb:'Endpoints and contracts that stay sane as the feature grows.',skills:['skill.api-design']},
+'kn-streaming':{title:'Streaming UX',blurb:'Tokens on screen fast: partial results, cancel, retry.',skills:['skill.frontend']},
+'kn-cost':{title:'Cost & latency budgets',blurb:'Knowing what a request costs and where the ms go.',skills:['skill.perf']},
+'kn-traces':{title:'LLM observability',blurb:'Traces, token counts and failure taxonomies you can query.',skills:['skill.observability']},
+'kn-writeup':{title:'Technical narrative',blurb:'The write-up of what you built and why.',skills:['skill.writing']},
+'kn-talk':{title:'Talk or deep-dive post',blurb:'One artifact in public: a talk given or a post published.',skills:['skill.writing']}};
+// per-node stored tier (map_state output, demo)
+const MIXED={'kn-rag':'proven','kn-embeddings':'honed','kn-chunking':'training','kn-tools':'training','kn-guardrails':'discovered','kn-api':'honed','kn-streaming':'discovered','kn-cost':'discovered','kn-traces':'discovered','kn-writeup':'honed','kn-talk':'honed'};
+const PERSONAL_GROUPS=[{group_id:'kcg-side',title:'Side quests'}];
+const PERSONAL_NODES=[{node_id:'kcn-rust',title:'Learn enough Rust',group_id:'kcg-side',description:'For the CLI rewrite.',tier:'training'}];
+
+let scenario='mixed';
+let tier={}, open=new Set(['kg-grounding','kg-surface']), sel=null;
+const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function reset(){
+  tier = scenario==='mixed'?{...MIXED}:{};
+  for(const id in NODES) if(!(id in tier)) tier[id]='discovered';
+  for(const p of PERSONAL_NODES) tier[p.node_id]=scenario==='mixed'?p.tier:'discovered';
+  open = scenario==='mixed'?new Set(['kg-grounding','kg-surface']):new Set();
+  sel=null;
+}
+function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;')}
+function groupHoned(g){return g.members.filter(id=>RANK[tier[id]]>=2).length}
+function branchHoned(b){const ms=GROUPS.filter(g=>g.branch===b.slot_id).flatMap(g=>g.members);return[ms.filter(id=>RANK[tier[id]]>=2).length,ms.length]}
+function wpClass(g){const h=groupHoned(g),n=g.members.length;return h===0?'wp-0':h>=n?'wp-full':'wp-part'}
 /* ---------- header counts ---------- */
-function countsHTML(t,mobile){if(!t)return `<span class="chip"><span class="muted">no pathway chosen</span></span>`;
-const study=N.filter(n=>!n.cap);const h=study.filter(n=>t[n.id]>=3).length;const pv=N.filter(n=>t[n.id]===4&&!n.cap).length;const cp=N.filter(n=>n.cap&&t[n.id]===4).length;
-const nx=Object.entries(work).filter(([,w])=>w.next).map(([id,w])=>({id,w})).sort((a,b)=>a.w.next<b.w.next?-1:1)[0];
-let out=`<span class="chip"><span class="cdot" style="background:var(--gold)"></span><b>${h} of ${study.length}</b>&nbsp;study nodes honed</span><span class="chip"><span class="cdot" style="background:var(--sage)"></span><b>${pv}</b>&nbsp;proven</span><span class="chip"><span class="cdot" style="background:var(--gold-deep)"></span><b>${cp} of 3</b>&nbsp;capstones proven</span>`;
-if(nx&&!mobile)out+=`<span class="chip">next session · <b>&nbsp;Thu 09:00</b>&nbsp;— ${esc(byId[nx.id].name)}</span>`;
-return out}
-/* ---------- drawer / sheet ---------- */
-function ladderHTML(n,tr){const steps=n.cap?[0,1,4]:[0,1,2,3,4];return `<div class="ladder">`+steps.map(s=>`<div class="st ${s<tr?'done':''} ${s===tr?'cur':''}"><span class="dot"></span><span class="sl">${TW[s]}</span></div>`).join('')+`</div>`}
-function drawerHTML(id,t){const n=byId[id],tr=t[id],w=work[id];const pill=BR[n.b].name;
-let h=`<div class="dhead"><div class="row"><span class="eyebrow">${esc(pill)}${n.cap?' · capstone':''}</span><span class="spacer"></span><button class="icon-btn" data-act="close">✕</button></div><h2>${esc(n.name)}</h2>${ladderHTML(n,tr)}</div><div class="dbody">`;
-h+=`<p class="ddesc">${esc(n.desc)}</p>`;
-h+=`<p class="hint" style="margin-top:-6px"><b style="color:var(--ink-soft)">${TW[tr]}</b> — ${TMEAN[tr]}</p>`;
-if(!n.cap){h+=`<div class="dcounts card soft">`;
-if(w){h+=`<div class="cr"><span>Planned study</span><b>${w.plan} min</b></div><div class="cr"><span>Logged</span><b>${w.done} of ${w.plan} min</b></div><div class="cr"><span>Sessions</span><b>${w.sd} of ${w.st} done</b></div>`;if(w.next)h+=`<div class="cr"><span>Next session</span><b>${w.next}</b></div>`}
-else h+=`<div class="cr"><span>Planned study</span><b>none yet</b></div><div class="cr"><span>Logged</span><b>0 min</b></div>`;
-h+=`</div>`}
-else{h+=`<p class="hint">This capstone <b>is</b> the pillar. It turns Proven the moment you confirm the real artifact — there are no study minutes here.</p>`;
-const rem=N.filter(x=>x.b===n.b&&!x.cap&&t[x.id]<3);if(rem.length&&tr<4)h+=`<div class="dcounts card soft"><div class="cr"><span>Branch honed</span><b>${N.filter(x=>x.b===n.b&&!x.cap&&t[x.id]>=3).length} of ${N.filter(x=>x.b===n.b&&!x.cap).length}</b></div><div class="cr"><span>Still unlit</span><b>${rem.map(r=>esc(r.name.split(' &')[0])).join(' · ')}</b></div></div>`}
-if(n.req.length){h+=`<div><div class="label">Feeds from</div><div class="plist">${n.req.map(r=>`<button class="pitem" data-act="goto" data-to="${r}"><span class="tdot" style="background:${TCOL[t[r]]}"></span>${esc(byId[r].name)}<span class="tw">${TW[t[r]]}</span></button>`).join('')}</div></div>`}
-else h+=`<p class="hint">Root of this pillar — no prerequisites.</p>`;
-const leads=N.filter(x=>x.req.includes(id));
-if(leads.length)h+=`<div><div class="label">Feeds into</div><div class="plist">${leads.map(l=>`<button class="pitem" data-act="goto" data-to="${l.id}"><span class="tdot" style="background:${TCOL[t[l.id]]}"></span>${esc(l.name)}<span class="tw">${TW[t[l.id]]}</span></button>`).join('')}</div></div>`;
-if(tr===4&&w&&w.evidence)h+=`<div><div class="label">Evidence</div><div class="evfile" style="margin-top:7px"><div class="fg">MD</div><div><div class="fn">${esc(w.evidence.file)}</div><div class="fd">✓ ${esc(w.evidence.date)}</div></div></div></div>`;
-if(tr===3){if(evOpen)h+=`<div class="evform"><div class="label" style="color:var(--clay-deep)">Confirm the real artifact</div><input id="evinput" value="eval-harness/README.md"><div class="row"><button class="btn sm btn-primary" data-act="ev-confirm">Confirm evidence</button><button class="btn sm btn-soft" data-act="ev-cancel">Cancel</button></div></div>`;
-else h+=`<div><button class="btn btn-primary" data-act="ev-open">Mark evidence</button><p class="hint" style="margin-top:8px">Proof needs a real artifact — a repo, doc, talk or demo you can point to.</p></div>`}
-if(n.cap&&tr===1)h+=`<div><button class="btn btn-primary" data-act="ev-open">Mark evidence</button>${evOpen?`<div class="evform" style="margin-top:8px"><div class="label" style="color:var(--clay-deep)">Confirm the real artifact</div><input id="evinput" value="feature-launch-notes.md"><div class="row"><button class="btn sm btn-primary" data-act="ev-confirm">Confirm evidence</button><button class="btn sm btn-soft" data-act="ev-cancel">Cancel</button></div></div>`:''}</div>`;
-h+=`<div class="dfoot">`;
-if(tr===0)h+=`<button class="btn sm btn-ghost" data-act="schedule">Schedule study anyway</button>`;
-if(tr===1&&!n.cap)h+=`<button class="btn sm btn-primary" data-act="schedule">Schedule study</button>`;
-if(tr===2)h+=`<button class="btn sm btn-primary" data-act="log">Mark today\u2019s 45 min done</button><button class="btn sm btn-ghost">Reschedule</button>`;
-if(tr===3)h+=`<button class="btn sm btn-ghost" data-act="schedule">Add refresher session</button>`;
-h+=`</div>`;
-if(tr===0)h+=`<div class="guard"><span class="lk">◦</span><span>Locked is a map note, not a gate — Loop never blocks you from scheduling anything.</span></div>`;
+function countsHTML(){if(scenario==='none')return `<span class="chip"><span class="muted">no pathway chosen</span></span>`;
+const all=Object.keys(NODES);const honed=all.filter(id=>RANK[tier[id]]>=2).length;const proven=all.filter(id=>tier[id]==='proven').length;const caps=BRANCHES.filter(b=>b.capstone_tier==='proven').length;
+return `<span class="chip"><span class="cdot" style="background:var(--gold)"></span><b>${honed} of ${all.length}</b>&nbsp;skills honed</span><span class="chip"><span class="cdot" style="background:var(--gold-deep)"></span><b>${proven}</b>&nbsp;proven</span><span class="chip"><span class="cdot" style="background:var(--sage)"></span><b>${caps} of ${BRANCHES.length}</b>&nbsp;capstones proven</span>`}
+/* ---------- map ---------- */
+function nodeRowHTML(id,custom){const meta=custom?PERSONAL_NODES.find(p=>p.node_id===id):NODES[id];const t=tier[id];const name=custom?meta.title:meta.title;
+return `<button class="node t-${t}${custom?' custom':''}${sel===id?' sel':''}" data-node="${id}"><span class="dot${t==='training'&&!reduced?' pulse':''}"></span><span class="nname">${esc(name)}</span><span class="ntier">${TW[t]}</span></button>`}
+function groupHTML(g){const h=groupHoned(g),n=g.members.length;const isOpen=open.has(g.group_id);
+return `<div class="gw${isOpen?' open':''}" data-group="${g.group_id}"><div class="ghead" data-toggle="${g.group_id}"><span class="waypoint ${wpClass(g)}">${h}/${n}</span><div><div class="gtitle">${esc(g.title)}</div><div class="gcount">${h}/${n} honed${g.blurb?' · '+esc(g.blurb):''}</div></div><span class="caret">›</span></div><div class="members">${g.members.map(id=>nodeRowHTML(id,false)).join('')}<div style="margin-top:4px"><button class="btn sm btn-soft" data-add-here="${g.group_id}">+ Add a skill</button></div></div></div>`}
+function branchHTML(b){const gs=GROUPS.filter(g=>g.branch===b.slot_id);const[h,tot]=branchHoned(b);const proven=b.capstone_tier==='proven';
+return `<div class="branch"><div class="bhead"><div class="shield ${proven?'proven':'unproven'}">${proven?'✦':'◇'}</div><div><div class="bname">${esc(b.title)}</div><div class="bmeta">${h}/${tot} honed</div><div class="cshield-cap ${proven?'proven':'unproven'}"><span class="lbl">Capstone ${proven?'✦ proven':'— unproven'}</span></div></div></div><div class="groups">${gs.map(groupHTML).join('')}</div></div>`}
+function personalHTML(){const groups=PERSONAL_GROUPS.map(pg=>{const mem=PERSONAL_NODES.filter(p=>p.group_id===pg.group_id);
+return `<div class="gw open" data-group="${pg.group_id}"><div class="ghead" data-toggle="${pg.group_id}"><span class="waypoint wp-0" style="font-size:12px">✎</span><div><div class="gtitle">${esc(pg.title)}</div><div class="gcount">personal · counts toward nothing</div></div><button class="icon-btn" style="margin-left:auto" data-del-group="${pg.group_id}">✕</button></div><div class="members" style="display:flex">${mem.map(p=>nodeRowHTML(p.node_id,true)).join('')}<div style="margin-top:4px"><button class="btn sm btn-soft" data-add-node="${pg.group_id}">+ New node</button></div></div></div>`}).join('');
+return `<div class="additions"><div class="ahead"><span class="label">Your additions</span><span class="hint">Personal groups &amp; nodes — never counted, never in a prompt.</span></div><div class="agroups">${groups}</div></div>`}
+function toolsHTML(){return `<button class="btn sm btn-ghost" data-add>+ Add a skill</button><button class="btn sm btn-ghost" data-new-group>+ New group</button><span class="spacer"></span><span class="hint">Study lights a branch from the roots; proof crowns it.</span>`}
+/* ---------- drawer ---------- */
+function ladderHTML(t){return `<div class="ladder">`+TIERS.map(s=>`<div class="st ${RANK[s]<RANK[t]?'done':''} ${s===t?'cur':''}"><span class="dot"></span><span class="sl">${TW[s]}</span></div>`).join('')+`</div>`}
+function drawerHTML(id){const custom=id.startsWith('kcn-');const meta=custom?PERSONAL_NODES.find(p=>p.node_id===id):NODES[id];const t=tier[id];
+let h=`<div class="dhead"><div class="row"><span class="eyebrow">${custom?'Personal node':'Skill node'}</span><span class="spacer"></span><button class="icon-btn" data-close>✕</button></div><h2>${esc(meta.title)}</h2>${ladderHTML(t)}</div><div class="dbody">`;
+h+=`<p class="ddesc">${esc(custom?(meta.description||'Your own node — track it however you like.'):meta.blurb)}</p>`;
+h+=`<p class="hint" style="margin-top:-6px"><b style="color:var(--ink-soft)">${TW[t]}</b> — ${TMEAN[t]}</p>`;
+if(!custom){h+=`<div><div class="label">Skills</div><div class="chipwrap" style="margin-top:7px">${meta.skills.map(s=>`<span class="tchip">${esc(s)}</span>`).join('')}</div></div>`;
+  if(meta.modules&&meta.modules.length)h+=`<div><div class="label">Linked study</div><div class="mlist">${meta.modules.map(m=>`<div class="mitem">${esc(m.title)}<span class="ms">${esc(m.status)}</span></div>`).join('')}</div></div>`}
+else h+=`<div><div class="label">Name &amp; description</div><div class="noteed"><input class="tchip" style="width:100%;padding:8px 10px;font-family:var(--sans);font-size:13px;margin-bottom:6px" value="${esc(meta.title)}"><textarea placeholder="Optional description">${esc(meta.description||'')}</textarea></div></div>`;
+// adjust mastery
+const settable=custom?['discovered','training','honed']:['discovered','training','honed'];
+h+=`<div><div class="label">Adjust mastery</div><div class="setrow" style="margin-top:7px">${settable.map(s=>`<button class="chip sm ${s===t?'cur':''}" data-set="${s}">${TW[s]}</button>`).join('')}</div><p class="hint" style="margin-top:6px">A set-point is the only control that lowers a tier — down-adjusting re-opens a skill for study.</p></div>`;
+// note editor
+h+=`<div class="noteed"><div class="label">Private note</div><textarea style="margin-top:7px" placeholder="Your framing, resources, reminders — never shared, never in a prompt.">${id==='kn-rag'?'The write-up here became my public artifact seed.':''}</textarea></div>`;
+// mark evidence
+if(!custom&&t==='honed')h+=`<div><button class="btn btn-primary sm" data-evidence>Mark evidence</button><p class="hint" style="margin-top:8px">Proof needs a real artifact — a repo, doc, talk or demo you can point to. It is the only path to Proven.</p></div>`;
+if(!custom&&t==='proven')h+=`<div class="selfassessed">✓ Proven — artifact confirmed</div>`;
+if(custom)h+=`<div class="dfoot"><button class="btn sm btn-ghost" data-del-node="${id}">Delete node</button></div>`;
 h+=`</div>`;return h}
-function sheetHTML(id,t){const n=byId[id],tr=t[id],w=work[id];
-let c;if(n.cap)c=tr===4?'capstone ✦ proven':'capstone — unproven';
-else if(w)c=`${w.done} of ${w.plan} min · ${w.sd} of ${w.st} sessions${w.next?' · next '+w.next.split('·')[0].trim():''}`;
-else c=tr===1?'reachable · no study yet':'groundwork untouched · nothing blocked';
-let h=`<div class="grab"></div><div class="eyebrow" style="font-size:9.5px">${esc(BR[n.b].name)}</div><h3>${esc(n.name)}</h3>${ladderHTML(n,tr)}<div class="scount">${TW[tr]} · ${c}</div>`;
-if(tr===2)h+=`<button class="btn btn-primary" data-act="log">Mark today\u2019s 45 min done</button>`;
-else if(tr===3)h+=`<button class="btn btn-primary" data-act="ev-open-m">Mark evidence</button>`;
-else if(tr===4&&w&&w.evidence)h+=`<div class="evfile"><div class="fg">MD</div><div><div class="fn">${esc(w.evidence.file)}</div><div class="fd">✓ ${esc(w.evidence.date)}</div></div></div>`;
-else h+=`<button class="btn ${tr===1&&!n.cap?'btn-primary':'btn-soft'}" data-act="schedule">Schedule study${tr===0?' anyway':''}</button>`;
-return h}
 /* ---------- render ---------- */
 const $=id=>document.getElementById(id);
-function overlayHTML(t){if(scenario==='none')return `<div class="nopath"><div class="inner card"><div class="eyebrow">Pathway map</div><h3>No pathway charted yet</h3><p>Pick a pathway and Loop lays out its knowledge map — every node, every pillar, and the artifacts that prove them.</p><div class="row" style="justify-content:center"><button class="btn btn-ink">Choose a pathway</button><button class="btn btn-ghost">Browse examples</button></div></div></div>`;
-const anyLit=N.some(n=>t[n.id]>=2);
-if(!anyLit)return `<div class="empty-note card"><h3>Nothing lit yet</h3><p>Your map starts dark. Schedule the first session on a root node — Retrieval fundamentals, Prompt &amp; schema design or API surface design — and light climbs from there.</p><button class="btn sm btn-primary" data-act="goto" data-to="r1">Start at a root</button></div>`;
+function emptyHTML(){if(scenario==='none')return `<div class="empty"><div class="inner card"><div class="eyebrow">Pathway map</div><h3>No pathway charted yet</h3><p>Pick a pathway and Loop lays out its knowledge map — every group, every pillar, and the artifacts that prove them.</p><div class="row" style="justify-content:center"><button class="btn btn-ink">Choose a pathway</button></div></div></div>`;
+const anyLit=Object.values(tier).some(t=>RANK[t]>=1);
+if(scenario==='fresh'&&!anyLit)return `<div class="empty"><div class="inner card"><h3>Your map is charted. Time to walk it.</h3><p>Every node starts Discovered. Schedule the first session and light climbs from the roots.</p></div></div>`;
 return ''}
-function render(bloomId){const t=scenario==='none'?null:tiers();
-$('chart').innerHTML=chartSVG(t,bloomId);
-$('mchart').innerHTML=chartSVG(t,bloomId);
-$('overlay').innerHTML=overlayHTML(t);$('moverlay').innerHTML='';
-$('counts').innerHTML=countsHTML(t);$('mcounts').innerHTML=countsHTML(t,1);
-if(t&&sel){$('drawer').innerHTML=drawerHTML(sel,t);$('drawer').classList.add('open');
-document.querySelectorAll(`#chart [data-nid="${sel}"]`).forEach(g=>g.classList.add('sel'))}
-else $('drawer').classList.remove('open');
-if(t&&msel){$('sheet').innerHTML=sheetHTML(msel,t);$('sheet').classList.add('open');
-document.querySelectorAll(`#mchart [data-nid="${msel}"]`).forEach(g=>g.classList.add('sel'))}
-else $('sheet').classList.remove('open')}
+function render(){
+  $('counts').innerHTML=countsHTML();
+  if(scenario==='none'){$('maptools').innerHTML='';$('map').innerHTML='';$('mbody').innerHTML='';$('empty').innerHTML=emptyHTML();$('drawer').classList.remove('open');$('sheet').classList.remove('open');return}
+  $('maptools').innerHTML=toolsHTML();
+  const body=BRANCHES.map(branchHTML).join('')+personalHTML();
+  $('map').innerHTML=body;$('mbody').innerHTML=body;
+  $('empty').innerHTML=emptyHTML();
+  if(sel){$('drawer').innerHTML=drawerHTML(sel);$('drawer').classList.add('open');$('sheet').innerHTML=`<div class="grab"></div>`+drawerHTML(sel).replace(/^<div class="dhead">[\s\S]*?<\/div><div class="dbody">/,'<div class="dbody" style="padding:0">');$('sheet').classList.add('open')}
+  else{$('drawer').classList.remove('open');$('sheet').classList.remove('open')}
+}
 /* ---------- interactions ---------- */
-function toast(msg){const el=$('toast');el.textContent='✦ '+msg;el.classList.add('show');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('show'),2800)}
-function tierUpCheck(id,before,after,src){if(after>before){render(id);toast(`${byId[id].name} is now ${TW[after]}`)}else render()}
-function doAct(act,src){const id=src==='m'?msel:sel;const t=tiers();const before=t[id];const n=byId[id];
-if(act==='close'){sel=null;render();return}
-if(act==='goto')return;
-if(act==='log'){const w=work[id];w.done=Math.min(w.plan,w.done+45);w.sd=Math.min(w.st,w.sd+1);if(w.done>=w.plan)delete w.next;evOpen=false;tierUpCheck(id,before,tiers()[id]);return}
-if(act==='schedule'){if(!work[id])work[id]={plan:120,done:0,sd:0,st:3,next:'Mon 20 Jul · 09:00 · 45 min'};else work[id].next='Mon 20 Jul · 09:00 · 45 min';evOpen=false;tierUpCheck(id,before,tiers()[id]);return}
-if(act==='ev-open'){evOpen=true;render();return}
-if(act==='ev-open-m'){msel=id;evOpen=true;if(scenario!=='none'){sel=id;}render();return}
-if(act==='ev-cancel'){evOpen=false;render();return}
-if(act==='ev-confirm'){const f=document.getElementById('evinput');const file=f&&f.value.trim()?f.value.trim():'artifact.md';if(!work[id])work[id]={plan:0,done:0,sd:0,st:0};work[id].evidence={file,date:'confirmed 16 Jul'};evOpen=false;tierUpCheck(id,before,tiers()[id]);return}}
-function wire(container,isMobile){
-container.addEventListener('click',e=>{const g=e.target.closest('[data-nid]');if(g){evOpen=false;if(isMobile)msel=g.dataset.nid;else sel=g.dataset.nid;render();return}});
-if(!isMobile){
-container.addEventListener('mousemove',e=>{const g=e.target.closest('[data-nid]');const tt=$('tt');
-if(!g){tt.style.display='none';clearDim();return}
-const id=g.dataset.nid,t=tiers(),tr=t[id],n=byId[id],w=work[id];let meta;
-if(n.cap)meta=tr===4?'Capstone ✦ proven':'Capstone — unproven, needs a confirmed artifact';
-else if(tr===4)meta=`Proven ✦ ${w.evidence.file} · ${w.evidence.date}`;
-else if(tr===3)meta=`Honed · ${w.done} of ${w.plan} min complete`;
-else if(tr===2)meta=`Training · ${w.sd} of ${w.st} sessions · ${w.done} of ${w.plan} min`;
-else if(tr===1)meta='Discovered · reachable, no study yet';
-else meta='Locked · groundwork untouched — nothing blocked';
-tt.innerHTML=`<div class="tname">${esc(n.name)}</div><div class="tmeta">${esc(meta)}</div>`;tt.style.display='block';
-const wr=$('chartwrap').getBoundingClientRect();tt.style.left=Math.min(e.clientX-wr.left+16,wr.width-270)+'px';tt.style.top=(e.clientY-wr.top+14)+'px';
-const keep=anc(id);keep.add(id);
-document.querySelectorAll('#chart .node').forEach(el=>el.classList.toggle('dim',!keep.has(el.dataset.nid)));
-document.querySelectorAll('#chart .edge').forEach(el=>{const ok=keep.has(el.dataset.b)&&(el.dataset.a==='root'||keep.has(el.dataset.a));el.classList.toggle('dim',!ok)})});
-container.addEventListener('mouseleave',()=>{$('tt').style.display='none';clearDim()})}}
-function clearDim(){document.querySelectorAll('#chart .dim').forEach(el=>el.classList.remove('dim'))}
-document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)return;
-if(b.dataset.act==='goto'){evOpen=false;sel=b.dataset.to;msel=b.dataset.to;render();return}
-doAct(b.dataset.act,b.closest('.sheet')?'m':'d')});
-document.querySelectorAll('[data-scn]').forEach(c=>c.addEventListener('click',()=>{
-document.querySelectorAll('[data-scn]').forEach(x=>x.classList.toggle('on',x===c));
-scenario=c.dataset.scn;evOpen=false;
-work=scenario==='mixed'?JSON.parse(JSON.stringify(MIXED)):{};
-sel=scenario==='mixed'?'t1':null;msel=scenario==='mixed'?'t1':null;
-render()}));
-wire($('chart'),false);wire($('mchart'),true);
-render();
-$('mchartsc').scrollLeft=60;$('mchartsc').scrollTop=40;
+document.addEventListener('click',e=>{
+  const scn=e.target.closest('[data-scn]');if(scn){document.querySelectorAll('[data-scn]').forEach(x=>x.classList.toggle('on',x===scn));scenario=scn.dataset.scn;reset();render();return}
+  const tog=e.target.closest('[data-toggle]');if(tog){const g=tog.dataset.toggle;open.has(g)?open.delete(g):open.add(g);render();return}
+  const node=e.target.closest('[data-node]');if(node){sel=node.dataset.node;render();return}
+  const set=e.target.closest('[data-set]');if(set&&sel){tier[sel]=set.dataset.set;render();return}
+  const ev=e.target.closest('[data-evidence]');if(ev&&sel){tier[sel]='proven';render();return}
+  if(e.target.closest('[data-close]')){sel=null;render();return}
+});
+reset();render();
 </script>
 </body>
 </html>

@@ -238,6 +238,35 @@ class KnowledgeMapView(BaseModel):
     nodes: list[KnowledgeNodeView] = Field(default_factory=list)
 
 
+class AddableSkill(BaseModel):
+    """One skill the "Add a skill" picker may offer (KT-D).
+
+    ``title`` is the taxonomy entry's display name - the same closed vocabulary
+    ``add_knowledge_node`` accepts, so the picker can never offer a ``skill_id``
+    the mutation would 409 on.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    skill_id: str
+    title: str
+
+
+class AddSkillVocabularyResult(BaseModel):
+    """The closed add-picker vocabulary the knowledge-map UI binds "Add a skill" to (KT-D).
+
+    ``skills`` is the account track's taxonomy slice, restricted to skills the
+    grouping can place, minus skills already on the map - exactly the predicates
+    ``add_knowledge_node`` enforces (``06-…``). Empty when no pathway is selected
+    or no track resolves. Registry/taxonomy literals, never client input.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    track: CareerTrack | None
+    skills: list[AddableSkill] = Field(default_factory=list)
+
+
 class EvidenceVocabularyResult(BaseModel):
     """The closed vocabularies the UI binds evidence tagging to (NP-E).
 

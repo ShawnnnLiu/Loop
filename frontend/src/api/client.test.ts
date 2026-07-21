@@ -202,6 +202,41 @@ describe('api client request handling', () => {
     expect(notes.notes).toEqual({})
   })
 
+  it('knowledge-map reads and mutations hit their routes and return the refreshed view', async () => {
+    const view = { has_selection: true, pathway_id: 'p', registry_version: 'v1', version_mismatch: false, branches: [], groups: [], nodes: [] }
+    const fetchMock = vi.fn(async () => jsonResponse(200, view))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await api.knowledgeMap()
+    await api.addVocabulary()
+    await api.setMastery('kn-rag', 'honed')
+    await api.upsertNote('kn-rag', 'revisit')
+    await api.deleteNote('kn-rag')
+    await api.markNodeEvidence('kn-rag')
+    await api.addKnowledgeNode('skill.rag')
+    await api.createCustomGroup('Side quests')
+    await api.createCustomNode({ name: 'Rust', groupId: 'kcg-1', description: 'CLI' })
+    await api.deleteCustomNode('kcn-1')
+    await api.deleteCustomGroup('kcg-1')
+
+    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/knowledge-map', expect.objectContaining({ method: 'GET' }))
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/knowledge-map/add-vocabulary', expect.objectContaining({ method: 'GET' }))
+    expect(fetchMock).toHaveBeenNthCalledWith(3, '/api/knowledge-map/setpoint', expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({ node_id: 'kn-rag', target_tier: 'honed' }),
+    }))
+    expect(fetchMock).toHaveBeenNthCalledWith(5, '/api/knowledge-map/note/kn-rag', expect.objectContaining({ method: 'DELETE' }))
+    expect(fetchMock).toHaveBeenNthCalledWith(6, '/api/knowledge-map/mark-evidence', expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({ node_id: 'kn-rag' }),
+    }))
+    expect(fetchMock).toHaveBeenNthCalledWith(9, '/api/knowledge-map/custom-node', expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({ name: 'Rust', group_id: 'kcg-1', description: 'CLI' }),
+    }))
+    expect(fetchMock).toHaveBeenNthCalledWith(11, '/api/knowledge-map/custom-group/kcg-1', expect.objectContaining({ method: 'DELETE' }))
+  })
+
   it('reconcile posts an empty body and returns the typed reconciliation result', async () => {
     const fetchMock = vi.fn(async () =>
       jsonResponse(200, { run_id: 'run_1', outcome: 'sync_disabled', deltas: [] }),

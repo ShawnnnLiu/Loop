@@ -8,6 +8,7 @@ import { AccountabilityScreen } from './screens/Accountability'
 import { ApprovalScreen } from './screens/Approval'
 import { GenerationScreen } from './screens/Generation'
 import { OnboardingScreen } from './screens/Onboarding'
+import { PathwayScreen } from './screens/Pathway'
 import { ScheduleReviewScreen } from './screens/ScheduleReview'
 import { ThresholdsScreen } from './screens/Thresholds'
 import { TodayScreen } from './screens/Today'
@@ -64,6 +65,7 @@ export function App() {
           <Route path="/approve" element={<ApprovalScreen email={me.email} />} />
           <Route path="/today" element={<TodayScreen />} />
           <Route path="/accountability" element={<AccountabilityScreen />} />
+          <Route path="/pathway" element={<PathwayScreen />} />
           <Route path="/thresholds" element={<ThresholdsScreen />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

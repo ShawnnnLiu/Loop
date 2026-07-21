@@ -738,6 +738,24 @@ def test_knowledge_map_crud_over_http() -> None:
     assert bad.json()["reason_code"] == "SKILL_NOT_IN_TRACK_VOCABULARY"
 
 
+def test_knowledge_map_add_vocabulary_round_trips_into_add_node() -> None:
+    client, _clock = _client()
+    client.post("/api/pathways/select", json={"pathway_id": _BACKEND})
+
+    vocab = client.get("/api/knowledge-map/add-vocabulary")
+    assert vocab.status_code == 200
+    skills = vocab.json()["skills"]
+    assert skills  # a real pathway leaves room to add
+    pick = skills[0]["skill_id"]
+
+    # The picker only ever offers a skill add-node accepts.
+    added = client.post("/api/knowledge-map/add-node", json={"skill_id": pick})
+    assert added.status_code == 200
+    # Once added, it drops out of the offered vocabulary.
+    reoffered = {s["skill_id"] for s in client.get("/api/knowledge-map/add-vocabulary").json()["skills"]}
+    assert pick not in reoffered
+
+
 def test_knowledge_map_mark_evidence_over_http() -> None:
     client, _clock = _client()
     client.post("/api/pathways/select", json={"pathway_id": _BACKEND})

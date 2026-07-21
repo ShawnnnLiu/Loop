@@ -436,3 +436,48 @@ def test_mark_evidence_proven_survives_a_downward_setpoint_on_another_node() -> 
     service.set_mastery(USER_ID, node_id=b.node_id, target_tier=MasteryTier.DISCOVERED)
     view = service.knowledge_map_view(USER_ID)
     assert next(n for n in view.nodes if n.node_id == a.node_id).tier is MasteryTier.PROVEN
+
+
+# --------------------------------------------------------------------------- #
+# add-skill picker vocabulary (KT-D)
+# --------------------------------------------------------------------------- #
+
+
+def test_add_vocabulary_empty_without_selection() -> None:
+    service, _env, _clock = make_service(onboard=False, seed_claims=False)
+    service.onboard(
+        {"user_profile": make_profile([]).model_dump(mode="json"), "timezone": "UTC"}
+    )
+    vocab = service.add_skill_vocabulary_view(USER_ID)
+    assert vocab.skills == []
+
+
+def test_add_vocabulary_offers_only_addable_skills() -> None:
+    service = _service_with_selection()
+    present = {n.skill_id for n in service.knowledge_map_view(USER_ID).nodes if n.skill_id}
+    placeable = {e.skill_id for e in service._grouping().entries}
+
+    vocab = service.add_skill_vocabulary_view(USER_ID)
+    offered = {s.skill_id for s in vocab.skills}
+
+    assert offered  # a real pathway leaves room to add
+    # Never offers a skill already on the map, and only grouping-placeable ones.
+    assert not (offered & {node_id_for(s) for s in present})  # ids never collide
+    assert all(s not in offered for s in present)
+    assert offered <= placeable
+    # Titles are present and the list is title-sorted (a stable picker order).
+    assert all(s.title for s in vocab.skills)
+    assert [s.title for s in vocab.skills] == sorted(s.title for s in vocab.skills)
+
+
+def test_add_vocabulary_entries_are_all_acceptable_by_add_node() -> None:
+    # The picker can only ever offer a skill_id add_knowledge_node accepts.
+    service = _service_with_selection()
+    vocab = service.add_skill_vocabulary_view(USER_ID)
+    first = vocab.skills[0]
+    view = service.add_knowledge_node(USER_ID, skill_id=first.skill_id)
+    assert node_id_for(first.skill_id) in {n.node_id for n in view.nodes}
+    # Once added, it drops out of the offered vocabulary.
+    assert first.skill_id not in {
+        s.skill_id for s in service.add_skill_vocabulary_view(USER_ID).skills
+    }

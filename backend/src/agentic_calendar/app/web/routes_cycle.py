@@ -676,6 +676,18 @@ def knowledge_map_add_node(
     return _json(service.add_knowledge_node(user_id, skill_id=body.skill_id))
 
 
+@router.get("/knowledge-map/add-vocabulary")
+def knowledge_map_add_vocabulary(
+    service: Service, user_id: ActingUser
+) -> JSONResponse:
+    """The closed vocabulary the "Add a skill" picker binds to (KT-D).
+
+    Read-only: the account track's taxonomy slice restricted to grouping-placeable
+    skills, minus skills already on the map - exactly what ``add-node`` accepts, so
+    the picker never offers a dead option. Empty before a pathway is selected."""
+    return _json(service.add_skill_vocabulary_view(user_id))
+
+
 @router.post("/knowledge-map/custom-group")
 def knowledge_map_custom_group(
     service: Service, user_id: ActingUser, body: CreateCustomGroupRequest

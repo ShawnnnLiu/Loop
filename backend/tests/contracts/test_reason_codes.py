@@ -86,3 +86,13 @@ def test_narrative_pathway_codes_present() -> None:
     }
     present = {c.value for c in ReasonCode}
     assert required.issubset(present)
+
+
+def test_mastery_memory_codes_present() -> None:
+    """The two mastery-memory output-gate codes (MM-A) must be defined."""
+    required = {
+        "MASTERY_REVIEW_BOUND_EXCEEDED",
+        "REVIEW_MODULE_LIMIT_EXCEEDED",
+    }
+    present = {c.value for c in ReasonCode}
+    assert required.issubset(present)

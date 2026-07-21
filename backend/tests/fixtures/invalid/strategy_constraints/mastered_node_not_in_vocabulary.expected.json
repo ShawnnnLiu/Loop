@@ -1,0 +1,3 @@
+{
+  "error_substrings": ["mastered_node_ids must reference knowledge_nodes", "kn-embeddings"]
+}

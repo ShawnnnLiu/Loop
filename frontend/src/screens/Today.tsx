@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 
 import { ApiError, api, errorMessage } from '../api/client'
 import type { TodayResult, TodayTask } from '../api/types'
+import { CONFIDENCE_OPTIONS, type SolveConfidence } from '../lib/checkin'
 import { fmtClock, fmtWhen } from '../lib/datetime'
 import { attentionChip } from '../lib/review'
 
@@ -19,6 +20,9 @@ export function TodayScreen() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState<string | null>(null)
+  // MM-B: the task whose Complete tap has revealed the confidence triage but not
+  // yet fired the POST. Kept out of `load()` so a refresh dismisses a stale reveal.
+  const [confirming, setConfirming] = useState<string | null>(null)
   const [rowError, setRowError] = useState<{ taskId: string; text: string } | null>(null)
   const [runState, setRunState] = useState<string | null>(null)
 
@@ -44,21 +48,27 @@ export function TodayScreen() {
     load(true)
   }, [])
 
-  async function checkin(task: TodayTask, outcome: 'complete' | 'missed') {
+  async function checkin(
+    task: TodayTask,
+    outcome: 'complete' | 'missed',
+    confidence?: SolveConfidence,
+  ) {
     setPending(task.task_id)
     setRowError(null)
     try {
-      await api.checkin(task.task_id, outcome)
+      await api.checkin(task.task_id, outcome, confidence)
     } catch (err) {
       setPending(null)
       // A 401 has already redirected to login — don't fire a doomed reload.
       if (err instanceof ApiError && err.status === 401) return
       // 409 = the server refused (not due / already reported / not in plan).
       setRowError({ taskId: task.task_id, text: errorMessage(err) })
+      setConfirming(null)
       load() // refresh so the row reflects the server's current truth
       return
     }
     setPending(null)
+    setConfirming(null)
     load() // re-render from the server's truth, never an optimistic guess
   }
 
@@ -161,24 +171,53 @@ export function TodayScreen() {
               {task.reported ? (
                 <span className="tag ok">✓ reported</span>
               ) : task.due ? (
-                <>
-                  <button
-                    className="btn btn-soft sm"
-                    type="button"
-                    disabled={pending === task.task_id}
-                    onClick={() => void checkin(task, 'missed')}
-                  >
-                    Missed
-                  </button>
-                  <button
-                    className="btn btn-primary sm"
-                    type="button"
-                    disabled={pending === task.task_id}
-                    onClick={() => void checkin(task, 'complete')}
-                  >
-                    Complete
-                  </button>
-                </>
+                confirming === task.task_id ? (
+                  // MM-B reveal: Complete tapped, no POST yet. Any chip carries its
+                  // solve_confidence; Skip completes with no signal (neutral).
+                  <div className="row" style={{ gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <span className="muted" style={{ fontSize: 12.5 }}>
+                      How did it go?
+                    </span>
+                    {CONFIDENCE_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.value}
+                        className="chip sm"
+                        type="button"
+                        disabled={pending === task.task_id}
+                        onClick={() => void checkin(task, 'complete', opt.value)}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                    <button
+                      className="btn btn-quiet sm"
+                      type="button"
+                      disabled={pending === task.task_id}
+                      onClick={() => void checkin(task, 'complete')}
+                    >
+                      Skip →
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <button
+                      className="btn btn-soft sm"
+                      type="button"
+                      disabled={pending === task.task_id}
+                      onClick={() => void checkin(task, 'missed')}
+                    >
+                      Missed
+                    </button>
+                    <button
+                      className="btn btn-primary sm"
+                      type="button"
+                      disabled={pending === task.task_id}
+                      onClick={() => setConfirming(task.task_id)}
+                    >
+                      Complete
+                    </button>
+                  </>
+                )
               ) : (
                 <span className="tag">upcoming</span>
               )}

@@ -1,11 +1,26 @@
 # 08 · Mastery Memory — Completions That Shape the Next Plan
 
-Added 2026-07-19, same status as the rest of the folder: **planning only,
-nothing implemented.** This doc amends `06-…` (one carefully scoped
-exception to the non-interference rule) and extends `02-…` (strategist
-plumbing) and the telemetry spec. It closes a specific gap: **completed
-work is remembered forever, but nothing stops the next full generation
-from assigning the same skills again.**
+Added 2026-07-19. Status: **implemented (MM-A … MM-C).** This doc amends
+`06-…` (one carefully scoped exception to the non-interference rule) and
+extends `02-…` (strategist plumbing) and the telemetry spec. It closes a
+specific gap: **completed work is remembered forever, but nothing stops the
+next full generation from assigning the same skills again.**
+
+## Increment landings (MM-A … MM-C)
+
+One commit per increment, spec/axiom-first, `uv run make check` green per
+commit (frontend four gates for MM-B). Where the landed spec, contract, or
+reason code was refined during the spec-first workflow, `docs/specs/` and the
+axioms are authoritative over the proposals below.
+
+| Increment | What landed |
+|---|---|
+| MM-A | Contracts: telemetry `solve_confidence` enum (`confident · unsure · needed_help`) + `present ⟹ completed` invariant; the `StrategyConstraints` mastery slice (`mastered_node_ids` / `review_node_ids` disjoint, `max_review_modules` = 2 / `max_review_minutes` = 60) + subset-of-`knowledge_nodes` invariant; the two reason codes registered; `tuning.toml` confidence-weight priors; valid/invalid fixtures. |
+| MM-B | Capture + fold weighting: reveal-then-confirm one-tap triage on the Today check-off (`POST /api/checkin` threads `solve_confidence` onto the written telemetry event); the confidence-weighted telemetry term folded into `narrative/mastery.py` (`folded_basis`, consumed by both `map_state` and the new `mastery_memory` aggregation); composition root projects completed telemetry per node over all plan versions. |
+| MM-C | Strategist wiring: composition-root projection of `mastery_memory` onto the `StrategyConstraints` slice; system-prompt rule 9 (do not re-assign mastered skills; bound review modules) + prompt-version bump; the deterministic output gate (`MASTERY_REVIEW_BOUND_EXCEEDED` / `REVIEW_MODULE_LIMIT_EXCEEDED`) in `validation/pathway.py`, routed to the Strategist repair loop. |
+
+The design proposals below predate implementation and are preserved as the
+design record.
 
 ## The gap, precisely
 
@@ -229,8 +244,18 @@ without the map screen.
   groups/nodes, notes — and the set-point tier fractions are KT-A/KT-B
   material per `06-…`; MM-A adds only the confidence axis and the slice.)
 - **MM-B — capture + fold weighting.** Completion endpoint accepts
-  `solve_confidence`; one-tap triage on the check-off flow (+ vitest;
-  skippable, no layout shift); confidence weighting added into KT-B's
+  `solve_confidence`; one-tap triage on the check-off flow, built against
+  the reference component
+  `docs/design-reference/design-loop/accountability.jsx` (`CheckInDemo`):
+  insert it as a sibling of the completed-reveal "How long, really?" row
+  that already appears when a block is marked `✓ Completed`, reusing the
+  design-system chip/pill grammar (`docs/design-reference/claude_code_handoff/DESIGN-SYSTEM.md`)
+  so it adds no required friction and no layout shift (+ vitest;
+  skippable). Review-flagged nodes get no new MM surface: they are
+  display-only data that KT-D's knowledge-map drawer renders (alongside
+  the "self-assessed" set-point label), consistent with the `06-…`
+  non-interference posture; this is a scoping decision, not an omission.
+  Confidence weighting added into KT-B's
   basis fold (`map_state` and the mastery aggregation consume the one
   shared implementation); exhaustive fold tests: weighting per enum value,
   absent-signal neutrality, grant/completion/set-point interleavings and

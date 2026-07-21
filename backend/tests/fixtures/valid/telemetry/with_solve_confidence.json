@@ -1,0 +1,14 @@
+{
+  "telemetry_event_id": "tel_confidence_001",
+  "task_id": "dp_007",
+  "scheduled_duration_min": 60,
+  "actual_duration_min": 58,
+  "completed": true,
+  "completion_timestamp": "2026-05-10T21:00:00-07:00",
+  "user_reschedule_count": 0,
+  "subjective_difficulty": 3,
+  "solve_confidence": "confident",
+  "data_quality": "complete",
+  "duration_estimated": false,
+  "captured_offline": false
+}

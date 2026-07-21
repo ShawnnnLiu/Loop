@@ -98,7 +98,7 @@ from agentic_calendar.contracts.task_disposition import (
     TaskDispositionType,
 )
 from agentic_calendar.contracts.task_plan import Task, TaskPlan
-from agentic_calendar.contracts.telemetry import TelemetryEvent
+from agentic_calendar.contracts.telemetry import SolveConfidence, TelemetryEvent
 from agentic_calendar.contracts.user_profile import UserProfile
 from agentic_calendar.contracts.validation_result import ValidationResult
 from agentic_calendar.contracts.violation_types import ViolationType
@@ -1568,6 +1568,96 @@ def test_checkin_completed_records_telemetry() -> None:
     stored = env.telemetry_store.list_for_task("dp_001")
     assert len(stored) == 1
     assert stored[0].completed is True
+
+
+def test_checkin_records_solve_confidence_on_the_event() -> None:
+    service, env, clock = make_service()
+    proposed = _activate_plan(service)
+    _advance_past_draft(env, clock, proposed.draft_schedule_id)
+    service.checkin(
+        USER_ID, "dp_001", completed=True, solve_confidence=SolveConfidence.UNSURE
+    )
+    stored = env.telemetry_store.list_for_task("dp_001")
+    assert stored[0].solve_confidence is SolveConfidence.UNSURE
+
+
+def test_checkin_without_confidence_leaves_it_absent() -> None:
+    service, env, clock = make_service()
+    proposed = _activate_plan(service)
+    _advance_past_draft(env, clock, proposed.draft_schedule_id)
+    service.checkin(USER_ID, "dp_001", completed=True)
+    stored = env.telemetry_store.list_for_task("dp_001")
+    assert stored[0].solve_confidence is None
+
+
+def test_checkin_rejects_confidence_on_a_miss() -> None:
+    service, env, clock = make_service()
+    proposed = _activate_plan(service)
+    _advance_past_draft(env, clock, proposed.draft_schedule_id)
+    with pytest.raises(CycleError, match="only valid on a completed task"):
+        service.checkin(
+            USER_ID,
+            "dp_001",
+            completed=False,
+            solve_confidence=SolveConfidence.CONFIDENT,
+        )
+    assert env.telemetry_store.list_for_task("dp_001") == []
+
+
+def test_completed_telemetry_projects_onto_module_knowledge_nodes() -> None:
+    # MM-B: a completion on a task credits every knowledge node its module trains,
+    # carrying the solve_confidence self-report, joined over the stored plans.
+    service, env, clock = make_service()
+    proposed = _activate_plan(service)
+    active = env.plan_store.get_active(USER_ID)
+    assert active is not None
+    task = active.plan.tasks[0]
+
+    # Tag that task's module with a knowledge node (every other module unchanged).
+    syllabus = env.state.get_syllabus(USER_ID)
+    assert syllabus is not None
+    data = syllabus.model_dump(mode="json")
+    tagged = False
+    for module in data["modules"]:
+        if module["module_id"] == task.module_id:
+            module["knowledge_node_ids"] = ["kn-python"]
+            tagged = True
+    assert tagged
+    env.state.save_syllabus(USER_ID, SyllabusUnits.model_validate(data))
+
+    _advance_past_draft(env, clock, proposed.draft_schedule_id)
+    service.checkin(
+        USER_ID, task.task_id, completed=True, solve_confidence=SolveConfidence.UNSURE
+    )
+
+    profile = service._require_onboarding(USER_ID).user_profile
+    completions = service._completed_minutes_by_node(profile)
+    assert "kn-python" in completions
+    contribution = completions["kn-python"]
+    assert len(contribution) == 1
+    assert contribution[0].solve_confidence is SolveConfidence.UNSURE
+    assert contribution[0].minutes > 0
+
+
+def test_missed_telemetry_does_not_project_onto_nodes() -> None:
+    service, env, clock = make_service()
+    proposed = _activate_plan(service)
+    active = env.plan_store.get_active(USER_ID)
+    assert active is not None
+    task = active.plan.tasks[0]
+    syllabus = env.state.get_syllabus(USER_ID)
+    assert syllabus is not None
+    data = syllabus.model_dump(mode="json")
+    for module in data["modules"]:
+        if module["module_id"] == task.module_id:
+            module["knowledge_node_ids"] = ["kn-python"]
+    env.state.save_syllabus(USER_ID, SyllabusUnits.model_validate(data))
+
+    _advance_past_draft(env, clock, proposed.draft_schedule_id)
+    service.checkin(USER_ID, task.task_id, completed=False)
+
+    profile = service._require_onboarding(USER_ID).user_profile
+    assert service._completed_minutes_by_node(profile) == {}
 
 
 def test_checkin_missed_records_incomplete_telemetry() -> None:

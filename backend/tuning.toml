@@ -85,3 +85,10 @@
 # honed_fraction = 0.8
 # setpoint_training_fraction = 0.5
 # setpoint_honed_fraction = 1.0
+# solve_confidence weighting of completion minutes before the basis fold
+# (narrative-pathways MM-A priors; the weighting lands in MM-B). Absent
+# confidence weighs 1.0 and is deliberately not tunable - an opt-in signal must
+# never punish non-reporting (08-mastery-memory.md m1).
+# confident_confidence_weight = 1.0
+# unsure_confidence_weight = 0.5
+# needed_help_confidence_weight = 0.25

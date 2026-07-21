@@ -134,7 +134,7 @@ from agentic_calendar.contracts.task_disposition import (
     TaskDispositionType,
 )
 from agentic_calendar.contracts.task_plan import TaskPlan
-from agentic_calendar.contracts.telemetry import TelemetryEvent
+from agentic_calendar.contracts.telemetry import SolveConfidence, TelemetryEvent
 from agentic_calendar.contracts.user_profile import UserProfile
 from agentic_calendar.contracts.validation_result import (
     MAX_REPAIR_ATTEMPTS_LLM,
@@ -163,8 +163,10 @@ from agentic_calendar.llm_nodes.user_facing_explanation import (
     UserExplanation,
 )
 from agentic_calendar.narrative import (
+    NodeCompletion,
     SlotState,
     map_state,
+    mastery_memory,
     merge_additions,
     node_id_for,
     pathway_node_vocabulary,
@@ -763,12 +765,46 @@ class CycleService:
             for slot in template.evidence_slots
             if slot.slot_id not in filled
         ]
+        vocabulary = self._knowledge_node_vocabulary(profile, template)
+        mastered, review = self._mastery_slice(profile, vocabulary)
         constraints = StrategyConstraints(
             pathway_id=template.pathway_id,
             unfilled_slots=unfilled,
-            knowledge_nodes=self._knowledge_node_vocabulary(profile, template),
+            knowledge_nodes=vocabulary,
+            mastered_node_ids=mastered,
+            review_node_ids=review,
         )
         return constraints, template
+
+    def _mastery_slice(
+        self, profile: UserProfile, vocabulary: list[KnowledgeNodeRef]
+    ) -> tuple[list[str], list[str]]:
+        """The account's mastered / review-flagged node ids for the slice (MM-C).
+
+        Folds the account's overlay records plus projected completion telemetry
+        into skill mastery (:func:`narrative.mastery_memory`) so a fresh
+        generation stops re-assigning honed skills and bounds review of
+        low-confidence ones. The result is intersected with ``vocabulary`` (the
+        Strategist's ``knowledge_nodes``) so every projected id resolves to the
+        account map - the composition-time guarantee the ``StrategyConstraints``
+        subset invariant also enforces. Sorted for a deterministic bundle.
+        """
+        account = self._account_map(profile)
+        if account.map is None:
+            return [], []
+        env = self._env
+        user_id = profile.user_id
+        memory = mastery_memory(
+            account.map,
+            grants=env.knowledge_overlay_store.mastery_grants_for_user(user_id),
+            setpoints=env.knowledge_overlay_store.setpoints_for_user(user_id),
+            completions=self._completed_minutes_by_node(profile),
+            tuning=env.tuning.mastery,
+        )
+        allowed = {ref.node_id for ref in vocabulary}
+        mastered = sorted(memory.mastered_node_ids & allowed)
+        review = sorted(memory.review_node_ids & allowed)
+        return mastered, review
 
     def _knowledge_node_vocabulary(
         self, profile: UserProfile, template: PathwayTemplate
@@ -879,10 +915,63 @@ class CycleService:
             custom_nodes=custom_nodes,
         )
 
+    def _completed_minutes_by_node(
+        self, profile: UserProfile
+    ) -> dict[str, list[NodeCompletion]]:
+        """Completed telemetry projected onto skill nodes (MM-B basis fold).
+
+        The telemetry-minutes term of ``folded_basis``: a completion on a task
+        credits every knowledge node its module trains. The join runs over **all
+        plan versions** of the profile (``task_id → module_id``) against the
+        current syllabus (``module_id → knowledge_node_ids``) - so replans within a
+        pathway accumulate, per the disposition-store union pattern. Memory across a
+        pathway *change* rides ``MasteryGrant``s instead (the syllabus is discarded
+        on change; node ids are skill-derived so grants survive).
+        """
+        env = self._env
+        user_id = profile.user_id
+        syllabus = env.state.get_syllabus(user_id)
+        if syllabus is None:
+            return {}
+        nodes_by_module = {
+            module.module_id: module.knowledge_node_ids
+            for module in syllabus.modules
+            if module.knowledge_node_ids
+        }
+        if not nodes_by_module:
+            return {}
+        module_by_task: dict[str, str] = {}
+        for version in env.plan_store.list_for_user(user_id):
+            for task in version.plan.tasks:
+                module_by_task[task.task_id] = task.module_id
+
+        completions: dict[str, list[NodeCompletion]] = {}
+        for task_id, module_id in module_by_task.items():
+            node_ids = nodes_by_module.get(module_id)
+            if not node_ids:
+                continue
+            for event in env.telemetry_store.list_for_task(task_id):
+                if not event.completed:
+                    continue
+                # A validated completed event always carries actuals + timestamp
+                # (ingestion defaults them); guard defensively regardless.
+                minutes = event.actual_duration_min or event.scheduled_duration_min
+                when = event.completion_timestamp
+                if when is None:
+                    continue
+                completion = NodeCompletion(
+                    minutes=minutes,
+                    created_at=when,
+                    solve_confidence=event.solve_confidence,
+                )
+                for node_id in node_ids:
+                    completions.setdefault(node_id, []).append(completion)
+        return completions
+
     def _map_tiers(
         self, profile: UserProfile, account: _AccountMap
     ) -> dict[str, MasteryTier]:
-        """The deterministic per-node tier via ``map_state`` (KT-C)."""
+        """The deterministic per-node tier via ``map_state`` (KT-C / MM-B)."""
         if account.map is None or account.template is None:
             return {}
         env = self._env
@@ -912,6 +1001,7 @@ class CycleService:
             account.map,
             grants=env.knowledge_overlay_store.mastery_grants_for_user(user_id),
             setpoints=env.knowledge_overlay_store.setpoints_for_user(user_id),
+            completions=self._completed_minutes_by_node(profile),
             custom_nodes=account.custom_nodes,
             training_node_ids=training_node_ids,
             filled_slot_ids=filled_slot_ids,
@@ -1505,6 +1595,22 @@ class CycleService:
             if constraints is not None
             else []
         )
+        # Mastery slice (MM-C): the same mastered / review ids + review bounds the
+        # Strategist was told, so the output gate disposes exactly what the prompt
+        # was asked to respect. Absent a selection ⇒ empty lists ⇒ no review
+        # module can form ⇒ byte-identical to today.
+        mastered_node_ids = (
+            list(constraints.mastered_node_ids) if constraints is not None else []
+        )
+        review_node_ids = (
+            list(constraints.review_node_ids) if constraints is not None else []
+        )
+        max_review_modules = (
+            constraints.max_review_modules if constraints is not None else 2
+        )
+        max_review_minutes = (
+            constraints.max_review_minutes if constraints is not None else 60
+        )
 
         syllabus: SyllabusUnits | None = None
         for attempt in range(MAX_REPAIR_ATTEMPTS_LLM + 1):
@@ -1526,6 +1632,10 @@ class CycleService:
                 selected_pathway=selected_pathway,
                 max_slot_modules=max_slot_modules,
                 knowledge_node_ids=knowledge_node_ids,
+                mastered_node_ids=mastered_node_ids,
+                review_node_ids=review_node_ids,
+                max_review_modules=max_review_modules,
+                max_review_minutes=max_review_minutes,
                 repair_attempt=attempt,
             )
             if result.valid:
@@ -4589,7 +4699,14 @@ class CycleService:
             completed_task_count=event.completed_task_count,
         )
 
-    def checkin(self, user_id: str, task_id: str, *, completed: bool) -> IngestResult:
+    def checkin(
+        self,
+        user_id: str,
+        task_id: str,
+        *,
+        completed: bool,
+        solve_confidence: SolveConfidence | None = None,
+    ) -> IngestResult:
         """Report a scheduled block's outcome as completion telemetry.
 
         Server-authoritative guard the client cannot bypass: the task must be in
@@ -4598,8 +4715,17 @@ class CycleService:
         actuals + timestamp so ``data_quality`` stays ``complete``; a miss
         carries neither. Then it flows through the same :meth:`ingest` path the
         operator surface uses.
+
+        ``solve_confidence`` (MM-B) is the user's opt-in one-tap self-report; it
+        rides on the same telemetry event. It is only meaningful on a completion -
+        a report on a miss is contradictory (telemetry-spec invariant) and rejected
+        here before a payload is built.
         """
         env = self._env
+        if solve_confidence is not None and not completed:
+            raise CycleError(
+                "solve_confidence is only valid on a completed task"
+            )
         draft = self._active_draft(user_id)
         entry = (
             next((e for e in draft.entries if e.task_id == task_id), None)
@@ -4624,4 +4750,6 @@ class CycleService:
         }
         if completed:
             payload["completion_timestamp"] = env.clock.now()
+            if solve_confidence is not None:
+                payload["solve_confidence"] = solve_confidence.value
         return self.ingest(user_id, [payload])

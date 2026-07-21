@@ -6,9 +6,10 @@ career-pathway story layer is built on branch `narrative-pathways`: curated
 evidence tagging inside `ResumeIntakeNode`, pathway selection + syllabus
 invalidation, the story frontend, and the two `UserFacingExplanationNode` prose
 targets. The knowledge-map (KT-A … KT-D, `06-…`) and mastery-memory
-(MM-A … MM-C, `08-…`) series remain planning docs. This document's original
-proposals below are preserved as the design record; the per-increment landings
-are the table that follows.
+(MM-A … MM-C, `08-…`) series are **also implemented** — their per-increment
+landings live in `06-knowledge-tree.md` and `08-mastery-memory.md`
+respectively. This document's original proposals below are preserved as the
+design record; the per-increment landings are the table that follows.
 
 ## Increment landings (Loop, NP-A … NP-F)
 

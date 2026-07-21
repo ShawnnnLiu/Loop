@@ -83,6 +83,16 @@ class StrategyConstraints(BaseModel):
     unfilled_slots: list[UnfilledSlot] = Field(default_factory=list)
     max_slot_modules: int = Field(default=3, gt=0, le=10)
     knowledge_nodes: list[KnowledgeNodeRef] = Field(default_factory=list)
+    # Mastery slice (narrative-pathways MM-A). Advisory typed context projected
+    # by the composition root from the kernel basis fold: which of the account
+    # map's skills are done (>= honed) and which are review-flagged (raw minutes
+    # met the honed bar but confidence-weighted basis did not). Never a gate -
+    # it shapes what the Strategist is *asked to propose*, disposed by the MM-C
+    # output gate (``08-mastery-memory.md``). Defaults keep today's behavior.
+    mastered_node_ids: list[KnowledgeNodeId] = Field(default_factory=list)
+    review_node_ids: list[KnowledgeNodeId] = Field(default_factory=list)
+    max_review_modules: int = Field(default=2, gt=0, le=10)
+    max_review_minutes: int = Field(default=60, gt=0)
 
     @model_validator(mode="after")
     def _priority_values_unique_nonempty(self) -> StrategyConstraints:
@@ -121,4 +131,60 @@ class StrategyConstraints(BaseModel):
             raise ValueError(
                 f"knowledge_nodes must have unique node_id values; duplicates: {dupes}"
             )
+        return self
+
+    @model_validator(mode="after")
+    def _mastery_lists_require_pathway(self) -> StrategyConstraints:
+        # Mastery data exists only for a selected pathway (no selection -> no map
+        # -> no mastery projection); a slice with no pathway is contradictory,
+        # exactly like ``knowledge_nodes`` and ``unfilled_slots``.
+        if (self.mastered_node_ids or self.review_node_ids) and self.pathway_id is None:
+            raise ValueError(
+                "mastered_node_ids/review_node_ids require pathway_id "
+                "(no pathway selected)"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _mastery_ids_unique(self) -> StrategyConstraints:
+        for field_name, ids in (
+            ("mastered_node_ids", self.mastered_node_ids),
+            ("review_node_ids", self.review_node_ids),
+        ):
+            dupes = find_duplicates(ids)
+            if dupes:
+                raise ValueError(
+                    f"{field_name} must have unique node ids; duplicates: {dupes}"
+                )
+        return self
+
+    @model_validator(mode="after")
+    def _mastery_lists_disjoint(self) -> StrategyConstraints:
+        # A node is either done (>= honed) or flagged for review, never both -
+        # the confidence-weighted basis puts it on exactly one side of the bar.
+        overlap = sorted(set(self.mastered_node_ids) & set(self.review_node_ids))
+        if overlap:
+            raise ValueError(
+                "mastered_node_ids and review_node_ids must be disjoint; "
+                f"overlap: {overlap}"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _mastery_ids_in_vocabulary(self) -> StrategyConstraints:
+        # Every mastery id must resolve to the account map - the composition-time
+        # guarantee (``08-mastery-memory.md``) backed here as a contract
+        # invariant, so the MM-C gate can compare mastery ids against module tags
+        # over one shared vocabulary.
+        vocabulary = {n.node_id for n in self.knowledge_nodes}
+        for field_name, ids in (
+            ("mastered_node_ids", self.mastered_node_ids),
+            ("review_node_ids", self.review_node_ids),
+        ):
+            unknown = sorted(set(ids) - vocabulary)
+            if unknown:
+                raise ValueError(
+                    f"{field_name} must reference knowledge_nodes; "
+                    f"unknown ids: {unknown}"
+                )
         return self

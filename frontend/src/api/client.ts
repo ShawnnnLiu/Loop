@@ -32,6 +32,7 @@ import type {
   WeeklyCheckinResult,
   WriteCycleResult,
 } from './types'
+import { type SolveConfidence, checkinBody } from '../lib/checkin'
 
 /** A non-OK HTTP response from the API (4xx/5xx). A *workflow* failure is NOT
  *  an ApiError — the backend returns those as 200 with a typed `reason_code`
@@ -186,8 +187,9 @@ export const api = {
     request<RollbackResult>('POST', '/rollback', { dry_run: dryRun }),
   retryWrite: () => request<WriteCycleResult>('POST', '/retry-write', {}),
   // Check-in (F-G): completion telemetry, guarded server-side (due + idempotent).
-  checkin: (taskId: string, outcome: 'complete' | 'missed') =>
-    request<CheckinResult>('POST', '/checkin', { task_id: taskId, outcome }),
+  // MM-B: an optional one-tap solve-confidence self-report rides on the same POST.
+  checkin: (taskId: string, outcome: 'complete' | 'missed', confidence?: SolveConfidence) =>
+    request<CheckinResult>('POST', '/checkin', checkinBody(taskId, outcome, confidence)),
   // Inbound calendar reconciliation (R-e). `setCalendarSync` flips the opt-in and
   // returns the refreshed me projection. `reconcile` is an on-demand, read-only
   // pull that adopts the user's valid edits to Loop's events; it 409s when no

@@ -543,6 +543,31 @@ class ReasonCode(StrEnum):
     (``07-tree-generation.md``). **Build/registry-time only; no KT-A
     producer** - the generator lands in KT-B."""
 
+    # --- Mastery memory (MM-A; telemetry / strategy-constraints specs) ---
+    #
+    # Completions are remembered as *skill mastery*, so a fresh generation stops
+    # re-assigning honed skills and bounds review of low-confidence ones
+    # (``08-mastery-memory.md``). The mastery slice on ``StrategyConstraints`` is
+    # advisory typed context (like ``unfilled_slots``): it shapes what the
+    # Strategist is asked to propose, disposed by these two output-gate codes.
+    # This is the complete new runtime code list - two codes. Defined here first
+    # so contracts, fixtures, and specs speak the same typed vocabulary; the
+    # mastery slice never gates unlocks, scheduling, or user actions (the
+    # ``06-…`` non-interference rule, amended only in the forward direction).
+    MASTERY_REVIEW_BOUND_EXCEEDED = "MASTERY_REVIEW_BOUND_EXCEEDED"
+    """A review module - one whose ``knowledge_node_ids`` are all mastered or
+    review-flagged - exceeds ``strategy_constraints.max_review_minutes``. Old
+    skills are reviewed briefly, not re-studied at full length. Mixed modules
+    (mastered + unmastered nodes) are legitimate and unbounded. **No MM-A
+    producer** - the deterministic gate lands in MM-C."""
+
+    REVIEW_MODULE_LIMIT_EXCEEDED = "REVIEW_MODULE_LIMIT_EXCEEDED"
+    """A syllabus proposes more all-mastered/review "review modules" than
+    ``strategy_constraints.max_review_modules`` allows. The exclusion of
+    mastered skills is advisory (it mirrors the disposition spec's Planner
+    posture); this bound is what enforces it deterministically. **No MM-A
+    producer** - the gate lands in MM-C."""
+
     # --- LLM generation (axiom 22; Phase 8) ---
     #
     # Generation-side failures are distinct from validation-layer failures:

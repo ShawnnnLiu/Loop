@@ -1,0 +1,8 @@
+{
+  "pathway_id": "ai-integration-engineer",
+  "knowledge_nodes": [
+    { "node_id": "kn-rag", "title": "Retrieval fundamentals" }
+  ],
+  "mastered_node_ids": ["kn-rag"],
+  "review_node_ids": ["kn-rag"]
+}

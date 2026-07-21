@@ -47,6 +47,25 @@ describe('api client request handling', () => {
     })
   })
 
+  it('carries solve_confidence on a completion check-in but omits it when skipped', async () => {
+    const fetchMock = vi.fn(async () => jsonResponse(200, { ingested_count: 1 }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await api.checkin('t1', 'complete', 'unsure')
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      '/api/checkin',
+      expect.objectContaining({
+        body: JSON.stringify({ task_id: 't1', outcome: 'complete', solve_confidence: 'unsure' }),
+      }),
+    )
+
+    await api.checkin('t1', 'complete')
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      '/api/checkin',
+      expect.objectContaining({ body: JSON.stringify({ task_id: 't1', outcome: 'complete' }) }),
+    )
+  })
+
   it('treats a workflow failure (200 + reason_code) as a normal result, not an error', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => jsonResponse(200, { state: 'error_requires_user', reason_code: 'INSUFFICIENT_WEEKLY_CAPACITY' })))
 

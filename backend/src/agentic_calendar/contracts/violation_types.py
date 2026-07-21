@@ -84,3 +84,13 @@ class ViolationType(StrEnum):
     # A module's ``knowledge_node_ids`` names a node outside the account's
     # knowledge-map vocabulary (KT-C; maps to ``UNKNOWN_KNOWLEDGE_NODE``).
     UNKNOWN_KNOWLEDGE_NODE = "unknown_knowledge_node"
+
+    # --- Mastery memory (strategy-constraints spec; MM-C) ---
+    #
+    # The mastery-slice output gate: a "review module" (one whose
+    # ``knowledge_node_ids`` are all mastered or review-flagged) must be short and
+    # few. These need the ``StrategyConstraints`` mastery slice + review bounds -
+    # external state the contract cannot see - so they live in the validation
+    # layer. Each maps one-to-one onto the matching ``ReasonCode``.
+    MASTERY_REVIEW_BOUND_EXCEEDED = "mastery_review_bound_exceeded"
+    REVIEW_MODULE_LIMIT_EXCEEDED = "review_module_limit_exceeded"

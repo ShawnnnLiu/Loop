@@ -45,6 +45,22 @@ class DataQuality(StrEnum):
     MANUAL_BACKFILL = "manual_backfill"
 
 
+class SolveConfidence(StrEnum):
+    """The user's one-tap self-report of whether they own the material now.
+
+    A distinct axis from ``subjective_difficulty`` (how hard it *felt* vs.
+    whether the user could *do it again unaided*). Opt-in: skipping the triage
+    is always allowed and never a penalty (empty-over-fabrication). The user
+    reports it; code records it; an LLM never assigns it (axiom 08
+    source-confidence rule). It feeds the mastery basis fold
+    (``08-mastery-memory.md``); the confidence weighting itself lands in MM-B.
+    """
+
+    CONFIDENT = "confident"
+    UNSURE = "unsure"
+    NEEDED_HELP = "needed_help"
+
+
 class TelemetryEvent(BaseModel):
     """One append-only record of a task's execution outcome."""
 
@@ -59,6 +75,7 @@ class TelemetryEvent(BaseModel):
     user_reschedule_count: int = Field(ge=0)
     data_quality: DataQuality
     subjective_difficulty: int | None = Field(default=None, ge=1, le=5)
+    solve_confidence: SolveConfidence | None = None
     duration_estimated: bool = False
     captured_offline: bool = False
     synced_at: datetime | None = None
@@ -83,6 +100,22 @@ class TelemetryEvent(BaseModel):
                     "completed event requires completion_timestamp "
                     "(ingestion defaults it from the scheduled end time)"
                 )
+        return self
+
+    @model_validator(mode="after")
+    def _confidence_requires_completion(self) -> TelemetryEvent:
+        """A solve-confidence self-report only makes sense on a completed task.
+
+        Telemetry-spec invariant (``08-mastery-memory.md``): ``solve_confidence``
+        present implies ``completed: true``. A confidence report on an
+        uncompleted task is contradictory and rejected (the spec invalid
+        example). Absence is always allowed - the signal is opt-in.
+        """
+        if self.solve_confidence is not None and not self.completed:
+            raise ValueError(
+                "solve_confidence requires completed=true "
+                "(a confidence self-report on an uncompleted task is contradictory)"
+            )
         return self
 
     @model_validator(mode="after")

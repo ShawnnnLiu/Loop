@@ -403,11 +403,32 @@
           "title": "Knowledge Nodes",
           "type": "array"
         },
+        "mastered_node_ids": {
+          "items": {
+            "pattern": "^kn-[a-z0-9-]+$",
+            "type": "string"
+          },
+          "title": "Mastered Node Ids",
+          "type": "array"
+        },
         "max_modules": {
           "default": 12,
           "exclusiveMinimum": 0,
           "maximum": 100,
           "title": "Max Modules",
+          "type": "integer"
+        },
+        "max_review_minutes": {
+          "default": 60,
+          "exclusiveMinimum": 0,
+          "title": "Max Review Minutes",
+          "type": "integer"
+        },
+        "max_review_modules": {
+          "default": 2,
+          "exclusiveMinimum": 0,
+          "maximum": 10,
+          "title": "Max Review Modules",
           "type": "integer"
         },
         "max_slot_modules": {
@@ -446,6 +467,14 @@
             "$ref": "#/$defs/Priority"
           },
           "title": "Required Priority Values",
+          "type": "array"
+        },
+        "review_node_ids": {
+          "items": {
+            "pattern": "^kn-[a-z0-9-]+$",
+            "type": "string"
+          },
+          "title": "Review Node Ids",
           "type": "array"
         },
         "unfilled_slots": {

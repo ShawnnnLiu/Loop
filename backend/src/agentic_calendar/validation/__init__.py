@@ -37,7 +37,11 @@ from agentic_calendar.contracts.violation_types import ViolationType
 
 from .coverage import check_coverage
 from .graph import check_task_graph
-from .pathway import check_knowledge_node_tags, check_pathway_slots
+from .pathway import (
+    check_knowledge_node_tags,
+    check_mastery_review,
+    check_pathway_slots,
+)
 from .repair import RepairPayload, next_action_for
 from .scheduling_preconditions import check_scheduling_preconditions
 from .schema import check_syllabus_units_shape, check_task_plan_shape
@@ -117,6 +121,10 @@ def validate_syllabus_units(
     selected_pathway: PathwayTemplate | None = None,
     max_slot_modules: int = 3,
     knowledge_node_ids: Collection[str] = (),
+    mastered_node_ids: Collection[str] = (),
+    review_node_ids: Collection[str] = (),
+    max_review_modules: int = 2,
+    max_review_minutes: int = 60,
     repair_attempt: int = 0,
 ) -> ValidationResult:
     """Validate a ``SyllabusUnits`` proposal's source-claim + slot integrity.
@@ -125,9 +133,10 @@ def validate_syllabus_units(
     non-expired claim (axiom 08), that company-specific modules cite evidence
     when required, that any ``evidence_slot_id`` links resolve to slots of the
     selected pathway within the ``max_slot_modules`` bound (narrative pathways,
-    NP-D), and that every ``knowledge_node_ids`` tag names a node in the
-    account's knowledge-map vocabulary (``knowledge_node_ids``, KT-C). A failure
-    routes to a Strategist repair (the Strategist is
+    NP-D), that every ``knowledge_node_ids`` tag names a node in the account's
+    knowledge-map vocabulary (``knowledge_node_ids``, KT-C), and that all-mastered
+    "review modules" stay short and few (the mastery slice + review bounds,
+    MM-C). A failure routes to a Strategist repair (the Strategist is
     the artifact's producer); success is a benign ``NOOP`` — the orchestrator
     then proceeds to the Planner outside this result.
 
@@ -167,6 +176,15 @@ def validate_syllabus_units(
             check_knowledge_node_tags(
                 parsed,
                 knowledge_node_ids=knowledge_node_ids,
+            )
+        )
+        violations.extend(
+            check_mastery_review(
+                parsed,
+                mastered_node_ids=mastered_node_ids,
+                review_node_ids=review_node_ids,
+                max_review_modules=max_review_modules,
+                max_review_minutes=max_review_minutes,
             )
         )
 
@@ -213,7 +231,8 @@ def _summarize_reason(violations: list[Violation]) -> ReasonCode:
        deadlocked plan reports the right reason)
     4. coverage
     5. source claims (axiom 08 — missing/expired evidence; syllabus stage)
-    6. narrative-pathway slot linkage (NP-D — each type its own reason code)
+    6. narrative-pathway slot linkage (NP-D) + knowledge-node tags (KT-C) +
+       mastery-review bounds (MM-C) — each type its own reason code
     7. user fit
     8. generic schema invalid (fallback)
     """
@@ -266,6 +285,14 @@ def _summarize_reason(violations: list[Violation]) -> ReasonCode:
         return ReasonCode.SLOT_MODULE_LIMIT_EXCEEDED
     if ViolationType.UNKNOWN_KNOWLEDGE_NODE in types:
         return ReasonCode.UNKNOWN_KNOWLEDGE_NODE
+
+    # Mastery-slice output gate (MM-C): the per-module bound is the narrower,
+    # more actionable signal, so it wins over the aggregate count on a tie -
+    # mirroring the slot codes' per-module-before-aggregate order above.
+    if ViolationType.MASTERY_REVIEW_BOUND_EXCEEDED in types:
+        return ReasonCode.MASTERY_REVIEW_BOUND_EXCEEDED
+    if ViolationType.REVIEW_MODULE_LIMIT_EXCEEDED in types:
+        return ReasonCode.REVIEW_MODULE_LIMIT_EXCEEDED
 
     user_fit_types = {
         ViolationType.DURATION_EXCEEDS_USER_MAX_SESSION,

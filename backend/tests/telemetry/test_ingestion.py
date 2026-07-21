@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 
 from agentic_calendar.common.clock import FrozenClock
 from agentic_calendar.contracts.reason_codes import ReasonCode
-from agentic_calendar.contracts.telemetry import DataQuality
+from agentic_calendar.contracts.telemetry import DataQuality, SolveConfidence
 from agentic_calendar.telemetry.event_store import InMemoryTelemetryEventStore
 from agentic_calendar.telemetry.ingestion import (
     IngestionStatus,
@@ -59,6 +59,45 @@ def test_completion_timestamp_defaults_to_scheduled_end_when_given() -> None:
     assert out.ok
     assert out.event is not None
     assert out.event.completion_timestamp == scheduled_end
+
+
+def test_solve_confidence_passes_through_to_the_stored_event() -> None:
+    ing, _ = _ingestor()
+    out = ing.ingest(
+        {
+            "telemetry_event_id": "tel_1",
+            "task_id": "dp_2",
+            "scheduled_duration_min": 45,
+            "actual_duration_min": 45,
+            "completed": True,
+            "completion_timestamp": NOW.isoformat(),
+            "user_reschedule_count": 0,
+            "data_quality": "complete",
+            "solve_confidence": "needed_help",
+        }
+    )
+    assert out.ok
+    assert out.event is not None
+    assert out.event.solve_confidence is SolveConfidence.NEEDED_HELP
+
+
+def test_solve_confidence_on_incomplete_is_rejected() -> None:
+    # The contract invariant (present ⟹ completed) is the backstop even if a
+    # caller bypasses the service-layer guard.
+    ing, _ = _ingestor()
+    out = ing.ingest(
+        {
+            "telemetry_event_id": "tel_1",
+            "task_id": "dp_2",
+            "scheduled_duration_min": 45,
+            "completed": False,
+            "user_reschedule_count": 0,
+            "data_quality": "complete",
+            "solve_confidence": "confident",
+        }
+    )
+    assert out.status is IngestionStatus.REJECTED
+    assert out.reason_code is ReasonCode.SCHEMA_INVALID
 
 
 def test_reingestion_is_idempotent_duplicate() -> None:

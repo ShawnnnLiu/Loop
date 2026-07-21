@@ -21,6 +21,65 @@ def test_defaults_match_spec() -> None:
     assert c.pathway_id is None
     assert c.unfilled_slots == []
     assert c.max_slot_modules == 3
+    # Mastery slice (MM-A) defaults to "no mastery shaping" = today's behavior.
+    assert c.mastered_node_ids == []
+    assert c.review_node_ids == []
+    assert c.max_review_modules == 2
+    assert c.max_review_minutes == 60
+
+
+def test_mastery_lists_require_pathway_id() -> None:
+    with pytest.raises(ValidationError):
+        StrategyConstraints(mastered_node_ids=["kn-rag"])
+    with pytest.raises(ValidationError):
+        StrategyConstraints(review_node_ids=["kn-rag"])
+
+
+def test_mastery_ids_must_be_in_knowledge_node_vocabulary() -> None:
+    from agentic_calendar.contracts.strategy_constraints import KnowledgeNodeRef
+
+    # A mastery id with no matching knowledge_nodes entry does not resolve to
+    # the account map and is rejected (the composition-time guarantee).
+    with pytest.raises(ValidationError):
+        StrategyConstraints(pathway_id="p", mastered_node_ids=["kn-rag"])
+    ok = StrategyConstraints(
+        pathway_id="p",
+        knowledge_nodes=[KnowledgeNodeRef(node_id="kn-rag", title="RAG")],
+        mastered_node_ids=["kn-rag"],
+    )
+    assert ok.mastered_node_ids == ["kn-rag"]
+
+
+def test_mastered_and_review_must_be_disjoint() -> None:
+    from agentic_calendar.contracts.strategy_constraints import KnowledgeNodeRef
+
+    with pytest.raises(ValidationError):
+        StrategyConstraints(
+            pathway_id="p",
+            knowledge_nodes=[KnowledgeNodeRef(node_id="kn-rag", title="RAG")],
+            mastered_node_ids=["kn-rag"],
+            review_node_ids=["kn-rag"],
+        )
+
+
+def test_mastery_ids_unique_within_list() -> None:
+    from agentic_calendar.contracts.strategy_constraints import KnowledgeNodeRef
+
+    with pytest.raises(ValidationError):
+        StrategyConstraints(
+            pathway_id="p",
+            knowledge_nodes=[KnowledgeNodeRef(node_id="kn-rag", title="RAG")],
+            mastered_node_ids=["kn-rag", "kn-rag"],
+        )
+
+
+def test_max_review_modules_and_minutes_bounds() -> None:
+    with pytest.raises(ValidationError):
+        StrategyConstraints(max_review_modules=0)
+    with pytest.raises(ValidationError):
+        StrategyConstraints(max_review_modules=11)
+    with pytest.raises(ValidationError):
+        StrategyConstraints(max_review_minutes=0)
 
 
 def test_unfilled_slots_require_pathway_id() -> None:

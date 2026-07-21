@@ -160,33 +160,6 @@ export function ThresholdsScreen() {
             new story. Pillar states below are computed deterministically from your confirmed evidence.
           </p>
 
-          {pendingPathway && (
-            <div className="card" style={{ marginTop: 12, padding: '12px 16px', borderColor: 'var(--clay)' }}>
-              <span style={{ fontSize: 13.5 }}>
-                Switch to{' '}
-                <b>{pathways.cards.find((c) => c.pathway_id === pendingPathway)?.display_name}</b>? This
-                discards your current draft/active plan and regenerates it around the new pillars.
-              </span>
-              <div className="row" style={{ gap: 8, marginTop: 10 }}>
-                <button
-                  className="btn btn-primary sm"
-                  type="button"
-                  disabled={pathwayBusy}
-                  onClick={() => void confirmPathwayChange()}
-                >
-                  {pathwayBusy ? 'Switching…' : 'Switch and replan'}
-                </button>
-                <button
-                  className="btn btn-quiet sm"
-                  type="button"
-                  disabled={pathwayBusy}
-                  onClick={() => setPendingPathway(null)}
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          )}
           {pathwayError && (
             <div className="banner-error" style={{ marginTop: 12 }}>
               Couldn’t change your pathway — {pathwayError}
@@ -198,8 +171,23 @@ export function ThresholdsScreen() {
               key={card.pathway_id}
               card={card}
               experienceTitles={(me?.profile?.experience ?? []).map((e) => e.title)}
-              onSelect={() => setPendingPathway(card.pathway_id)}
+              onSelect={() => {
+                setPathwayError(null)
+                setPendingPathway(card.pathway_id)
+              }}
               selectLabel="Switch to this story"
+              confirming={pendingPathway === card.pathway_id}
+              confirmPrompt={
+                <>
+                  Switch to <b>{card.display_name}</b>? This discards your current draft/active plan
+                  and regenerates it around the new pillars. Your evidence is never reset — only
+                  re-matched to the new story.
+                </>
+              }
+              confirmLabel="Switch and replan"
+              busy={pathwayBusy}
+              onConfirm={() => void confirmPathwayChange()}
+              onCancel={() => setPendingPathway(null)}
             />
           ))}
         </div>

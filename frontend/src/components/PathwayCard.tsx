@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react'
+
 import type { PathwayCard } from '../api/types'
 import { SLOT_STATE_LABEL, fitLine, matchedTitles, slotStateTone } from '../lib/story'
 
@@ -16,6 +18,11 @@ export function PathwayCardView({
   onSelect,
   selectLabel = 'Choose this story',
   busy = false,
+  confirming = false,
+  confirmPrompt,
+  confirmLabel = 'Confirm',
+  onConfirm,
+  onCancel,
 }: {
   card: PathwayCard
   /** Stored evidence titles, so filled pillars can name their items. */
@@ -28,6 +35,15 @@ export function PathwayCardView({
   onSelect?: () => void
   selectLabel?: string
   busy?: boolean
+  /** When true, the select control is replaced by an inline confirm/cancel
+   *  window anchored to this card — so a destructive select (e.g. a plan-
+   *  regenerating story switch) is confirmed in view, next to the button the
+   *  user pressed, rather than by a banner elsewhere on the page. */
+  confirming?: boolean
+  confirmPrompt?: ReactNode
+  confirmLabel?: string
+  onConfirm?: () => void
+  onCancel?: () => void
 }) {
   return (
     <div
@@ -87,7 +103,7 @@ export function PathwayCardView({
         })}
       </div>
 
-      {onSelect && (
+      {onSelect && !confirming && (
         <div className="row" style={{ marginTop: 12 }}>
           <button
             type="button"
@@ -97,6 +113,33 @@ export function PathwayCardView({
           >
             {card.selected ? 'Chosen' : selectLabel}
           </button>
+        </div>
+      )}
+
+      {confirming && (
+        <div
+          className="card"
+          style={{ marginTop: 12, padding: '12px 14px', borderColor: 'var(--clay)' }}
+        >
+          {confirmPrompt && <div style={{ fontSize: 13 }}>{confirmPrompt}</div>}
+          <div className="row" style={{ gap: 8, marginTop: confirmPrompt ? 10 : 0 }}>
+            <button
+              type="button"
+              className="btn btn-primary sm"
+              disabled={busy}
+              onClick={onConfirm}
+            >
+              {busy ? 'Switching…' : confirmLabel}
+            </button>
+            <button
+              type="button"
+              className="btn btn-quiet sm"
+              disabled={busy}
+              onClick={onCancel}
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       )}
     </div>

@@ -1,0 +1,11 @@
+{
+  "skill_grouping_version": "skill-grouping-v1",
+  "taxonomy_version": "skill-taxonomy-v4",
+  "groups": [
+    { "group_id": "kg-dup", "title": "One", "blurb": "b" },
+    { "group_id": "kg-dup", "title": "Two", "blurb": "b" }
+  ],
+  "entries": [
+    { "skill_id": "skill.rag", "group_id": "kg-dup", "expected_minutes": 360, "blurb": "b" }
+  ]
+}

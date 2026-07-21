@@ -169,6 +169,28 @@
       "title": "HardConstraints",
       "type": "object"
     },
+    "KnowledgeNodeRef": {
+      "additionalProperties": false,
+      "description": "One trainable skill node on the account's knowledge map (KT-C).\n\nThe closed vocabulary the Strategist may tag modules against: ``node_id``\nplus the taxonomy ``title`` (a curated display name, never user free text).\nThe account's *pathway content* only - generated skill nodes plus\ntaxonomy-anchored additions; personal custom content never appears here (the\ninjection wall, ``06-knowledge-tree.md``).",
+      "properties": {
+        "node_id": {
+          "pattern": "^kn-[a-z0-9-]+$",
+          "title": "Node Id",
+          "type": "string"
+        },
+        "title": {
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "node_id",
+        "title"
+      ],
+      "title": "KnowledgeNodeRef",
+      "type": "object"
+    },
     "PathwaySelection": {
       "additionalProperties": false,
       "description": "The user's confirmed pathway choice, pinned to a registry version.",
@@ -374,6 +396,13 @@
       "additionalProperties": false,
       "description": "Bounds on a Strategist proposal (spec defaults shown).",
       "properties": {
+        "knowledge_nodes": {
+          "items": {
+            "$ref": "#/$defs/KnowledgeNodeRef"
+          },
+          "title": "Knowledge Nodes",
+          "type": "array"
+        },
         "max_modules": {
           "default": 12,
           "exclusiveMinimum": 0,

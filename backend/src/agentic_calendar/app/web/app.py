@@ -116,7 +116,12 @@ def _mount_spa(app: FastAPI, dist_dir: Path) -> None:
 
 
 def _error_body(exc: Exception) -> dict[str, str]:
-    return {"error": str(exc), "type": exc.__class__.__name__}
+    body = {"error": str(exc), "type": exc.__class__.__name__}
+    reason_code = getattr(exc, "reason_code", None)
+    if reason_code is not None:
+        # ReasonCode is a StrEnum; str() yields its wire value.
+        body["reason_code"] = str(reason_code)
+    return body
 
 
 def create_app(

@@ -1,0 +1,44 @@
+{
+  "$defs": {
+    "PersonalContentKind": {
+      "description": "What a ``PersonalContentTombstone`` deletes (knowledge-map-overlay spec,\nKT-C). Only personal content is deletable; pathway content never is.",
+      "enum": [
+        "custom_group",
+        "custom_node",
+        "note"
+      ],
+      "title": "PersonalContentKind",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "The append-only delete marker for personal content (KT-C).\n\nThe store has no single-record delete, so a user deletes their **own**\npersonal content - a custom group, a custom node, or a note - by appending a\ntombstone. Pathway content is never deletable. ``target_id`` is the ``kcg-`` /\n``kcn-`` id for a group / node, or the note's ``node_id`` for a note; the\n``target_kind`` disambiguates. Read semantics live in the store / API.",
+  "properties": {
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "target_id": {
+      "minLength": 1,
+      "title": "Target Id",
+      "type": "string"
+    },
+    "target_kind": {
+      "$ref": "#/$defs/PersonalContentKind"
+    },
+    "user_id": {
+      "minLength": 1,
+      "title": "User Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "user_id",
+    "target_kind",
+    "target_id",
+    "created_at"
+  ],
+  "title": "PersonalContentTombstone",
+  "type": "object"
+}

@@ -16,14 +16,42 @@ valid, so a profile without a selection produces today's bundle unchanged.
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from typing import Annotated
+
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    StringConstraints,
+    model_validator,
+)
 
 from ._dedup import find_duplicates
 from .common_types import Priority
 
+#: A generated (taxonomy-anchored) knowledge-map node id (``kn-…``). Capstones
+#: are not training targets, so the vocabulary carries skill nodes only.
+KnowledgeNodeId = Annotated[str, StringConstraints(pattern=r"^kn-[a-z0-9-]+$")]
+
 
 def _default_priority_values() -> list[Priority]:
     return [Priority.HIGH, Priority.MEDIUM, Priority.LOW]
+
+
+class KnowledgeNodeRef(BaseModel):
+    """One trainable skill node on the account's knowledge map (KT-C).
+
+    The closed vocabulary the Strategist may tag modules against: ``node_id``
+    plus the taxonomy ``title`` (a curated display name, never user free text).
+    The account's *pathway content* only - generated skill nodes plus
+    taxonomy-anchored additions; personal custom content never appears here (the
+    injection wall, ``06-knowledge-tree.md``).
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    node_id: KnowledgeNodeId
+    title: str = Field(min_length=1)
 
 
 class UnfilledSlot(BaseModel):
@@ -54,6 +82,7 @@ class StrategyConstraints(BaseModel):
     pathway_id: str | None = Field(default=None, min_length=1)
     unfilled_slots: list[UnfilledSlot] = Field(default_factory=list)
     max_slot_modules: int = Field(default=3, gt=0, le=10)
+    knowledge_nodes: list[KnowledgeNodeRef] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _priority_values_unique_nonempty(self) -> StrategyConstraints:
@@ -74,4 +103,22 @@ class StrategyConstraints(BaseModel):
         dupes = find_duplicates([s.slot_id for s in self.unfilled_slots])
         if dupes:
             raise ValueError(f"unfilled_slots must have unique slot_id values; duplicates: {dupes}")
+        return self
+
+    @model_validator(mode="after")
+    def _knowledge_nodes_require_pathway(self) -> StrategyConstraints:
+        # A knowledge-map vocabulary exists only for a selected pathway (a map
+        # requires a selection, ``06-…`` d6); a vocabulary with no pathway is
+        # contradictory, exactly like ``unfilled_slots``.
+        if self.knowledge_nodes and self.pathway_id is None:
+            raise ValueError("knowledge_nodes requires pathway_id (no pathway selected)")
+        return self
+
+    @model_validator(mode="after")
+    def _knowledge_node_ids_unique(self) -> StrategyConstraints:
+        dupes = find_duplicates([n.node_id for n in self.knowledge_nodes])
+        if dupes:
+            raise ValueError(
+                f"knowledge_nodes must have unique node_id values; duplicates: {dupes}"
+            )
         return self

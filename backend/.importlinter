@@ -36,6 +36,7 @@ source_modules =
     agentic_calendar.retrieval
     agentic_calendar.skill_taxonomy
     agentic_calendar.narrative
+    agentic_calendar.overlay
 forbidden_modules =
     openai
     anthropic
@@ -72,6 +73,7 @@ modules =
     agentic_calendar.consent
     agentic_calendar.identity
     agentic_calendar.disposition
+    agentic_calendar.overlay
 
 # Note: `calendar_writer` is intentionally NOT in the independence set above.
 # The Calendar Write Manager must import :class:`ApprovalEventStore` from
@@ -504,6 +506,7 @@ forbidden_modules =
     agentic_calendar.consent
     agentic_calendar.identity
     agentic_calendar.disposition
+    agentic_calendar.overlay
 
 # ---------------------------------------------------------------------------
 # Contract 18: LLM nodes never import the skill-taxonomy kernel.
@@ -555,6 +558,7 @@ forbidden_modules =
     agentic_calendar.consent
     agentic_calendar.identity
     agentic_calendar.disposition
+    agentic_calendar.overlay
 
 # ---------------------------------------------------------------------------
 # Contract 20: Narrative kernel leaf-deps (narrative-pathways NP-B).
@@ -594,3 +598,43 @@ forbidden_modules =
     agentic_calendar.disposition
     agentic_calendar.retrieval
     agentic_calendar.skill_taxonomy
+    agentic_calendar.overlay
+
+# ---------------------------------------------------------------------------
+# Contract 21: Knowledge-map overlay store leaf-deps (narrative-pathways KT-B).
+#
+# `overlay` (the append-only per-account knowledge-map overlay: grants,
+# set-points, additions, custom groups/nodes, notes) is a store like
+# `disposition`: it may depend only on `common` and `contracts`. The
+# composition root (`app/`) wires it, the map API (KT-C) drives it, and the
+# `narrative.map_state` kernel consumes its records as PLAIN DATA passed in —
+# the kernel never imports this region, so free text can never reach a prompt
+# through an import path. Nothing inside it may reach back into a region.
+# ---------------------------------------------------------------------------
+[importlinter:contract:overlay-is-leaf]
+name = overlay/ may only depend on common/ and contracts/.
+type = forbidden
+source_modules =
+    agentic_calendar.overlay
+forbidden_modules =
+    agentic_calendar.supervisor
+    agentic_calendar.validation
+    agentic_calendar.scheduler
+    agentic_calendar.planning
+    agentic_calendar.llm_nodes
+    agentic_calendar.prerequisites
+    agentic_calendar.calendar_writer
+    agentic_calendar.approval
+    agentic_calendar.accountability
+    agentic_calendar.telemetry
+    agentic_calendar.drift
+    agentic_calendar.duration_estimation
+    agentic_calendar.source_claims
+    agentic_calendar.cache
+    agentic_calendar.templates
+    agentic_calendar.consent
+    agentic_calendar.identity
+    agentic_calendar.disposition
+    agentic_calendar.retrieval
+    agentic_calendar.skill_taxonomy
+    agentic_calendar.narrative

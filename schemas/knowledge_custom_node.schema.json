@@ -1,0 +1,54 @@
+{
+  "additionalProperties": false,
+  "description": "A user-created personal node (personal content; counts toward nothing).",
+  "properties": {
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "custom_node_id": {
+      "pattern": "^kcn-[a-z0-9-]+$",
+      "title": "Custom Node Id",
+      "type": "string"
+    },
+    "description": {
+      "anyOf": [
+        {
+          "maxLength": 500,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Description"
+    },
+    "group_id": {
+      "pattern": "^k(g|cg)-[a-z0-9-]+$",
+      "title": "Group Id",
+      "type": "string"
+    },
+    "name": {
+      "maxLength": 60,
+      "minLength": 1,
+      "title": "Name",
+      "type": "string"
+    },
+    "user_id": {
+      "minLength": 1,
+      "title": "User Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "user_id",
+    "custom_node_id",
+    "name",
+    "group_id",
+    "created_at"
+  ],
+  "title": "CustomNode",
+  "type": "object"
+}

@@ -1,5 +1,6 @@
 import type {
   AccountabilityResult,
+  AddSkillVocabularyResult,
   AdjustResult,
   ApproveResult,
   CalendarReconciliationResult,
@@ -12,6 +13,8 @@ import type {
   ExtractResumeResult,
   FitNotesPayload,
   FitNotesResult,
+  KnowledgeMapView,
+  MasteryTier,
   MeResult,
   OnboardPayload,
   OnboardResult,
@@ -133,6 +136,40 @@ export const api = {
   pathwayFitNotes: (payload: FitNotesPayload = {}) =>
     request<FitNotesResult>('POST', '/pathways/fit-notes', payload),
   storySummary: () => request<StorySummaryResult>('POST', '/story-summary', {}),
+  // Knowledge map (KT-C read + mutations; KT-D UI). All kernel-computed, no LLM:
+  // `knowledgeMap` reads the account's map with deterministic `map_state` tiers;
+  // `addVocabulary` is the closed "Add a skill" picker slice. Every mutation
+  // returns the refreshed `KnowledgeMapView` (the server recomputes tiers), so
+  // callers just replace state from the response. Personal custom content is a
+  // display-only layer that counts toward nothing and never enters a prompt.
+  knowledgeMap: () => request<KnowledgeMapView>('GET', '/knowledge-map'),
+  addVocabulary: () =>
+    request<AddSkillVocabularyResult>('GET', '/knowledge-map/add-vocabulary'),
+  setMastery: (nodeId: string, tier: MasteryTier) =>
+    request<KnowledgeMapView>('POST', '/knowledge-map/setpoint', {
+      node_id: nodeId,
+      target_tier: tier,
+    }),
+  upsertNote: (nodeId: string, text: string) =>
+    request<KnowledgeMapView>('POST', '/knowledge-map/note', { node_id: nodeId, text }),
+  deleteNote: (nodeId: string) =>
+    request<KnowledgeMapView>('DELETE', `/knowledge-map/note/${encodeURIComponent(nodeId)}`),
+  markNodeEvidence: (nodeId: string) =>
+    request<KnowledgeMapView>('POST', '/knowledge-map/mark-evidence', { node_id: nodeId }),
+  addKnowledgeNode: (skillId: string) =>
+    request<KnowledgeMapView>('POST', '/knowledge-map/add-node', { skill_id: skillId }),
+  createCustomGroup: (name: string) =>
+    request<KnowledgeMapView>('POST', '/knowledge-map/custom-group', { name }),
+  deleteCustomGroup: (id: string) =>
+    request<KnowledgeMapView>('DELETE', `/knowledge-map/custom-group/${encodeURIComponent(id)}`),
+  createCustomNode: (node: { name: string; groupId: string; description?: string | null }) =>
+    request<KnowledgeMapView>('POST', '/knowledge-map/custom-node', {
+      name: node.name,
+      group_id: node.groupId,
+      description: node.description ?? null,
+    }),
+  deleteCustomNode: (id: string) =>
+    request<KnowledgeMapView>('DELETE', `/knowledge-map/custom-node/${encodeURIComponent(id)}`),
   propose: (body: ProposeRequest = {}) => request<ProposeResult>('POST', '/propose', body),
   // Approval gate (F-F). `approve` records the explicit decision and mints the
   // approval_event_id + hash the write requires; `write` is the only call that

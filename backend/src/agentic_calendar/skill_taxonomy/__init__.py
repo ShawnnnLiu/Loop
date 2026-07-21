@@ -13,6 +13,13 @@ vocabulary and the membership resolver reach the node as plain data
 (``.importlinter`` enforces both directions).
 """
 
+from .grouping import (
+    DEFAULT_SKILL_GROUPING_PATH,
+    SkillGroupingLoadError,
+    SkillGroupingRegistry,
+    load_skill_grouping,
+    load_skill_grouping_registry,
+)
 from .normalize import normalize_surface, resolve, resolve_track
 from .registry import (
     DEFAULT_TAXONOMY_PATH,
@@ -23,10 +30,15 @@ from .registry import (
 )
 
 __all__ = [
+    "DEFAULT_SKILL_GROUPING_PATH",
     "DEFAULT_TAXONOMY_PATH",
+    "SkillGroupingLoadError",
+    "SkillGroupingRegistry",
     "SkillTaxonomyLoadError",
     "SkillTaxonomyRegistry",
     "load_registry",
+    "load_skill_grouping",
+    "load_skill_grouping_registry",
     "load_taxonomy",
     "normalize_surface",
     "resolve",

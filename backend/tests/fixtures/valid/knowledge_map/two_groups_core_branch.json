@@ -1,0 +1,50 @@
+{
+  "groups": [
+    {
+      "group_id": "kg-retrieval",
+      "title": "Retrieval & Grounding",
+      "branch": "llm-feature-depth",
+      "blurb": "Finding and feeding the right context to a model.",
+      "member_node_ids": ["kn-rag"]
+    },
+    {
+      "group_id": "kg-foundations",
+      "title": "Engineering Foundations",
+      "branch": "core",
+      "blurb": "Shared craft every branch leans on.",
+      "member_node_ids": ["kn-testing"]
+    }
+  ],
+  "nodes": [
+    {
+      "node_id": "kn-rag",
+      "title": "Retrieval fundamentals",
+      "kind": "skill",
+      "skill_id": "skill.rag",
+      "group_id": "kg-retrieval",
+      "expected_minutes": 360
+    },
+    {
+      "node_id": "kn-testing",
+      "title": "Automated testing",
+      "kind": "skill",
+      "skill_id": "skill.testing",
+      "group_id": "kg-foundations",
+      "expected_minutes": 300
+    },
+    {
+      "node_id": "kn-llm-feature-capstone",
+      "title": "LLM feature shipped",
+      "kind": "capstone",
+      "evidence_slot_id": "llm-feature-depth",
+      "branch": "llm-feature-depth"
+    },
+    {
+      "node_id": "kn-public-artifact-capstone",
+      "title": "Public writeup",
+      "kind": "capstone",
+      "evidence_slot_id": "public-artifact",
+      "branch": "public-artifact"
+    }
+  ]
+}

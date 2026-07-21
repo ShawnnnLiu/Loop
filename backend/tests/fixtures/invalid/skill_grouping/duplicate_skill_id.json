@@ -1,0 +1,11 @@
+{
+  "skill_grouping_version": "skill-grouping-v1",
+  "taxonomy_version": "skill-taxonomy-v4",
+  "groups": [
+    { "group_id": "kg-retrieval", "title": "Retrieval", "blurb": "b" }
+  ],
+  "entries": [
+    { "skill_id": "skill.rag", "group_id": "kg-retrieval", "expected_minutes": 360, "blurb": "b" },
+    { "skill_id": "skill.rag", "group_id": "kg-retrieval", "expected_minutes": 120, "blurb": "b" }
+  ]
+}

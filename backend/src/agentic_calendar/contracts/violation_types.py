@@ -81,3 +81,6 @@ class ViolationType(StrEnum):
     PATHWAY_NOT_SELECTED = "pathway_not_selected"
     UNKNOWN_EVIDENCE_SLOT = "unknown_evidence_slot"
     SLOT_MODULE_LIMIT_EXCEEDED = "slot_module_limit_exceeded"
+    # A module's ``knowledge_node_ids`` names a node outside the account's
+    # knowledge-map vocabulary (KT-C; maps to ``UNKNOWN_KNOWLEDGE_NODE``).
+    UNKNOWN_KNOWLEDGE_NODE = "unknown_knowledge_node"

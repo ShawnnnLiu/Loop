@@ -108,6 +108,11 @@ from agentic_calendar.llm_nodes.user_facing_explanation import (
     StorySummaryRequest,
     UserExplanation,
 )
+from agentic_calendar.overlay import (
+    InMemoryKnowledgeOverlayStore,
+    KnowledgeOverlayStore,
+    SqliteKnowledgeOverlayStore,
+)
 from agentic_calendar.planning.sqlite_store import SqlitePlanVersionStore
 from agentic_calendar.planning.store import InMemoryPlanVersionStore, PlanVersionStore
 from agentic_calendar.source_claims.ingestion import (
@@ -273,6 +278,7 @@ class AppEnvironment:
     mapping_store: CalendarEventMappingStore
     telemetry_store: TelemetryEventStore
     disposition_store: TaskDispositionStore
+    knowledge_overlay_store: KnowledgeOverlayStore
     placement_preference_store: PlacementPreferenceStore
     consent_store: ConsentStore
     audit_store: DataAccessAuditStore
@@ -331,6 +337,9 @@ def build_environment(
         mapping_store: CalendarEventMappingStore = InMemoryCalendarEventMappingStore()
         telemetry_store: TelemetryEventStore = InMemoryTelemetryEventStore()
         disposition_store: TaskDispositionStore = InMemoryTaskDispositionStore()
+        knowledge_overlay_store: KnowledgeOverlayStore = (
+            InMemoryKnowledgeOverlayStore()
+        )
         placement_preference_store: PlacementPreferenceStore = (
             InMemoryPlacementPreferenceStore()
         )
@@ -356,6 +365,7 @@ def build_environment(
         mapping_store = SqliteCalendarEventMappingStore(db)
         telemetry_store = SqliteTelemetryEventStore(db)
         disposition_store = SqliteTaskDispositionStore(db)
+        knowledge_overlay_store = SqliteKnowledgeOverlayStore(db)
         placement_preference_store = SqlitePlacementPreferenceStore(db)
         consent_store = SqliteConsentStore(db, clock)
         audit_store = SqliteDataAccessAuditStore(db)
@@ -404,6 +414,7 @@ def build_environment(
         mapping_store=mapping_store,
         telemetry_store=telemetry_store,
         disposition_store=disposition_store,
+        knowledge_overlay_store=knowledge_overlay_store,
         placement_preference_store=placement_preference_store,
         consent_store=consent_store,
         audit_store=audit_store,

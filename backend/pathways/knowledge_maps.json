@@ -1,0 +1,2256 @@
+{
+  "maps": {
+    "ai-integration-engineer": {
+      "groups": [
+        {
+          "blurb": "Working directly with language models: prompting, shaping, and adapting them.",
+          "branch": "core",
+          "group_id": "kg-llm-foundations",
+          "member_node_ids": [
+            "kn-fine-tuning",
+            "kn-llms",
+            "kn-prompt-engineering",
+            "kn-structured-outputs"
+          ],
+          "title": "LLM Foundations"
+        },
+        {
+          "blurb": "Finding and feeding the right context to a model.",
+          "branch": "core",
+          "group_id": "kg-retrieval",
+          "member_node_ids": [
+            "kn-chunking",
+            "kn-embeddings",
+            "kn-rag",
+            "kn-reranking",
+            "kn-semantic-search",
+            "kn-vector-databases"
+          ],
+          "title": "Retrieval & Grounding"
+        },
+        {
+          "blurb": "Wiring models into tools, agents, and multi-step workflows.",
+          "branch": "integration-breadth",
+          "group_id": "kg-llm-orchestration",
+          "member_node_ids": [
+            "kn-ai-agents",
+            "kn-function-calling",
+            "kn-langchain",
+            "kn-llamaindex",
+            "kn-mcp"
+          ],
+          "title": "LLM Orchestration"
+        },
+        {
+          "blurb": "Measuring LLM output quality and keeping it inside safe bounds.",
+          "branch": "eval-telemetry",
+          "group_id": "kg-llm-evaluation",
+          "member_node_ids": [
+            "kn-guardrails",
+            "kn-llm-evaluation",
+            "kn-llm-observability",
+            "kn-responsible-ai"
+          ],
+          "title": "LLM Evaluation & Safety"
+        }
+      ],
+      "nodes": [
+        {
+          "blurb": "Keeping model output inside safe, expected bounds.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 300,
+          "group_id": "kg-llm-evaluation",
+          "kind": "skill",
+          "node_id": "kn-guardrails",
+          "skill_id": "skill.guardrails",
+          "title": "LLM guardrails"
+        },
+        {
+          "blurb": "Judging whether an LLM's output is actually good.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 360,
+          "group_id": "kg-llm-evaluation",
+          "kind": "skill",
+          "node_id": "kn-llm-evaluation",
+          "skill_id": "skill.llm-evaluation",
+          "title": "LLM evaluation"
+        },
+        {
+          "blurb": "Tracing and monitoring what an LLM feature does in production.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 300,
+          "group_id": "kg-llm-evaluation",
+          "kind": "skill",
+          "node_id": "kn-llm-observability",
+          "skill_id": "skill.llm-observability",
+          "title": "LLM observability"
+        },
+        {
+          "blurb": "Building AI systems with fairness, transparency, and harm in mind.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 300,
+          "group_id": "kg-llm-evaluation",
+          "kind": "skill",
+          "node_id": "kn-responsible-ai",
+          "skill_id": "skill.responsible-ai",
+          "title": "Responsible AI"
+        },
+        {
+          "blurb": "Adapting a pretrained model to a task with more training.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 420,
+          "group_id": "kg-llm-foundations",
+          "kind": "skill",
+          "node_id": "kn-fine-tuning",
+          "skill_id": "skill.fine-tuning",
+          "title": "Fine-tuning"
+        },
+        {
+          "blurb": "How large language models work and where their limits are.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 480,
+          "group_id": "kg-llm-foundations",
+          "kind": "skill",
+          "node_id": "kn-llms",
+          "skill_id": "skill.llms",
+          "title": "Large language models"
+        },
+        {
+          "blurb": "Shaping instructions and context to steer a model's output.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 240,
+          "group_id": "kg-llm-foundations",
+          "kind": "skill",
+          "node_id": "kn-prompt-engineering",
+          "skill_id": "skill.prompt-engineering",
+          "title": "Prompt engineering"
+        },
+        {
+          "blurb": "Constraining a model to return machine-readable, validated shapes.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 180,
+          "group_id": "kg-llm-foundations",
+          "kind": "skill",
+          "node_id": "kn-structured-outputs",
+          "skill_id": "skill.structured-outputs",
+          "title": "Structured outputs"
+        },
+        {
+          "blurb": "Letting a model plan and act through tools over multiple steps.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 420,
+          "group_id": "kg-llm-orchestration",
+          "kind": "skill",
+          "node_id": "kn-ai-agents",
+          "skill_id": "skill.ai-agents",
+          "title": "AI agents"
+        },
+        {
+          "blurb": "Letting a model invoke your functions with structured arguments.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 240,
+          "group_id": "kg-llm-orchestration",
+          "kind": "skill",
+          "node_id": "kn-function-calling",
+          "skill_id": "skill.function-calling",
+          "title": "Function calling / tool use"
+        },
+        {
+          "blurb": "A framework for composing LLM calls, tools, and memory.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 300,
+          "group_id": "kg-llm-orchestration",
+          "kind": "skill",
+          "node_id": "kn-langchain",
+          "skill_id": "skill.langchain",
+          "title": "LangChain"
+        },
+        {
+          "blurb": "A framework for connecting LLMs to your own data.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 300,
+          "group_id": "kg-llm-orchestration",
+          "kind": "skill",
+          "node_id": "kn-llamaindex",
+          "skill_id": "skill.llamaindex",
+          "title": "LlamaIndex"
+        },
+        {
+          "blurb": "An open protocol for connecting models to tools and data sources.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 240,
+          "group_id": "kg-llm-orchestration",
+          "kind": "skill",
+          "node_id": "kn-mcp",
+          "skill_id": "skill.mcp",
+          "title": "Model Context Protocol"
+        },
+        {
+          "blurb": "Splitting documents into passages that retrieve and fit well.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 180,
+          "group_id": "kg-retrieval",
+          "kind": "skill",
+          "node_id": "kn-chunking",
+          "skill_id": "skill.chunking",
+          "title": "Chunking"
+        },
+        {
+          "blurb": "Turning text into vectors that capture meaning for search.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 300,
+          "group_id": "kg-retrieval",
+          "kind": "skill",
+          "node_id": "kn-embeddings",
+          "skill_id": "skill.embeddings",
+          "title": "Embeddings"
+        },
+        {
+          "blurb": "Grounding a model's answers in retrieved source documents.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 360,
+          "group_id": "kg-retrieval",
+          "kind": "skill",
+          "node_id": "kn-rag",
+          "skill_id": "skill.rag",
+          "title": "Retrieval-augmented generation"
+        },
+        {
+          "blurb": "Reordering retrieved candidates to put the best ones first.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 240,
+          "group_id": "kg-retrieval",
+          "kind": "skill",
+          "node_id": "kn-reranking",
+          "skill_id": "skill.reranking",
+          "title": "Reranking"
+        },
+        {
+          "blurb": "Finding results by meaning rather than exact keywords.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 300,
+          "group_id": "kg-retrieval",
+          "kind": "skill",
+          "node_id": "kn-semantic-search",
+          "skill_id": "skill.semantic-search",
+          "title": "Semantic search"
+        },
+        {
+          "blurb": "Stores built to search by vector similarity at scale.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 300,
+          "group_id": "kg-retrieval",
+          "kind": "skill",
+          "node_id": "kn-vector-databases",
+          "skill_id": "skill.vector-databases",
+          "title": "Vector databases"
+        },
+        {
+          "blurb": null,
+          "branch": "llm-feature-depth",
+          "evidence_slot_id": "llm-feature-depth",
+          "expected_minutes": null,
+          "group_id": null,
+          "kind": "capstone",
+          "node_id": "kn-llm-feature-depth-capstone",
+          "skill_id": null,
+          "title": "LLM feature shipped in a real app"
+        },
+        {
+          "blurb": null,
+          "branch": "integration-breadth",
+          "evidence_slot_id": "integration-breadth",
+          "expected_minutes": null,
+          "group_id": null,
+          "kind": "capstone",
+          "node_id": "kn-integration-breadth-capstone",
+          "skill_id": null,
+          "title": "Integration and tooling breadth"
+        },
+        {
+          "blurb": null,
+          "branch": "eval-telemetry",
+          "evidence_slot_id": "eval-telemetry",
+          "expected_minutes": null,
+          "group_id": null,
+          "kind": "capstone",
+          "node_id": "kn-eval-telemetry-capstone",
+          "skill_id": null,
+          "title": "Evaluation and telemetry literacy"
+        },
+        {
+          "blurb": null,
+          "branch": "public-artifact",
+          "evidence_slot_id": "public-artifact",
+          "expected_minutes": null,
+          "group_id": null,
+          "kind": "capstone",
+          "node_id": "kn-public-artifact-capstone",
+          "skill_id": null,
+          "title": "Public writeup or talk"
+        }
+      ]
+    },
+    "applied-ml-specialist": {
+      "groups": [
+        {
+          "blurb": "Supervised learning with tabular data: the models and how to judge them.",
+          "branch": "core",
+          "group_id": "kg-classical-ml",
+          "member_node_ids": [
+            "kn-feature-engineering",
+            "kn-lightgbm",
+            "kn-machine-learning",
+            "kn-model-evaluation",
+            "kn-scikit-learn",
+            "kn-xgboost"
+          ],
+          "title": "Classical Machine Learning"
+        },
+        {
+          "blurb": "Recording runs and measuring change so results are reproducible.",
+          "branch": "core",
+          "group_id": "kg-experiment-tracking",
+          "member_node_ids": [
+            "kn-ab-testing",
+            "kn-experiment-tracking",
+            "kn-mlflow",
+            "kn-wandb"
+          ],
+          "title": "Experiment Tracking"
+        },
+        {
+          "blurb": "Neural networks, the frameworks that train them, and the hardware behind them.",
+          "branch": "modeling-depth-advanced",
+          "group_id": "kg-deep-learning",
+          "member_node_ids": [
+            "kn-deep-learning",
+            "kn-distributed-training",
+            "kn-gpu-computing",
+            "kn-keras",
+            "kn-pytorch",
+            "kn-tensorflow",
+            "kn-transformers"
+          ],
+          "title": "Deep Learning"
+        },
+        {
+          "blurb": "Packaging and provisioning: containers, orchestration, and infrastructure as code.",
+          "branch": "deployment-evidence",
+          "group_id": "kg-containers",
+          "member_node_ids": [
+            "kn-docker",
+            "kn-kubernetes",
+            "kn-serverless",
+            "kn-terraform"
+          ],
+          "title": "Containers & Provisioning"
+        },
+        {
+          "blurb": "Getting models off the notebook and into dependable production.",
+          "branch": "deployment-evidence",
+          "group_id": "kg-mlops",
+          "member_node_ids": [
+            "kn-feature-stores",
+            "kn-kubeflow",
+            "kn-mlops",
+            "kn-model-deployment",
+            "kn-model-optimization",
+            "kn-ray",
+            "kn-sagemaker",
+            "kn-vertex-ai"
+          ],
+          "title": "MLOps & Serving"
+        },
+        {
+          "blurb": "Pipelines and warehouses that move and shape data at rest and in flight.",
+          "branch": "data-engineering-breadth",
+          "group_id": "kg-data-engineering",
+          "member_node_ids": [
+            "kn-airflow",
+            "kn-bigquery",
+            "kn-data-pipelines",
+            "kn-dbt",
+            "kn-snowflake",
+            "kn-spark",
+            "kn-sql"
+          ],
+          "title": "Data Engineering"
+        }
+      ],
+      "nodes": [
+        {
+          "blurb": "Turning raw data into inputs a model can learn from.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 420,
+          "group_id": "kg-classical-ml",
+          "kind": "skill",
+          "node_id": "kn-feature-engineering",
+          "skill_id": "skill.feature-engineering",
+          "title": "Feature engineering"
+        },
+        {
+          "blurb": "A fast gradient-boosting framework for large tabular datasets.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 240,
+          "group_id": "kg-classical-ml",
+          "kind": "skill",
+          "node_id": "kn-lightgbm",
+          "skill_id": "skill.lightgbm",
+          "title": "LightGBM"
+        },
+        {
+          "blurb": "Learning patterns from data to make predictions.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 600,
+          "group_id": "kg-classical-ml",
+          "kind": "skill",
+          "node_id": "kn-machine-learning",
+          "skill_id": "skill.machine-learning",
+          "title": "Machine learning"
+        },
+        {
+          "blurb": "Measuring whether a model actually works, and where it fails.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 360,
+          "group_id": "kg-classical-ml",
+          "kind": "skill",
+          "node_id": "kn-model-evaluation",
+          "skill_id": "skill.model-evaluation",
+          "title": "Model evaluation"
+        },
+        {
+          "blurb": "The standard Python toolkit for classical machine learning.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 360,
+          "group_id": "kg-classical-ml",
+          "kind": "skill",
+          "node_id": "kn-scikit-learn",
+          "skill_id": "skill.scikit-learn",
+          "title": "scikit-learn"
+        },
+        {
+          "blurb": "A gradient-boosting library that wins on much tabular data.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 300,
+          "group_id": "kg-classical-ml",
+          "kind": "skill",
+          "node_id": "kn-xgboost",
+          "skill_id": "skill.xgboost",
+          "title": "XGBoost"
+        },
+        {
+          "blurb": "Packaging software and its dependencies into portable containers.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 300,
+          "group_id": "kg-containers",
+          "kind": "skill",
+          "node_id": "kn-docker",
+          "skill_id": "skill.docker",
+          "title": "Docker"
+        },
+        {
+          "blurb": "Orchestrating containers across a cluster of machines.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 600,
+          "group_id": "kg-containers",
+          "kind": "skill",
+          "node_id": "kn-kubernetes",
+          "skill_id": "skill.kubernetes",
+          "title": "Kubernetes"
+        },
+        {
+          "blurb": "Running code as managed functions without provisioning servers.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 300,
+          "group_id": "kg-containers",
+          "kind": "skill",
+          "node_id": "kn-serverless",
+          "skill_id": "skill.serverless",
+          "title": "Serverless"
+        },
+        {
+          "blurb": "Declaring cloud infrastructure as version-controlled code.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 360,
+          "group_id": "kg-containers",
+          "kind": "skill",
+          "node_id": "kn-terraform",
+          "skill_id": "skill.terraform",
+          "title": "Terraform"
+        },
+        {
+          "blurb": "Scheduling and orchestrating data workflows as code.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 300,
+          "group_id": "kg-data-engineering",
+          "kind": "skill",
+          "node_id": "kn-airflow",
+          "skill_id": "skill.airflow",
+          "title": "Airflow"
+        },
+        {
+          "blurb": "Google's serverless warehouse for querying large datasets.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 240,
+          "group_id": "kg-data-engineering",
+          "kind": "skill",
+          "node_id": "kn-bigquery",
+          "skill_id": "skill.bigquery",
+          "title": "BigQuery"
+        },
+        {
+          "blurb": "Moving and transforming data reliably from source to destination.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 420,
+          "group_id": "kg-data-engineering",
+          "kind": "skill",
+          "node_id": "kn-data-pipelines",
+          "skill_id": "skill.data-pipelines",
+          "title": "Data pipelines"
+        },
+        {
+          "blurb": "Transforming warehouse data with version-controlled SQL models.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 240,
+          "group_id": "kg-data-engineering",
+          "kind": "skill",
+          "node_id": "kn-dbt",
+          "skill_id": "skill.dbt",
+          "title": "dbt"
+        },
+        {
+          "blurb": "A managed cloud data warehouse that separates storage and compute.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 240,
+          "group_id": "kg-data-engineering",
+          "kind": "skill",
+          "node_id": "kn-snowflake",
+          "skill_id": "skill.snowflake",
+          "title": "Snowflake"
+        },
+        {
+          "blurb": "A distributed engine for processing large datasets in parallel.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 480,
+          "group_id": "kg-data-engineering",
+          "kind": "skill",
+          "node_id": "kn-spark",
+          "skill_id": "skill.spark",
+          "title": "Spark"
+        },
+        {
+          "blurb": "The query language for asking questions of relational data.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 360,
+          "group_id": "kg-data-engineering",
+          "kind": "skill",
+          "node_id": "kn-sql",
+          "skill_id": "skill.sql",
+          "title": "SQL"
+        },
+        {
+          "blurb": "Training multi-layer neural networks to learn rich representations.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 600,
+          "group_id": "kg-deep-learning",
+          "kind": "skill",
+          "node_id": "kn-deep-learning",
+          "skill_id": "skill.deep-learning",
+          "title": "Deep learning"
+        },
+        {
+          "blurb": "Training large models across many GPUs or machines.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 480,
+          "group_id": "kg-deep-learning",
+          "kind": "skill",
+          "node_id": "kn-distributed-training",
+          "skill_id": "skill.distributed-training",
+          "title": "Distributed training"
+        },
+        {
+          "blurb": "Using graphics hardware to accelerate heavy numerical work.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 360,
+          "group_id": "kg-deep-learning",
+          "kind": "skill",
+          "node_id": "kn-gpu-computing",
+          "skill_id": "skill.gpu-computing",
+          "title": "GPU computing"
+        },
+        {
+          "blurb": "A high-level API for assembling neural networks quickly.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 240,
+          "group_id": "kg-deep-learning",
+          "kind": "skill",
+          "node_id": "kn-keras",
+          "skill_id": "skill.keras",
+          "title": "Keras"
+        },
+        {
+          "blurb": "A flexible framework for building and training neural networks.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 480,
+          "group_id": "kg-deep-learning",
+          "kind": "skill",
+          "node_id": "kn-pytorch",
+          "skill_id": "skill.pytorch",
+          "title": "PyTorch"
+        },
+        {
+          "blurb": "A neural-network framework with a broad production ecosystem.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 480,
+          "group_id": "kg-deep-learning",
+          "kind": "skill",
+          "node_id": "kn-tensorflow",
+          "skill_id": "skill.tensorflow",
+          "title": "TensorFlow"
+        },
+        {
+          "blurb": "The attention-based architecture behind modern language and vision models.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 480,
+          "group_id": "kg-deep-learning",
+          "kind": "skill",
+          "node_id": "kn-transformers",
+          "skill_id": "skill.transformers",
+          "title": "Transformers"
+        },
+        {
+          "blurb": "Comparing variants with controlled experiments to see what wins.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 300,
+          "group_id": "kg-experiment-tracking",
+          "kind": "skill",
+          "node_id": "kn-ab-testing",
+          "skill_id": "skill.ab-testing",
+          "title": "A/B testing"
+        },
+        {
+          "blurb": "Recording runs so results can be compared and reproduced.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 240,
+          "group_id": "kg-experiment-tracking",
+          "kind": "skill",
+          "node_id": "kn-experiment-tracking",
+          "skill_id": "skill.experiment-tracking",
+          "title": "Experiment tracking"
+        },
+        {
+          "blurb": "Tracking experiments, models, and their metadata.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 240,
+          "group_id": "kg-experiment-tracking",
+          "kind": "skill",
+          "node_id": "kn-mlflow",
+          "skill_id": "skill.mlflow",
+          "title": "MLflow"
+        },
+        {
+          "blurb": "A hosted tool for logging and comparing training runs.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 180,
+          "group_id": "kg-experiment-tracking",
+          "kind": "skill",
+          "node_id": "kn-wandb",
+          "skill_id": "skill.wandb",
+          "title": "Weights & Biases"
+        },
+        {
+          "blurb": "A managed home for the features models share in training and serving.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 300,
+          "group_id": "kg-mlops",
+          "kind": "skill",
+          "node_id": "kn-feature-stores",
+          "skill_id": "skill.feature-stores",
+          "title": "Feature stores"
+        },
+        {
+          "blurb": "Running ML workflows on top of Kubernetes.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 360,
+          "group_id": "kg-mlops",
+          "kind": "skill",
+          "node_id": "kn-kubeflow",
+          "skill_id": "skill.kubeflow",
+          "title": "Kubeflow"
+        },
+        {
+          "blurb": "The practices that keep models reproducible and reliable in production.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 420,
+          "group_id": "kg-mlops",
+          "kind": "skill",
+          "node_id": "kn-mlops",
+          "skill_id": "skill.mlops",
+          "title": "MLOps"
+        },
+        {
+          "blurb": "Getting a trained model behind an endpoint that others can call.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 360,
+          "group_id": "kg-mlops",
+          "kind": "skill",
+          "node_id": "kn-model-deployment",
+          "skill_id": "skill.model-deployment",
+          "title": "Model deployment"
+        },
+        {
+          "blurb": "Shrinking and speeding up models for cheaper, faster serving.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 420,
+          "group_id": "kg-mlops",
+          "kind": "skill",
+          "node_id": "kn-model-optimization",
+          "skill_id": "skill.model-optimization",
+          "title": "Model optimization"
+        },
+        {
+          "blurb": "A framework for scaling Python and ML workloads across a cluster.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 360,
+          "group_id": "kg-mlops",
+          "kind": "skill",
+          "node_id": "kn-ray",
+          "skill_id": "skill.ray",
+          "title": "Ray"
+        },
+        {
+          "blurb": "AWS's managed platform for building and serving models.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 360,
+          "group_id": "kg-mlops",
+          "kind": "skill",
+          "node_id": "kn-sagemaker",
+          "skill_id": "skill.sagemaker",
+          "title": "SageMaker"
+        },
+        {
+          "blurb": "Google Cloud's managed platform for the ML lifecycle.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 360,
+          "group_id": "kg-mlops",
+          "kind": "skill",
+          "node_id": "kn-vertex-ai",
+          "skill_id": "skill.vertex-ai",
+          "title": "Vertex AI"
+        },
+        {
+          "blurb": null,
+          "branch": "modeling-depth-core",
+          "evidence_slot_id": "modeling-depth-core",
+          "expected_minutes": null,
+          "group_id": null,
+          "kind": "capstone",
+          "node_id": "kn-modeling-depth-core-capstone",
+          "skill_id": null,
+          "title": "Core modeling project"
+        },
+        {
+          "blurb": null,
+          "branch": "modeling-depth-advanced",
+          "evidence_slot_id": "modeling-depth-advanced",
+          "expected_minutes": null,
+          "group_id": null,
+          "kind": "capstone",
+          "node_id": "kn-modeling-depth-advanced-capstone",
+          "skill_id": null,
+          "title": "Deep-learning or specialized modeling"
+        },
+        {
+          "blurb": null,
+          "branch": "deployment-evidence",
+          "evidence_slot_id": "deployment-evidence",
+          "expected_minutes": null,
+          "group_id": null,
+          "kind": "capstone",
+          "node_id": "kn-deployment-evidence-capstone",
+          "skill_id": null,
+          "title": "Model deployed"
+        },
+        {
+          "blurb": null,
+          "branch": "data-engineering-breadth",
+          "evidence_slot_id": "data-engineering-breadth",
+          "expected_minutes": null,
+          "group_id": null,
+          "kind": "capstone",
+          "node_id": "kn-data-engineering-breadth-capstone",
+          "skill_id": null,
+          "title": "Data pipeline you built"
+        },
+        {
+          "blurb": null,
+          "branch": "writeup",
+          "evidence_slot_id": "writeup",
+          "expected_minutes": null,
+          "group_id": null,
+          "kind": "capstone",
+          "node_id": "kn-writeup-capstone",
+          "skill_id": null,
+          "title": "Technical writeup"
+        }
+      ]
+    },
+    "backend-infrastructure-engineer": {
+      "groups": [
+        {
+          "blurb": "Source control and the pipelines that build, test, and ship it.",
+          "branch": "core",
+          "group_id": "kg-cicd",
+          "member_node_ids": [
+            "kn-ci-cd",
+            "kn-git",
+            "kn-github-actions",
+            "kn-jenkins"
+          ],
+          "title": "Version Control & CI/CD"
+        },
+        {
+          "blurb": "How a backend is shaped: interfaces, boundaries, and how services talk.",
+          "branch": "service-depth",
+          "group_id": "kg-service-architecture",
+          "member_node_ids": [
+            "kn-api-design",
+            "kn-distributed-systems",
+            "kn-event-driven",
+            "kn-microservices",
+            "kn-rest-apis",
+            "kn-system-design"
+          ],
+          "title": "Service Architecture"
+        },
+        {
+          "blurb": "Relational stores and the discipline of modeling data well.",
+          "branch": "data-layer",
+          "group_id": "kg-databases-relational",
+          "member_node_ids": [
+            "kn-database-design",
+            "kn-mysql",
+            "kn-postgresql",
+            "kn-sqlite"
+          ],
+          "title": "Relational Data"
+        },
+        {
+          "blurb": "Techniques for handling load: caching, queues, and concurrent work.",
+          "branch": "data-layer",
+          "group_id": "kg-scalability",
+          "member_node_ids": [
+            "kn-caching",
+            "kn-concurrency",
+            "kn-load-balancing",
+            "kn-message-queues",
+            "kn-sharding"
+          ],
+          "title": "Scaling & Concurrency"
+        },
+        {
+          "blurb": "Packaging and provisioning: containers, orchestration, and infrastructure as code.",
+          "branch": "production-ops",
+          "group_id": "kg-containers",
+          "member_node_ids": [
+            "kn-docker",
+            "kn-kubernetes",
+            "kn-serverless",
+            "kn-terraform"
+          ],
+          "title": "Containers & Provisioning"
+        },
+        {
+          "blurb": "Running software in production and seeing what it does.",
+          "branch": "production-ops",
+          "group_id": "kg-observability-ops",
+          "member_node_ids": [
+            "kn-datadog",
+            "kn-grafana",
+            "kn-linux",
+            "kn-nginx",
+            "kn-observability",
+            "kn-prometheus"
+          ],
+          "title": "Operations & Observability"
+        },
+        {
+          "blurb": "The day-to-day craft: testing, review, and keeping code fast and clean.",
+          "branch": "public-artifact",
+          "group_id": "kg-engineering-practice",
+          "member_node_ids": [
+            "kn-agile",
+            "kn-code-review",
+            "kn-debugging",
+            "kn-performance-optimization",
+            "kn-testing"
+          ],
+          "title": "Engineering Practice"
+        }
+      ],
+      "nodes": [
+        {
+          "blurb": "Automating the path from a commit to a tested, deployed release.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 300,
+          "group_id": "kg-cicd",
+          "kind": "skill",
+          "node_id": "kn-ci-cd",
+          "skill_id": "skill.ci-cd",
+          "title": "CI/CD"
+        },
+        {
+          "blurb": "Tracking changes and collaborating on code with confidence.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 240,
+          "group_id": "kg-cicd",
+          "kind": "skill",
+          "node_id": "kn-git",
+          "skill_id": "skill.git",
+          "title": "Git"
+        },
+        {
+          "blurb": "Automating builds and deploys from within GitHub.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 180,
+          "group_id": "kg-cicd",
+          "kind": "skill",
+          "node_id": "kn-github-actions",
+          "skill_id": "skill.github-actions",
+          "title": "GitHub Actions"
+        },
+        {
+          "blurb": "A long-standing automation server for build and deploy pipelines.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 240,
+          "group_id": "kg-cicd",
+          "kind": "skill",
+          "node_id": "kn-jenkins",
+          "skill_id": "skill.jenkins",
+          "title": "Jenkins"
+        },
+        {
+          "blurb": "Packaging software and its dependencies into portable containers.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 300,
+          "group_id": "kg-containers",
+          "kind": "skill",
+          "node_id": "kn-docker",
+          "skill_id": "skill.docker",
+          "title": "Docker"
+        },
+        {
+          "blurb": "Orchestrating containers across a cluster of machines.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 600,
+          "group_id": "kg-containers",
+          "kind": "skill",
+          "node_id": "kn-kubernetes",
+          "skill_id": "skill.kubernetes",
+          "title": "Kubernetes"
+        },
+        {
+          "blurb": "Running code as managed functions without provisioning servers.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 300,
+          "group_id": "kg-containers",
+          "kind": "skill",
+          "node_id": "kn-serverless",
+          "skill_id": "skill.serverless",
+          "title": "Serverless"
+        },
+        {
+          "blurb": "Declaring cloud infrastructure as version-controlled code.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 360,
+          "group_id": "kg-containers",
+          "kind": "skill",
+          "node_id": "kn-terraform",
+          "skill_id": "skill.terraform",
+          "title": "Terraform"
+        },
+        {
+          "blurb": "Modeling data into tables and relationships that stay correct as they grow.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 420,
+          "group_id": "kg-databases-relational",
+          "kind": "skill",
+          "node_id": "kn-database-design",
+          "skill_id": "skill.database-design",
+          "title": "Database design"
+        },
+        {
+          "blurb": "A widely deployed open-source relational database.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 360,
+          "group_id": "kg-databases-relational",
+          "kind": "skill",
+          "node_id": "kn-mysql",
+          "skill_id": "skill.mysql",
+          "title": "MySQL"
+        },
+        {
+          "blurb": "A capable open-source relational database and its rich feature set.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 420,
+          "group_id": "kg-databases-relational",
+          "kind": "skill",
+          "node_id": "kn-postgresql",
+          "skill_id": "skill.postgresql",
+          "title": "PostgreSQL"
+        },
+        {
+          "blurb": "A tiny embedded relational database that lives in a single file.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 180,
+          "group_id": "kg-databases-relational",
+          "kind": "skill",
+          "node_id": "kn-sqlite",
+          "skill_id": "skill.sqlite",
+          "title": "SQLite"
+        },
+        {
+          "blurb": "Iterative ways of planning and shipping work in small increments.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 180,
+          "group_id": "kg-engineering-practice",
+          "kind": "skill",
+          "node_id": "kn-agile",
+          "skill_id": "skill.agile",
+          "title": "Agile"
+        },
+        {
+          "blurb": "Reading a teammate's change to catch issues and share context.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 240,
+          "group_id": "kg-engineering-practice",
+          "kind": "skill",
+          "node_id": "kn-code-review",
+          "skill_id": "skill.code-review",
+          "title": "Code review"
+        },
+        {
+          "blurb": "Systematically finding why software misbehaves and fixing it.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 300,
+          "group_id": "kg-engineering-practice",
+          "kind": "skill",
+          "node_id": "kn-debugging",
+          "skill_id": "skill.debugging",
+          "title": "Debugging"
+        },
+        {
+          "blurb": "Measuring and removing the bottlenecks that slow software down.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 420,
+          "group_id": "kg-engineering-practice",
+          "kind": "skill",
+          "node_id": "kn-performance-optimization",
+          "skill_id": "skill.performance-optimization",
+          "title": "Performance optimization"
+        },
+        {
+          "blurb": "Writing checks that keep software correct as it changes.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 360,
+          "group_id": "kg-engineering-practice",
+          "kind": "skill",
+          "node_id": "kn-testing",
+          "skill_id": "skill.testing",
+          "title": "Software testing"
+        },
+        {
+          "blurb": "A hosted platform for monitoring across infrastructure and apps.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 180,
+          "group_id": "kg-observability-ops",
+          "kind": "skill",
+          "node_id": "kn-datadog",
+          "skill_id": "skill.datadog",
+          "title": "Datadog"
+        },
+        {
+          "blurb": "Dashboards that visualize metrics and logs.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 180,
+          "group_id": "kg-observability-ops",
+          "kind": "skill",
+          "node_id": "kn-grafana",
+          "skill_id": "skill.grafana",
+          "title": "Grafana"
+        },
+        {
+          "blurb": "The operating system most servers run and the shell around it.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 420,
+          "group_id": "kg-observability-ops",
+          "kind": "skill",
+          "node_id": "kn-linux",
+          "skill_id": "skill.linux",
+          "title": "Linux"
+        },
+        {
+          "blurb": "A web server and reverse proxy that fronts many services.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 240,
+          "group_id": "kg-observability-ops",
+          "kind": "skill",
+          "node_id": "kn-nginx",
+          "skill_id": "skill.nginx",
+          "title": "Nginx"
+        },
+        {
+          "blurb": "Making a running system legible through logs, metrics, and traces.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 360,
+          "group_id": "kg-observability-ops",
+          "kind": "skill",
+          "node_id": "kn-observability",
+          "skill_id": "skill.observability",
+          "title": "Observability"
+        },
+        {
+          "blurb": "A metrics system for collecting and querying time-series data.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 240,
+          "group_id": "kg-observability-ops",
+          "kind": "skill",
+          "node_id": "kn-prometheus",
+          "skill_id": "skill.prometheus",
+          "title": "Prometheus"
+        },
+        {
+          "blurb": "Storing computed results to cut latency and load.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 300,
+          "group_id": "kg-scalability",
+          "kind": "skill",
+          "node_id": "kn-caching",
+          "skill_id": "skill.caching",
+          "title": "Caching"
+        },
+        {
+          "blurb": "Doing many things at once without corrupting shared state.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 480,
+          "group_id": "kg-scalability",
+          "kind": "skill",
+          "node_id": "kn-concurrency",
+          "skill_id": "skill.concurrency",
+          "title": "Concurrency"
+        },
+        {
+          "blurb": "Spreading traffic across instances so none is overwhelmed.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 300,
+          "group_id": "kg-scalability",
+          "kind": "skill",
+          "node_id": "kn-load-balancing",
+          "skill_id": "skill.load-balancing",
+          "title": "Load balancing"
+        },
+        {
+          "blurb": "Decoupling producers and consumers with a queue in between.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 300,
+          "group_id": "kg-scalability",
+          "kind": "skill",
+          "node_id": "kn-message-queues",
+          "skill_id": "skill.message-queues",
+          "title": "Message queues"
+        },
+        {
+          "blurb": "Partitioning data across machines to scale past one node.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 360,
+          "group_id": "kg-scalability",
+          "kind": "skill",
+          "node_id": "kn-sharding",
+          "skill_id": "skill.sharding",
+          "title": "Sharding"
+        },
+        {
+          "blurb": "Shaping interfaces that are clear, stable, and pleasant to consume.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 360,
+          "group_id": "kg-service-architecture",
+          "kind": "skill",
+          "node_id": "kn-api-design",
+          "skill_id": "skill.api-design",
+          "title": "API design"
+        },
+        {
+          "blurb": "Reasoning about systems whose parts fail and communicate over a network.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 720,
+          "group_id": "kg-service-architecture",
+          "kind": "skill",
+          "node_id": "kn-distributed-systems",
+          "skill_id": "skill.distributed-systems",
+          "title": "Distributed systems"
+        },
+        {
+          "blurb": "Architecting around events rather than direct calls between services.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 420,
+          "group_id": "kg-service-architecture",
+          "kind": "skill",
+          "node_id": "kn-event-driven",
+          "skill_id": "skill.event-driven",
+          "title": "Event-driven architecture"
+        },
+        {
+          "blurb": "Splitting a system into independently deployable services.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 480,
+          "group_id": "kg-service-architecture",
+          "kind": "skill",
+          "node_id": "kn-microservices",
+          "skill_id": "skill.microservices",
+          "title": "Microservices"
+        },
+        {
+          "blurb": "The request/response conventions most web APIs still follow.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 300,
+          "group_id": "kg-service-architecture",
+          "kind": "skill",
+          "node_id": "kn-rest-apis",
+          "skill_id": "skill.rest-apis",
+          "title": "REST APIs"
+        },
+        {
+          "blurb": "Composing components into a system that meets its scale and reliability goals.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 720,
+          "group_id": "kg-service-architecture",
+          "kind": "skill",
+          "node_id": "kn-system-design",
+          "skill_id": "skill.system-design",
+          "title": "System design"
+        },
+        {
+          "blurb": null,
+          "branch": "service-depth",
+          "evidence_slot_id": "service-depth",
+          "expected_minutes": null,
+          "group_id": null,
+          "kind": "capstone",
+          "node_id": "kn-service-depth-capstone",
+          "skill_id": null,
+          "title": "Backend service built end to end"
+        },
+        {
+          "blurb": null,
+          "branch": "data-layer",
+          "evidence_slot_id": "data-layer",
+          "expected_minutes": null,
+          "group_id": null,
+          "kind": "capstone",
+          "node_id": "kn-data-layer-capstone",
+          "skill_id": null,
+          "title": "Data layer you designed"
+        },
+        {
+          "blurb": null,
+          "branch": "production-ops",
+          "evidence_slot_id": "production-ops",
+          "expected_minutes": null,
+          "group_id": null,
+          "kind": "capstone",
+          "node_id": "kn-production-ops-capstone",
+          "skill_id": null,
+          "title": "Ran it in production"
+        },
+        {
+          "blurb": null,
+          "branch": "public-artifact",
+          "evidence_slot_id": "public-artifact",
+          "expected_minutes": null,
+          "group_id": null,
+          "kind": "capstone",
+          "node_id": "kn-public-artifact-capstone",
+          "skill_id": null,
+          "title": "Public writeup or open-source work"
+        }
+      ]
+    },
+    "full-stack-product-engineer": {
+      "groups": [
+        {
+          "blurb": "Source control and the pipelines that build, test, and ship it.",
+          "branch": "core",
+          "group_id": "kg-cicd",
+          "member_node_ids": [
+            "kn-ci-cd",
+            "kn-git",
+            "kn-github-actions",
+            "kn-jenkins"
+          ],
+          "title": "Version Control & CI/CD"
+        },
+        {
+          "blurb": "The day-to-day craft: testing, review, and keeping code fast and clean.",
+          "branch": "core",
+          "group_id": "kg-engineering-practice",
+          "member_node_ids": [
+            "kn-agile",
+            "kn-code-review",
+            "kn-debugging",
+            "kn-performance-optimization",
+            "kn-testing"
+          ],
+          "title": "Engineering Practice"
+        },
+        {
+          "blurb": "How a backend is shaped: interfaces, boundaries, and how services talk.",
+          "branch": "core",
+          "group_id": "kg-service-architecture",
+          "member_node_ids": [
+            "kn-api-design",
+            "kn-distributed-systems",
+            "kn-event-driven",
+            "kn-microservices",
+            "kn-rest-apis",
+            "kn-system-design"
+          ],
+          "title": "Service Architecture"
+        },
+        {
+          "blurb": "Component frameworks and tooling for building web interfaces.",
+          "branch": "frontend-surface",
+          "group_id": "kg-frontend-frameworks",
+          "member_node_ids": [
+            "kn-angular",
+            "kn-nextjs",
+            "kn-react",
+            "kn-redux",
+            "kn-tailwind",
+            "kn-vite",
+            "kn-vue"
+          ],
+          "title": "Frontend Frameworks"
+        },
+        {
+          "blurb": "The languages the browser runs and the types that keep them honest.",
+          "branch": "frontend-surface",
+          "group_id": "kg-web-languages",
+          "member_node_ids": [
+            "kn-html-css",
+            "kn-javascript",
+            "kn-typescript"
+          ],
+          "title": "Web Languages"
+        },
+        {
+          "blurb": "Server frameworks for building web services and APIs.",
+          "branch": "backend-depth",
+          "group_id": "kg-backend-frameworks",
+          "member_node_ids": [
+            "kn-django",
+            "kn-dotnet",
+            "kn-express",
+            "kn-fastapi",
+            "kn-flask",
+            "kn-nodejs",
+            "kn-rails",
+            "kn-spring-boot"
+          ],
+          "title": "Backend Frameworks"
+        },
+        {
+          "blurb": "Relational stores and the discipline of modeling data well.",
+          "branch": "backend-depth",
+          "group_id": "kg-databases-relational",
+          "member_node_ids": [
+            "kn-database-design",
+            "kn-mysql",
+            "kn-postgresql",
+            "kn-sqlite"
+          ],
+          "title": "Relational Data"
+        }
+      ],
+      "nodes": [
+        {
+          "blurb": "A batteries-included Python framework for full web applications.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 480,
+          "group_id": "kg-backend-frameworks",
+          "kind": "skill",
+          "node_id": "kn-django",
+          "skill_id": "skill.django",
+          "title": "Django"
+        },
+        {
+          "blurb": "Microsoft's framework for building services and apps in C#.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 600,
+          "group_id": "kg-backend-frameworks",
+          "kind": "skill",
+          "node_id": "kn-dotnet",
+          "skill_id": "skill.dotnet",
+          "title": ".NET"
+        },
+        {
+          "blurb": "A minimal, unopinionated web framework for Node.js.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 300,
+          "group_id": "kg-backend-frameworks",
+          "kind": "skill",
+          "node_id": "kn-express",
+          "skill_id": "skill.express",
+          "title": "Express"
+        },
+        {
+          "blurb": "A modern Python framework for typed, high-performance APIs.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 360,
+          "group_id": "kg-backend-frameworks",
+          "kind": "skill",
+          "node_id": "kn-fastapi",
+          "skill_id": "skill.fastapi",
+          "title": "FastAPI"
+        },
+        {
+          "blurb": "A lightweight Python framework you assemble to taste.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 300,
+          "group_id": "kg-backend-frameworks",
+          "kind": "skill",
+          "node_id": "kn-flask",
+          "skill_id": "skill.flask",
+          "title": "Flask"
+        },
+        {
+          "blurb": "A runtime that lets JavaScript power servers and tooling.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 480,
+          "group_id": "kg-backend-frameworks",
+          "kind": "skill",
+          "node_id": "kn-nodejs",
+          "skill_id": "skill.nodejs",
+          "title": "Node.js"
+        },
+        {
+          "blurb": "A convention-driven Ruby framework for building web apps fast.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 480,
+          "group_id": "kg-backend-frameworks",
+          "kind": "skill",
+          "node_id": "kn-rails",
+          "skill_id": "skill.rails",
+          "title": "Ruby on Rails"
+        },
+        {
+          "blurb": "The dominant framework for building Java web services.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 600,
+          "group_id": "kg-backend-frameworks",
+          "kind": "skill",
+          "node_id": "kn-spring-boot",
+          "skill_id": "skill.spring-boot",
+          "title": "Spring Boot"
+        },
+        {
+          "blurb": "Automating the path from a commit to a tested, deployed release.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 300,
+          "group_id": "kg-cicd",
+          "kind": "skill",
+          "node_id": "kn-ci-cd",
+          "skill_id": "skill.ci-cd",
+          "title": "CI/CD"
+        },
+        {
+          "blurb": "Tracking changes and collaborating on code with confidence.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 240,
+          "group_id": "kg-cicd",
+          "kind": "skill",
+          "node_id": "kn-git",
+          "skill_id": "skill.git",
+          "title": "Git"
+        },
+        {
+          "blurb": "Automating builds and deploys from within GitHub.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 180,
+          "group_id": "kg-cicd",
+          "kind": "skill",
+          "node_id": "kn-github-actions",
+          "skill_id": "skill.github-actions",
+          "title": "GitHub Actions"
+        },
+        {
+          "blurb": "A long-standing automation server for build and deploy pipelines.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 240,
+          "group_id": "kg-cicd",
+          "kind": "skill",
+          "node_id": "kn-jenkins",
+          "skill_id": "skill.jenkins",
+          "title": "Jenkins"
+        },
+        {
+          "blurb": "Modeling data into tables and relationships that stay correct as they grow.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 420,
+          "group_id": "kg-databases-relational",
+          "kind": "skill",
+          "node_id": "kn-database-design",
+          "skill_id": "skill.database-design",
+          "title": "Database design"
+        },
+        {
+          "blurb": "A widely deployed open-source relational database.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 360,
+          "group_id": "kg-databases-relational",
+          "kind": "skill",
+          "node_id": "kn-mysql",
+          "skill_id": "skill.mysql",
+          "title": "MySQL"
+        },
+        {
+          "blurb": "A capable open-source relational database and its rich feature set.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 420,
+          "group_id": "kg-databases-relational",
+          "kind": "skill",
+          "node_id": "kn-postgresql",
+          "skill_id": "skill.postgresql",
+          "title": "PostgreSQL"
+        },
+        {
+          "blurb": "A tiny embedded relational database that lives in a single file.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 180,
+          "group_id": "kg-databases-relational",
+          "kind": "skill",
+          "node_id": "kn-sqlite",
+          "skill_id": "skill.sqlite",
+          "title": "SQLite"
+        },
+        {
+          "blurb": "Iterative ways of planning and shipping work in small increments.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 180,
+          "group_id": "kg-engineering-practice",
+          "kind": "skill",
+          "node_id": "kn-agile",
+          "skill_id": "skill.agile",
+          "title": "Agile"
+        },
+        {
+          "blurb": "Reading a teammate's change to catch issues and share context.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 240,
+          "group_id": "kg-engineering-practice",
+          "kind": "skill",
+          "node_id": "kn-code-review",
+          "skill_id": "skill.code-review",
+          "title": "Code review"
+        },
+        {
+          "blurb": "Systematically finding why software misbehaves and fixing it.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 300,
+          "group_id": "kg-engineering-practice",
+          "kind": "skill",
+          "node_id": "kn-debugging",
+          "skill_id": "skill.debugging",
+          "title": "Debugging"
+        },
+        {
+          "blurb": "Measuring and removing the bottlenecks that slow software down.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 420,
+          "group_id": "kg-engineering-practice",
+          "kind": "skill",
+          "node_id": "kn-performance-optimization",
+          "skill_id": "skill.performance-optimization",
+          "title": "Performance optimization"
+        },
+        {
+          "blurb": "Writing checks that keep software correct as it changes.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 360,
+          "group_id": "kg-engineering-practice",
+          "kind": "skill",
+          "node_id": "kn-testing",
+          "skill_id": "skill.testing",
+          "title": "Software testing"
+        },
+        {
+          "blurb": "A full-featured framework for structured single-page applications.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 480,
+          "group_id": "kg-frontend-frameworks",
+          "kind": "skill",
+          "node_id": "kn-angular",
+          "skill_id": "skill.angular",
+          "title": "Angular"
+        },
+        {
+          "blurb": "A React framework adding routing, rendering, and server features.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 360,
+          "group_id": "kg-frontend-frameworks",
+          "kind": "skill",
+          "node_id": "kn-nextjs",
+          "skill_id": "skill.nextjs",
+          "title": "Next.js"
+        },
+        {
+          "blurb": "A component library for building interactive user interfaces.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 480,
+          "group_id": "kg-frontend-frameworks",
+          "kind": "skill",
+          "node_id": "kn-react",
+          "skill_id": "skill.react",
+          "title": "React"
+        },
+        {
+          "blurb": "A predictable state container often paired with React.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 240,
+          "group_id": "kg-frontend-frameworks",
+          "kind": "skill",
+          "node_id": "kn-redux",
+          "skill_id": "skill.redux",
+          "title": "Redux"
+        },
+        {
+          "blurb": "A utility-first CSS approach for styling straight in the markup.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 180,
+          "group_id": "kg-frontend-frameworks",
+          "kind": "skill",
+          "node_id": "kn-tailwind",
+          "skill_id": "skill.tailwind",
+          "title": "Tailwind CSS"
+        },
+        {
+          "blurb": "A fast build tool and dev server for modern frontend projects.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 120,
+          "group_id": "kg-frontend-frameworks",
+          "kind": "skill",
+          "node_id": "kn-vite",
+          "skill_id": "skill.vite",
+          "title": "Vite"
+        },
+        {
+          "blurb": "An approachable component framework for building web interfaces.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 360,
+          "group_id": "kg-frontend-frameworks",
+          "kind": "skill",
+          "node_id": "kn-vue",
+          "skill_id": "skill.vue",
+          "title": "Vue"
+        },
+        {
+          "blurb": "Shaping interfaces that are clear, stable, and pleasant to consume.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 360,
+          "group_id": "kg-service-architecture",
+          "kind": "skill",
+          "node_id": "kn-api-design",
+          "skill_id": "skill.api-design",
+          "title": "API design"
+        },
+        {
+          "blurb": "Reasoning about systems whose parts fail and communicate over a network.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 720,
+          "group_id": "kg-service-architecture",
+          "kind": "skill",
+          "node_id": "kn-distributed-systems",
+          "skill_id": "skill.distributed-systems",
+          "title": "Distributed systems"
+        },
+        {
+          "blurb": "Architecting around events rather than direct calls between services.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 420,
+          "group_id": "kg-service-architecture",
+          "kind": "skill",
+          "node_id": "kn-event-driven",
+          "skill_id": "skill.event-driven",
+          "title": "Event-driven architecture"
+        },
+        {
+          "blurb": "Splitting a system into independently deployable services.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 480,
+          "group_id": "kg-service-architecture",
+          "kind": "skill",
+          "node_id": "kn-microservices",
+          "skill_id": "skill.microservices",
+          "title": "Microservices"
+        },
+        {
+          "blurb": "The request/response conventions most web APIs still follow.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 300,
+          "group_id": "kg-service-architecture",
+          "kind": "skill",
+          "node_id": "kn-rest-apis",
+          "skill_id": "skill.rest-apis",
+          "title": "REST APIs"
+        },
+        {
+          "blurb": "Composing components into a system that meets its scale and reliability goals.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 720,
+          "group_id": "kg-service-architecture",
+          "kind": "skill",
+          "node_id": "kn-system-design",
+          "skill_id": "skill.system-design",
+          "title": "System design"
+        },
+        {
+          "blurb": "The markup and styling every web interface is built from.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 480,
+          "group_id": "kg-web-languages",
+          "kind": "skill",
+          "node_id": "kn-html-css",
+          "skill_id": "skill.html-css",
+          "title": "HTML/CSS"
+        },
+        {
+          "blurb": "The language of the browser and much of the modern web stack.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 720,
+          "group_id": "kg-web-languages",
+          "kind": "skill",
+          "node_id": "kn-javascript",
+          "skill_id": "skill.javascript",
+          "title": "JavaScript"
+        },
+        {
+          "blurb": "JavaScript with a type system that catches mistakes before they ship.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 480,
+          "group_id": "kg-web-languages",
+          "kind": "skill",
+          "node_id": "kn-typescript",
+          "skill_id": "skill.typescript",
+          "title": "TypeScript"
+        },
+        {
+          "blurb": null,
+          "branch": "frontend-surface",
+          "evidence_slot_id": "frontend-surface",
+          "expected_minutes": null,
+          "group_id": null,
+          "kind": "capstone",
+          "node_id": "kn-frontend-surface-capstone",
+          "skill_id": null,
+          "title": "Frontend you built"
+        },
+        {
+          "blurb": null,
+          "branch": "backend-depth",
+          "evidence_slot_id": "backend-depth",
+          "expected_minutes": null,
+          "group_id": null,
+          "kind": "capstone",
+          "node_id": "kn-backend-depth-capstone",
+          "skill_id": null,
+          "title": "Backend behind the product"
+        },
+        {
+          "blurb": null,
+          "branch": "shipped-product",
+          "evidence_slot_id": "shipped-product",
+          "expected_minutes": null,
+          "group_id": null,
+          "kind": "capstone",
+          "node_id": "kn-shipped-product-capstone",
+          "skill_id": null,
+          "title": "Product shipped to users"
+        },
+        {
+          "blurb": null,
+          "branch": "user-facing-polish",
+          "evidence_slot_id": "user-facing-polish",
+          "expected_minutes": null,
+          "group_id": null,
+          "kind": "capstone",
+          "node_id": "kn-user-facing-polish-capstone",
+          "skill_id": null,
+          "title": "User-facing polish or writeup"
+        }
+      ]
+    },
+    "llm-systems-engineer": {
+      "groups": [
+        {
+          "blurb": "Measuring LLM output quality and keeping it inside safe bounds.",
+          "branch": "core",
+          "group_id": "kg-llm-evaluation",
+          "member_node_ids": [
+            "kn-guardrails",
+            "kn-llm-evaluation",
+            "kn-llm-observability",
+            "kn-responsible-ai"
+          ],
+          "title": "LLM Evaluation & Safety"
+        },
+        {
+          "blurb": "Finding and feeding the right context to a model.",
+          "branch": "core",
+          "group_id": "kg-retrieval",
+          "member_node_ids": [
+            "kn-chunking",
+            "kn-embeddings",
+            "kn-rag",
+            "kn-reranking",
+            "kn-semantic-search",
+            "kn-vector-databases"
+          ],
+          "title": "Retrieval & Grounding"
+        },
+        {
+          "blurb": "Wiring models into tools, agents, and multi-step workflows.",
+          "branch": "orchestration-eval-depth",
+          "group_id": "kg-llm-orchestration",
+          "member_node_ids": [
+            "kn-ai-agents",
+            "kn-function-calling",
+            "kn-langchain",
+            "kn-llamaindex",
+            "kn-mcp"
+          ],
+          "title": "LLM Orchestration"
+        },
+        {
+          "blurb": "Calling hosted models and running open ones with cost and latency in mind.",
+          "branch": "cost-latency-evidence",
+          "group_id": "kg-llm-serving",
+          "member_node_ids": [
+            "kn-anthropic-api",
+            "kn-hugging-face",
+            "kn-inference-optimization",
+            "kn-ollama",
+            "kn-openai-api",
+            "kn-vllm"
+          ],
+          "title": "LLM Serving & Providers"
+        }
+      ],
+      "nodes": [
+        {
+          "blurb": "Keeping model output inside safe, expected bounds.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 300,
+          "group_id": "kg-llm-evaluation",
+          "kind": "skill",
+          "node_id": "kn-guardrails",
+          "skill_id": "skill.guardrails",
+          "title": "LLM guardrails"
+        },
+        {
+          "blurb": "Judging whether an LLM's output is actually good.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 360,
+          "group_id": "kg-llm-evaluation",
+          "kind": "skill",
+          "node_id": "kn-llm-evaluation",
+          "skill_id": "skill.llm-evaluation",
+          "title": "LLM evaluation"
+        },
+        {
+          "blurb": "Tracing and monitoring what an LLM feature does in production.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 300,
+          "group_id": "kg-llm-evaluation",
+          "kind": "skill",
+          "node_id": "kn-llm-observability",
+          "skill_id": "skill.llm-observability",
+          "title": "LLM observability"
+        },
+        {
+          "blurb": "Building AI systems with fairness, transparency, and harm in mind.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 300,
+          "group_id": "kg-llm-evaluation",
+          "kind": "skill",
+          "node_id": "kn-responsible-ai",
+          "skill_id": "skill.responsible-ai",
+          "title": "Responsible AI"
+        },
+        {
+          "blurb": "Letting a model plan and act through tools over multiple steps.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 420,
+          "group_id": "kg-llm-orchestration",
+          "kind": "skill",
+          "node_id": "kn-ai-agents",
+          "skill_id": "skill.ai-agents",
+          "title": "AI agents"
+        },
+        {
+          "blurb": "Letting a model invoke your functions with structured arguments.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 240,
+          "group_id": "kg-llm-orchestration",
+          "kind": "skill",
+          "node_id": "kn-function-calling",
+          "skill_id": "skill.function-calling",
+          "title": "Function calling / tool use"
+        },
+        {
+          "blurb": "A framework for composing LLM calls, tools, and memory.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 300,
+          "group_id": "kg-llm-orchestration",
+          "kind": "skill",
+          "node_id": "kn-langchain",
+          "skill_id": "skill.langchain",
+          "title": "LangChain"
+        },
+        {
+          "blurb": "A framework for connecting LLMs to your own data.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 300,
+          "group_id": "kg-llm-orchestration",
+          "kind": "skill",
+          "node_id": "kn-llamaindex",
+          "skill_id": "skill.llamaindex",
+          "title": "LlamaIndex"
+        },
+        {
+          "blurb": "An open protocol for connecting models to tools and data sources.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 240,
+          "group_id": "kg-llm-orchestration",
+          "kind": "skill",
+          "node_id": "kn-mcp",
+          "skill_id": "skill.mcp",
+          "title": "Model Context Protocol"
+        },
+        {
+          "blurb": "Calling Anthropic's Claude models from your application.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 180,
+          "group_id": "kg-llm-serving",
+          "kind": "skill",
+          "node_id": "kn-anthropic-api",
+          "skill_id": "skill.anthropic-api",
+          "title": "Anthropic API"
+        },
+        {
+          "blurb": "The hub and libraries for open models and datasets.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 300,
+          "group_id": "kg-llm-serving",
+          "kind": "skill",
+          "node_id": "kn-hugging-face",
+          "skill_id": "skill.hugging-face",
+          "title": "Hugging Face"
+        },
+        {
+          "blurb": "Cutting the cost and latency of running a language model.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 360,
+          "group_id": "kg-llm-serving",
+          "kind": "skill",
+          "node_id": "kn-inference-optimization",
+          "skill_id": "skill.inference-optimization",
+          "title": "LLM inference optimization"
+        },
+        {
+          "blurb": "Running open language models locally with a simple interface.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 180,
+          "group_id": "kg-llm-serving",
+          "kind": "skill",
+          "node_id": "kn-ollama",
+          "skill_id": "skill.ollama",
+          "title": "Ollama"
+        },
+        {
+          "blurb": "Calling OpenAI's hosted models from your application.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 180,
+          "group_id": "kg-llm-serving",
+          "kind": "skill",
+          "node_id": "kn-openai-api",
+          "skill_id": "skill.openai-api",
+          "title": "OpenAI API"
+        },
+        {
+          "blurb": "A high-throughput engine for serving language models.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 300,
+          "group_id": "kg-llm-serving",
+          "kind": "skill",
+          "node_id": "kn-vllm",
+          "skill_id": "skill.vllm",
+          "title": "vLLM"
+        },
+        {
+          "blurb": "Splitting documents into passages that retrieve and fit well.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 180,
+          "group_id": "kg-retrieval",
+          "kind": "skill",
+          "node_id": "kn-chunking",
+          "skill_id": "skill.chunking",
+          "title": "Chunking"
+        },
+        {
+          "blurb": "Turning text into vectors that capture meaning for search.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 300,
+          "group_id": "kg-retrieval",
+          "kind": "skill",
+          "node_id": "kn-embeddings",
+          "skill_id": "skill.embeddings",
+          "title": "Embeddings"
+        },
+        {
+          "blurb": "Grounding a model's answers in retrieved source documents.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 360,
+          "group_id": "kg-retrieval",
+          "kind": "skill",
+          "node_id": "kn-rag",
+          "skill_id": "skill.rag",
+          "title": "Retrieval-augmented generation"
+        },
+        {
+          "blurb": "Reordering retrieved candidates to put the best ones first.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 240,
+          "group_id": "kg-retrieval",
+          "kind": "skill",
+          "node_id": "kn-reranking",
+          "skill_id": "skill.reranking",
+          "title": "Reranking"
+        },
+        {
+          "blurb": "Finding results by meaning rather than exact keywords.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 300,
+          "group_id": "kg-retrieval",
+          "kind": "skill",
+          "node_id": "kn-semantic-search",
+          "skill_id": "skill.semantic-search",
+          "title": "Semantic search"
+        },
+        {
+          "blurb": "Stores built to search by vector similarity at scale.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 300,
+          "group_id": "kg-retrieval",
+          "kind": "skill",
+          "node_id": "kn-vector-databases",
+          "skill_id": "skill.vector-databases",
+          "title": "Vector databases"
+        },
+        {
+          "blurb": null,
+          "branch": "orchestration-eval-depth",
+          "evidence_slot_id": "orchestration-eval-depth",
+          "expected_minutes": null,
+          "group_id": null,
+          "kind": "capstone",
+          "node_id": "kn-orchestration-eval-depth-capstone",
+          "skill_id": null,
+          "title": "Orchestration and evaluation depth"
+        },
+        {
+          "blurb": null,
+          "branch": "retrieval-project",
+          "evidence_slot_id": "retrieval-project",
+          "expected_minutes": null,
+          "group_id": null,
+          "kind": "capstone",
+          "node_id": "kn-retrieval-project-capstone",
+          "skill_id": null,
+          "title": "Retrieval system you built"
+        },
+        {
+          "blurb": null,
+          "branch": "cost-latency-evidence",
+          "evidence_slot_id": "cost-latency-evidence",
+          "expected_minutes": null,
+          "group_id": null,
+          "kind": "capstone",
+          "node_id": "kn-cost-latency-evidence-capstone",
+          "skill_id": null,
+          "title": "Cost and latency optimization"
+        },
+        {
+          "blurb": null,
+          "branch": "public-artifact",
+          "evidence_slot_id": "public-artifact",
+          "expected_minutes": null,
+          "group_id": null,
+          "kind": "capstone",
+          "node_id": "kn-public-artifact-capstone",
+          "skill_id": null,
+          "title": "Public writeup or talk"
+        }
+      ]
+    }
+  },
+  "pathway_registry_version": "pathway-registry-v1",
+  "skill_grouping_version": "skill-grouping-v1",
+  "taxonomy_version": "skill-taxonomy-v4"
+}

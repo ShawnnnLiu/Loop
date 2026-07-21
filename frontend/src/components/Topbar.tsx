@@ -7,6 +7,7 @@ const NAV = [
   { to: '/review', label: 'Week' },
   { to: '/plan', label: 'Plan' },
   { to: '/accountability', label: 'Progress' },
+  { to: '/pathway', label: 'Pathway' },
   { to: '/thresholds', label: 'Tuning' },
 ] as const
 

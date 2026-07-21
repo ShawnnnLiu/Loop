@@ -1,0 +1,187 @@
+{
+  "$defs": {
+    "KnowledgeGroup": {
+      "additionalProperties": false,
+      "description": "A group waypoint: a clickable cluster of member skill nodes.",
+      "properties": {
+        "blurb": {
+          "minLength": 1,
+          "title": "Blurb",
+          "type": "string"
+        },
+        "branch": {
+          "minLength": 1,
+          "title": "Branch",
+          "type": "string"
+        },
+        "group_id": {
+          "pattern": "^kg-[a-z0-9-]+$",
+          "title": "Group Id",
+          "type": "string"
+        },
+        "member_node_ids": {
+          "items": {
+            "pattern": "^kn-[a-z0-9-]+$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Member Node Ids",
+          "type": "array"
+        },
+        "title": {
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "group_id",
+        "title",
+        "branch",
+        "blurb",
+        "member_node_ids"
+      ],
+      "title": "KnowledgeGroup",
+      "type": "object"
+    },
+    "KnowledgeNode": {
+      "additionalProperties": false,
+      "description": "One map node: a taxonomy-anchored ``skill`` or a branch-level ``capstone``.\n\nKind-conditional fields (enforced below):\n\n* ``skill`` requires ``skill_id``, ``group_id``, ``expected_minutes`` and\n  forbids ``evidence_slot_id`` / ``branch``.\n* ``capstone`` requires ``evidence_slot_id``, ``branch`` and forbids\n  ``skill_id`` / ``group_id`` / ``expected_minutes``.",
+      "properties": {
+        "blurb": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Blurb"
+        },
+        "branch": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Branch"
+        },
+        "evidence_slot_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Evidence Slot Id"
+        },
+        "expected_minutes": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Expected Minutes"
+        },
+        "group_id": {
+          "anyOf": [
+            {
+              "pattern": "^kg-[a-z0-9-]+$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Group Id"
+        },
+        "kind": {
+          "$ref": "#/$defs/KnowledgeNodeKind"
+        },
+        "node_id": {
+          "pattern": "^kn-[a-z0-9-]+$",
+          "title": "Node Id",
+          "type": "string"
+        },
+        "skill_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Skill Id"
+        },
+        "title": {
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "node_id",
+        "title",
+        "kind"
+      ],
+      "title": "KnowledgeNode",
+      "type": "object"
+    },
+    "KnowledgeNodeKind": {
+      "description": "What a knowledge-map node represents (pathway-template spec, KT-A).\n\n``skill`` nodes are taxonomy-anchored and live in exactly one group;\n``capstone`` nodes are branch-level (one per evidence slot) and belong to\nno group. There are no other kinds and no edges between nodes.",
+      "enum": [
+        "skill",
+        "capstone"
+      ],
+      "title": "KnowledgeNodeKind",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A pathway's generated grouped map: groups + nodes, no edges.",
+  "properties": {
+    "groups": {
+      "items": {
+        "$ref": "#/$defs/KnowledgeGroup"
+      },
+      "minItems": 1,
+      "title": "Groups",
+      "type": "array"
+    },
+    "nodes": {
+      "items": {
+        "$ref": "#/$defs/KnowledgeNode"
+      },
+      "minItems": 1,
+      "title": "Nodes",
+      "type": "array"
+    }
+  },
+  "required": [
+    "groups",
+    "nodes"
+  ],
+  "title": "KnowledgeMap",
+  "type": "object"
+}

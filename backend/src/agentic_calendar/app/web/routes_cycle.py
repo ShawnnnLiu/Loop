@@ -27,7 +27,7 @@ from pydantic import BaseModel, ConfigDict
 
 from agentic_calendar.app.cycle import DEFAULT_TARGET_CALENDAR_ID, CycleService
 from agentic_calendar.contracts.checkin_event import RecoveryAction
-from agentic_calendar.contracts.common_types import EvidenceKind
+from agentic_calendar.contracts.common_types import EvidenceKind, MasteryTier
 from agentic_calendar.contracts.recommitment import RecommitmentChoice
 from agentic_calendar.scheduler.adjustment import DraftAdjustment
 
@@ -118,6 +118,46 @@ class SelectPathwayRequest(BaseModel):
     # Slot-override editing has no NP-E UI yet; the field is accepted (and
     # registry-validated by the service) so the shape is forward-compatible.
     slot_overrides: list[dict[str, Any]] = []
+
+
+class AddKnowledgeNodeRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    skill_id: str
+
+
+class CreateCustomGroupRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+
+
+class CreateCustomNodeRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    group_id: str
+    description: str | None = None
+
+
+class NodeRefRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    node_id: str
+
+
+class SetMasteryRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    node_id: str
+    target_tier: MasteryTier
+
+
+class UpsertNoteRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    node_id: str
+    text: str
 
 
 class CalendarSyncRequest(BaseModel):
@@ -564,6 +604,132 @@ def select_pathway(
         service.select_pathway(
             user_id, pathway_id=body.pathway_id, slot_overrides=body.slot_overrides
         )
+    )
+
+
+@router.get("/knowledge-map")
+def knowledge_map(service: Service, user_id: ActingUser) -> JSONResponse:
+    """The account's knowledge map with deterministic per-node mastery tiers (KT-C).
+
+    Read-only: structure from the pathway registry + the append-only overlay, tiers
+    from the ``map_state`` kernel fold - no LLM, reproducible on stored data. Empty
+    (``has_selection=false``) until a pathway is selected. Personal custom content
+    renders as a separate layer and counts toward nothing."""
+    return _json(service.knowledge_map_view(user_id))
+
+
+@router.post("/knowledge-map/setpoint")
+def knowledge_map_setpoint(
+    service: Service, user_id: ActingUser, body: SetMasteryRequest
+) -> JSONResponse:
+    """Set a per-node mastery set-point - the only control that lowers a tier (KT-C).
+
+    ``proven`` is evidence-gated, not settable (409); an unknown node is a 409.
+    Returns the refreshed map."""
+    return _json(
+        service.set_mastery(user_id, node_id=body.node_id, target_tier=body.target_tier)
+    )
+
+
+@router.post("/knowledge-map/note")
+def knowledge_map_note(
+    service: Service, user_id: ActingUser, body: UpsertNoteRequest
+) -> JSONResponse:
+    """Upsert the single private note on a node (KT-C).
+
+    Display-only personal content - never enters a prompt, coverage metric, or
+    sponsor report. An unknown node is a 409; the length cap is contract-enforced.
+    Returns the refreshed map."""
+    return _json(
+        service.upsert_note(user_id, node_id=body.node_id, text=body.text)
+    )
+
+
+@router.delete("/knowledge-map/note/{node_id}")
+def knowledge_map_delete_note(
+    service: Service, user_id: ActingUser, node_id: str
+) -> JSONResponse:
+    """Delete the note on a node (tombstone). Unknown node -> 409."""
+    return _json(service.delete_note(user_id, node_id=node_id))
+
+
+@router.post("/knowledge-map/mark-evidence")
+def knowledge_map_mark_evidence(
+    service: Service, user_id: ActingUser, body: NodeRefRequest
+) -> JSONResponse:
+    """Mark a honed skill node ``proven`` with a real artifact (KT-C).
+
+    The only path to skill ``proven`` - user-gated, never automatic. Available
+    only on a honed generated / added skill node (409 otherwise)."""
+    return _json(service.mark_node_evidence(user_id, node_id=body.node_id))
+
+
+@router.post("/knowledge-map/add-node")
+def knowledge_map_add_node(
+    service: Service, user_id: ActingUser, body: AddKnowledgeNodeRequest
+) -> JSONResponse:
+    """Add a taxonomy skill we did not seed to the account map (pathway content, KT-C).
+
+    Typed rejections (409 with ``reason_code``): ``SKILL_NOT_IN_TRACK_VOCABULARY``
+    (outside the add-picker slice / unplaceable), ``KNOWLEDGE_NODE_ALREADY_PRESENT``.
+    A vocabulary-added node becomes a first-class planning target next generation."""
+    return _json(service.add_knowledge_node(user_id, skill_id=body.skill_id))
+
+
+@router.get("/knowledge-map/add-vocabulary")
+def knowledge_map_add_vocabulary(
+    service: Service, user_id: ActingUser
+) -> JSONResponse:
+    """The closed vocabulary the "Add a skill" picker binds to (KT-D).
+
+    Read-only: the account track's taxonomy slice restricted to grouping-placeable
+    skills, minus skills already on the map - exactly what ``add-node`` accepts, so
+    the picker never offers a dead option. Empty before a pathway is selected."""
+    return _json(service.add_skill_vocabulary_view(user_id))
+
+
+@router.post("/knowledge-map/custom-group")
+def knowledge_map_custom_group(
+    service: Service, user_id: ActingUser, body: CreateCustomGroupRequest
+) -> JSONResponse:
+    """Create a personal group (KT-C). ``CUSTOM_CONTENT_LIMIT_EXCEEDED`` at the cap."""
+    return _json(service.create_custom_group(user_id, name=body.name))
+
+
+@router.delete("/knowledge-map/custom-group/{custom_group_id}")
+def knowledge_map_delete_custom_group(
+    service: Service, user_id: ActingUser, custom_group_id: str
+) -> JSONResponse:
+    """Delete one of the user's own custom groups (tombstone). Unknown -> 409."""
+    return _json(
+        service.delete_custom_group(user_id, custom_group_id=custom_group_id)
+    )
+
+
+@router.post("/knowledge-map/custom-node")
+def knowledge_map_custom_node(
+    service: Service, user_id: ActingUser, body: CreateCustomNodeRequest
+) -> JSONResponse:
+    """Create a personal node in any group, curated or custom (KT-C).
+
+    ``CUSTOM_CONTENT_LIMIT_EXCEEDED`` at the cap; an unknown ``group_id`` is a 409."""
+    return _json(
+        service.create_custom_node(
+            user_id,
+            name=body.name,
+            group_id=body.group_id,
+            description=body.description,
+        )
+    )
+
+
+@router.delete("/knowledge-map/custom-node/{custom_node_id}")
+def knowledge_map_delete_custom_node(
+    service: Service, user_id: ActingUser, custom_node_id: str
+) -> JSONResponse:
+    """Delete one of the user's own custom nodes (tombstone). Unknown -> 409."""
+    return _json(
+        service.delete_custom_node(user_id, custom_node_id=custom_node_id)
     )
 
 

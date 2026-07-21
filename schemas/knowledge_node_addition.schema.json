@@ -1,0 +1,28 @@
+{
+  "additionalProperties": false,
+  "description": "The user added a taxonomy skill we did not seed (pathway content).\n\nPlacement is deterministic (the skill's ``skill-grouping`` row names the\ngroup); this record only stores *what* was added and when.",
+  "properties": {
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "skill_id": {
+      "minLength": 1,
+      "title": "Skill Id",
+      "type": "string"
+    },
+    "user_id": {
+      "minLength": 1,
+      "title": "User Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "user_id",
+    "skill_id",
+    "created_at"
+  ],
+  "title": "NodeAddition",
+  "type": "object"
+}

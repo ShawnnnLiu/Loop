@@ -21,6 +21,13 @@ from agentic_calendar.contracts.milestone_template import (
 )
 from agentic_calendar.contracts.pathway_template import EvidenceSlot, PathwayTemplate
 
+from .knowledge_maps import (
+    DEFAULT_KNOWLEDGE_MAPS_PATH,
+    KnowledgeMapsLoadError,
+    knowledge_map_for,
+    load_knowledge_maps,
+    pathway_with_map,
+)
 from .pathways import (
     PATHWAY_REGISTRY_VERSION,
     PATHWAY_SCHEMA_VERSION,
@@ -38,19 +45,24 @@ from .registry import (
 )
 
 __all__ = [
+    "DEFAULT_KNOWLEDGE_MAPS_PATH",
     "PATHWAY_REGISTRY_VERSION",
     "PATHWAY_SCHEMA_VERSION",
     "TEMPLATE_SCHEMA_VERSION",
     "EvidenceSlot",
     "GoalClass",
+    "KnowledgeMapsLoadError",
     "Milestone",
     "MilestoneTemplate",
     "PathwayTemplate",
     "get_pathway",
     "get_template",
     "is_theme_in_vocabulary",
+    "knowledge_map_for",
     "list_pathways",
     "list_templates",
+    "load_knowledge_maps",
+    "pathway_with_map",
     "pathways_for_track",
     "select_template_for_profile",
     "theme_vocabulary",

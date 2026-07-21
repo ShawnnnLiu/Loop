@@ -1,0 +1,41 @@
+{
+  "additionalProperties": false,
+  "description": "One free-text note on any node (personal content; never in any prompt).",
+  "properties": {
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "node_id": {
+      "pattern": "^k(n|cn)-[a-z0-9-]+$",
+      "title": "Node Id",
+      "type": "string"
+    },
+    "text": {
+      "maxLength": 2000,
+      "minLength": 1,
+      "title": "Text",
+      "type": "string"
+    },
+    "updated_at": {
+      "format": "date-time",
+      "title": "Updated At",
+      "type": "string"
+    },
+    "user_id": {
+      "minLength": 1,
+      "title": "User Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "user_id",
+    "node_id",
+    "text",
+    "created_at",
+    "updated_at"
+  ],
+  "title": "NodeNote",
+  "type": "object"
+}

@@ -122,3 +122,25 @@ def slot_linked_syllabus(slot_ids: list[str | None]) -> SyllabusUnits:
         goal_summary="Test goal.",
         modules=modules,
     )
+
+
+def node_tagged_syllabus(tag_lists: list[list[str]]) -> SyllabusUnits:
+    """A syllabus whose modules tag the given ``knowledge_node_ids`` (KT-C)."""
+    modules = [
+        SyllabusModule(
+            module_id=f"m{i}",
+            title=f"Module {i}",
+            priority=Priority.MEDIUM,
+            reason=None,
+            target_outcomes=["outcome"],
+            estimated_total_min=60,
+            difficulty=2,
+            knowledge_node_ids=tags,
+        )
+        for i, tags in enumerate(tag_lists)
+    ]
+    return SyllabusUnits(
+        syllabus_version="syllabus-v1",
+        goal_summary="Test goal.",
+        modules=modules,
+    )

@@ -197,6 +197,12 @@ export function StoryPanel() {
           </p>
           <PathwayCardView card={selected} experienceTitles={experienceTitles} fitNote={fitNotes[selected.pathway_id]} />
 
+          <div className="row" style={{ marginTop: 10 }}>
+            <Link to="/pathway" className="btn btn-ghost sm">
+              View knowledge map →
+            </Link>
+          </div>
+
           <div className="card" style={{ marginTop: 12, padding: '12px 16px' }}>
             <div className="row" style={{ justifyContent: 'space-between', alignItems: 'baseline', gap: 10 }}>
               <span className="label">Where your package stands</span>

@@ -95,6 +95,10 @@ USER_FACING: dict[ViolationType, str] = {
         "Too many modules were building toward story pillars at once. "
         "Trimming to the limit."
     ),
+    ViolationType.UNKNOWN_KNOWLEDGE_NODE: (
+        "A module was tagged with a skill that isn't on your knowledge map. "
+        "Unlinking it."
+    ),
 }
 
 

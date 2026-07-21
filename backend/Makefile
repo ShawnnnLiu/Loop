@@ -1,4 +1,4 @@
-.PHONY: help install sync test test-fast lint typecheck format boundaries schemas schema-check eval-gate retrieval-eval visualize check clean
+.PHONY: help install sync test test-fast lint typecheck format boundaries schemas schema-check maps maps-check eval-gate retrieval-eval visualize check clean
 
 help:
 	@echo "Targets:"
@@ -12,10 +12,12 @@ help:
 	@echo "  boundaries  import-linter contracts (LLM SDK isolation, layering)"
 	@echo "  schemas     regenerate /schemas/*.schema.json from Pydantic contracts"
 	@echo "  schema-check verify committed /schemas match the contracts (no write)"
+	@echo "  maps        regenerate pathways/knowledge_maps.json from the curated grouping"
+	@echo "  maps-check  verify the committed knowledge maps match a fresh regeneration (no write)"
 	@echo "  eval-gate   strict-grade committed eval recordings (offline; amended axiom 22)"
 	@echo "  retrieval-eval  grade the labeled retrieval query set against the pinned corpus snapshot (corpus/corpus.db, committed)"
 	@echo "  visualize   render the 'success' scheduler scenario to ../schedule.html"
-	@echo "  check       lint + typecheck + schema-check + test (boundaries run inside test)"
+	@echo "  check       lint + typecheck + schema-check + maps-check + test (boundaries run inside test)"
 	@echo "  clean       remove caches and build artifacts"
 
 install sync:
@@ -44,6 +46,12 @@ schemas:
 
 schema-check:
 	uv run python -m agentic_calendar.tools.export_schemas --out ../schemas --check
+
+maps:
+	uv run python -m agentic_calendar.tools.generate_knowledge_maps
+
+maps-check:
+	uv run python -m agentic_calendar.tools.generate_knowledge_maps --check
 
 # Grades COMMITTED recordings only — deterministic and offline, so it may
 # gate merges (amended axiom 22; live-call evals still never run in CI).
@@ -128,7 +136,7 @@ visualize:
 # binary plus the LLM-SDK grep), so chaining `boundaries` here would run
 # import-linter twice per CI job. `make boundaries` stays as the focused
 # local target.
-check: lint typecheck schema-check test
+check: lint typecheck schema-check maps-check test
 
 clean:
 	rm -rf .pytest_cache .mypy_cache .ruff_cache .coverage htmlcov build dist *.egg-info

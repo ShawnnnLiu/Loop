@@ -655,3 +655,127 @@ def test_extract_route_persists_nothing(tmp_path: Path) -> None:
     before = row_count()
     assert client.post("/api/onboard/extract", json=_EXTRACT_BODY).status_code == 200
     assert row_count() == before
+
+
+# --------------------------------------------------------------------------- #
+# Knowledge map (KT-C-b): read + set-point + note over HTTP
+# --------------------------------------------------------------------------- #
+
+_BACKEND = "backend-infrastructure-engineer"
+
+
+def test_knowledge_map_empty_before_selection() -> None:
+    client, _clock = _client()
+    body = client.get("/api/knowledge-map").json()
+    assert body["has_selection"] is False
+    assert body["nodes"] == []
+
+
+def test_knowledge_map_populates_after_selection_and_mutations() -> None:
+    client, _clock = _client()
+    selected = client.post("/api/pathways/select", json={"pathway_id": _BACKEND})
+    assert selected.status_code == 200
+
+    view = client.get("/api/knowledge-map").json()
+    assert view["has_selection"] is True
+    assert view["pathway_id"] == _BACKEND
+    assert view["nodes"]
+    skill = next(n for n in view["nodes"] if n["kind"] == "skill")
+
+    honed = client.post(
+        "/api/knowledge-map/setpoint",
+        json={"node_id": skill["node_id"], "target_tier": "honed"},
+    )
+    assert honed.status_code == 200
+    node = next(n for n in honed.json()["nodes"] if n["node_id"] == skill["node_id"])
+    assert node["tier"] == "honed"
+
+    noted = client.post(
+        "/api/knowledge-map/note",
+        json={"node_id": skill["node_id"], "text": "revisit this"},
+    )
+    assert noted.status_code == 200
+    node = next(n for n in noted.json()["nodes"] if n["node_id"] == skill["node_id"])
+    assert node["note"] == "revisit this"
+
+
+def test_knowledge_map_proven_setpoint_is_409() -> None:
+    client, _clock = _client()
+    client.post("/api/pathways/select", json={"pathway_id": _BACKEND})
+    view = client.get("/api/knowledge-map").json()
+    skill = next(n for n in view["nodes"] if n["kind"] == "skill")
+    resp = client.post(
+        "/api/knowledge-map/setpoint",
+        json={"node_id": skill["node_id"], "target_tier": "proven"},
+    )
+    assert resp.status_code == 409
+
+
+def test_knowledge_map_crud_over_http() -> None:
+    client, _clock = _client()
+    client.post("/api/pathways/select", json={"pathway_id": _BACKEND})
+
+    # Create a custom group, then a custom node inside it.
+    g = client.post("/api/knowledge-map/custom-group", json={"name": "My cluster"})
+    assert g.status_code == 200
+    gid = next(gr["group_id"] for gr in g.json()["groups"] if gr["is_personal"])
+
+    n = client.post(
+        "/api/knowledge-map/custom-node",
+        json={"name": "My node", "group_id": gid, "description": "d"},
+    )
+    assert n.status_code == 200
+    nid = next(nd["node_id"] for nd in n.json()["nodes"] if nd["is_personal"])
+
+    # Delete the custom node -> gone.
+    d = client.delete(f"/api/knowledge-map/custom-node/{nid}")
+    assert d.status_code == 200
+    assert nid not in {nd["node_id"] for nd in d.json()["nodes"]}
+
+    # Off-vocabulary add-node -> 409 with the typed reason code.
+    bad = client.post("/api/knowledge-map/add-node", json={"skill_id": "skill.nope"})
+    assert bad.status_code == 409
+    assert bad.json()["reason_code"] == "SKILL_NOT_IN_TRACK_VOCABULARY"
+
+
+def test_knowledge_map_add_vocabulary_round_trips_into_add_node() -> None:
+    client, _clock = _client()
+    client.post("/api/pathways/select", json={"pathway_id": _BACKEND})
+
+    vocab = client.get("/api/knowledge-map/add-vocabulary")
+    assert vocab.status_code == 200
+    skills = vocab.json()["skills"]
+    assert skills  # a real pathway leaves room to add
+    pick = skills[0]["skill_id"]
+
+    # The picker only ever offers a skill add-node accepts.
+    added = client.post("/api/knowledge-map/add-node", json={"skill_id": pick})
+    assert added.status_code == 200
+    # Once added, it drops out of the offered vocabulary.
+    reoffered = {s["skill_id"] for s in client.get("/api/knowledge-map/add-vocabulary").json()["skills"]}
+    assert pick not in reoffered
+
+
+def test_knowledge_map_mark_evidence_over_http() -> None:
+    client, _clock = _client()
+    client.post("/api/pathways/select", json={"pathway_id": _BACKEND})
+    view = client.get("/api/knowledge-map").json()
+    skill = next(n for n in view["nodes"] if n["kind"] == "skill")
+
+    # Before honed -> 409.
+    early = client.post(
+        "/api/knowledge-map/mark-evidence", json={"node_id": skill["node_id"]}
+    )
+    assert early.status_code == 409
+
+    # Hone it, then mark evidence -> proven.
+    client.post(
+        "/api/knowledge-map/setpoint",
+        json={"node_id": skill["node_id"], "target_tier": "honed"},
+    )
+    proven = client.post(
+        "/api/knowledge-map/mark-evidence", json={"node_id": skill["node_id"]}
+    )
+    assert proven.status_code == 200
+    node = next(n for n in proven.json()["nodes"] if n["node_id"] == skill["node_id"])
+    assert node["tier"] == "proven"

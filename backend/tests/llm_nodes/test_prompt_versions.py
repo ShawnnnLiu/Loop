@@ -91,16 +91,19 @@ _PINNED: list[tuple[str, object, str, str]] = [
         # v5 (PD-B): plan-direction translate rule + hedge extension changed
         # the system-prompt bytes. v6 (NP-D): system-prompt rule 7 (link up to
         # max_slot_modules modules to unfilled_slots via evidence_slot_id) +
-        # the seven-rule self-check line changed the bytes again.
-        "strategist-v6-2026-07-20",
-        "b3fbf12f2a90065f998a086171bc44bfb288c924d21c45d01bbe9bd73581e174",
+        # the seven-rule self-check line changed the bytes again. v7 (KT-C):
+        # system-prompt rule 8 (tag modules with knowledge_node_ids) + the
+        # eight-rule self-check line.
+        "strategist-v7-2026-07-20",
+        "3df3536eeb4b02b0cff51e672945939b7c42a6f0cfaf61fd597bd7c1ae49e562",
     ),
     (
         "_PLANNER_SYSTEM",
         adapter.PLANNER_CONFIG,
-        # Version date bumped to 2026-07-20 (NP-A) for the SyllabusModule
-        # evidence_slot_id field — system-prompt bytes unchanged, hash same.
-        "planner-v5-2026-07-20",
+        # Bumped v5->v6 (KT-A) for the SyllabusModule knowledge_node_ids field
+        # (v5 was NP-A's evidence_slot_id). System-prompt template text is
+        # unchanged in both cases, so the system-prompt hash is the same.
+        "planner-v6-2026-07-20",
         "71cb5b40315ec2f2ef0411c03928a27518f1a6df05903f4c5c4a46e9a0626513",
     ),
     (
@@ -495,16 +498,18 @@ _FULL_PROMPT_PINS: list[
         # 2026-07-20 (NP-A): StrategyConstraints story-layer default fields now
         # serialize into the input bundle — rendered bytes changed, rehashed.
         # v6 (NP-D): system-prompt rule 7 changed the system frame, rehashed.
-        "strategist-v6-2026-07-20",
-        "498d544a77d4effb8a3e7604fb5ed0a4d37ab0431d845b7a46f89ffe2575e3c6",
+        # v7 (KT-C): rule 8 + the knowledge_nodes default [] in the bundle JSON.
+        "strategist-v7-2026-07-20",
+        "544fb5bb4c405276d4ba59db2acf111cffb06f5cbc6940c5ecf1763467689eb3",
     ),
     (
         "planner",
         _planner_full,
-        # 2026-07-20 (NP-A): SyllabusModule evidence_slot_id serializes into the
-        # validated-syllabus block — rendered bytes changed, rehashed.
-        "planner-v5-2026-07-20",
-        "c7097dbd61a824ec973191de62d083e2385d48d520c036e1fc5b8217b8782290",
+        # v6 (KT-A): SyllabusModule knowledge_node_ids serializes into the
+        # validated-syllabus block (default []) — rendered bytes changed,
+        # rehashed. (v5 was NP-A's evidence_slot_id.)
+        "planner-v6-2026-07-20",
+        "bf92ef3556fa4d11350a3cb02fc15d4f8ac9ff67f7fdbb59002ffeb938e8a8f8",
     ),
     (
         "reflection_summary",

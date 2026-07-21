@@ -249,6 +249,88 @@ export interface EvidenceVocabularyResult {
   themes: string[]
 }
 
+// --------------------------------------------------------------------------- //
+// Knowledge map (KT-C read + mutations; KT-D UI). Every tier is the narrative
+// map_state fold over stored overlay records — a presentation/memory layer that
+// never gates anything (axiom-11 non-interference), never an LLM.
+// --------------------------------------------------------------------------- //
+
+/** Mirror of contracts/common_types.py::MasteryTier — the four-state ladder. */
+export type MasteryTier = 'discovered' | 'training' | 'honed' | 'proven'
+
+/** Ordered discovered → proven, so the UI can compare tiers (honed threshold,
+ *  ladder rendering) without hard-coding the sequence in components. */
+export const MASTERY_TIERS: MasteryTier[] = ['discovered', 'training', 'honed', 'proven']
+
+/** Mirror of app/results.py::KnowledgeNodeView. A `skill` node carries taxonomy
+ *  chips + blurb + the active-plan modules training it; a `capstone` heads its
+ *  branch; a `custom` node is the personal layer (`is_personal`, counts nothing). */
+export interface KnowledgeNodeView {
+  node_id: string
+  title: string
+  kind: 'skill' | 'capstone' | 'custom'
+  tier: MasteryTier
+  group_id: string | null
+  branch: string | null
+  skill_id: string | null
+  expected_minutes: number | null
+  blurb: string | null
+  description: string | null
+  note: string | null
+  linked_module_ids: string[]
+  is_personal: boolean
+}
+
+/** Mirror of app/results.py::KnowledgeGroupView — a group waypoint with honest
+ *  pathway-skill counts ("2/5 honed", no percentage). Personal groups count 0. */
+export interface KnowledgeGroupView {
+  group_id: string
+  title: string
+  branch: string
+  blurb: string | null
+  member_node_ids: string[]
+  honed_count: number
+  total_count: number
+  is_personal: boolean
+}
+
+/** Mirror of app/results.py::KnowledgeBranchView — one evidence-slot branch. */
+export interface KnowledgeBranchView {
+  slot_id: string
+  title: string
+  capstone_node_id: string
+  capstone_tier: MasteryTier
+  honed_count: number
+  total_count: number
+}
+
+/** Mirror of app/results.py::KnowledgeMapView. `has_selection` is false until a
+ *  pathway is selected (v1 needs a selection to instantiate a map). Every
+ *  mutation route returns this refreshed view. */
+export interface KnowledgeMapView {
+  has_selection: boolean
+  pathway_id: string | null
+  registry_version: string
+  version_mismatch: boolean
+  branches: KnowledgeBranchView[]
+  groups: KnowledgeGroupView[]
+  nodes: KnowledgeNodeView[]
+}
+
+/** Mirror of app/results.py::AddableSkill — one option in the "Add a skill"
+ *  picker; `title` is the taxonomy display name. */
+export interface AddableSkill {
+  skill_id: string
+  title: string
+}
+
+/** Mirror of app/results.py::AddSkillVocabularyResult — the closed vocabulary the
+ *  picker binds to (track slice ∩ placeable − already-present). Empty pre-selection. */
+export interface AddSkillVocabularyResult {
+  track: string | null
+  skills: AddableSkill[]
+}
+
 /** Body of POST /api/pathways/fit-notes. `user_profile` is the wizard's
  *  not-yet-saved draft (persistence-free); omit it to note the stored profile. */
 export interface FitNotesPayload {

@@ -25,6 +25,7 @@
   --sage-deep: #496650;
   --sage-soft: #e3ebe2;
   --gold: #c08a3e;
+  --gold-deep: #9a6d2f;
   --gold-soft: #f6e6cf;
 
   --line: #e9e0d2;
@@ -1419,5 +1420,395 @@ select.input {
     padding-left: 0;
     border-top: 1px solid var(--line);
     padding-top: 16px;
+  }
+}
+
+/* --------------------------------------------------------------------------- */
+/* Knowledge map (KT-D). An illuminated cartographer's chart in Loop's skin:    */
+/* branches → group waypoints → inline-accordion skill nodes on the gilding     */
+/* ramp. Honest counts only, never percentages. Every tier is the map_state     */
+/* fold's output; these classes just paint it.                                  */
+/* --------------------------------------------------------------------------- */
+.km-tools {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 4px 0 18px;
+}
+.km-branch {
+  margin-bottom: 14px;
+}
+.km-bhead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 15px;
+  border-radius: var(--r-sm) var(--r-sm) 0 0;
+  background: var(--paper-2);
+  border: 1px solid var(--line-2);
+  border-bottom: none;
+}
+.km-shield {
+  width: 32px;
+  height: 38px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: 15px;
+  border-radius: 6px 6px 10px 10px;
+}
+.km-shield.unproven {
+  background: var(--card);
+  border: 1px dashed var(--line-3);
+  color: var(--ink-soft);
+}
+.km-shield.proven {
+  background: var(--gold);
+  border: 1px solid var(--gold-deep);
+  color: #fff;
+  box-shadow: 0 0 0 4px var(--gold-soft);
+}
+.km-bname {
+  font-family: var(--serif);
+  font-size: 16.5px;
+  font-weight: 500;
+}
+.km-bmeta {
+  font-size: 11.5px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.km-groups {
+  border: 1px solid var(--line-2);
+  border-top: none;
+  border-radius: 0 0 var(--r-sm) var(--r-sm);
+  background: var(--card);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.km-gw {
+  border: 1px solid var(--line-2);
+  border-radius: 10px;
+  background: var(--paper);
+  overflow: hidden;
+}
+.km-ghead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 13px;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  font-family: var(--sans);
+}
+.km-ghead:hover {
+  background: var(--paper-2);
+}
+.km-waypoint {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  flex: none;
+  display: grid;
+  place-items: center;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+}
+.km-wp-0 {
+  background: var(--paper-2);
+  border: 1.5px solid var(--line-3);
+  color: var(--muted);
+}
+.km-wp-part {
+  background: var(--gold-soft);
+  border: 1.5px solid var(--gold);
+  color: var(--gold-deep);
+}
+.km-wp-full {
+  background: var(--gold);
+  border: 1.5px solid var(--gold-deep);
+  color: #fff;
+}
+.km-gtitle {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--ink);
+}
+.km-gcount {
+  font-size: 11.5px;
+  color: var(--muted);
+  margin-top: 1px;
+}
+.km-caret {
+  margin-left: auto;
+  color: var(--muted-2);
+  font-family: var(--mono);
+  font-size: 13px;
+  transition: transform 0.2s;
+}
+.km-gw.open .km-caret {
+  transform: rotate(90deg);
+}
+.km-members {
+  padding: 2px 13px 13px 54px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.km-node {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 8px 11px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  cursor: pointer;
+  text-align: left;
+  background: none;
+  width: 100%;
+  font-family: var(--sans);
+}
+.km-node:hover {
+  background: var(--paper-2);
+  border-color: var(--line-2);
+}
+.km-node.sel {
+  border-color: var(--clay);
+  background: var(--clay-tint);
+}
+.km-node.custom {
+  border-style: dashed;
+  border-color: var(--line-3);
+}
+.km-node .km-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  flex: none;
+}
+.km-node.custom .km-dot {
+  background: var(--card);
+  border: 1.5px solid var(--ink-soft);
+}
+.km-nname {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+.km-ntier {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+  font-weight: 600;
+}
+.km-t-discovered .km-dot {
+  background: #fff;
+  border: 1.5px solid var(--muted);
+}
+.km-t-training .km-dot {
+  background: var(--clay-tint);
+  border: 1.5px solid var(--clay);
+  box-shadow: 0 0 0 3px var(--clay-soft);
+  animation: km-breathe 3.4s ease-in-out infinite;
+}
+.km-t-honed .km-dot {
+  background: var(--gold-soft);
+  border: 1.5px solid var(--gold);
+}
+.km-t-proven .km-dot {
+  background: var(--gold);
+  border: 1.5px solid var(--gold-deep);
+  box-shadow: 0 0 0 3px var(--gold-soft);
+}
+.km-t-honed .km-ntier,
+.km-t-proven .km-ntier {
+  color: var(--gold-deep);
+}
+@keyframes km-breathe {
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.km-additions {
+  margin-top: 22px;
+}
+.km-ahead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.km-inline-form {
+  border: 1px dashed var(--clay);
+  background: var(--clay-tint);
+  border-radius: var(--r-sm);
+  padding: 12px 13px;
+  margin: 4px 0;
+}
+.km-pick {
+  max-height: 220px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+}
+.km-pick button {
+  text-align: left;
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  padding: 7px 10px;
+  background: var(--card);
+  font-size: 13px;
+  color: var(--ink-soft);
+  cursor: pointer;
+  font-family: var(--sans);
+}
+.km-pick button:hover {
+  border-color: var(--clay);
+  background: var(--paper);
+}
+/* drawer */
+.km-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(22, 33, 46, 0.28);
+  z-index: 60;
+}
+.km-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 372px;
+  max-width: 92vw;
+  background: var(--card);
+  border-left: 1px solid var(--line-2);
+  box-shadow: -30px 0 70px -28px rgba(22, 33, 46, 0.4);
+  z-index: 61;
+  display: flex;
+  flex-direction: column;
+}
+.km-dhead {
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--line);
+}
+.km-dbody {
+  padding: 16px 20px 22px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.km-ladder {
+  display: flex;
+  align-items: flex-start;
+  margin-top: 13px;
+}
+.km-ladder .km-st {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  position: relative;
+}
+.km-ladder .km-st::before {
+  content: '';
+  position: absolute;
+  top: 5.5px;
+  left: -50%;
+  width: 100%;
+  height: 1.5px;
+  background: var(--line-2);
+}
+.km-ladder .km-st:first-child::before {
+  display: none;
+}
+.km-ladder .km-st.done::before {
+  background: var(--gold);
+}
+.km-ladder .km-sdot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--card);
+  border: 1.5px solid var(--line-3);
+  z-index: 1;
+}
+.km-ladder .km-st.done .km-sdot {
+  background: var(--gold);
+  border-color: var(--gold);
+}
+.km-ladder .km-st.cur .km-sdot {
+  background: var(--clay);
+  border-color: var(--clay);
+  box-shadow: 0 0 0 3px var(--clay-soft);
+}
+.km-ladder .km-sl {
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 0.06em;
+  color: var(--muted-2);
+  text-transform: uppercase;
+}
+.km-ladder .km-st.cur .km-sl {
+  color: var(--clay-deep);
+  font-weight: 700;
+}
+.km-ladder .km-st.done .km-sl {
+  color: var(--gold-deep);
+}
+.km-chipwrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.km-set .chip {
+  cursor: pointer;
+}
+.km-set .chip.cur {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+}
+@media (prefers-reduced-motion: reduce) {
+  .km-t-training .km-dot {
+    animation: none;
+    opacity: 0.85;
+  }
+  .km-caret {
+    transition: none;
+  }
+}
+@media (max-width: 560px) {
+  .km-drawer {
+    top: auto;
+    width: 100%;
+    max-width: 100%;
+    border-left: none;
+    border-top: 1px solid var(--line-2);
+    border-radius: 18px 18px 0 0;
+    max-height: 82vh;
+  }
+  .km-members {
+    padding-left: 26px;
   }
 }

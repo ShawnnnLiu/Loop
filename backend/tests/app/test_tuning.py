@@ -36,6 +36,7 @@ from agentic_calendar.duration_estimation.power_user import (
     DEFAULT_ELIGIBILITY_CONFIG,
     DEFAULT_REFINEMENT_CONFIG,
 )
+from agentic_calendar.narrative.mastery import DEFAULT_MASTERY_TUNING
 from agentic_calendar.scheduler.scoring import DEFAULT_PLACEMENT_SCORING_CONFIG
 from agentic_calendar.telemetry.calibration import DEFAULT_CALIBRATION_CONFIG
 
@@ -80,6 +81,7 @@ def test_no_file_returns_all_defaults_and_touches_nothing() -> None:
     assert tuning.power_user_eligibility == DEFAULT_ELIGIBILITY_CONFIG
     assert tuning.per_user_refinement == DEFAULT_REFINEMENT_CONFIG
     assert tuning.scheduler_placement == DEFAULT_PLACEMENT_SCORING_CONFIG
+    assert tuning.mastery == DEFAULT_MASTERY_TUNING
     assert store.list_all() == []
 
 

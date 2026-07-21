@@ -1,0 +1,35 @@
+{
+  "additionalProperties": false,
+  "description": "A user-created personal group (personal content; counts toward nothing).",
+  "properties": {
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "custom_group_id": {
+      "pattern": "^kcg-[a-z0-9-]+$",
+      "title": "Custom Group Id",
+      "type": "string"
+    },
+    "name": {
+      "maxLength": 60,
+      "minLength": 1,
+      "title": "Name",
+      "type": "string"
+    },
+    "user_id": {
+      "minLength": 1,
+      "title": "User Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "user_id",
+    "custom_group_id",
+    "name",
+    "created_at"
+  ],
+  "title": "CustomGroup",
+  "type": "object"
+}

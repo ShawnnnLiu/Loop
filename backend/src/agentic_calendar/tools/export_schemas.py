@@ -40,6 +40,16 @@ from agentic_calendar.contracts.corpus_snapshot import CorpusSnapshot
 from agentic_calendar.contracts.data_access_audit import DataAccessAuditEntry
 from agentic_calendar.contracts.draft_schedule import DraftSchedule
 from agentic_calendar.contracts.drift_event import DriftEvent
+from agentic_calendar.contracts.knowledge_map import KnowledgeMap
+from agentic_calendar.contracts.knowledge_map_overlay import (
+    CustomGroup,
+    CustomNode,
+    MasteryGrant,
+    MasterySetPoint,
+    NodeAddition,
+    NodeNote,
+    PersonalContentTombstone,
+)
 from agentic_calendar.contracts.milestone_template import MilestoneTemplate
 from agentic_calendar.contracts.motivation_profile import MotivationProfile
 from agentic_calendar.contracts.notification_log import NotificationLog
@@ -65,6 +75,7 @@ from agentic_calendar.contracts.resume_intake_input import ResumeIntakeInput
 from agentic_calendar.contracts.retrieval_query import RetrievalQuery
 from agentic_calendar.contracts.retrieval_result import RetrievalResult
 from agentic_calendar.contracts.scheduler_output import SchedulerOutput
+from agentic_calendar.contracts.skill_grouping import SkillGrouping
 from agentic_calendar.contracts.skill_taxonomy import SkillTaxonomy
 from agentic_calendar.contracts.source_claim import SourceClaim
 from agentic_calendar.contracts.sponsor import Sponsor
@@ -137,6 +148,15 @@ CONTRACTS: dict[str, type[BaseModel]] = {
     "placement_preference": PlacementPreferenceObservation,
     "pathway_template": PathwayTemplate,
     "pathway_selection": PathwaySelection,
+    "knowledge_map": KnowledgeMap,
+    "skill_grouping": SkillGrouping,
+    "knowledge_node_addition": NodeAddition,
+    "knowledge_custom_group": CustomGroup,
+    "knowledge_custom_node": CustomNode,
+    "knowledge_node_note": NodeNote,
+    "knowledge_mastery_grant": MasteryGrant,
+    "knowledge_mastery_setpoint": MasterySetPoint,
+    "knowledge_personal_tombstone": PersonalContentTombstone,
     "llm_call_log": LlmCallLog,
     "prose_attachment": ProseAttachmentRecord,
     "threshold_change_log": ThresholdChange,

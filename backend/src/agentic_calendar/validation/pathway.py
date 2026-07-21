@@ -22,6 +22,8 @@ Pure function returning a list of ``Violation`` records; never mutates inputs
 
 from __future__ import annotations
 
+from collections.abc import Collection
+
 from agentic_calendar.contracts.pathway_template import PathwayTemplate
 from agentic_calendar.contracts.syllabus_units import SyllabusUnits
 from agentic_calendar.contracts.validation_result import Violation
@@ -84,4 +86,34 @@ def check_pathway_slots(
             )
         )
 
+    return violations
+
+
+def check_knowledge_node_tags(
+    syllabus: SyllabusUnits,
+    *,
+    knowledge_node_ids: Collection[str],
+) -> list[Violation]:
+    """Return ``UNKNOWN_KNOWLEDGE_NODE`` violations for out-of-vocabulary tags.
+
+    A module tags the skills it trains via ``knowledge_node_ids``
+    (``syllabus-units.schema.md``). Every tag must name a node in the account's
+    knowledge-map vocabulary - exactly the ``StrategyConstraints.knowledge_nodes``
+    the composition root handed the Strategist (KT-C), so the gate disposes what
+    the prompt was told to respect. With no pathway selected the vocabulary is
+    empty and any tag is rejected; untagged modules are always valid (a general
+    module trains no specific node).
+    """
+    allowed = frozenset(knowledge_node_ids)
+    violations: list[Violation] = []
+    for module in syllabus.modules:
+        for node_id in module.knowledge_node_ids:
+            if node_id not in allowed:
+                violations.append(
+                    make_violation(
+                        ViolationType.UNKNOWN_KNOWLEDGE_NODE,
+                        module_id=module.module_id,
+                        knowledge_node_id=node_id,
+                    )
+                )
     return violations

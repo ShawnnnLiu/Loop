@@ -494,6 +494,55 @@ class ReasonCode(StrEnum):
     NP-A producer** - the version check lands with the registry (NP-B) and
     the coverage endpoints (NP-D)."""
 
+    # --- Knowledge map (KT-A; knowledge-map-overlay / skill-grouping / pathway-template specs) ---
+    #
+    # Story-layer knowledge-map codes. Runtime codes get producers in the map
+    # API and syllabus validation (KT-C); the build/registry-time codes get
+    # their producer in the map generator (KT-B). Defined here first so
+    # contracts, fixtures, and specs speak the same typed vocabulary from the
+    # start. The map is a presentation/memory layer and never gates the
+    # Planner or Scheduler (axiom 11 non-interference).
+    UNKNOWN_KNOWLEDGE_NODE = "UNKNOWN_KNOWLEDGE_NODE"
+    """A ``syllabus module.knowledge_node_ids`` entry is not a node on the
+    account's knowledge map (syllabus-units spec). **No KT-A producer** - the
+    validator lands in KT-C, where the account map is available."""
+
+    SKILL_NOT_IN_TRACK_VOCABULARY = "SKILL_NOT_IN_TRACK_VOCABULARY"
+    """An add-node request named a ``skill_id`` outside the account track's
+    add-picker slice (knowledge-map-overlay spec). **No KT-A producer** - the
+    add-node API lands in KT-C."""
+
+    KNOWLEDGE_NODE_ALREADY_PRESENT = "KNOWLEDGE_NODE_ALREADY_PRESENT"
+    """An add-node request named a skill already on the account's map
+    (knowledge-map-overlay spec). **No KT-A producer** - the add-node API
+    lands in KT-C."""
+
+    CUSTOM_CONTENT_LIMIT_EXCEEDED = "CUSTOM_CONTENT_LIMIT_EXCEEDED"
+    """A personal-content bound was exceeded - a per-account count cap (<= 5
+    custom groups, <= 20 custom nodes, one note per node) with the specific
+    bound in the structured violation detail. Caps are heuristic priors. Text
+    lengths are contract-enforced at parse time instead. **No KT-A producer** -
+    the count caps live in the overlay store/API (KT-C)."""
+
+    SKILL_GROUPING_MISSING_ENTRY = "SKILL_GROUPING_MISSING_ENTRY"
+    """A skill reachable from a pathway's slot seeds (or the add-picker slice)
+    has no ``skill-grouping`` row, so the map cannot be generated
+    (skill-grouping / ``07-tree-generation.md``). **Build/registry-time only;
+    no KT-A producer** - the generator lands in KT-B and can never fail at
+    runtime."""
+
+    SLOT_SEEDS_MISSING = "SLOT_SEEDS_MISSING"
+    """A pathway registered for map generation has an evidence slot with no
+    ``branch_skill_ids`` seed list (``07-tree-generation.md``).
+    **Build/registry-time only; no KT-A producer** - the generator lands in
+    KT-B."""
+
+    KNOWLEDGE_MAP_BUDGET_EXCEEDED = "KNOWLEDGE_MAP_BUDGET_EXCEEDED"
+    """A generated map exceeds the skill-node ceiling (40 Loop, 60 Tandem); the
+    fix is trimming seeds or splitting oversized groups, never silent pruning
+    (``07-tree-generation.md``). **Build/registry-time only; no KT-A
+    producer** - the generator lands in KT-B."""
+
     # --- LLM generation (axiom 22; Phase 8) ---
     #
     # Generation-side failures are distinct from validation-layer failures:

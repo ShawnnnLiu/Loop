@@ -1,0 +1,30 @@
+{
+  "skill_grouping_version": "skill-grouping-v1",
+  "taxonomy_version": "skill-taxonomy-v4",
+  "groups": [
+    {
+      "group_id": "kg-retrieval",
+      "title": "Retrieval & Grounding",
+      "blurb": "Finding and feeding the right context to a model."
+    },
+    {
+      "group_id": "kg-foundations",
+      "title": "Engineering Foundations",
+      "blurb": "Shared craft every branch leans on."
+    }
+  ],
+  "entries": [
+    {
+      "skill_id": "skill.rag",
+      "group_id": "kg-retrieval",
+      "expected_minutes": 360,
+      "blurb": "How dense and lexical retrieval differ, and when each wins."
+    },
+    {
+      "skill_id": "skill.testing",
+      "group_id": "kg-foundations",
+      "expected_minutes": 300,
+      "blurb": "Writing tests that pin behavior."
+    }
+  ]
+}

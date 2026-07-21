@@ -18,13 +18,23 @@ from .coverage import (
     pathway_fit,
     slot_coverage,
 )
+from .generation import (
+    ADVISORY_MIN_SKILL_NODES,
+    LOOP_SKILL_NODE_CEILING,
+    MapGenerationError,
+    generate_map,
+)
 from .progress import SlotProgress, story_progress
 
 __all__ = [
+    "ADVISORY_MIN_SKILL_NODES",
+    "LOOP_SKILL_NODE_CEILING",
+    "MapGenerationError",
     "PathwayFit",
     "SlotCoverage",
     "SlotProgress",
     "SlotState",
+    "generate_map",
     "pathway_fit",
     "slot_coverage",
     "story_progress",

@@ -76,3 +76,12 @@
 # [claim_curation]
 # min_confidence = 0.25
 # max_per_host = 5
+
+# [mastery]
+# knowledge-map mastery ladder (narrative-pathways KT-B). honed bar =
+# honed_fraction * a node's expected_minutes; a set-point rebases the basis to
+# setpoint_<tier>_fraction * honed bar. discovered rebases to 0 (not tunable);
+# proven is evidence-gated, never set via a set-point.
+# honed_fraction = 0.8
+# setpoint_training_fraction = 0.5
+# setpoint_honed_fraction = 1.0

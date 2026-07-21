@@ -24,17 +24,27 @@ from .generation import (
     MapGenerationError,
     generate_map,
 )
+from .mastery import (
+    DEFAULT_MASTERY_TUNING,
+    MasteryTuning,
+    folded_basis,
+    map_state,
+)
 from .progress import SlotProgress, story_progress
 
 __all__ = [
     "ADVISORY_MIN_SKILL_NODES",
+    "DEFAULT_MASTERY_TUNING",
     "LOOP_SKILL_NODE_CEILING",
     "MapGenerationError",
+    "MasteryTuning",
     "PathwayFit",
     "SlotCoverage",
     "SlotProgress",
     "SlotState",
+    "folded_basis",
     "generate_map",
+    "map_state",
     "pathway_fit",
     "slot_coverage",
     "story_progress",

@@ -432,6 +432,35 @@ def test_checkin_records_completion_once_block_is_due() -> None:
     assert row["reported"] is True
 
 
+def test_checkin_accepts_solve_confidence() -> None:
+    client, clock = _client()
+    client.post("/api/propose", json={})
+    client.post("/api/approve", json={})
+    client.post("/api/write", json={})
+    clock.advance(seconds=8 * 86400)
+
+    resp = client.post(
+        "/api/checkin",
+        json={"task_id": "dp_001", "outcome": "complete", "solve_confidence": "unsure"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["ingested_count"] == 1
+
+
+def test_checkin_rejects_out_of_enum_solve_confidence() -> None:
+    client, clock = _client()
+    client.post("/api/propose", json={})
+    client.post("/api/approve", json={})
+    client.post("/api/write", json={})
+    clock.advance(seconds=8 * 86400)
+
+    resp = client.post(
+        "/api/checkin",
+        json={"task_id": "dp_001", "outcome": "complete", "solve_confidence": "easy"},
+    )
+    assert resp.status_code == 422
+
+
 def test_checkin_before_block_due_maps_to_409() -> None:
     client, _clock = _client()
     client.post("/api/propose", json={})

@@ -28,9 +28,12 @@ from .generation import (
 )
 from .mastery import (
     DEFAULT_MASTERY_TUNING,
+    MasteryMemory,
     MasteryTuning,
+    NodeCompletion,
     folded_basis,
     map_state,
+    mastery_memory,
 )
 from .progress import SlotProgress, story_progress
 
@@ -39,7 +42,9 @@ __all__ = [
     "DEFAULT_MASTERY_TUNING",
     "LOOP_SKILL_NODE_CEILING",
     "MapGenerationError",
+    "MasteryMemory",
     "MasteryTuning",
+    "NodeCompletion",
     "PathwayFit",
     "SlotCoverage",
     "SlotProgress",
@@ -47,6 +52,7 @@ __all__ = [
     "folded_basis",
     "generate_map",
     "map_state",
+    "mastery_memory",
     "merge_additions",
     "node_id_for",
     "pathway_fit",

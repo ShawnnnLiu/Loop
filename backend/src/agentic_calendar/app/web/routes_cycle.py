@@ -29,6 +29,7 @@ from agentic_calendar.app.cycle import DEFAULT_TARGET_CALENDAR_ID, CycleService
 from agentic_calendar.contracts.checkin_event import RecoveryAction
 from agentic_calendar.contracts.common_types import EvidenceKind, MasteryTier
 from agentic_calendar.contracts.recommitment import RecommitmentChoice
+from agentic_calendar.contracts.telemetry import SolveConfidence
 from agentic_calendar.scheduler.adjustment import DraftAdjustment
 
 from .calendar_service import best_effort_free_busy, build_user_calendar_service
@@ -99,6 +100,9 @@ class CheckinRequest(BaseModel):
 
     task_id: str
     outcome: Literal["complete", "missed"]
+    # MM-B: the user's opt-in one-tap confidence self-report, only sent on a
+    # completion. Omitted = no triage = neutral (never a penalty).
+    solve_confidence: SolveConfidence | None = None
 
 
 class MarkEvidenceRequest(BaseModel):
@@ -765,4 +769,11 @@ def me(service: Service, user_id: ActingUser) -> JSONResponse:
 
 @router.post("/checkin")
 def checkin(service: Service, user_id: ActingUser, body: CheckinRequest) -> JSONResponse:
-    return _json(service.checkin(user_id, body.task_id, completed=body.outcome == "complete"))
+    return _json(
+        service.checkin(
+            user_id,
+            body.task_id,
+            completed=body.outcome == "complete",
+            solve_confidence=body.solve_confidence,
+        )
+    )

@@ -1,0 +1,11 @@
+{
+  "telemetry_event_id": "tel_inv_007",
+  "task_id": "dp_inv_007",
+  "scheduled_duration_min": 60,
+  "actual_duration_min": 62,
+  "completed": true,
+  "completion_timestamp": "2026-05-10T21:00:00-07:00",
+  "user_reschedule_count": 0,
+  "solve_confidence": "easy",
+  "data_quality": "complete"
+}

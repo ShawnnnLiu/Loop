@@ -1,0 +1,18 @@
+{
+  "max_modules": 12,
+  "required_priority_values": ["high", "medium", "low"],
+  "max_total_estimated_minutes": 4800,
+  "must_reference_claims_for_company_specific_modules": true,
+  "pathway_id": "ai-integration-engineer",
+  "unfilled_slots": [],
+  "max_slot_modules": 3,
+  "knowledge_nodes": [
+    { "node_id": "kn-rag", "title": "Retrieval fundamentals" },
+    { "node_id": "kn-embeddings", "title": "Embeddings" },
+    { "node_id": "kn-evals", "title": "Evaluation harnesses" }
+  ],
+  "mastered_node_ids": ["kn-rag"],
+  "review_node_ids": ["kn-embeddings"],
+  "max_review_modules": 2,
+  "max_review_minutes": 60
+}

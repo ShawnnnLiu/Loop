@@ -229,8 +229,18 @@ without the map screen.
   groups/nodes, notes — and the set-point tier fractions are KT-A/KT-B
   material per `06-…`; MM-A adds only the confidence axis and the slice.)
 - **MM-B — capture + fold weighting.** Completion endpoint accepts
-  `solve_confidence`; one-tap triage on the check-off flow (+ vitest;
-  skippable, no layout shift); confidence weighting added into KT-B's
+  `solve_confidence`; one-tap triage on the check-off flow, built against
+  the reference component
+  `docs/design-reference/design-loop/accountability.jsx` (`CheckInDemo`):
+  insert it as a sibling of the completed-reveal "How long, really?" row
+  that already appears when a block is marked `✓ Completed`, reusing the
+  design-system chip/pill grammar (`docs/design-reference/claude_code_handoff/DESIGN-SYSTEM.md`)
+  so it adds no required friction and no layout shift (+ vitest;
+  skippable). Review-flagged nodes get no new MM surface: they are
+  display-only data that KT-D's knowledge-map drawer renders (alongside
+  the "self-assessed" set-point label), consistent with the `06-…`
+  non-interference posture; this is a scoping decision, not an omission.
+  Confidence weighting added into KT-B's
   basis fold (`map_state` and the mastery aggregation consume the one
   shared implementation); exhaustive fold tests: weighting per enum value,
   absent-signal neutrality, grant/completion/set-point interleavings and

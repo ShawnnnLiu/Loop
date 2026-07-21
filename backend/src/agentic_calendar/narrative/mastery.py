@@ -53,11 +53,20 @@ class MasteryTuning:
     them as an argument so it never reads a file. ``discovered`` rebases to zero
     (a reset) and is not a tunable knob; ``proven`` is not settable, so a
     set-point to it rebases as ``honed``.
+
+    The ``*_confidence_weight`` fields scale a completion's minutes by the user's
+    ``solve_confidence`` self-report before it folds into the basis (MM-A priors;
+    the weighting itself lands in MM-B). Absent confidence weighs ``1.0`` - the
+    signal is opt-in and not reporting is never punished, so there is no
+    ``absent`` knob to tune (``08-mastery-memory.md`` m1).
     """
 
     honed_fraction: float = 0.8
     setpoint_training_fraction: float = 0.5
     setpoint_honed_fraction: float = 1.0
+    confident_confidence_weight: float = 1.0
+    unsure_confidence_weight: float = 0.5
+    needed_help_confidence_weight: float = 0.25
 
 
 DEFAULT_MASTERY_TUNING = MasteryTuning()

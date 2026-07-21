@@ -47,10 +47,19 @@ When `completed` is `true`:
 
 ## Optional Fields
 
-- `subjective_difficulty` — 1 to 5 self-report.
-- `captured_offline` — boolean; true when the event was logged while the client was offline.
-- `synced_at` — timestamp at which the event reached the server.
-- `duration_estimated` — boolean; true when the system filled in `actual_duration_min` because the user did not provide it.
+- `subjective_difficulty` - 1 to 5 self-report.
+- `captured_offline` - boolean; true when the event was logged while the client was offline.
+- `synced_at` - timestamp at which the event reached the server.
+- `duration_estimated` - boolean; true when the system filled in `actual_duration_min` because the user did not provide it.
+- `solve_confidence` - closed enum (see below); the user's one-tap self-report at completion of whether they could solve or apply the material unaided. A distinct axis from `subjective_difficulty` (how hard it *felt* vs. whether the user *owns it now*); both stay optional and independent. Feeds the mastery basis fold (`../implementation-plans/narrative-pathways/08-mastery-memory.md`).
+
+## Allowed `solve_confidence` Values
+
+- `confident` - "I could do this again unaided."
+- `unsure` - "I got through it but I'm shaky."
+- `needed_help` - "I leaned on help the whole way."
+
+The signal is opt-in: skipping the triage is always allowed and is never a penalty (empty-over-fabrication). The user reports it; code records it; an LLM never assigns it (axiom 08 source-confidence rule). Enum only, no free text, on the existing append-only telemetry store - no new store.
 
 ## Allowed `data_quality` Values
 
@@ -80,6 +89,7 @@ The MVP **may** store:
 - Actual duration.
 - Reschedule count.
 - Subjective difficulty when the user provides it.
+- Solve-confidence self-report when the user provides it. Private to the user; never surfaced in sponsor reports.
 - Data-quality tagging metadata defined above.
 
 ## Invariants
@@ -89,6 +99,7 @@ The MVP **may** store:
 - `completion_timestamp` is required when `completed` is `true`. If absent, the system defaults to the scheduled end time and tags the event accordingly.
 - `user_reschedule_count` is a non-negative integer.
 - `subjective_difficulty` is an integer in `[1, 5]` when present.
+- `solve_confidence`, when present, must be one of `confident`, `unsure`, `needed_help`, and requires `completed: true` (a confidence self-report on an uncompleted task is contradictory).
 - `data_quality` must be one of the allowed values.
 - `telemetry_event_id` is unique; reingestion uses the id for deduplication.
 - Telemetry events are append-only and never silently mutated.
@@ -139,6 +150,18 @@ Reason: offline events must carry `data_quality: "offline_synced"` or stricter.
 ```
 
 Reason: difficulty out of range.
+
+```json
+{ "solve_confidence": "confident", "completed": false }
+```
+
+Reason: `solve_confidence` requires `completed: true`.
+
+```json
+{ "solve_confidence": "easy", "completed": true }
+```
+
+Reason: `solve_confidence` outside the closed enum (`confident`, `unsure`, `needed_help`).
 
 ## Related Docs
 

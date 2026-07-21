@@ -10,6 +10,16 @@
       ],
       "title": "DataQuality",
       "type": "string"
+    },
+    "SolveConfidence": {
+      "description": "The user's one-tap self-report of whether they own the material now.\n\nA distinct axis from ``subjective_difficulty`` (how hard it *felt* vs.\nwhether the user could *do it again unaided*). Opt-in: skipping the triage\nis always allowed and never a penalty (empty-over-fabrication). The user\nreports it; code records it; an LLM never assigns it (axiom 08\nsource-confidence rule). It feeds the mastery basis fold\n(``08-mastery-memory.md``); the confidence weighting itself lands in MM-B.",
+      "enum": [
+        "confident",
+        "unsure",
+        "needed_help"
+      ],
+      "title": "SolveConfidence",
+      "type": "string"
     }
   },
   "additionalProperties": false,
@@ -62,6 +72,17 @@
       "exclusiveMinimum": 0,
       "title": "Scheduled Duration Min",
       "type": "integer"
+    },
+    "solve_confidence": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/SolveConfidence"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     },
     "subjective_difficulty": {
       "anyOf": [

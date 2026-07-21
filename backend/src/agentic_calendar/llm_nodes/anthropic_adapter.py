@@ -381,7 +381,13 @@ STRATEGIST_CONFIG = AdapterConfig(
     # from the constraints' knowledge_nodes vocabulary. The new
     # StrategyConstraints.knowledge_nodes field also serializes into the bundle
     # JSON (at its [] default), so both the system and full-render hashes move.
-    prompt_version="strategist-v7-2026-07-20",
+    # 2026-07-21 (MM-A): StrategyConstraints gained the mastery slice
+    # (mastered_node_ids / review_node_ids / max_review_modules /
+    # max_review_minutes); they serialize into the input bundle at their
+    # defaults, moving the full-render hash. System-prompt rules are unchanged
+    # (the mastery-exclusion rule lands in MM-C), so v7 holds; only the date
+    # suffix advances and only the full-render hash is re-pinned.
+    prompt_version="strategist-v7-2026-07-21",
     max_tokens=16384,
     input_price_per_mtok=5.00,
     output_price_per_mtok=25.00,

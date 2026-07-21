@@ -5,7 +5,11 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from agentic_calendar.contracts.telemetry import DataQuality, TelemetryEvent
+from agentic_calendar.contracts.telemetry import (
+    DataQuality,
+    SolveConfidence,
+    TelemetryEvent,
+)
 from tests._fixture_loader import iter_invalid, iter_valid
 
 CONTRACT = "telemetry"
@@ -69,3 +73,49 @@ def test_incomplete_does_not_require_actuals() -> None:
     event = TelemetryEvent.model_validate(payload)
     assert event.completed is False
     assert event.actual_duration_min is None
+
+
+def test_solve_confidence_optional_and_defaults_absent() -> None:
+    """The triage is opt-in: a completed event without it is valid, absent."""
+    payload = {
+        "telemetry_event_id": "tel_conf_absent",
+        "task_id": "dp_conf",
+        "scheduled_duration_min": 60,
+        "actual_duration_min": 60,
+        "completed": True,
+        "completion_timestamp": "2026-05-10T21:00:00-07:00",
+        "user_reschedule_count": 0,
+        "data_quality": DataQuality.COMPLETE,
+    }
+    event = TelemetryEvent.model_validate(payload)
+    assert event.solve_confidence is None
+
+
+@pytest.mark.parametrize("value", list(SolveConfidence))
+def test_solve_confidence_accepts_each_enum_value(value: SolveConfidence) -> None:
+    payload = {
+        "telemetry_event_id": f"tel_conf_{value.value}",
+        "task_id": "dp_conf",
+        "scheduled_duration_min": 60,
+        "actual_duration_min": 60,
+        "completed": True,
+        "completion_timestamp": "2026-05-10T21:00:00-07:00",
+        "user_reschedule_count": 0,
+        "solve_confidence": value,
+        "data_quality": DataQuality.COMPLETE,
+    }
+    assert TelemetryEvent.model_validate(payload).solve_confidence is value
+
+
+def test_solve_confidence_requires_completion() -> None:
+    payload = {
+        "telemetry_event_id": "tel_conf_incomplete",
+        "task_id": "dp_conf",
+        "scheduled_duration_min": 60,
+        "completed": False,
+        "user_reschedule_count": 0,
+        "solve_confidence": SolveConfidence.CONFIDENT,
+        "data_quality": DataQuality.COMPLETE,
+    }
+    with pytest.raises(ValidationError):
+        TelemetryEvent.model_validate(payload)

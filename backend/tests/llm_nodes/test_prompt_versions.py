@@ -93,8 +93,9 @@ _PINNED: list[tuple[str, object, str, str]] = [
         # max_slot_modules modules to unfilled_slots via evidence_slot_id) +
         # the seven-rule self-check line changed the bytes again. v7 (KT-C):
         # system-prompt rule 8 (tag modules with knowledge_node_ids) + the
-        # eight-rule self-check line.
-        "strategist-v7-2026-07-20",
+        # eight-rule self-check line. MM-A (2026-07-21) advances the version
+        # date but leaves the system prompt untouched, so this hash is unchanged.
+        "strategist-v7-2026-07-21",
         "3df3536eeb4b02b0cff51e672945939b7c42a6f0cfaf61fd597bd7c1ae49e562",
     ),
     (
@@ -499,8 +500,12 @@ _FULL_PROMPT_PINS: list[
         # serialize into the input bundle — rendered bytes changed, rehashed.
         # v6 (NP-D): system-prompt rule 7 changed the system frame, rehashed.
         # v7 (KT-C): rule 8 + the knowledge_nodes default [] in the bundle JSON.
-        "strategist-v7-2026-07-20",
-        "544fb5bb4c405276d4ba59db2acf111cffb06f5cbc6940c5ecf1763467689eb3",
+        # MM-A (2026-07-21): the mastery slice (mastered_node_ids /
+        # review_node_ids / max_review_modules / max_review_minutes) now
+        # serializes into the bundle JSON at its defaults — rendered bytes
+        # changed, rehashed.
+        "strategist-v7-2026-07-21",
+        "3357ce47ac505f6ed59276c7294943e92c22f52e2a6c1088f70edb147afdb2c9",
     ),
     (
         "planner",

@@ -247,6 +247,17 @@ and can never occur at runtime.
 
 ## UI — the Knowledge Map (expandable groups in Loop's skin)
 
+> **Superseded for visuals (2026-07-21).** The warm-paper cartographer's-chart
+> treatment below is the *original* visual, shipped as the KT-D DOM accordion.
+> The 2026-07-20 design drop `docs/design-reference/Loop - Star Atlas.html`
+> replaced the map's visual source of truth with an observatory / star-atlas
+> rendering, and its adoption plan lives in
+> `docs/implementation-plans/knowledge-map-atlas/` (SA-A … SA-E). The
+> **semantics** in this doc (four tiers, honest counts, no edges, content
+> classes, add-only rule, customization surfaces, non-interference) remain fully
+> normative; only the palette/metaphor/interaction rendering is superseded.
+> Read the atlas folder for the current visual plan.
+
 Loop's design language is warm paper, ink, clay, sage, gold
 (`frontend/src/styles/tokens.css`) — an **illuminated cartographer's
 chart**, not a neon tech-tree. The interaction model replaces the fixed

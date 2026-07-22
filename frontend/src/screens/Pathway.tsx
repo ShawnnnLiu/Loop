@@ -5,6 +5,24 @@ import { ApiError, api, errorMessage } from '../api/client'
 import type { KnowledgeMapView, PathwayCard } from '../api/types'
 import { KnowledgeMap } from '../components/KnowledgeMap'
 import { NodeDrawer } from '../components/NodeDrawer'
+import { Observatory } from '../components/Observatory'
+
+// Desktop gets the Star Atlas observatory (SA-C); phones keep the accordion until
+// SA-D swaps in MobileSky. The breakpoint keeps the force-directed layoutSky off
+// small screens (it is desktop-only, 02-…). Tracks the media query live so a
+// resize across the breakpoint re-renders the right surface.
+function useIsDesktop(): boolean {
+  const [desktop, setDesktop] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(min-width: 900px)').matches,
+  )
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 900px)')
+    const onChange = () => setDesktop(mq.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
+  return desktop
+}
 
 // The Pathway screen (KT-D): the account's full knowledge map. Structure comes
 // from the pathway registry + the append-only overlay; every tier is the
@@ -23,6 +41,7 @@ export function PathwayScreen() {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
+  const isDesktop = useIsDesktop()
 
   function load(initial = false) {
     if (initial) setLoading(true)
@@ -138,6 +157,17 @@ export function PathwayScreen() {
               Choose a pathway
             </Link>
           </div>
+        </div>
+      ) : isDesktop ? (
+        <div style={{ marginTop: 20, maxWidth: 1080 }}>
+          <Observatory
+            view={view}
+            pathwayName={card?.display_name ?? 'Your knowledge map'}
+            selectedNodeId={selectedNodeId}
+            onSelectNode={setSelectedNodeId}
+            onMutate={mutate}
+            busy={busy}
+          />
         </div>
       ) : (
         <div style={{ marginTop: 20, maxWidth: 760 }}>

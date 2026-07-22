@@ -1828,3 +1828,368 @@ select.input {
     padding-left: 26px;
   }
 }
+
+/* --------------------------------------------------------------------------- */
+/* Star Atlas — the desktop Observatory (SA-C). The one dark surface: a bezel   */
+/* holding a brass-edged rim over the radial sky. Ported from the visual source */
+/* of truth (docs/design-reference/Loop - Star Atlas.html). SVG classes are     */
+/* scoped under .rim so the chart's grammar never leaks into the light page.    */
+/* Ornaments (orrery, bezel ticks, brackets), the drifting probe and the        */
+/* tier-up bloom land in SA-E; reduced-motion fallbacks ship here with their    */
+/* animations.                                                                  */
+/* --------------------------------------------------------------------------- */
+.chart-wrap {
+  position: relative;
+}
+.bezel {
+  background: linear-gradient(160deg, #2b333f, #171f2a 42%, #232b37);
+  border: 1px solid #3a4553;
+  border-radius: 16px;
+  padding: 11px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 14px 34px -16px rgba(22, 33, 46, 0.55);
+}
+.rim {
+  position: relative;
+  border-radius: 8px;
+  border: 1px solid var(--brass);
+  box-shadow:
+    inset 0 0 0 1px rgba(138, 111, 63, 0.22),
+    inset 0 0 46px rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+  background: var(--sky);
+}
+.rim svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.rim text {
+  font-family: var(--sans);
+}
+.rim .sysg,
+.rim .nodeg {
+  cursor: pointer;
+}
+.rim .hit {
+  fill: transparent;
+  stroke: none;
+}
+.rim .selring {
+  stroke: var(--star-gold);
+  stroke-width: 1.2;
+  fill: none;
+  stroke-dasharray: 3 3;
+  opacity: 0.9;
+}
+.rim .rlabel {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 15px;
+  letter-spacing: 0.12em;
+  fill: rgba(213, 197, 168, 0.6);
+}
+.rim .rlabel.lit {
+  fill: rgba(240, 208, 146, 0.85);
+}
+.rim .caplab {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  fill: var(--chalk-dim);
+}
+.rim .caplab.lit {
+  fill: var(--star-gold);
+}
+.rim .slab {
+  font-family: var(--serif);
+  font-size: 13.5px;
+  fill: #dbe4ea;
+  paint-order: stroke;
+  stroke: rgba(11, 20, 32, 0.85);
+  stroke-width: 3.5px;
+  stroke-linejoin: round;
+}
+.rim .scount {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  fill: var(--chalk-dim);
+  paint-order: stroke;
+  stroke: rgba(11, 20, 32, 0.85);
+  stroke-width: 3px;
+}
+.rim .scount.warm {
+  fill: var(--star-gold);
+}
+.rim .plab {
+  font-size: 10.5px;
+  font-weight: 600;
+  fill: #c6d2dc;
+  paint-order: stroke;
+  stroke: rgba(11, 20, 32, 0.88);
+  stroke-width: 3.2px;
+  stroke-linejoin: round;
+}
+.rim .plab.dim {
+  fill: #7f92a5;
+}
+.rim .yourshdr {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.26em;
+  fill: rgba(207, 218, 226, 0.42);
+}
+.rim .del-group {
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: 0.08em;
+  fill: var(--chalk-dim);
+  cursor: pointer;
+}
+.rim .del-group:hover {
+  fill: var(--magma);
+}
+.rim .plaq-n {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  fill: #d5c5a8;
+}
+.rim .plaq-c {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.05em;
+  fill: var(--chalk-dim);
+}
+.atlas-dust {
+  transition: transform 0.25s ease-out;
+}
+.rim .twinkle {
+  animation: atlas-tw 4.2s ease-in-out infinite;
+}
+@keyframes atlas-tw {
+  0%,
+  100% {
+    opacity: 0.22;
+  }
+  50% {
+    opacity: 0.75;
+  }
+}
+.rim .pulse {
+  animation: atlas-breathe 3.6s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+@keyframes atlas-breathe {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+.rim .shimmer {
+  animation: atlas-shim 2.8s ease-in-out infinite;
+}
+@keyframes atlas-shim {
+  0%,
+  100% {
+    opacity: 0.2;
+  }
+  40% {
+    opacity: 0.6;
+  }
+  55% {
+    opacity: 0.3;
+  }
+  70% {
+    opacity: 0.55;
+  }
+}
+.rim .trail {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: atlas-spin 90s linear infinite;
+}
+.rim .rays {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: atlas-spin 160s linear infinite;
+}
+@keyframes atlas-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.rim .consti {
+  animation: atlas-cfade 1s ease-out forwards;
+}
+@keyframes atlas-cfade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+/* Pointer-follow tooltip — decorative; the drawer is the accessible detail. */
+.atlas-tt {
+  position: absolute;
+  z-index: 30;
+  pointer-events: none;
+  background: var(--ink);
+  color: var(--paper);
+  border-radius: 9px;
+  padding: 7px 11px;
+  font-size: 12px;
+  line-height: 1.45;
+  max-width: 260px;
+  box-shadow: var(--shadow);
+  border: 1px solid rgba(232, 192, 122, 0.35);
+  display: none;
+}
+.atlas-tt.show {
+  display: block;
+}
+.atlas-tt .tname {
+  font-weight: 700;
+}
+.atlas-tt .tmeta {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: rgba(251, 248, 242, 0.72);
+  margin-top: 2px;
+}
+/* "Nothing lit yet" overlay — a real card over the dark rim. */
+.atlas-empty {
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  transform: translate(-50%, -50%);
+  width: 352px;
+  max-width: 82%;
+  text-align: center;
+  padding: 20px 22px;
+  z-index: 10;
+}
+.atlas-empty h3 {
+  margin: 0 0 6px;
+  font-family: var(--serif);
+  font-weight: 500;
+  font-size: 19px;
+}
+.atlas-empty p {
+  margin: 0 0 13px;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+/* Atlas drawer signal cards (SA-C): session counts, evidence, review flag,
+   self-assessed tick. Each is guarded by its SA-A signal in NodeDrawer. */
+.km-satick {
+  color: var(--sage-deep);
+  font-weight: 600;
+}
+.km-dcounts {
+  border-radius: var(--r-sm);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.km-cr {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.km-cr b {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+  text-align: right;
+}
+.km-evfile {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-sm);
+  padding: 11px 13px;
+  background: var(--paper);
+}
+.km-fg {
+  width: 34px;
+  height: 42px;
+  border-radius: 6px;
+  flex: none;
+  background: var(--card);
+  border: 1px solid var(--line-2);
+  display: grid;
+  place-items: center;
+  font-size: 15px;
+  color: var(--gold-deep);
+  box-shadow: var(--shadow-sm);
+}
+.km-fn {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+  word-break: break-word;
+}
+.km-fd {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--sage-deep);
+  font-weight: 600;
+  margin-top: 2px;
+}
+.km-flagcard {
+  border: 1px dashed var(--gold);
+  background: var(--gold-soft);
+  border-radius: var(--r-sm);
+  padding: 11px 13px;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+.km-flagcard b {
+  color: var(--gold-deep);
+}
+/* Reduced motion — every atlas loop stills to a calm opacity; the focus glide
+   and dust parallax go instant (03-…/01-…). The dedicated CDP stillness audit
+   rides with SA-F; the fallbacks themselves ship here. */
+@media (prefers-reduced-motion: reduce) {
+  .rim .twinkle,
+  .rim .pulse,
+  .rim .shimmer,
+  .rim .trail,
+  .rim .rays {
+    animation: none;
+  }
+  .rim .twinkle {
+    opacity: 0.45;
+  }
+  .rim .pulse {
+    opacity: 0.6;
+  }
+  .rim .shimmer {
+    opacity: 0.4;
+  }
+  .rim .consti {
+    animation: none;
+    opacity: 1;
+  }
+  .atlas-dust {
+    transition: none;
+  }
+}

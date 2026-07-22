@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react'
 import { api } from '../api/client'
 import type { KnowledgeMapView, KnowledgeNodeView, MasteryTier } from '../api/types'
 import { MASTERY_TIERS } from '../api/types'
+import { readSignals } from '../lib/atlas/signals'
+import { fmtDate, fmtWhen } from '../lib/datetime'
 import {
   SETTABLE_TIERS,
   TIER_MEANING,
@@ -64,6 +66,13 @@ export function NodeDrawer({
   const isCustom = node.kind === 'custom'
   const noteChanged = noteText.trim() !== (node.note ?? '')
 
+  // Additive atlas signals (SA-A), each read defensively: a null/false signal
+  // simply omits its card (the graceful-degradation contract, 02-…).
+  const signals = readSignals(node)
+  const isProven = node.tier === 'proven'
+  const hasEvidence = isProven && (signals.evidenceLabel !== null || signals.evidenceConfirmedAt !== null)
+  const hasSessionCounts = signals.sessionsTotal !== null && signals.sessionsDone !== null
+
   return (
     <>
       <div className="km-backdrop" onClick={onClose} aria-hidden="true" />
@@ -91,7 +100,64 @@ export function NodeDrawer({
           )}
           <p className="muted" style={{ fontSize: 12, margin: 0, lineHeight: 1.5 }}>
             <b style={{ color: 'var(--ink-soft)' }}>{tierLabel(node.tier)}</b> — {TIER_MEANING[node.tier]}
+            {signals.selfAssessed && <span className="km-satick"> ✓ self-assessed</span>}
           </p>
+
+          {/* Session progress — the same plan/telemetry counts the Today screen
+              shows, surfaced onto the node (SA-A). Omitted when absent. */}
+          {!isCapstone && (hasSessionCounts || signals.nextSessionAt) && (
+            <div className="km-dcounts card soft">
+              {hasSessionCounts && (
+                <div className="km-cr">
+                  <span>Sessions</span>
+                  <b>
+                    {signals.sessionsDone} of {signals.sessionsTotal} done
+                  </b>
+                </div>
+              )}
+              {node.expected_minutes != null && (
+                <div className="km-cr">
+                  <span>Planned study</span>
+                  <b>{node.expected_minutes} min</b>
+                </div>
+              )}
+              {signals.nextSessionAt && (
+                <div className="km-cr">
+                  <span>Next session</span>
+                  <b>{fmtWhen(signals.nextSessionAt)}</b>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Review shimmer's explanation (08-…: honed on minutes, shaky on
+              confidence). Never lowers the tier. */}
+          {signals.reviewFlagged && (
+            <div className="km-flagcard">
+              <b>Revisit?</b> The study minutes are done, but your own check-ins after these
+              sessions were shaky. Still honed — just worth a second look.
+            </div>
+          )}
+
+          {/* Proven evidence anchor (SA-A). Skills carry a confirmed-at time; a
+              capstone carries its matched artifact label. Either may be absent. */}
+          {hasEvidence && (
+            <div>
+              <div className="label">Evidence</div>
+              <div className="km-evfile" style={{ marginTop: 7 }}>
+                <div className="km-fg">✦</div>
+                <div>
+                  <div className="km-fn">{signals.evidenceLabel ?? 'Confirmed artifact'}</div>
+                  <div className="km-fd">
+                    ✓{' '}
+                    {signals.evidenceConfirmedAt
+                      ? `confirmed ${fmtDate(signals.evidenceConfirmedAt)}`
+                      : 'confirmed'}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {node.kind === 'skill' && node.skill_id && (
             <div>

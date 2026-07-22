@@ -1,12 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 import { api } from '../api/client'
-import type {
-  AddableSkill,
-  KnowledgeGroupView,
-  KnowledgeMapView,
-  KnowledgeNodeView,
-} from '../api/types'
+import type { KnowledgeGroupView, KnowledgeMapView, KnowledgeNodeView } from '../api/types'
 import {
   branchCountLabel,
   branchGroups,
@@ -17,6 +12,7 @@ import {
   partitionGroups,
   tierLabel,
 } from '../lib/knowledgeMap'
+import { AddSkillPicker, CreateForm } from './MapForms'
 
 // The knowledge map (KT-D): branches (one per evidence slot) → group waypoints
 // that expand inline (accordion) into their skill nodes on the gilding ramp, then
@@ -52,139 +48,6 @@ function NodeRow({
 function waypointClass(group: KnowledgeGroupView): string {
   if (group.total_count === 0 || group.honed_count === 0) return 'km-wp-0'
   return group.honed_count >= group.total_count ? 'km-wp-full' : 'km-wp-part'
-}
-
-/** The "Add a skill" picker — the closed add-vocabulary (track slice ∩ placeable −
- *  already-present). Loaded on open; a pick calls add-node (server places it by its
- *  grouping row) and hands back the refreshed map. */
-function AddSkillPicker({
-  onMutate,
-  busy,
-}: {
-  onMutate: (fn: () => Promise<KnowledgeMapView>) => void
-  busy: boolean
-}) {
-  const [skills, setSkills] = useState<AddableSkill[] | null>(null)
-  const [query, setQuery] = useState('')
-  const [loadError, setLoadError] = useState(false)
-
-  useEffect(() => {
-    api
-      .addVocabulary()
-      .then((res) => setSkills(res.skills))
-      .catch(() => setLoadError(true))
-  }, [])
-
-  const filtered = (skills ?? []).filter((s) =>
-    s.title.toLowerCase().includes(query.trim().toLowerCase()),
-  )
-
-  return (
-    <div className="km-inline-form">
-      <div className="label" style={{ color: 'var(--clay-deep)' }}>
-        Add a skill
-      </div>
-      <p className="muted" style={{ fontSize: 11.5, margin: '6px 0 0', lineHeight: 1.5 }}>
-        Pick from your track&rsquo;s vocabulary; we place it in the right group. It becomes a
-        first-class planning target next time you regenerate.
-      </p>
-      {loadError ? (
-        <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
-          Couldn&rsquo;t load the skill list — try again in a moment.
-        </p>
-      ) : skills === null ? (
-        <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
-          Loading…
-        </p>
-      ) : skills.length === 0 ? (
-        <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
-          Every skill in your track&rsquo;s vocabulary is already on your map.
-        </p>
-      ) : (
-        <>
-          <input
-            className="input"
-            style={{ marginTop: 8 }}
-            aria-label="search skills to add"
-            placeholder="Search skills…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-          <div className="km-pick">
-            {filtered.map((s) => (
-              <button
-                key={s.skill_id}
-                type="button"
-                disabled={busy}
-                onClick={() => onMutate(() => api.addKnowledgeNode(s.skill_id))}
-              >
-                {s.title}
-              </button>
-            ))}
-            {filtered.length === 0 && (
-              <p className="muted" style={{ fontSize: 12 }}>
-                No match.
-              </p>
-            )}
-          </div>
-        </>
-      )}
-    </div>
-  )
-}
-
-/** A small named-entity form (custom group / custom node). */
-function CreateForm({
-  title,
-  withDescription,
-  submitLabel,
-  busy,
-  onSubmit,
-}: {
-  title: string
-  withDescription?: boolean
-  submitLabel: string
-  busy: boolean
-  onSubmit: (name: string, description: string) => void
-}) {
-  const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
-  return (
-    <div className="km-inline-form">
-      <div className="label" style={{ color: 'var(--clay-deep)' }}>
-        {title}
-      </div>
-      <input
-        className="input"
-        style={{ marginTop: 8 }}
-        aria-label={`${title} name`}
-        placeholder="Name"
-        maxLength={60}
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-      />
-      {withDescription && (
-        <input
-          className="input"
-          style={{ marginTop: 8 }}
-          aria-label={`${title} description`}
-          placeholder="Description (optional)"
-          maxLength={500}
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-        />
-      )}
-      <button
-        type="button"
-        className="btn btn-primary sm"
-        style={{ marginTop: 10 }}
-        disabled={busy || name.trim().length === 0}
-        onClick={() => onSubmit(name.trim(), description.trim())}
-      >
-        {submitLabel}
-      </button>
-    </div>
-  )
 }
 
 export function KnowledgeMap({

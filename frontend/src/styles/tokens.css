@@ -32,6 +32,22 @@
   --line-2: #ddd2bf;
   --line-3: #cdbfa8;
 
+  /* Star Atlas (Knowledge Map observatory) — the one dark surface, an instrument
+     embedded in the light page, not a theme. Ported verbatim from the design
+     page's :root (docs/design-reference/Loop - Star Atlas.html). The existing
+     --gold (light chrome) and the new --star-gold (lit stars) coexist. The SVG
+     <defs> gradient set these pair with ships with the chart in SA-C (AtlasDefs);
+     SVG gradient markup cannot live in a stylesheet. */
+  --sky: #0b1420;
+  --sky-2: #142333;
+  --chalk: #cfdae2;
+  --chalk-dim: #8ea1b5;
+  --star-gold: #e8c07a;
+  --magma: #e0764a;
+  --ocean: #3f8f88;
+  --brass: #8a6f3f;
+  --brass-dim: rgba(138, 111, 63, 0.45);
+
   --serif: 'Newsreader', Georgia, serif;
   --sans: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
   --mono: 'Spline Sans Mono', ui-monospace, 'SF Mono', Menlo, monospace;

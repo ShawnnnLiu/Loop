@@ -279,6 +279,22 @@ export interface KnowledgeNodeView {
   note: string | null
   linked_module_ids: string[]
   is_personal: boolean
+  // Additive atlas signals (Star Atlas SA-A). Deterministic, server-computed
+  // flourishes; a null/false signal simply drops its flourish (never fabricated).
+  /** Active-plan sessions training this node; null when it has no linked work. */
+  sessions_total: number | null
+  /** Of `sessions_total`, how many carry completed telemetry (null in lockstep). */
+  sessions_done: number | null
+  /** Earliest scheduled start after now among linked tasks (ISO); null if none. */
+  next_session_at: string | null
+  /** Opaque evidence label behind a proven capstone; null for skills/unproven. */
+  evidence_label: string | null
+  /** When a proven skill's mark-evidence anchor was recorded (ISO); null else. */
+  evidence_confirmed_at: string | null
+  /** Honed on raw minutes but not confidence-weighted — the review shimmer. */
+  review_flagged: boolean
+  /** Tier lifted by a user set-point above earned study — the self-assessed tick. */
+  self_assessed: boolean
 }
 
 /** Mirror of app/results.py::KnowledgeGroupView — a group waypoint with honest

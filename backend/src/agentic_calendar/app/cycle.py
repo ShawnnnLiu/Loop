@@ -381,6 +381,16 @@ class _ReplanDecision:
 #: (``06-…``: proven ⊃ honed). No average, no percentage - a "2/5 honed" chip.
 _MASTERED_TIERS = frozenset({MasteryTier.HONED, MasteryTier.PROVEN})
 
+#: Ordinal rank of the mastery ladder - used to detect when a user set-point
+#: lifted a node's tier above what derived study alone gives (the SA-A
+#: ``self_assessed`` signal). Never a score the user sees; a comparison key only.
+_TIER_RANK = {
+    MasteryTier.DISCOVERED: 0,
+    MasteryTier.TRAINING: 1,
+    MasteryTier.HONED: 2,
+    MasteryTier.PROVEN: 3,
+}
+
 #: Personal-content per-account count caps (``06-…``; heuristic priors). Exceeding
 #: one is ``CUSTOM_CONTENT_LIMIT_EXCEEDED`` with the specific bound in the detail.
 _MAX_CUSTOM_GROUPS = 5
@@ -968,12 +978,20 @@ class CycleService:
                     completions.setdefault(node_id, []).append(completion)
         return completions
 
-    def _map_tiers(
+    def _mastery_fold_inputs(
         self, profile: UserProfile, account: _AccountMap
-    ) -> dict[str, MasteryTier]:
-        """The deterministic per-node tier via ``map_state`` (KT-C / MM-B)."""
+    ) -> dict[str, Any] | None:
+        """The shared ``map_state`` / ``mastery_memory`` fold inputs (KT-C / MM-B).
+
+        One deterministic input bundle - grants, set-points, completion telemetry,
+        plus the training/slot-coverage signals - that every consumer folds: the
+        per-node tiers (:meth:`_map_tiers`), the review flag, and the self-assessed
+        signal (SA-A). Assembling it once keeps the fold's meaning in a single
+        place; the kwargs match ``map_state``'s keyword parameters. ``None`` when
+        there is no live map.
+        """
         if account.map is None or account.template is None:
-            return {}
+            return None
         env = self._env
         user_id = profile.user_id
         # Training signal: skill nodes trained by a module that has >= 1 task in
@@ -997,17 +1015,132 @@ class CycleService:
                 for p in story_progress(profile, syllabus, account.template)
                 if p.in_progress
             }
-        return map_state(
-            account.map,
-            grants=env.knowledge_overlay_store.mastery_grants_for_user(user_id),
-            setpoints=env.knowledge_overlay_store.setpoints_for_user(user_id),
-            completions=self._completed_minutes_by_node(profile),
-            custom_nodes=account.custom_nodes,
-            training_node_ids=training_node_ids,
-            filled_slot_ids=filled_slot_ids,
-            in_progress_slot_ids=in_progress_slot_ids,
-            tuning=env.tuning.mastery,
+        return {
+            "grants": env.knowledge_overlay_store.mastery_grants_for_user(user_id),
+            "setpoints": env.knowledge_overlay_store.setpoints_for_user(user_id),
+            "completions": self._completed_minutes_by_node(profile),
+            "custom_nodes": account.custom_nodes,
+            "training_node_ids": training_node_ids,
+            "filled_slot_ids": filled_slot_ids,
+            "in_progress_slot_ids": in_progress_slot_ids,
+            "tuning": env.tuning.mastery,
+        }
+
+    def _map_tiers(
+        self, profile: UserProfile, account: _AccountMap
+    ) -> dict[str, MasteryTier]:
+        """The deterministic per-node tier via ``map_state`` (KT-C / MM-B)."""
+        inputs = self._mastery_fold_inputs(profile, account)
+        if inputs is None:
+            return {}
+        assert account.map is not None  # inputs is not None ⇒ map resolved
+        return map_state(account.map, **inputs)
+
+    @staticmethod
+    def _evidence_grant_times(
+        grants: Sequence[MasteryGrant],
+    ) -> dict[str, datetime]:
+        """node_id -> latest ``evidence``-source grant time (SA-A proven anchor).
+
+        The mark-evidence record's timestamp - the only stored fact about a skill
+        node's evidence (mark-evidence keeps no label, so a skill carries no
+        ``evidence_label``, only this ``evidence_confirmed_at``)."""
+        latest: dict[str, datetime] = {}
+        for grant in grants:
+            if grant.source is not MasteryGrantSource.EVIDENCE:
+                continue
+            prior = latest.get(grant.node_id)
+            if prior is None or grant.created_at > prior:
+                latest[grant.node_id] = grant.created_at
+        return latest
+
+    def _session_signals(
+        self, user_id: str
+    ) -> dict[str, tuple[int, int, datetime | None]]:
+        """Per-skill-node ``(total, done, next_upcoming_start)`` (SA-A trail/probe).
+
+        The same numbers Today/Week derive from the active plan, projected onto the
+        skill nodes each task's module trains: ``total`` scheduled sessions,
+        ``done`` telemetry-confirmed sessions, and the earliest active-draft start
+        strictly after now (``None`` when nothing upcoming is scheduled). A node
+        with no active-plan task is absent - the renderer then draws no trail.
+        Capstone/custom nodes never appear (modules link skill nodes only)."""
+        env = self._env
+        syllabus = env.state.get_syllabus(user_id)
+        active = env.plan_store.get_active(user_id)
+        if syllabus is None or active is None:
+            return {}
+        nodes_by_module = {
+            module.module_id: module.knowledge_node_ids
+            for module in syllabus.modules
+            if module.knowledge_node_ids
+        }
+        if not nodes_by_module:
+            return {}
+        draft = self._active_draft(user_id)
+        starts = (
+            {entry.task_id: entry.start for entry in draft.entries}
+            if draft is not None
+            else {}
         )
+        now = env.clock.now()
+        total: dict[str, int] = {}
+        done: dict[str, int] = {}
+        next_at: dict[str, datetime] = {}
+        for task in active.plan.tasks:
+            node_ids = nodes_by_module.get(task.module_id)
+            if not node_ids:
+                continue
+            completed = any(
+                event.completed
+                for event in env.telemetry_store.list_for_task(task.task_id)
+            )
+            start = starts.get(task.task_id)
+            upcoming = start if (start is not None and start > now) else None
+            for node_id in node_ids:
+                total[node_id] = total.get(node_id, 0) + 1
+                if completed:
+                    done[node_id] = done.get(node_id, 0) + 1
+                if upcoming is not None:
+                    prior = next_at.get(node_id)
+                    if prior is None or upcoming < prior:
+                        next_at[node_id] = upcoming
+        return {
+            node_id: (count, done.get(node_id, 0), next_at.get(node_id))
+            for node_id, count in total.items()
+        }
+
+    def _capstone_evidence(
+        self, profile: UserProfile, account: _AccountMap
+    ) -> dict[str, str]:
+        """Capstone node_id -> the opaque title of the confirmed experience that
+        fills its evidence slot (SA-A proven card).
+
+        The same profile-owned experience title the fit-note slice already
+        surfaces - never raw calendar text. Empty for unfilled slots / capstones
+        with no matched item; capstones keep no ``evidence_confirmed_at`` (an
+        experience item carries no timestamp)."""
+        if account.map is None or account.template is None:
+            return {}
+        filled = {
+            cov.slot_id: cov
+            for cov in slot_coverage(profile, account.template)
+            if cov.state is SlotState.FILLED
+        }
+        if not filled:
+            return {}
+        titles = [item.title for item in profile.experience]
+        labels: dict[str, str] = {}
+        for node in account.map.nodes:
+            if node.kind is not KnowledgeNodeKind.CAPSTONE:
+                continue
+            cov = filled.get(node.evidence_slot_id or "")
+            if cov is None:
+                continue
+            matched = [i for i in cov.matched_item_indices if 0 <= i < len(titles)]
+            if matched:
+                labels[node.node_id] = titles[matched[0]]
+        return labels
 
     def knowledge_map_view(self, user_id: str) -> KnowledgeMapView:
         """The account's knowledge map with deterministic tiers (KT-C).
@@ -1031,7 +1164,9 @@ class CycleService:
                 version_mismatch=account.version_mismatch,
             )
 
-        tiers = self._map_tiers(profile, account)
+        inputs = self._mastery_fold_inputs(profile, account)
+        assert inputs is not None  # account.map is not None ⇒ inputs resolved
+        tiers = map_state(account.map, **inputs)
         notes = self._latest_notes(user_id)
         linked = self._linked_modules(user_id)
         skill_tiers = {
@@ -1040,32 +1175,70 @@ class CycleService:
             if n.kind is KnowledgeNodeKind.SKILL
         }
 
+        # Additive atlas signals (SA-A) - deterministic presentation flourishes
+        # folded from the same records; absent per node ⇒ the flourish drops.
+        sessions = self._session_signals(user_id)
+        evidence_at = self._evidence_grant_times(inputs["grants"])
+        capstone_evidence = self._capstone_evidence(profile, account)
+        review = mastery_memory(
+            account.map,
+            grants=inputs["grants"],
+            setpoints=inputs["setpoints"],
+            completions=inputs["completions"],
+            tuning=inputs["tuning"],
+        ).review_node_ids
+        # self_assessed: a set-point lifted the tier above what derived study
+        # (the same fold with no set-points) alone would give - a claimed tier,
+        # not an earned one. A downward or no-op set-point is not self-assessed.
+        tiers_no_setpoint = map_state(account.map, **{**inputs, "setpoints": ()})
+        self_assessed = {
+            s.node_id
+            for s in inputs["setpoints"]
+            if _TIER_RANK[tiers.get(s.node_id, MasteryTier.DISCOVERED)]
+            > _TIER_RANK[tiers_no_setpoint.get(s.node_id, MasteryTier.DISCOVERED)]
+        }
+
         nodes: list[KnowledgeNodeView] = []
         for node in account.map.nodes:
+            node_id = node.node_id
+            tier = tiers.get(node_id, MasteryTier.DISCOVERED)
+            total, done, next_at = sessions.get(node_id, (None, None, None))
             if node.kind is KnowledgeNodeKind.SKILL:
                 nodes.append(
                     KnowledgeNodeView(
-                        node_id=node.node_id,
+                        node_id=node_id,
                         title=node.title,
                         kind="skill",
-                        tier=tiers.get(node.node_id, MasteryTier.DISCOVERED),
+                        tier=tier,
                         group_id=node.group_id,
                         skill_id=node.skill_id,
                         expected_minutes=node.expected_minutes,
                         blurb=node.blurb,
-                        note=notes.get(node.node_id),
-                        linked_module_ids=linked.get(node.node_id, []),
+                        note=notes.get(node_id),
+                        linked_module_ids=linked.get(node_id, []),
+                        sessions_total=total,
+                        sessions_done=done,
+                        next_session_at=next_at,
+                        evidence_confirmed_at=(
+                            evidence_at.get(node_id)
+                            if tier is MasteryTier.PROVEN
+                            else None
+                        ),
+                        review_flagged=node_id in review,
+                        self_assessed=node_id in self_assessed,
                     )
                 )
             else:  # capstone
                 nodes.append(
                     KnowledgeNodeView(
-                        node_id=node.node_id,
+                        node_id=node_id,
                         title=node.title,
                         kind="capstone",
-                        tier=tiers.get(node.node_id, MasteryTier.DISCOVERED),
+                        tier=tier,
                         branch=node.branch,
-                        note=notes.get(node.node_id),
+                        note=notes.get(node_id),
+                        evidence_label=capstone_evidence.get(node_id),
+                        self_assessed=node_id in self_assessed,
                     )
                 )
         for custom in account.custom_nodes:
@@ -1079,6 +1252,7 @@ class CycleService:
                     description=custom.description,
                     note=notes.get(custom.custom_node_id),
                     is_personal=True,
+                    self_assessed=custom.custom_node_id in self_assessed,
                 )
             )
 

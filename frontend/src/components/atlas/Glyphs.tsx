@@ -44,7 +44,12 @@ export function SvgButton({
       role="button"
       tabIndex={0}
       aria-label={label}
-      onClick={onActivate}
+      onClick={(e) => {
+        // Stop the click from bubbling to the sky background's dismiss handler
+        // (Observatory): activating a body is never an "empty space" click.
+        e.stopPropagation()
+        onActivate()
+      }}
       onKeyDown={(e) => {
         // Enter/Space are the native button activation keys; preventDefault stops
         // Space from scrolling the page (SVG groups have no default activation).

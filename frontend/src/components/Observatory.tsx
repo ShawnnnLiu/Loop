@@ -46,6 +46,7 @@ export function Observatory({
   onSelectNode,
   onMutate,
   busy,
+  resetKey,
 }: {
   view: KnowledgeMapView
   pathwayName: string
@@ -53,6 +54,10 @@ export function Observatory({
   onSelectNode: (nodeId: string) => void
   onMutate: (fn: () => Promise<KnowledgeMapView>) => void
   busy: boolean
+  /** Bumped by Pathway when the user clicks empty space around an open drawer
+   *  (the backdrop): the sky then returns to the overview (collapse + zoom out)
+   *  in the same gesture that closes the drawer. */
+  resetKey: number
 }) {
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set())
   const [focusId, setFocusId] = useState<string | null>(null)
@@ -137,6 +142,27 @@ export function Observatory({
     },
     [],
   )
+
+  // Return the sky to the overview: collapse every open system and drop the pan
+  // focus so the chart zooms back out. Driven both by an empty-sky click (the svg
+  // background handler) and, when a drawer is open, by Pathway bumping `resetKey`
+  // as it closes the drawer on an outside click — one gesture, full dismiss.
+  function resetView() {
+    setOpenGroups((prev) => (prev.size === 0 ? prev : new Set()))
+    setFocusId(null)
+  }
+
+  const firstResetKey = useRef(true)
+  useEffect(() => {
+    // Skip the initial mount; only react to real bumps from Pathway.
+    if (firstResetKey.current) {
+      firstResetKey.current = false
+      return
+    }
+    resetView()
+    // resetView is stable enough for this purpose; depend only on the signal.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resetKey])
 
   function toggleGroup(groupId: string) {
     setOpenGroups((prev) => {
@@ -297,7 +323,15 @@ export function Observatory({
       <div className="chart-wrap" ref={wrapRef} onMouseMove={onMove} onMouseLeave={() => setHover(null)}>
         <div className="bezel">
           <div className="rim">
-            <svg viewBox="0 0 1180 665" xmlns="http://www.w3.org/2000/svg" role="group" aria-label={`${pathwayName} — knowledge map`}>
+            {/* A click that reaches the svg (rather than a body, which stops
+                propagation) is an empty-sky click: return to the overview. */}
+            <svg
+              viewBox="0 0 1180 665"
+              xmlns="http://www.w3.org/2000/svg"
+              role="group"
+              aria-label={`${pathwayName} — knowledge map`}
+              onClick={resetView}
+            >
               <rect width="1180" height="665" fill="url(#g-sky)" />
 
               <g ref={skypanRef} style={panStyle}>

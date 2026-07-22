@@ -43,16 +43,22 @@ export function NodeDrawer({
   node,
   onMutate,
   onClose,
+  onDismiss,
   busy,
   error,
 }: {
   node: KnowledgeNodeView
   /** Run a mutation and adopt its refreshed map. Errors surface via `error`. */
   onMutate: (fn: () => Promise<KnowledgeMapView>) => void
+  /** Close just this panel (the ✕ button and Escape). Leaves the chart as-is. */
   onClose: () => void
+  /** Click-away dismiss (the backdrop). On desktop this also returns the sky to
+   *  the overview; defaults to `onClose` when not provided. */
+  onDismiss?: () => void
   busy: boolean
   error: string | null
 }) {
+  const dismiss = onDismiss ?? onClose
   const [noteText, setNoteText] = useState(node.note ?? '')
 
   const drawerRef = useRef<HTMLElement>(null)
@@ -124,7 +130,7 @@ export function NodeDrawer({
 
   return (
     <>
-      <div className="km-backdrop" onClick={onClose} aria-hidden="true" />
+      <div className="km-backdrop" onClick={dismiss} aria-hidden="true" />
       <aside
         ref={drawerRef}
         className="km-drawer"

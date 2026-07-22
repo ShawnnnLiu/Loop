@@ -42,6 +42,10 @@ export function PathwayScreen() {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
+  // Bumped when the user clicks the backdrop (empty space) around the drawer, so
+  // the desktop Observatory returns to the overview in the same gesture. The ✕ and
+  // Esc close the drawer only (they leave the system open), so they don't bump it.
+  const [viewResetKey, setViewResetKey] = useState(0)
   const isDesktop = useIsDesktop()
 
   function load(initial = false) {
@@ -103,6 +107,20 @@ export function PathwayScreen() {
   const selectedNode = selectedNodeId
     ? view.nodes.find((n) => n.node_id === selectedNodeId) ?? null
     : null
+
+  // Close the drawer only (✕ / Esc): keep the system open so the user can stay in
+  // context or pick another world.
+  function closeDrawer() {
+    setSelectedNodeId(null)
+    setActionError(null)
+  }
+
+  // Click-away dismiss (the drawer backdrop): close the drawer and return the sky
+  // to the overview (collapse open systems + zoom out) in one gesture.
+  function dismissDrawer() {
+    closeDrawer()
+    setViewResetKey((k) => k + 1)
+  }
 
   return (
     <div className="screen">
@@ -168,6 +186,7 @@ export function PathwayScreen() {
             onSelectNode={setSelectedNodeId}
             onMutate={mutate}
             busy={busy}
+            resetKey={viewResetKey}
           />
         </div>
       ) : (
@@ -187,10 +206,8 @@ export function PathwayScreen() {
         <NodeDrawer
           node={selectedNode}
           onMutate={mutate}
-          onClose={() => {
-            setSelectedNodeId(null)
-            setActionError(null)
-          }}
+          onClose={closeDrawer}
+          onDismiss={isDesktop ? dismissDrawer : closeDrawer}
           busy={busy}
           error={actionError}
         />

@@ -3,10 +3,11 @@ import { useEffect, useState } from 'react'
 import { api } from '../api/client'
 import type { AddableSkill, KnowledgeGroupView, KnowledgeMapView } from '../api/types'
 
-// Shared inline forms for the knowledge-map create/add actions (KT-D). Extracted
-// from KnowledgeMap so the desktop Observatory (SA-C) and the accordion reuse one
-// copy — every form runs an existing mutation route verbatim through `onMutate`
-// and adopts the refreshed view. No new backend surface.
+// Shared inline forms for the knowledge-map create/add actions (KT-D). Reused by
+// both Star Atlas renderers — the desktop Observatory (SA-C) and the mobile
+// scrolling sky (SA-D) — so there is one copy; every form runs an existing
+// mutation route verbatim through `onMutate` and adopts the refreshed view. No new
+// backend surface.
 
 type Mutate = (fn: () => Promise<KnowledgeMapView>) => void
 

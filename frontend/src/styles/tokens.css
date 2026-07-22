@@ -1440,10 +1440,12 @@ select.input {
 }
 
 /* --------------------------------------------------------------------------- */
-/* Knowledge map (KT-D). An illuminated cartographer's chart in Loop's skin:    */
-/* branches → group waypoints → inline-accordion skill nodes on the gilding     */
-/* ramp. Honest counts only, never percentages. Every tier is the map_state     */
-/* fold's output; these classes just paint it.                                  */
+/* Knowledge map (KT-D) — shared map chrome. The tools row and the inline        */
+/* create/add forms are reused by both Star Atlas renderers (the desktop         */
+/* Observatory and the mobile scrolling sky); every tier is the map_state fold's */
+/* output, these classes just paint the light-page chrome around the chart. The  */
+/* former DOM-accordion renderer (KnowledgeMap.tsx) and its branch/waypoint/node */
+/* classes were retired in SA-D when MobileSky replaced it.                      */
 /* --------------------------------------------------------------------------- */
 .km-tools {
   display: flex;
@@ -1451,224 +1453,6 @@ select.input {
   align-items: center;
   flex-wrap: wrap;
   margin: 4px 0 18px;
-}
-.km-branch {
-  margin-bottom: 14px;
-}
-.km-bhead {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 11px 15px;
-  border-radius: var(--r-sm) var(--r-sm) 0 0;
-  background: var(--paper-2);
-  border: 1px solid var(--line-2);
-  border-bottom: none;
-}
-.km-shield {
-  width: 32px;
-  height: 38px;
-  flex: none;
-  display: grid;
-  place-items: center;
-  font-family: var(--serif);
-  font-weight: 600;
-  font-size: 15px;
-  border-radius: 6px 6px 10px 10px;
-}
-.km-shield.unproven {
-  background: var(--card);
-  border: 1px dashed var(--line-3);
-  color: var(--ink-soft);
-}
-.km-shield.proven {
-  background: var(--gold);
-  border: 1px solid var(--gold-deep);
-  color: #fff;
-  box-shadow: 0 0 0 4px var(--gold-soft);
-}
-.km-bname {
-  font-family: var(--serif);
-  font-size: 16.5px;
-  font-weight: 500;
-}
-.km-bmeta {
-  font-size: 11.5px;
-  color: var(--muted);
-  margin-top: 2px;
-}
-.km-groups {
-  border: 1px solid var(--line-2);
-  border-top: none;
-  border-radius: 0 0 var(--r-sm) var(--r-sm);
-  background: var(--card);
-  padding: 12px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 9px;
-}
-.km-gw {
-  border: 1px solid var(--line-2);
-  border-radius: 10px;
-  background: var(--paper);
-  overflow: hidden;
-}
-.km-ghead {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 11px 13px;
-  cursor: pointer;
-  width: 100%;
-  text-align: left;
-  background: none;
-  border: none;
-  font-family: var(--sans);
-}
-.km-ghead:hover {
-  background: var(--paper-2);
-}
-.km-waypoint {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  flex: none;
-  display: grid;
-  place-items: center;
-  font-family: var(--mono);
-  font-size: 10px;
-  font-weight: 700;
-}
-.km-wp-0 {
-  background: var(--paper-2);
-  border: 1.5px solid var(--line-3);
-  color: var(--muted);
-}
-.km-wp-part {
-  background: var(--gold-soft);
-  border: 1.5px solid var(--gold);
-  color: var(--gold-deep);
-}
-.km-wp-full {
-  background: var(--gold);
-  border: 1.5px solid var(--gold-deep);
-  color: #fff;
-}
-.km-gtitle {
-  font-weight: 600;
-  font-size: 14px;
-  color: var(--ink);
-}
-.km-gcount {
-  font-size: 11.5px;
-  color: var(--muted);
-  margin-top: 1px;
-}
-.km-caret {
-  margin-left: auto;
-  color: var(--muted-2);
-  font-family: var(--mono);
-  font-size: 13px;
-  transition: transform 0.2s;
-}
-.km-gw.open .km-caret {
-  transform: rotate(90deg);
-}
-.km-members {
-  padding: 2px 13px 13px 54px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.km-node {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  padding: 8px 11px;
-  border: 1px solid transparent;
-  border-radius: 9px;
-  cursor: pointer;
-  text-align: left;
-  background: none;
-  width: 100%;
-  font-family: var(--sans);
-}
-.km-node:hover {
-  background: var(--paper-2);
-  border-color: var(--line-2);
-}
-.km-node.sel {
-  border-color: var(--clay);
-  background: var(--clay-tint);
-}
-.km-node.custom {
-  border-style: dashed;
-  border-color: var(--line-3);
-}
-.km-node .km-dot {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  flex: none;
-}
-.km-node.custom .km-dot {
-  background: var(--card);
-  border: 1.5px solid var(--ink-soft);
-}
-.km-nname {
-  font-size: 13.5px;
-  font-weight: 600;
-  color: var(--ink-soft);
-}
-.km-ntier {
-  margin-left: auto;
-  font-family: var(--mono);
-  font-size: 9.5px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--muted-2);
-  font-weight: 600;
-}
-.km-t-discovered .km-dot {
-  background: #fff;
-  border: 1.5px solid var(--muted);
-}
-.km-t-training .km-dot {
-  background: var(--clay-tint);
-  border: 1.5px solid var(--clay);
-  box-shadow: 0 0 0 3px var(--clay-soft);
-  animation: km-breathe 3.4s ease-in-out infinite;
-}
-.km-t-honed .km-dot {
-  background: var(--gold-soft);
-  border: 1.5px solid var(--gold);
-}
-.km-t-proven .km-dot {
-  background: var(--gold);
-  border: 1.5px solid var(--gold-deep);
-  box-shadow: 0 0 0 3px var(--gold-soft);
-}
-.km-t-honed .km-ntier,
-.km-t-proven .km-ntier {
-  color: var(--gold-deep);
-}
-@keyframes km-breathe {
-  0%,
-  100% {
-    opacity: 0.6;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-.km-additions {
-  margin-top: 22px;
-}
-.km-ahead {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
 }
 .km-inline-form {
   border: 1px dashed var(--clay);
@@ -1805,13 +1589,17 @@ select.input {
   color: var(--paper);
   border-color: var(--ink);
 }
-@media (prefers-reduced-motion: reduce) {
-  .km-t-training .km-dot {
-    animation: none;
-    opacity: 0.85;
+/* Grab handle — the phone bottom-sheet affordance (SA-D). Hidden on the desktop
+   side-drawer; a centred pill on the sheet. */
+.km-grab {
+  display: none;
+}
+@keyframes km-sheet-up {
+  from {
+    transform: translateY(100%);
   }
-  .km-caret {
-    transition: none;
+  to {
+    transform: translateY(0);
   }
 }
 @media (max-width: 560px) {
@@ -1823,9 +1611,18 @@ select.input {
     border-top: 1px solid var(--line-2);
     border-radius: 18px 18px 0 0;
     max-height: 82vh;
+    animation: km-sheet-up 0.3s cubic-bezier(0.3, 0.9, 0.3, 1);
   }
-  .km-members {
-    padding-left: 26px;
+  .km-grab {
+    display: block;
+    width: 38px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--line-3);
+    margin: 8px auto 2px;
+  }
+  .km-dbody {
+    padding-bottom: calc(22px + env(safe-area-inset-bottom));
   }
 }
 
@@ -2190,6 +1987,226 @@ select.input {
     opacity: 1;
   }
   .atlas-dust {
+    transition: none;
+  }
+}
+
+/* --------------------------------------------------------------------------- */
+/* Star Atlas — the mobile scrolling sky (SA-D). Mobile is not a shrunk         */
+/* Observatory: the desktop force-directed chart never runs on phones (Pathway's */
+/* matchMedia switch). The chart becomes a vertically scrolling dark sky of      */
+/* accordion system cards; the drawer becomes the bottom sheet above. Same data, */
+/* same four tiers, same routes — a thumb-first layout. Ported from the visual   */
+/* source of truth (docs/design-reference/Loop - Star Atlas.html: m-sky / m-sys).*/
+/* The chrome + sheet stay on Loop's light tokens; only this scroll region is    */
+/* the observatory. The page (not an inner container) scrolls — one axis, no     */
+/* nested-scroll trap (a known past gotcha). Mini glyphs are static off .rim.    */
+/* --------------------------------------------------------------------------- */
+.msky {
+  position: relative;
+  margin-top: 12px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid #3a4553;
+  background: radial-gradient(130% 60% at 50% 0%, #152538, var(--sky) 72%);
+  color: var(--chalk);
+}
+.msky-dust {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(1px 1px at 12% 8%, rgba(207, 218, 226, 0.5), transparent 60%),
+    radial-gradient(1.2px 1.2px at 78% 14%, rgba(207, 218, 226, 0.4), transparent 60%),
+    radial-gradient(1px 1px at 34% 22%, rgba(207, 218, 226, 0.35), transparent 60%),
+    radial-gradient(1.4px 1.4px at 88% 34%, rgba(232, 192, 122, 0.3), transparent 60%),
+    radial-gradient(1px 1px at 8% 48%, rgba(207, 218, 226, 0.4), transparent 60%),
+    radial-gradient(1.1px 1.1px at 55% 62%, rgba(207, 218, 226, 0.3), transparent 60%),
+    radial-gradient(1px 1px at 70% 82%, rgba(207, 218, 226, 0.35), transparent 60%),
+    radial-gradient(1px 1px at 24% 92%, rgba(207, 218, 226, 0.3), transparent 60%);
+}
+.msky-in {
+  position: relative;
+  z-index: 1;
+  padding: 16px 16px calc(24px + env(safe-area-inset-bottom));
+}
+.msky-hint {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--chalk-dim);
+  background: rgba(11, 20, 32, 0.7);
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(138, 111, 63, 0.4);
+  margin: 0 0 6px 2px;
+}
+.msky .m-region {
+  margin: 14px 0 4px;
+}
+.msky .m-rlabel {
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 14px;
+  letter-spacing: 0.1em;
+  color: rgba(213, 197, 168, 0.65);
+  margin: 4px 2px 8px;
+}
+.msky .m-rlabel.lit {
+  color: rgba(240, 208, 146, 0.9);
+}
+.msky .m-cap,
+.msky .m-srow,
+.msky .m-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(207, 218, 226, 0.1);
+  border-radius: 13px;
+  padding: 9px 12px;
+  color: var(--chalk);
+  font-family: var(--sans);
+  text-align: left;
+  cursor: pointer;
+  margin-bottom: 7px;
+}
+.msky .m-cap {
+  background: rgba(232, 192, 122, 0.045);
+  border-color: rgba(138, 111, 63, 0.35);
+}
+.msky .m-srow {
+  min-height: 56px;
+}
+.msky .m-card {
+  background: rgba(255, 255, 255, 0.035);
+  margin: 0;
+}
+.msky .m-card.sel {
+  border-color: var(--star-gold);
+  background: rgba(232, 192, 122, 0.08);
+}
+.msky .mc-t {
+  display: block;
+  font-family: var(--serif);
+  font-size: 15px;
+  line-height: 1.2;
+  color: var(--chalk);
+}
+.msky .mc-s {
+  display: block;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.05em;
+  color: var(--chalk-dim);
+  margin-top: 2px;
+}
+.msky .mc-s.warm {
+  color: var(--star-gold);
+}
+.msky .chev {
+  margin-left: auto;
+  color: var(--chalk-dim);
+  font-size: 11px;
+  transition: transform 0.2s;
+}
+.msky .m-sys.open .chev {
+  transform: rotate(180deg);
+}
+.msky .m-acc {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 2px 0 10px 14px;
+  border-left: 1px dashed rgba(207, 218, 226, 0.14);
+  margin: 0 0 4px 16px;
+}
+.msky .m-yours {
+  font-family: var(--mono);
+  font-weight: 400;
+  font-size: 9px;
+  letter-spacing: 0.26em;
+  color: rgba(207, 218, 226, 0.42);
+  margin: 18px 2px 8px;
+  text-transform: uppercase;
+}
+.msky .m-del {
+  align-self: flex-start;
+  min-height: 44px;
+  padding: 4px 2px;
+  background: none;
+  border: none;
+  color: rgba(224, 118, 74, 0.85);
+  font-family: var(--mono);
+  font-size: 11px;
+  cursor: pointer;
+}
+.msky .m-plaq {
+  width: 250px;
+  max-width: 100%;
+  margin: 20px auto 4px;
+  border: 1px solid var(--brass-dim);
+  border-radius: 7px;
+  padding: 10px 12px;
+  text-align: center;
+  background: rgba(20, 29, 41, 0.8);
+}
+.msky .m-plaq .n {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: #d5c5a8;
+}
+.msky .m-plaq .c {
+  font-family: var(--mono);
+  font-size: 8.5px;
+  color: var(--chalk-dim);
+  margin-top: 3px;
+}
+.m-empty {
+  position: absolute;
+  left: 50%;
+  top: 34%;
+  transform: translate(-50%, -50%);
+  width: 290px;
+  max-width: 86%;
+  text-align: center;
+  padding: 18px 18px 16px;
+  z-index: 10;
+}
+.m-empty h3 {
+  margin: 0 0 6px;
+  font-family: var(--serif);
+  font-weight: 500;
+  font-size: 17px;
+}
+.m-empty p {
+  margin: 0 0 12px;
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+/* Mini glyphs render the shared celestial SVGs small and static outside .rim, so
+   their hit circle / selection ring (styled only under .rim on desktop) must be
+   neutralized here, and the twinkle/pulse loops simply never start. */
+.mglyph {
+  flex: none;
+  display: block;
+}
+.mglyph .hit {
+  fill: transparent;
+  pointer-events: none;
+}
+.mglyph .selring {
+  display: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .msky .chev {
     transition: none;
   }
 }

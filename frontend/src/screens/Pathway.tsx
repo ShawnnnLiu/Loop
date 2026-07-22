@@ -3,14 +3,15 @@ import { Link } from 'react-router-dom'
 
 import { ApiError, api, errorMessage } from '../api/client'
 import type { KnowledgeMapView, PathwayCard } from '../api/types'
-import { KnowledgeMap } from '../components/KnowledgeMap'
+import { MobileSky } from '../components/MobileSky'
 import { NodeDrawer } from '../components/NodeDrawer'
 import { Observatory } from '../components/Observatory'
 
-// Desktop gets the Star Atlas observatory (SA-C); phones keep the accordion until
-// SA-D swaps in MobileSky. The breakpoint keeps the force-directed layoutSky off
-// small screens (it is desktop-only, 02-…). Tracks the media query live so a
-// resize across the breakpoint re-renders the right surface.
+// One Star Atlas screen, two renderers: desktop gets the force-directed Observatory
+// (SA-C), phones get the scrolling MobileSky (SA-D). The breakpoint keeps the
+// desktop-only layoutSky off small screens (02-…) so a phone never runs the force
+// sim. Tracks the media query live so a resize across the breakpoint re-renders the
+// right surface.
 function useIsDesktop(): boolean {
   const [desktop, setDesktop] = useState(
     () => typeof window !== 'undefined' && window.matchMedia('(min-width: 900px)').matches,
@@ -171,8 +172,9 @@ export function PathwayScreen() {
         </div>
       ) : (
         <div style={{ marginTop: 20, maxWidth: 760 }}>
-          <KnowledgeMap
+          <MobileSky
             view={view}
+            pathwayName={card?.display_name ?? 'Your knowledge map'}
             selectedNodeId={selectedNodeId}
             onSelectNode={setSelectedNodeId}
             onMutate={mutate}

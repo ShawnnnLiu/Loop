@@ -77,6 +77,8 @@ export function NodeDrawer({
     <>
       <div className="km-backdrop" onClick={onClose} aria-hidden="true" />
       <aside className="km-drawer" role="dialog" aria-label={`${node.title} details`}>
+        {/* Grab handle — hidden on desktop, the sheet affordance on phones (SA-D). */}
+        <div className="km-grab" aria-hidden="true" />
         <div className="km-dhead">
           <div className="row" style={{ justifyContent: 'space-between' }}>
             <span className="label" style={{ color: 'var(--clay-deep)' }}>

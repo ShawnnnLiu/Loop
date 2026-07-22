@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { api } from '../api/client'
 import type { KnowledgeMapView, KnowledgeNodeView, MasteryTier } from '../api/types'
@@ -55,6 +55,55 @@ export function NodeDrawer({
 }) {
   const [noteText, setNoteText] = useState(node.note ?? '')
 
+  const drawerRef = useRef<HTMLElement>(null)
+  // Keep the latest onClose reachable from the mount-only effect below without
+  // re-running it (onClose is a fresh closure each render; re-running the effect
+  // would re-focus the close button mid-interaction and steal focus while typing).
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
+
+  // Focus management (SA-F). The chart bodies are now real controls, so the drawer
+  // completes the loop: on open, focus moves into the dialog; Tab is trapped inside
+  // it; Escape closes it; and on close, focus returns to the invoking body (the
+  // star/world/capstone that was focused when it opened). Runs once per open — the
+  // empty deps are intentional; the drawer stays mounted across node switches, so
+  // this must not re-run when the node prop or onClose closure changes.
+  useEffect(() => {
+    const previouslyFocused = document.activeElement as HTMLElement | null
+    const el = drawerRef.current
+    el?.querySelector<HTMLElement>('[data-drawer-close]')?.focus()
+
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onCloseRef.current()
+        return
+      }
+      if (e.key !== 'Tab' || !el) return
+      const focusable = Array.from(
+        el.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      )
+      if (focusable.length === 0) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
+
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('keydown', onKeyDown)
+      previouslyFocused?.focus?.()
+    }
+  }, [])
+
   // Re-seed the editor whenever a different node opens or the stored note changes
   // (e.g. after a save/delete round-trips a fresh view). Keyed on node identity so
   // switching nodes never leaks the previous draft.
@@ -76,7 +125,13 @@ export function NodeDrawer({
   return (
     <>
       <div className="km-backdrop" onClick={onClose} aria-hidden="true" />
-      <aside className="km-drawer" role="dialog" aria-label={`${node.title} details`}>
+      <aside
+        ref={drawerRef}
+        className="km-drawer"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${node.title} details`}
+      >
         {/* Grab handle — hidden on desktop, the sheet affordance on phones (SA-D). */}
         <div className="km-grab" aria-hidden="true" />
         <div className="km-dhead">
@@ -84,7 +139,13 @@ export function NodeDrawer({
             <span className="label" style={{ color: 'var(--clay-deep)' }}>
               {KIND_EYEBROW[node.kind]}
             </span>
-            <button className="btn btn-quiet sm" type="button" onClick={onClose} aria-label="close">
+            <button
+              className="btn btn-quiet sm"
+              type="button"
+              onClick={onClose}
+              aria-label="close"
+              data-drawer-close
+            >
               ✕
             </button>
           </div>

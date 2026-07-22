@@ -4,6 +4,7 @@ import type { KnowledgeBranchView, KnowledgeMapView, KnowledgeNodeView } from '.
 import { NO_SIGNALS, type NodeSignals } from './signals'
 import {
   bezelTicks,
+  bodyAccessibleName,
   earliestNextSession,
   honedFraction,
   nothingLit,
@@ -13,6 +14,7 @@ import {
   probeGeometry,
   roseNodes,
   statusLine,
+  systemAccessibleName,
   trailArcs,
 } from './render'
 import type { MasteryTier } from '../../api/types'
@@ -84,6 +86,62 @@ describe('statusLine', () => {
     expect(statusLine(cap, 'proven', sig({ evidenceLabel: 'talk.md' }))).toBe(
       'Capstone ✦ proven · talk.md',
     )
+  })
+})
+
+describe('bodyAccessibleName (SA-F)', () => {
+  it('composes title + honest status so the tier is spoken, not colour-only', () => {
+    const skill = { title: 'Retrieval fundamentals', kind: 'skill' as const, is_personal: false }
+    expect(bodyAccessibleName(skill, 'training', sig({ sessionsTotal: 4, sessionsDone: 2 }))).toBe(
+      'Retrieval fundamentals. Training · 2 of 4 sessions',
+    )
+    expect(bodyAccessibleName(skill, 'discovered', NO_SIGNALS)).toBe(
+      'Retrieval fundamentals. Discovered · on the map, no study yet',
+    )
+  })
+
+  it('names a capstone by its slot coverage', () => {
+    const cap = { title: 'Ship a RAG demo', kind: 'capstone' as const, is_personal: false }
+    expect(bodyAccessibleName(cap, 'proven', sig({ evidenceLabel: 'repo' }))).toBe(
+      'Ship a RAG demo. Capstone ✦ proven · repo',
+    )
+    expect(bodyAccessibleName(cap, 'discovered', NO_SIGNALS)).toBe(
+      'Ship a RAG demo. Capstone — unproven',
+    )
+  })
+
+  it('marks personal worlds as yours', () => {
+    const custom = { title: 'My note', kind: 'custom' as const, is_personal: true }
+    expect(bodyAccessibleName(custom, 'honed', NO_SIGNALS)).toBe('My note. Yours · Honed')
+  })
+})
+
+describe('systemAccessibleName (SA-F)', () => {
+  const group = (over: {
+    title?: string
+    is_personal?: boolean
+    honed_count?: number
+    total_count?: number
+  }) => ({
+    title: over.title ?? 'Retrieval & Grounding',
+    is_personal: over.is_personal ?? false,
+    honed_count: over.honed_count ?? 0,
+    total_count: over.total_count ?? 0,
+  })
+
+  it('speaks the honest honed fraction and the expand state', () => {
+    expect(systemAccessibleName(group({ honed_count: 2, total_count: 5 }), false)).toBe(
+      'Retrieval & Grounding, 2 of 5 honed, collapsed',
+    )
+    expect(systemAccessibleName(group({ honed_count: 2, total_count: 5 }), true)).toBe(
+      'Retrieval & Grounding, 2 of 5 honed, expanded',
+    )
+  })
+
+  it('reports a personal group as yours and never a honed fraction', () => {
+    expect(
+      systemAccessibleName(group({ title: 'My set', is_personal: true, total_count: 3 }), false),
+    ).toBe('My set, your group, 3 sketched, collapsed')
   })
 })
 

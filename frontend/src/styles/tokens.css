@@ -1680,6 +1680,18 @@ select.input {
   stroke-dasharray: 3 3;
   opacity: 0.9;
 }
+/* SA-F — the keyboard focus affordance for the chart bodies (systems, worlds,
+   capstones are role=button, tabbable in reading order). The gold dashed outline
+   echoes the .selring selection ring; :focus-visible keeps it keyboard-only, so a
+   pointer click never leaves a lingering ring. */
+.rim [role='button'] {
+  outline: none;
+}
+.rim [role='button']:focus-visible {
+  outline: 2px dashed var(--star-gold);
+  outline-offset: 3px;
+  border-radius: 5px;
+}
 .rim .rlabel {
   font-family: var(--serif);
   font-style: italic;
@@ -2147,6 +2159,17 @@ select.input {
 .msky .m-cap {
   background: rgba(232, 192, 122, 0.045);
   border-color: rgba(138, 111, 63, 0.35);
+}
+/* SA-F — a visible keyboard-focus ring on the dark sky. The mobile cards are native
+   buttons (already operable + named by their text); this just makes the focus
+   indicator legible against the near-black background, where the UA default is
+   easily lost. */
+.msky .m-cap:focus-visible,
+.msky .m-srow:focus-visible,
+.msky .m-card:focus-visible,
+.msky .m-del:focus-visible {
+  outline: 2px solid var(--star-gold);
+  outline-offset: 2px;
 }
 .msky .m-srow {
   min-height: 56px;

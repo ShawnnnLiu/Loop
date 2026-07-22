@@ -6,6 +6,7 @@ import type { KnowledgeMapView, MasteryTier } from '../api/types'
 import { DUST_FAR, DUST_NEAR, beaconFor, bodyFor, starFor } from '../lib/atlas/bodies'
 import { CANONICAL_VIEWPORT, layoutSky } from '../lib/atlas/layout'
 import {
+  bodyAccessibleName,
   earliestNextSession,
   honedFraction,
   nothingLit,
@@ -15,12 +16,13 @@ import {
   probeGeometry,
   roseNodes,
   statusLine,
+  systemAccessibleName,
 } from '../lib/atlas/render'
 import { readSignals } from '../lib/atlas/signals'
 import { fmtWhen } from '../lib/datetime'
 import { groupCountLabel, groupNodes } from '../lib/knowledgeMap'
 import { AtlasDefs } from './atlas/AtlasDefs'
-import { BeaconGlyph, PlanetGlyph, StarGlyph } from './atlas/Glyphs'
+import { BeaconGlyph, PlanetGlyph, StarGlyph, SvgButton } from './atlas/Glyphs'
 import { Bloom, InstrumentEdge, Probe } from './atlas/Ornaments'
 import { AddSkillPicker, CreateForm, CreateNodeForm } from './MapForms'
 
@@ -299,7 +301,7 @@ export function Observatory({
               <rect width="1180" height="665" fill="url(#g-sky)" />
 
               <g ref={skypanRef} style={panStyle}>
-                <g ref={dustNearRef} className="atlas-dust">
+                <g ref={dustNearRef} className="atlas-dust" aria-hidden="true">
                   {DUST_NEAR.map((d, i) => (
                     <circle
                       key={i}
@@ -313,7 +315,7 @@ export function Observatory({
                     />
                   ))}
                 </g>
-                <g ref={dustFarRef} className="atlas-dust">
+                <g ref={dustFarRef} className="atlas-dust" aria-hidden="true">
                   {DUST_FAR.map((d, i) => (
                     <circle
                       key={i}
@@ -328,11 +330,12 @@ export function Observatory({
                   ))}
                 </g>
 
-                {/* Nebulae + mastery light-pollution */}
+                {/* Nebulae + mastery light-pollution — pure atmosphere, hidden
+                    from AT (`01-…`); the honest counts are the accessible truth. */}
                 {sky.regions.map((r) => {
                   const lit = branchBySlot.get(r.branch)?.capstone_tier === 'proven'
                   return (
-                    <g key={r.branch}>
+                    <g key={r.branch} aria-hidden="true">
                       <ellipse cx={r.cx} cy={r.cy} rx={r.rx} ry={r.ry} fill={`url(#${r.grad})`} />
                       {lit && (
                         <ellipse cx={r.cx} cy={r.cy} rx={r.rx * 0.8} ry={r.ry * 0.8} fill="url(#g-lamp)" />
@@ -353,11 +356,18 @@ export function Observatory({
                       r={(85 + 75 * k).toFixed(0)}
                       fill="url(#g-lamp)"
                       opacity={(k * 0.95).toFixed(2)}
+                      aria-hidden="true"
                     />
                   )
                 })}
                 {hf > 0.5 && (
-                  <rect width="1180" height="665" fill="url(#g-lamp)" opacity={((hf - 0.5) * 0.9).toFixed(2)} />
+                  <rect
+                    width="1180"
+                    height="665"
+                    fill="url(#g-lamp)"
+                    opacity={((hf - 0.5) * 0.9).toFixed(2)}
+                    aria-hidden="true"
+                  />
                 )}
 
                 {/* Region labels */}
@@ -386,10 +396,11 @@ export function Observatory({
                   const proven = branch.capstone_tier === 'proven'
                   return (
                     <g key={c.nodeId}>
-                      <g
+                      <SvgButton
                         className="nodeg"
                         transform={`translate(${c.x},${c.y})`}
-                        onClick={() => selectNode(c.nodeId)}
+                        label={bodyAccessibleName(node, branch.capstone_tier, readSignals(node))}
+                        onActivate={() => selectNode(c.nodeId)}
                         onMouseEnter={() =>
                           setHover({
                             title: node.title,
@@ -399,8 +410,15 @@ export function Observatory({
                         onMouseLeave={() => setHover(null)}
                       >
                         <BeaconGlyph proven={proven} selected={selectedNodeId === c.nodeId} />
-                      </g>
-                      <text x={c.x} y={c.y + 36} textAnchor="middle" className="slab" fontSize="12.5">
+                      </SvgButton>
+                      <text
+                        x={c.x}
+                        y={c.y + 36}
+                        textAnchor="middle"
+                        className="slab"
+                        fontSize="12.5"
+                        aria-hidden="true"
+                      >
                         {node.title}
                       </text>
                       <text
@@ -408,6 +426,7 @@ export function Observatory({
                         y={c.y + 51}
                         textAnchor="middle"
                         className={`caplab${proven ? ' lit' : ''}`}
+                        aria-hidden="true"
                       >
                         {beaconFor(branch).label}
                       </text>
@@ -452,16 +471,17 @@ export function Observatory({
                   if (!open) {
                     return (
                       <g key={group.group_id}>
-                        <g
+                        <SvgButton
                           className="sysg"
                           transform={`translate(${s.x},${s.y})`}
-                          onClick={() => toggleGroup(group.group_id)}
+                          label={systemAccessibleName(group, false)}
+                          onActivate={() => toggleGroup(group.group_id)}
                           onMouseEnter={() => setHover({ title: group.title, meta: hoverMeta })}
                         >
                           <StarGlyph star={star} />
                           <circle className="hit" r="30" />
-                        </g>
-                        <text x={s.x} y={s.y + 24} textAnchor="middle" className="slab">
+                        </SvgButton>
+                        <text x={s.x} y={s.y + 24} textAnchor="middle" className="slab" aria-hidden="true">
                           {group.title}
                         </text>
                         <text
@@ -469,6 +489,7 @@ export function Observatory({
                           y={s.y + 38}
                           textAnchor="middle"
                           className={`scount${warm ? ' warm' : ''}`}
+                          aria-hidden="true"
                         >
                           {group.is_personal
                             ? `${group.total_count} sketched · yours`
@@ -489,9 +510,10 @@ export function Observatory({
                         fill="none"
                         stroke="rgba(207,218,226,.12)"
                         strokeWidth="1"
+                        aria-hidden="true"
                       />
                       {star.allHoned && (
-                        <g className="consti">
+                        <g className="consti" aria-hidden="true">
                           <polygon
                             points={planets.map((p) => `${p.x.toFixed(0)},${p.y.toFixed(0)}`).join(' ')}
                             fill="none"
@@ -504,49 +526,50 @@ export function Observatory({
                           ))}
                         </g>
                       )}
-                      <g
+                      <SvgButton
                         className="sysg"
                         transform={`translate(${s.x},${s.y})`}
-                        onClick={() => toggleGroup(group.group_id)}
+                        label={systemAccessibleName(group, true)}
+                        onActivate={() => toggleGroup(group.group_id)}
                         onMouseEnter={() => setHover({ title: group.title, meta: hoverMeta })}
                         onMouseLeave={() => setHover(null)}
                       >
                         <StarGlyph star={star} />
                         <circle className="hit" r="16" />
-                      </g>
+                      </SvgButton>
                       <text
                         x={s.x}
                         y={upperY}
                         textAnchor="middle"
                         className={`scount${warm ? ' warm' : ''}`}
+                        aria-hidden="true"
                       >
                         {group.title.toUpperCase()} ·{' '}
                         {group.is_personal ? `${group.total_count} YOURS` : `${group.honed_count}/${group.total_count}`}
                       </text>
                       {/* collapse control */}
-                      <g
+                      <SvgButton
                         className="sysg"
                         transform={`translate(${(s.x + 54).toFixed(0)},${(s.y - 54).toFixed(0)})`}
-                        onClick={() => toggleGroup(group.group_id)}
-                        aria-label={`collapse ${group.title}`}
+                        label={`Collapse ${group.title}`}
+                        onActivate={() => toggleGroup(group.group_id)}
                       >
                         <circle r="8" fill="rgba(11,20,32,.7)" stroke="rgba(207,218,226,.3)" />
-                        <text y="3" textAnchor="middle" fontSize="8.5" fill="#cfdae2">
+                        <text y="3" textAnchor="middle" fontSize="8.5" fill="#cfdae2" aria-hidden="true">
                           ✕
                         </text>
                         <circle className="hit" r="12" />
-                      </g>
+                      </SvgButton>
                       {/* delete-group affordance (custom groups only) */}
                       {group.is_personal && (
-                        <text
-                          x={s.x}
-                          y={upperY + 15}
-                          textAnchor="middle"
-                          className="del-group"
-                          onClick={() => onMutate(() => api.deleteCustomGroup(group.group_id))}
+                        <SvgButton
+                          label={`Delete group ${group.title}`}
+                          onActivate={() => onMutate(() => api.deleteCustomGroup(group.group_id))}
                         >
-                          Delete group
-                        </text>
+                          <text x={s.x} y={upperY + 15} textAnchor="middle" className="del-group">
+                            Delete group
+                          </text>
+                        </SvgButton>
                       )}
                       {planets.map((p) => {
                         const node = nodesById.get(p.nodeId)
@@ -557,10 +580,11 @@ export function Observatory({
                         const dim = node.tier === 'discovered'
                         return (
                           <g key={p.nodeId}>
-                            <g
+                            <SvgButton
                               className="nodeg"
                               transform={`translate(${p.x.toFixed(1)},${p.y.toFixed(1)})`}
-                              onClick={() => selectNode(p.nodeId)}
+                              label={bodyAccessibleName(node, node.tier, readSignals(node))}
+                              onActivate={() => selectNode(p.nodeId)}
                               onMouseEnter={() =>
                                 setHover({
                                   title: node.title,
@@ -570,12 +594,13 @@ export function Observatory({
                               onMouseLeave={() => setHover(null)}
                             >
                               <PlanetGlyph body={body} selected={selectedNodeId === p.nodeId} />
-                            </g>
+                            </SvgButton>
                             <text
                               x={label.x}
                               y={label.y}
                               textAnchor={label.anchor}
                               className={`plab${dim ? ' dim' : ''}`}
+                              aria-hidden="true"
                             >
                               {node.title}
                             </text>
@@ -615,7 +640,7 @@ export function Observatory({
                 </text>
               </g>
 
-              <rect width="1180" height="665" fill="url(#g-vig)" pointerEvents="none" />
+              <rect width="1180" height="665" fill="url(#g-vig)" pointerEvents="none" aria-hidden="true" />
             </svg>
 
             {dark && (

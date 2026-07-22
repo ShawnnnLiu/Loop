@@ -7,8 +7,59 @@
 // into place. Exported individually so SA-D's MobileSky reuses the same glyphs
 // (decision B: a comet is a comet on both platforms).
 
+import type { ReactNode } from 'react'
+
 import type { BodyDescriptor, StarDescriptor } from '../../lib/atlas/bodies'
 import { trailArcs } from '../../lib/atlas/render'
+
+/** SA-F — the accessibility wrapper that turns a decorative celestial glyph into a
+ *  real, keyboard-operable control. `role="button"` + `tabIndex=0` place it in the
+ *  Tab order (document order = reading order, `03-…`); Enter/Space activate it
+ *  exactly as a pointer click; the composed accessible name (`bodyAccessibleName` /
+ *  `systemAccessibleName`) is what AT announces. The visible focus ring is the CSS
+ *  `.rim [role='button']:focus-visible` outline, matching the gold `.selring`
+ *  treatment. Keeping the wrapper here (not inline in the JSX) means every chart
+ *  body is focusable the same way, and the glyph children stay logic-free. */
+export function SvgButton({
+  transform,
+  className,
+  label,
+  onActivate,
+  onMouseEnter,
+  onMouseLeave,
+  children,
+}: {
+  transform?: string
+  className?: string
+  label: string
+  onActivate: () => void
+  onMouseEnter?: () => void
+  onMouseLeave?: () => void
+  children: ReactNode
+}) {
+  return (
+    <g
+      transform={transform}
+      className={className}
+      role="button"
+      tabIndex={0}
+      aria-label={label}
+      onClick={onActivate}
+      onKeyDown={(e) => {
+        // Enter/Space are the native button activation keys; preventDefault stops
+        // Space from scrolling the page (SVG groups have no default activation).
+        if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+          e.preventDefault()
+          onActivate()
+        }
+      }}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
+      {children}
+    </g>
+  )
+}
 
 /** A world / added-skill node. Barren rock → magma-cracked training → living ocean
  *  → crowned proven, plus the optional session trail, review shimmer, and note

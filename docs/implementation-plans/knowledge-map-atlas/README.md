@@ -134,8 +134,9 @@ the increments and the open decisions the docs flag, then begin SA-A.
    It does **not** assert keyboard/screen-reader accessibility — that verification, together with the SVG-map a11y implementation, is deferred to the noted follow-up **SA-F** (see `05-…`).
    Reduced-motion fallbacks are still implemented (they ship in the design CSS); their dedicated CDP audit rides along with SA-F.
 
-## Deferred follow-up — SA-F (accessibility)
+## Follow-up — SA-F (accessibility) — IMPLEMENTED
 
-Descoped now for cost (decision C), tracked so it is not forgotten.
-SA-F makes the SVG map fully accessible per the `01-visual-language.md` spec: focusable celestial bodies with composed accessible names, keyboard traversal to every system/world/capstone, focus management on the map bodies (the drawer/sheet already have dialog semantics), a colour-independence pass, and the CDP assertions for keyboard-only reach and reduced-motion stillness.
-Until SA-F lands, the atlas is honest and legible (real-text counts, shape-encoded tiers, accessible drawer/sheet) but not keyboard/SR-complete on the chart itself — a known, documented debt, not a silent gap.
+Was descoped for cost (decision C) and tracked so it would not be forgotten; now landed (see `05-increments.md` -> SA-F for the full record).
+SA-F makes the SVG chart bodies fully accessible per the `01-visual-language.md` spec: a shared `SvgButton` wrapper turns every system/world/capstone/collapse-✕/delete affordance into a Tab-reachable `role="button"` with a composed, spoken accessible name (title + honest status line) and Enter/Space activation; a keyboard-only `:focus-visible` gold ring (echoing `.selring`); real drawer focus management (focus-in, a both-directions Tab trap, Esc-close, and focus-return to the invoking body - the `NodeDrawer` did *not* actually ship this before, despite the earlier assumption); every decorative layer (dust, nebulae, lamps, vignette, duplicate label text) hidden from AT; and a colour-independence pass (tier is also shape + text).
+Verified end-to-end in a real browser (keyboard reach + focus ring + activation + drawer trap/return). The reduced-motion fallbacks shipped and were audited in SA-E; their dedicated OS-flag stillness sweep could not be toggled through the automation surface and rests on the SA-E CSS audit.
+The atlas is now honest, legible, *and* keyboard/SR-complete on the chart itself.

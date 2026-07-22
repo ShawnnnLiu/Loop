@@ -10,7 +10,12 @@
 // of the deterministic map_state fold's output (server tiers + honest counts) plus
 // the additive SA-A signals — never an LLM signal, never a score.
 
-import type { KnowledgeMapView, KnowledgeNodeView, MasteryTier } from '../../api/types'
+import type {
+  KnowledgeGroupView,
+  KnowledgeMapView,
+  KnowledgeNodeView,
+  MasteryTier,
+} from '../../api/types'
 import { MASTERY_TIERS } from '../../api/types'
 import { CANONICAL_VIEWPORT } from './layout'
 import type { NodeSignals } from './signals'
@@ -58,6 +63,36 @@ export function statusLine(
     default:
       return `${pre}Discovered · on the map, no study yet`
   }
+}
+
+/** The composed accessible name a screen reader announces for a focusable chart
+ *  body (SA-F): the title, then its honest {@link statusLine} — which already
+ *  encodes tier + counts + flags in words, so the meaning the colour/shape carries
+ *  visually is also spoken (`01-…`: colour is never the only signal). The visible
+ *  label `<text>` beside the glyph is `aria-hidden`, so this is the single spoken
+ *  name, not a duplicate. Used for worlds, comets, and capstones. */
+export function bodyAccessibleName(
+  node: Pick<KnowledgeNodeView, 'title' | 'kind' | 'is_personal'>,
+  tier: MasteryTier,
+  signals: NodeSignals,
+): string {
+  return `${node.title}. ${statusLine(node, tier, signals)}`
+}
+
+/** The composed accessible name for a system-star button (SA-F): title, honest
+ *  honed count, and expand state, so a screen reader hears "Retrieval and
+ *  Grounding, two of five honed, collapsed" — the same fact the star's colour
+ *  encodes. A personal group reports "your group" and its sketch count and never a
+ *  honed fraction (`06-…`: the personal layer joins no count). */
+export function systemAccessibleName(
+  group: Pick<KnowledgeGroupView, 'title' | 'is_personal' | 'honed_count' | 'total_count'>,
+  open: boolean,
+): string {
+  const state = open ? 'expanded' : 'collapsed'
+  if (group.is_personal) {
+    return `${group.title}, your group, ${group.total_count} sketched, ${state}`
+  }
+  return `${group.title}, ${group.honed_count} of ${group.total_count} honed, ${state}`
 }
 
 /** One arc segment of a training world's orbital session trail. `filled` marks a

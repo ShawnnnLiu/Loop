@@ -81,13 +81,24 @@ Two verification notes:
 
 ## SA-F — accessibility (deferred follow-up)
 
-**Descoped from the initial build for cost (decision C); tracked here so it is not forgotten.**
-Not scheduled with SA-A…E; a required follow-up before the atlas is production-complete.
-- Make the SVG chart bodies fully accessible per `01-…`: focusable systems/worlds/capstones with composed accessible names, keyboard traversal to every body, `:focus-visible` ring (the existing `.selring`), focus management between the chart and the drawer/sheet.
-- Colour-independence pass (tier already conveyed by shape + text; verify no meaning is colour-only).
-- **CDP assertions** added here: keyboard-only reaches every node/system/capstone, and — with the OS flag set — nothing on the screen moves (the reduced-motion audit).
-- **Done when**: keyboard + SR reach every interactive body, the a11y + reduced-motion CDP checks pass, and the four gates are green.
-- Until SA-F lands, the atlas is honest and legible (real-text counts, shape-encoded tiers, the accessible drawer/sheet) but not keyboard/SR-complete on the chart itself — a documented debt, not a silent gap.
+**Status: IMPLEMENTED** (four frontend gates green: `typecheck` / `lint` / `test` 313 / `build`; the chart-body keyboard loop browser-verified end-to-end).
+Was descoped from the initial build for cost (decision C) and tracked as documented debt; now landed.
+
+Landed as:
+- A shared **`SvgButton`** wrapper in `components/atlas/Glyphs.tsx` — `role="button"` + `tabIndex=0` + Enter/Space activation (`preventDefault` on Space so the page never scrolls) + an `aria-label`. Every interactive chart body in `Observatory.tsx` (capstone beacons, collapsed *and* open system stars, the collapse-✕, the delete-group affordance, and every world/comet) now renders through it, so all are Tab-reachable in document = reading order.
+- Two pure, vitest-covered name composers in `lib/atlas/render.ts`: **`bodyAccessibleName`** (`${title}. ${statusLine(...)}` — the status line already puts tier + counts + flags in words, so what colour encodes is spoken) and **`systemAccessibleName`** (`"…, 2 of 5 honed, collapsed"`; personal groups read `"your group, n sketched"` and never a honed fraction). Covered in `render.test.ts`.
+- **`:focus-visible` ring**: `.rim [role='button']:focus-visible` draws the gold dashed outline echoing `.selring`; keyboard-only, so a pointer click leaves no lingering ring. A matching dark-sky ring for the mobile native-button cards (`.m-cap/.m-srow/.m-card/.m-del:focus-visible`).
+- **Drawer focus management** in `NodeDrawer.tsx` (the plan assumed this already shipped; it did not): on open, focus moves to the close button; Tab is trapped inside the dialog (wraps both directions); Escape closes; on close, focus returns to the invoking chart body. `aria-modal="true"` added. The mount-only effect uses an `onClose` ref so it never re-runs and steals focus mid-interaction across node switches.
+- **Decorative layers hidden from AT** (`aria-hidden`): both dust layers, the nebula ellipses + per-system lamp glows + the overall light-pollution wash, the orbit ring / constellation, the vignette, and the duplicate visible label `<text>` (`.slab`/`.scount`/`.caplab`/`.plab`) — so the a11y tree is just the meaningful bodies plus the real-text plaque/counts. The `<svg role="group" aria-label="… — knowledge map">` names the instrument. (Mobile was already native-button accessible from SA-D; SA-F only adds its focus ring.)
+- **Colour-independence**: verified — tier is conveyed by shape (rock/ocean/crown) + the spoken status line + the drawer ladder, never colour alone.
+
+Verification (browser, keyless demo server, `ai-integration-engineer` with a mixed sky seeded through the real `setpoint` route):
+- Tab from the toolbar reached the first SVG capstone with `:focus-visible` matching and the computed outline `rgb(232,192,122) dashed 2px` (`--star-gold`) — confirmed by zoomed screenshot.
+- All 8 collapsed bodies exposed composed `aria-label`s (`"LLM Evaluation & Safety, 4 of 4 honed, collapsed"`, `"… Capstone — unproven"`); dust + duplicate labels `aria-hidden`.
+- Enter on a system star expanded it (4 world buttons appeared, each `"… . Honed · self-assessed"` — honest, since seeded via set-point); Enter on a world opened the drawer (`role=dialog`, `aria-modal`, focus on the close button); Escape closed it and **returned focus to the invoking world button**; Tab / Shift+Tab wrapped within the drawer (real keys + dispatched, both directions).
+- **Reduced-motion**: the loop/one-shot fallbacks shipped and were audited in SA-E; the OS `prefers-reduced-motion` flag could not be toggled through the automation surface (the same limitation SA-E noted for the bottom sheet), so its dedicated stillness sweep rests on the SA-E CSS audit + the existing `@media (prefers-reduced-motion: reduce)` block (unchanged here — focus outlines are not animations).
+
+**Frontend-only** — no backend, spec, axiom, `map_state`, or mutation-contract change; SA-F touches rendering + accessibility affordances only.
 
 ## Test strategy (summary)
 

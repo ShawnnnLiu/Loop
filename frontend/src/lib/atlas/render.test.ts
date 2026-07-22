@@ -3,14 +3,19 @@ import { describe, expect, it } from 'vitest'
 import type { KnowledgeBranchView, KnowledgeMapView, KnowledgeNodeView } from '../../api/types'
 import { NO_SIGNALS, type NodeSignals } from './signals'
 import {
+  bezelTicks,
+  earliestNextSession,
   honedFraction,
   nothingLit,
   panTransform,
   planetLabel,
   plaqueSummary,
+  probeGeometry,
+  roseNodes,
   statusLine,
   trailArcs,
 } from './render'
+import type { MasteryTier } from '../../api/types'
 
 function sig(over: Partial<NodeSignals>): NodeSignals {
   return { ...NO_SIGNALS, ...over }
@@ -211,5 +216,106 @@ describe('map aggregates', () => {
       nodes: [node({ node_id: 'a', tier: 'discovered' })],
     }
     expect(nothingLit(dark)).toBe(true)
+  })
+})
+
+function mapView(nodes: KnowledgeNodeView[]): KnowledgeMapView {
+  return {
+    has_selection: true,
+    pathway_id: 'p',
+    registry_version: 'v1',
+    version_mismatch: false,
+    branches: [],
+    groups: [],
+    nodes,
+  }
+}
+
+describe('earliestNextSession', () => {
+  it('returns null when nothing is scheduled (degradation → no probe)', () => {
+    expect(earliestNextSession(mapView([node({ node_id: 'a' })]))).toBeNull()
+  })
+
+  it('picks the earliest scheduled start across the map', () => {
+    const view = mapView([
+      node({ node_id: 'a', next_session_at: '2026-07-23T09:00:00Z' }),
+      node({ node_id: 'b', next_session_at: '2026-07-21T09:00:00Z' }),
+      node({ node_id: 'c' }),
+    ])
+    expect(earliestNextSession(view)).toEqual({ nodeId: 'b', at: '2026-07-21T09:00:00Z' })
+  })
+
+  it('breaks ties on node id for determinism', () => {
+    const view = mapView([
+      node({ node_id: 'z', next_session_at: '2026-07-21T09:00:00Z' }),
+      node({ node_id: 'a', next_session_at: '2026-07-21T09:00:00Z' }),
+    ])
+    expect(earliestNextSession(view)?.nodeId).toBe('a')
+  })
+})
+
+describe('probeGeometry', () => {
+  it('stands off along the default up-right vector when the system is collapsed', () => {
+    const g = probeGeometry({ x: 300, y: 300 }, null)
+    // default (ux,uy)=(.8,-.6): x=300+68=368, y=300-51=249
+    expect(g.x).toBe(368)
+    expect(g.y).toBe(249)
+    // label sits below the probe when approaching from below (uy<0 → +18)
+    expect(g.labelY).toBe(g.y + 18)
+    // nose points back toward the target (atan2(+51, -68) → 2nd quadrant)
+    expect(Math.round(g.angle)).toBe(143)
+  })
+
+  it('approaches along the orbit radius when the system is open', () => {
+    // target directly right of the system centre → probe stands off to the right
+    const g = probeGeometry({ x: 300, y: 300 }, { x: 200, y: 300 })
+    expect(g.x).toBe(385)
+    expect(g.y).toBe(300)
+    expect(g.angle).toBe(180)
+  })
+
+  it('clamps the probe and its label inside the rim', () => {
+    const g = probeGeometry({ x: 1170, y: 40 }, null)
+    expect(g.x).toBeLessThanOrEqual(1096)
+    expect(g.y).toBeGreaterThanOrEqual(30)
+    expect(g.labelX).toBeLessThanOrEqual(1072)
+  })
+})
+
+describe('bezelTicks', () => {
+  it('is byte-stable and integer-only', () => {
+    expect(bezelTicks()).toEqual(bezelTicks())
+    for (const t of bezelTicks()) {
+      expect(Number.isInteger(t.x1) && Number.isInteger(t.y2)).toBe(true)
+    }
+  })
+
+  it('draws longer top/bottom ticks every third column', () => {
+    const ticks = bezelTicks()
+    const longTop = ticks.find((t) => t.x1 === 110 && t.y1 === 4)
+    expect(longTop?.y2).toBe(12) // long (x%120===110)
+    const shortTop = ticks.find((t) => t.x1 === 70 && t.y1 === 4)
+    expect(shortTop?.y2).toBe(8) // short
+  })
+})
+
+describe('roseNodes', () => {
+  const prev = new Map<string, MasteryTier>([
+    ['a', 'training'],
+    ['b', 'honed'],
+    ['c', 'honed'],
+  ])
+
+  it('reports only strict tier rises', () => {
+    const risen = roseNodes(prev, [
+      node({ node_id: 'a', tier: 'honed' }), // training → honed: rose
+      node({ node_id: 'b', tier: 'honed' }), // unchanged
+      node({ node_id: 'c', tier: 'training' }), // set-point down: never blooms
+    ])
+    expect(risen).toEqual(['a'])
+  })
+
+  it('never blooms a node absent from the previous snapshot (just added)', () => {
+    expect(roseNodes(prev, [node({ node_id: 'new', tier: 'proven' })])).toEqual([])
   })
 })

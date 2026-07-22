@@ -1833,6 +1833,64 @@ select.input {
     opacity: 1;
   }
 }
+/* SA-E ornaments. The probe label + orrery caption share the mono micro-type;
+   the orrery dots and the probe drift are slow decorative loops; the tier-up
+   bloom is a one-shot that expands and fades out. All stilled under reduced
+   motion below (and the bloom is additionally never mounted when reduced). */
+.rim .probelab {
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: 0.05em;
+  fill: var(--chalk-dim);
+}
+.rim .orr1 {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: atlas-spin 60s linear infinite;
+}
+.rim .orr2 {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: atlas-spinr 95s linear infinite;
+}
+@keyframes atlas-spinr {
+  to {
+    transform: rotate(-360deg);
+  }
+}
+.rim .drift {
+  animation: atlas-drift 5s ease-in-out infinite;
+}
+@keyframes atlas-drift {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(3px, -2px);
+  }
+}
+.rim .bloom circle {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: atlas-bloom 1.05s ease-out forwards;
+}
+.rim .bloom circle:nth-child(2) {
+  animation-delay: 0.16s;
+}
+.rim .bloom circle:nth-child(3) {
+  animation-delay: 0.32s;
+}
+@keyframes atlas-bloom {
+  0% {
+    transform: scale(0.2);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
 /* Pointer-follow tooltip — decorative; the drawer is the accessible detail. */
 .atlas-tt {
   position: absolute;
@@ -1970,7 +2028,10 @@ select.input {
   .rim .pulse,
   .rim .shimmer,
   .rim .trail,
-  .rim .rays {
+  .rim .rays,
+  .rim .orr1,
+  .rim .orr2,
+  .rim .drift {
     animation: none;
   }
   .rim .twinkle {
@@ -1985,6 +2046,13 @@ select.input {
   .rim .consti {
     animation: none;
     opacity: 1;
+  }
+  /* The bloom is a one-shot reward: under reduced motion it never plays and
+     resolves to its end state (invisible). The component also declines to mount
+     it when reduced, so this is a second guard. */
+  .rim .bloom circle {
+    animation: none;
+    opacity: 0;
   }
   .atlas-dust {
     transition: none;
@@ -2208,5 +2276,9 @@ select.input {
 @media (prefers-reduced-motion: reduce) {
   .msky .chev {
     transition: none;
+  }
+  /* The bottom sheet appears instantly rather than sliding up (SA-E audit). */
+  .km-drawer {
+    animation: none;
   }
 }

@@ -2,21 +2,26 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { api } from '../api/client'
-import type { KnowledgeMapView } from '../api/types'
+import type { KnowledgeMapView, MasteryTier } from '../api/types'
 import { DUST_FAR, DUST_NEAR, beaconFor, bodyFor, starFor } from '../lib/atlas/bodies'
 import { CANONICAL_VIEWPORT, layoutSky } from '../lib/atlas/layout'
 import {
+  earliestNextSession,
   honedFraction,
   nothingLit,
   panTransform,
   planetLabel,
   plaqueSummary,
+  probeGeometry,
+  roseNodes,
   statusLine,
 } from '../lib/atlas/render'
 import { readSignals } from '../lib/atlas/signals'
+import { fmtWhen } from '../lib/datetime'
 import { groupCountLabel, groupNodes } from '../lib/knowledgeMap'
 import { AtlasDefs } from './atlas/AtlasDefs'
 import { BeaconGlyph, PlanetGlyph, StarGlyph } from './atlas/Glyphs'
+import { Bloom, InstrumentEdge, Probe } from './atlas/Ornaments'
 import { AddSkillPicker, CreateForm, CreateNodeForm } from './MapForms'
 
 // The desktop Observatory (SA-C): the Star Atlas rendered from a real
@@ -24,10 +29,11 @@ import { AddSkillPicker, CreateForm, CreateNodeForm } from './MapForms'
 // (server-computed, axiom-11 non-interference); the *sky* is computed by the pure
 // SA-B layout engine (layoutSky) and drawn declaratively through the SA-B/SA-C
 // descriptor functions (bodyFor / starFor / beaconFor + render helpers). Every
-// mutation is an existing route through `onMutate`. Deferred by design (noted
-// inline): the drifting probe + tier-up bloom + orrery/bezel-tick/bracket
-// ornaments → SA-E; the mobile treatment → SA-D (MobileSky); chart-body
-// keyboard/SR accessibility → SA-F. The drawer's dialog semantics ship now.
+// mutation is an existing route through `onMutate`. The ornament layer is complete
+// (SA-E): the drifting probe + one-shot tier-up bloom ride inside the pan group;
+// the orrery/bezel-tick/bracket instrument edge sits outside it (never zoomed).
+// Deferred by design: chart-body keyboard/SR accessibility → SA-F. The drawer's
+// dialog semantics ship now, and every ornament respects reduced motion.
 
 const HINT = 'Study lights a system from its worlds; a confirmed artifact crowns a capstone.'
 
@@ -51,6 +57,8 @@ export function Observatory({
   // Which map-level action is open: 'add-skill' | 'new-group' | 'new-node'.
   const [panel, setPanel] = useState<string | null>(null)
   const [hover, setHover] = useState<{ title: string; meta: string } | null>(null)
+  // The node currently playing the one-shot tier-up bloom (SA-E), or null.
+  const [bloomNodeId, setBloomNodeId] = useState<string | null>(null)
 
   const wrapRef = useRef<HTMLDivElement>(null)
   const skypanRef = useRef<SVGGElement>(null)
@@ -58,6 +66,10 @@ export function Observatory({
   const dustFarRef = useRef<SVGGElement>(null)
   const tooltipRef = useRef<HTMLDivElement>(null)
   const [containerW, setContainerW] = useState(0)
+  // Previous snapshot of node tiers — the bloom fires on a strict tier rise
+  // between fetches. Null until the first view is seen (no bloom on initial load).
+  const prevTiers = useRef<Map<string, MasteryTier> | null>(null)
+  const bloomTimer = useRef<number | null>(null)
 
   const reduced = useMemo(
     () => window.matchMedia('(prefers-reduced-motion: reduce)').matches,
@@ -99,6 +111,31 @@ export function Observatory({
     return () => ro.disconnect()
   }, [])
 
+  // Tier-up bloom: when a node rises a tier between fetches (a mark-evidence or a
+  // set-point up through the drawer), play the one-shot at that world. The very
+  // first view establishes the baseline (no bloom on load); reduced motion skips
+  // it entirely (the reward flourish never mounts, mirroring the design page).
+  useEffect(() => {
+    const current = new Map<string, MasteryTier>(view.nodes.map((n) => [n.node_id, n.tier]))
+    const prev = prevTiers.current
+    prevTiers.current = current
+    if (prev === null || reduced) return
+    const risen = roseNodes(prev, view.nodes)
+    if (risen.length === 0) return
+    // Prefer the node the user is looking at, so the bloom lands where they acted.
+    const pick = selectedNodeId && risen.includes(selectedNodeId) ? selectedNodeId : risen[0]
+    setBloomNodeId(pick)
+    if (bloomTimer.current) window.clearTimeout(bloomTimer.current)
+    bloomTimer.current = window.setTimeout(() => setBloomNodeId(null), 1200)
+  }, [view, reduced, selectedNodeId])
+
+  useEffect(
+    () => () => {
+      if (bloomTimer.current) window.clearTimeout(bloomTimer.current)
+    },
+    [],
+  )
+
   function toggleGroup(groupId: string) {
     setOpenGroups((prev) => {
       const next = new Set(prev)
@@ -129,6 +166,41 @@ export function Observatory({
     const cap = sky.capstones.find((c) => c.nodeId === focusId)
     return cap ? { x: cap.x, y: cap.y } : null
   }, [focusId, sky])
+
+  // Where a node draws right now: a capstone at its beacon, an open system's world
+  // on its orbit, otherwise the (collapsed) system's star centre. Drives the probe
+  // target and the bloom position — both follow the world wherever it sits.
+  function nodePos(nodeId: string): { x: number; y: number } | null {
+    const node = nodesById.get(nodeId)
+    if (!node) return null
+    if (node.kind === 'capstone') {
+      const cap = sky.capstones.find((c) => c.nodeId === nodeId)
+      return cap ? { x: cap.x, y: cap.y } : null
+    }
+    const gid = node.group_id
+    if (gid && openGroups.has(gid)) {
+      const p = sky.planetsFor(gid).find((pl) => pl.nodeId === nodeId)
+      if (p) return { x: p.x, y: p.y }
+    }
+    const sys = sky.systems.find((s) => s.groupId === gid)
+    return sys ? { x: sys.x, y: sys.y } : null
+  }
+
+  // The drifting probe → the earliest scheduled session's world. Omitted when
+  // nothing is scheduled (graceful degradation). When its system is open the probe
+  // approaches along the orbit radius; collapsed, it uses the default approach.
+  const probe = (() => {
+    const next = earliestNextSession(view)
+    if (!next) return null
+    const target = nodePos(next.nodeId)
+    if (!target) return null
+    const gid = nodesById.get(next.nodeId)?.group_id ?? null
+    const centre = gid && openGroups.has(gid) ? sky.systems.find((s) => s.groupId === gid) : null
+    const approachFrom = centre ? { x: centre.x, y: centre.y } : null
+    return { geo: probeGeometry(target, approachFrom), whenLabel: fmtWhen(next.at) }
+  })()
+
+  const bloomPos = bloomNodeId ? nodePos(bloomNodeId) : null
 
   const pan = panTransform(focusPos, selectedNodeId !== null)
   const unit = containerW > 0 ? containerW / CANONICAL_VIEWPORT.w : 0
@@ -513,7 +585,17 @@ export function Observatory({
                     </g>
                   )
                 })}
+
+                {/* Motion ornaments ride inside the pan group so they glide with
+                    the sky (SA-E): the probe toward the next session, the one-shot
+                    tier-up bloom. Both aria-hidden — the drawer carries the truth. */}
+                {probe && <Probe geo={probe.geo} whenLabel={probe.whenLabel} />}
+                {bloomPos && <Bloom x={bloomPos.x} y={bloomPos.y} />}
               </g>
+
+              {/* Instrument edge (SA-E): bezel ticks, corner brackets, orrery —
+                  fixed to the rim, never zoomed with the sky. Decorative. */}
+              <InstrumentEdge />
 
               {/* Mission-plaque cartouche — the accessible textual truth (instrument
                   layer, outside the pan group so it never zooms). */}

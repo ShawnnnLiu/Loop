@@ -11,6 +11,7 @@
 // the additive SA-A signals — never an LLM signal, never a score.
 
 import type { KnowledgeMapView, KnowledgeNodeView, MasteryTier } from '../../api/types'
+import { MASTERY_TIERS } from '../../api/types'
 import { CANONICAL_VIEWPORT } from './layout'
 import type { NodeSignals } from './signals'
 import { sessionTrail } from './signals'
@@ -187,6 +188,110 @@ export function nothingLit(view: KnowledgeMapView): boolean {
   const anyLitNode = view.nodes.some((n) => n.kind !== 'capstone' && n.tier !== 'discovered')
   const anyProvenCapstone = view.branches.some((b) => b.capstone_tier === 'proven')
   return !anyLitNode && !anyProvenCapstone
+}
+
+// ——— SA-E ornaments (probe · bloom · instrument edge) ———
+
+/** The world a drifting probe heads for: the earliest scheduled session across
+ *  the whole map (`next_session_at`, SA-A). Capstones carry no sessions, so this
+ *  is always a world. ISO strings are compared as written (the SA-A field is a
+ *  tz-aware start); ties break on node id for determinism. Null when nothing is
+ *  scheduled — the probe is then omitted entirely (graceful degradation). */
+export function earliestNextSession(
+  view: KnowledgeMapView,
+): { nodeId: string; at: string } | null {
+  let best: { nodeId: string; at: string } | null = null
+  for (const n of view.nodes) {
+    const at = n.next_session_at
+    if (at == null) continue
+    if (best === null || at < best.at || (at === best.at && n.node_id < best.nodeId)) {
+      best = { nodeId: n.node_id, at }
+    }
+  }
+  return best
+}
+
+/** The drifting probe's geometry (canonical viewBox units). It sits `PROBE_STANDOFF`
+ *  from its target along the approach vector, nose pointed at the target, its label
+ *  clamped inside the rim. `approachFrom` is the owning system's centre when that
+ *  system is open (the probe comes in along the orbit radius); null when the system
+ *  is collapsed, falling back to the demo's default up-right approach. Mirrors the
+ *  reference probe math; pure and byte-stable (rounded). */
+export interface ProbeGeometry {
+  x: number
+  y: number
+  /** Nose rotation in degrees, pointing from the probe toward the target. */
+  angle: number
+  labelX: number
+  labelY: number
+}
+
+const PROBE_STANDOFF = 85
+
+export function probeGeometry(
+  target: { x: number; y: number },
+  approachFrom: { x: number; y: number } | null,
+): ProbeGeometry {
+  let ux = 0.8
+  let uy = -0.6
+  if (approachFrom) {
+    const dx = target.x - approachFrom.x
+    const dy = target.y - approachFrom.y
+    const len = Math.hypot(dx, dy) || 1
+    ux = dx / len
+    uy = dy / len
+  }
+  const x = clamp(target.x + ux * PROBE_STANDOFF, 84, 1096)
+  const y = clamp(target.y + uy * PROBE_STANDOFF, 30, 630)
+  const angle = (Math.atan2(target.y - y, target.x - x) * 180) / Math.PI
+  return {
+    x: round1(x),
+    y: round1(y),
+    angle: round1(angle),
+    labelX: round1(clamp(x, 108, 1072)),
+    labelY: round1(uy < 0 ? y + 18 : y - 14),
+  }
+}
+
+/** One engraved tick on the instrument bezel (canonical units). */
+export interface TickLine {
+  x1: number
+  y1: number
+  x2: number
+  y2: number
+}
+
+/** The engraved bezel ticks — top/bottom columns every 40u (longer every third),
+ *  short side ticks every 40u. Pure, integer, byte-stable; drawn on the fixed
+ *  instrument layer (never zoomed with the sky). Mirrors the reference edge. */
+export function bezelTicks(): TickLine[] {
+  const ticks: TickLine[] = []
+  for (let x = 70; x < 1130; x += 40) {
+    const long = x % 120 === 110
+    ticks.push({ x1: x, y1: 4, x2: x, y2: long ? 12 : 8 })
+    ticks.push({ x1: x, y1: 661, x2: x, y2: long ? 653 : 657 })
+  }
+  for (let y = 60; y < 620; y += 40) {
+    ticks.push({ x1: 4, y1: y, x2: 8, y2: y })
+    ticks.push({ x1: 1172, y1: y, x2: 1176, y2: y })
+  }
+  return ticks
+}
+
+/** Node ids whose tier *rose* between two snapshots — the tier-up bloom trigger.
+ *  Only strict increases count (a set-point down never blooms); a node absent from
+ *  `prev` (just added) does not bloom. Pure over the tier ladder order. */
+export function roseNodes(
+  prev: ReadonlyMap<string, MasteryTier>,
+  nodes: ReadonlyArray<Pick<KnowledgeNodeView, 'node_id' | 'tier'>>,
+): string[] {
+  const risen: string[] = []
+  for (const n of nodes) {
+    const before = prev.get(n.node_id)
+    if (before === undefined) continue
+    if (MASTERY_TIERS.indexOf(n.tier) > MASTERY_TIERS.indexOf(before)) risen.push(n.node_id)
+  }
+  return risen
 }
 
 // ——— small pure helpers ———

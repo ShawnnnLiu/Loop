@@ -183,6 +183,40 @@ class KnowledgeNodeView(BaseModel):
     linked_module_ids: list[str] = Field(default_factory=list)
     is_personal: bool = False
 
+    # --- Additive atlas signals (Star Atlas SA-A, ``knowledge-map-atlas/02-…``) ---
+    # Deterministic, server-computed presentation flourishes over data the service
+    # already holds - never a score, never an LLM, never a routing/scheduling input
+    # (axiom 00 / 11). All nullable/defaulted: a signal absent for a given node
+    # (no scheduled session, no evidence, no self-assessment) simply drops its
+    # flourish and is never fabricated (the plan's graceful-degradation contract).
+    sessions_total: int | None = None
+    """Active-plan tasks training this node (its ``linked_module_ids``' tasks);
+    ``None`` when the node has no linked active-plan work - the orbital trail's
+    denominator."""
+    sessions_done: int | None = None
+    """Of ``sessions_total``, how many carry a completed telemetry event; ``None``
+    in lockstep with ``sessions_total``."""
+    next_session_at: datetime | None = None
+    """Earliest active-draft start strictly after now among this node's linked
+    tasks (tz-aware; the client localizes). ``None`` when nothing upcoming is
+    scheduled - the "next session" probe is then omitted."""
+    evidence_label: str | None = None
+    """Opaque label of the confirmed evidence behind a ``proven`` node - a
+    capstone's matched confirmed-experience title (never raw calendar text).
+    ``None`` for a skill (mark-evidence stores no label) or an unproven node."""
+    evidence_confirmed_at: datetime | None = None
+    """When a skill node's mark-evidence anchor was recorded (its EVIDENCE-source
+    grant time); ``None`` for capstones (no timestamp source) and unproven
+    nodes."""
+    review_flagged: bool = False
+    """Honed on raw minutes but not on the confidence-weighted basis - the work
+    happened, the confidence didn't (``08-mastery-memory.md`` review flag). Drives
+    the review shimmer; ``False`` (no shimmer) when absent or not honed."""
+    self_assessed: bool = False
+    """This node's tier was lifted by a user set-point above what derived study
+    alone would give - a self-claimed tier, not an earned one. Drives the
+    self-assessed tick; ``False`` when the tier stands on study/evidence."""
+
 
 class KnowledgeGroupView(BaseModel):
     """A group waypoint: its member nodes plus honest pathway-skill counts (KT-C).

@@ -3,8 +3,27 @@ import { Link } from 'react-router-dom'
 
 import { ApiError, api, errorMessage } from '../api/client'
 import type { KnowledgeMapView, PathwayCard } from '../api/types'
-import { KnowledgeMap } from '../components/KnowledgeMap'
+import { MobileSky } from '../components/MobileSky'
 import { NodeDrawer } from '../components/NodeDrawer'
+import { Observatory } from '../components/Observatory'
+
+// One Star Atlas screen, two renderers: desktop gets the force-directed Observatory
+// (SA-C), phones get the scrolling MobileSky (SA-D). The breakpoint keeps the
+// desktop-only layoutSky off small screens (02-…) so a phone never runs the force
+// sim. Tracks the media query live so a resize across the breakpoint re-renders the
+// right surface.
+function useIsDesktop(): boolean {
+  const [desktop, setDesktop] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(min-width: 900px)').matches,
+  )
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 900px)')
+    const onChange = () => setDesktop(mq.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
+  return desktop
+}
 
 // The Pathway screen (KT-D): the account's full knowledge map. Structure comes
 // from the pathway registry + the append-only overlay; every tier is the
@@ -23,6 +42,11 @@ export function PathwayScreen() {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
+  // Bumped when the user clicks the backdrop (empty space) around the drawer, so
+  // the desktop Observatory returns to the overview in the same gesture. The ✕ and
+  // Esc close the drawer only (they leave the system open), so they don't bump it.
+  const [viewResetKey, setViewResetKey] = useState(0)
+  const isDesktop = useIsDesktop()
 
   function load(initial = false) {
     if (initial) setLoading(true)
@@ -84,6 +108,20 @@ export function PathwayScreen() {
     ? view.nodes.find((n) => n.node_id === selectedNodeId) ?? null
     : null
 
+  // Close the drawer only (✕ / Esc): keep the system open so the user can stay in
+  // context or pick another world.
+  function closeDrawer() {
+    setSelectedNodeId(null)
+    setActionError(null)
+  }
+
+  // Click-away dismiss (the drawer backdrop): close the drawer and return the sky
+  // to the overview (collapse open systems + zoom out) in one gesture.
+  function dismissDrawer() {
+    closeDrawer()
+    setViewResetKey((k) => k + 1)
+  }
+
   return (
     <div className="screen">
       <div className="row" style={{ alignItems: 'flex-end', gap: 18 }}>
@@ -139,10 +177,23 @@ export function PathwayScreen() {
             </Link>
           </div>
         </div>
+      ) : isDesktop ? (
+        <div style={{ marginTop: 20, maxWidth: 1080 }}>
+          <Observatory
+            view={view}
+            pathwayName={card?.display_name ?? 'Your knowledge map'}
+            selectedNodeId={selectedNodeId}
+            onSelectNode={setSelectedNodeId}
+            onMutate={mutate}
+            busy={busy}
+            resetKey={viewResetKey}
+          />
+        </div>
       ) : (
         <div style={{ marginTop: 20, maxWidth: 760 }}>
-          <KnowledgeMap
+          <MobileSky
             view={view}
+            pathwayName={card?.display_name ?? 'Your knowledge map'}
             selectedNodeId={selectedNodeId}
             onSelectNode={setSelectedNodeId}
             onMutate={mutate}
@@ -155,10 +206,8 @@ export function PathwayScreen() {
         <NodeDrawer
           node={selectedNode}
           onMutate={mutate}
-          onClose={() => {
-            setSelectedNodeId(null)
-            setActionError(null)
-          }}
+          onClose={closeDrawer}
+          onDismiss={isDesktop ? dismissDrawer : closeDrawer}
           busy={busy}
           error={actionError}
         />

@@ -28,22 +28,6 @@ export const TIER_MEANING: Record<MasteryTier, string> = {
   proven: 'Honed, with a real artifact you confirmed.',
 }
 
-/** The gilding-ramp tokens for a tier — a `fill`/`ring` pair of CSS var names
- *  (design-reference "Loop - Pathway Map.html"). Kept as data so the renderer
- *  stays declarative and both light and dark themes inherit the token values. */
-export function tierTone(tier: MasteryTier): { fill: string; ring: string } {
-  switch (tier) {
-    case 'training':
-      return { fill: 'var(--clay-tint)', ring: 'var(--clay)' }
-    case 'honed':
-      return { fill: 'var(--gold-soft)', ring: 'var(--gold)' }
-    case 'proven':
-      return { fill: 'var(--gold)', ring: 'var(--gold-deep)' }
-    default:
-      return { fill: '#fff', ring: 'var(--muted)' }
-  }
-}
-
 /** A node is mastered (counts toward the honed tally) when its tier is ≥ honed.
  *  Mirrors the server's `_MASTERED_TIERS` — `proven ⊃ honed`. */
 export function isMastered(tier: MasteryTier): boolean {

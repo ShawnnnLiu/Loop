@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { api } from '../api/client'
 import type { KnowledgeMapView, KnowledgeNodeView, MasteryTier } from '../api/types'
 import { MASTERY_TIERS } from '../api/types'
+import { readSignals } from '../lib/atlas/signals'
+import { fmtDate, fmtWhen } from '../lib/datetime'
 import {
   SETTABLE_TIERS,
   TIER_MEANING,
@@ -41,17 +43,72 @@ export function NodeDrawer({
   node,
   onMutate,
   onClose,
+  onDismiss,
   busy,
   error,
 }: {
   node: KnowledgeNodeView
   /** Run a mutation and adopt its refreshed map. Errors surface via `error`. */
   onMutate: (fn: () => Promise<KnowledgeMapView>) => void
+  /** Close just this panel (the ✕ button and Escape). Leaves the chart as-is. */
   onClose: () => void
+  /** Click-away dismiss (the backdrop). On desktop this also returns the sky to
+   *  the overview; defaults to `onClose` when not provided. */
+  onDismiss?: () => void
   busy: boolean
   error: string | null
 }) {
+  const dismiss = onDismiss ?? onClose
   const [noteText, setNoteText] = useState(node.note ?? '')
+
+  const drawerRef = useRef<HTMLElement>(null)
+  // Keep the latest onClose reachable from the mount-only effect below without
+  // re-running it (onClose is a fresh closure each render; re-running the effect
+  // would re-focus the close button mid-interaction and steal focus while typing).
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
+
+  // Focus management (SA-F). The chart bodies are now real controls, so the drawer
+  // completes the loop: on open, focus moves into the dialog; Tab is trapped inside
+  // it; Escape closes it; and on close, focus returns to the invoking body (the
+  // star/world/capstone that was focused when it opened). Runs once per open — the
+  // empty deps are intentional; the drawer stays mounted across node switches, so
+  // this must not re-run when the node prop or onClose closure changes.
+  useEffect(() => {
+    const previouslyFocused = document.activeElement as HTMLElement | null
+    const el = drawerRef.current
+    el?.querySelector<HTMLElement>('[data-drawer-close]')?.focus()
+
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onCloseRef.current()
+        return
+      }
+      if (e.key !== 'Tab' || !el) return
+      const focusable = Array.from(
+        el.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      )
+      if (focusable.length === 0) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
+
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('keydown', onKeyDown)
+      previouslyFocused?.focus?.()
+    }
+  }, [])
 
   // Re-seed the editor whenever a different node opens or the stored note changes
   // (e.g. after a save/delete round-trips a fresh view). Keyed on node identity so
@@ -64,16 +121,37 @@ export function NodeDrawer({
   const isCustom = node.kind === 'custom'
   const noteChanged = noteText.trim() !== (node.note ?? '')
 
+  // Additive atlas signals (SA-A), each read defensively: a null/false signal
+  // simply omits its card (the graceful-degradation contract, 02-…).
+  const signals = readSignals(node)
+  const isProven = node.tier === 'proven'
+  const hasEvidence = isProven && (signals.evidenceLabel !== null || signals.evidenceConfirmedAt !== null)
+  const hasSessionCounts = signals.sessionsTotal !== null && signals.sessionsDone !== null
+
   return (
     <>
-      <div className="km-backdrop" onClick={onClose} aria-hidden="true" />
-      <aside className="km-drawer" role="dialog" aria-label={`${node.title} details`}>
+      <div className="km-backdrop" onClick={dismiss} aria-hidden="true" />
+      <aside
+        ref={drawerRef}
+        className="km-drawer"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${node.title} details`}
+      >
+        {/* Grab handle — hidden on desktop, the sheet affordance on phones (SA-D). */}
+        <div className="km-grab" aria-hidden="true" />
         <div className="km-dhead">
           <div className="row" style={{ justifyContent: 'space-between' }}>
             <span className="label" style={{ color: 'var(--clay-deep)' }}>
               {KIND_EYEBROW[node.kind]}
             </span>
-            <button className="btn btn-quiet sm" type="button" onClick={onClose} aria-label="close">
+            <button
+              className="btn btn-quiet sm"
+              type="button"
+              onClick={onClose}
+              aria-label="close"
+              data-drawer-close
+            >
               ✕
             </button>
           </div>
@@ -91,7 +169,64 @@ export function NodeDrawer({
           )}
           <p className="muted" style={{ fontSize: 12, margin: 0, lineHeight: 1.5 }}>
             <b style={{ color: 'var(--ink-soft)' }}>{tierLabel(node.tier)}</b> — {TIER_MEANING[node.tier]}
+            {signals.selfAssessed && <span className="km-satick"> ✓ self-assessed</span>}
           </p>
+
+          {/* Session progress — the same plan/telemetry counts the Today screen
+              shows, surfaced onto the node (SA-A). Omitted when absent. */}
+          {!isCapstone && (hasSessionCounts || signals.nextSessionAt) && (
+            <div className="km-dcounts card soft">
+              {hasSessionCounts && (
+                <div className="km-cr">
+                  <span>Sessions</span>
+                  <b>
+                    {signals.sessionsDone} of {signals.sessionsTotal} done
+                  </b>
+                </div>
+              )}
+              {node.expected_minutes != null && (
+                <div className="km-cr">
+                  <span>Planned study</span>
+                  <b>{node.expected_minutes} min</b>
+                </div>
+              )}
+              {signals.nextSessionAt && (
+                <div className="km-cr">
+                  <span>Next session</span>
+                  <b>{fmtWhen(signals.nextSessionAt)}</b>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Review shimmer's explanation (08-…: honed on minutes, shaky on
+              confidence). Never lowers the tier. */}
+          {signals.reviewFlagged && (
+            <div className="km-flagcard">
+              <b>Revisit?</b> The study minutes are done, but your own check-ins after these
+              sessions were shaky. Still honed — just worth a second look.
+            </div>
+          )}
+
+          {/* Proven evidence anchor (SA-A). Skills carry a confirmed-at time; a
+              capstone carries its matched artifact label. Either may be absent. */}
+          {hasEvidence && (
+            <div>
+              <div className="label">Evidence</div>
+              <div className="km-evfile" style={{ marginTop: 7 }}>
+                <div className="km-fg">✦</div>
+                <div>
+                  <div className="km-fn">{signals.evidenceLabel ?? 'Confirmed artifact'}</div>
+                  <div className="km-fd">
+                    ✓{' '}
+                    {signals.evidenceConfirmedAt
+                      ? `confirmed ${fmtDate(signals.evidenceConfirmedAt)}`
+                      : 'confirmed'}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {node.kind === 'skill' && node.skill_id && (
             <div>

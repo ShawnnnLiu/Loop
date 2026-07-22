@@ -14,6 +14,17 @@ import {
   tierLabel,
 } from './knowledgeMap'
 
+// Additive atlas signals (SA-A) — absent/false in these view-model fixtures.
+const NO_ATLAS_SIGNALS = {
+  sessions_total: null,
+  sessions_done: null,
+  next_session_at: null,
+  evidence_label: null,
+  evidence_confirmed_at: null,
+  review_flagged: false,
+  self_assessed: false,
+}
+
 function skill(id: string, tier: KnowledgeNodeView['tier'], groupId: string): KnowledgeNodeView {
   return {
     node_id: id,
@@ -29,6 +40,7 @@ function skill(id: string, tier: KnowledgeNodeView['tier'], groupId: string): Kn
     note: null,
     linked_module_ids: [],
     is_personal: false,
+    ...NO_ATLAS_SIGNALS,
   }
 }
 
@@ -47,6 +59,7 @@ function custom(id: string, groupId: string): KnowledgeNodeView {
     note: null,
     linked_module_ids: [],
     is_personal: true,
+    ...NO_ATLAS_SIGNALS,
   }
 }
 

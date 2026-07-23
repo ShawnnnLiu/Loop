@@ -53,6 +53,12 @@ maps:
 maps-check:
 	uv run python -m agentic_calendar.tools.generate_knowledge_maps --check
 
+sources:
+	uv run python -m agentic_calendar.tools.export_sources_page
+
+sources-check:
+	uv run python -m agentic_calendar.tools.export_sources_page --check
+
 # Grades COMMITTED recordings only — deterministic and offline, so it may
 # gate merges (amended axiom 22; live-call evals still never run in CI).
 # The fixture_baseline recording deliberately contains a failing case (it
@@ -136,7 +142,7 @@ visualize:
 # binary plus the LLM-SDK grep), so chaining `boundaries` here would run
 # import-linter twice per CI job. `make boundaries` stays as the focused
 # local target.
-check: lint typecheck schema-check maps-check test
+check: lint typecheck schema-check maps-check sources-check test
 
 clean:
 	rm -rf .pytest_cache .mypy_cache .ruff_cache .coverage htmlcov build dist *.egg-info

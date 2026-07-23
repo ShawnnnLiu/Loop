@@ -26,6 +26,7 @@ from .app import (
     default_how_its_built,
     default_landing_index,
     default_privacy_page,
+    default_sources_page,
     default_spa_dist,
     default_terms_page,
 )
@@ -57,6 +58,7 @@ def main() -> None:
         spa_dist=default_spa_dist(),
         landing_index=default_landing_index(),
         how_its_built=default_how_its_built(),
+        sources_page=default_sources_page(),
         privacy_page=default_privacy_page(),
         terms_page=default_terms_page(),
     )

@@ -43,6 +43,7 @@ from .app import (
     default_how_its_built,
     default_landing_index,
     default_privacy_page,
+    default_sources_page,
     default_spa_dist,
     default_terms_page,
 )
@@ -72,6 +73,8 @@ def create_hosted_app() -> FastAPI:
     landing_index = Path(landing_override) if landing_override else default_landing_index()
     built_override = os.environ.get("HOW_ITS_BUILT_INDEX")
     how_its_built = Path(built_override) if built_override else default_how_its_built()
+    sources_override = os.environ.get("SOURCES_INDEX")
+    sources_page = Path(sources_override) if sources_override else default_sources_page()
     privacy_override = os.environ.get("PRIVACY_INDEX")
     privacy_page = Path(privacy_override) if privacy_override else default_privacy_page()
     terms_override = os.environ.get("TERMS_INDEX")
@@ -83,6 +86,7 @@ def create_hosted_app() -> FastAPI:
         spa_dist=spa_dist,
         landing_index=landing_index,
         how_its_built=how_its_built,
+        sources_page=sources_page,
         privacy_page=privacy_page,
         terms_page=terms_page,
         canonical_host=os.environ.get("CANONICAL_HOST") or None,

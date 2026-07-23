@@ -13,7 +13,12 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from agentic_calendar.app.web.app import create_app, default_privacy_page, default_terms_page
+from agentic_calendar.app.web.app import (
+    create_app,
+    default_privacy_page,
+    default_sources_page,
+    default_terms_page,
+)
 from tests.app.test_cycle import USER_ID, make_service
 
 _INDEX_HTML = "<!doctype html><title>Loop</title><div id=root></div>"
@@ -22,6 +27,7 @@ _LANDING_HTML = "<!doctype html><title>Loop — landing</title><h1>LANDING_MARKE
 _BUILT_HTML = "<!doctype html><title>Loop — how its built</title><h1>BUILT_MARKER</h1>"
 _PRIVACY_HTML = "<!doctype html><title>Loop — privacy</title><h1>PRIVACY_MARKER</h1>"
 _TERMS_HTML = "<!doctype html><title>Loop — terms</title><h1>TERMS_MARKER</h1>"
+_SOURCES_HTML = "<!doctype html><title>Loop — sources</title><h1>SOURCES_MARKER</h1>"
 
 
 def _dist(tmp_path: Path) -> Path:
@@ -341,3 +347,95 @@ def test_in_repo_policy_pages_have_the_required_content() -> None:
         "Service metrics",
     ):
         assert required in terms.text, required
+
+
+# --------------------------------------------------------------------------- #
+# Sources page (/sources): the crawlable corpus bibliography, a landing sibling
+# registered before the SPA catch-all, linked from the homepage and footer.
+# --------------------------------------------------------------------------- #
+
+
+def test_sources_page_wins_over_the_spa_catch_all(tmp_path: Path) -> None:
+    _service, env, _clock = make_service()
+    client = TestClient(
+        create_app(
+            env=env,
+            default_user_id=USER_ID,
+            spa_dist=_dist(tmp_path),
+            landing_index=_landing(tmp_path),
+            sources_page=_policy_page(tmp_path, "sources.html", _SOURCES_HTML),
+        )
+    )
+    resp = client.get("/sources")
+    assert resp.status_code == 200
+    assert "SOURCES_MARKER" in resp.text
+    assert _INDEX_HTML not in resp.text
+    assert resp.headers.get("cache-control") == "no-cache"
+    # The SPA still owns app routes.
+    assert _INDEX_HTML in client.get("/today").text
+
+
+def test_missing_sources_file_leaves_route_to_the_spa(tmp_path: Path) -> None:
+    _service, env, _clock = make_service()
+    client = TestClient(
+        create_app(
+            env=env,
+            default_user_id=USER_ID,
+            spa_dist=_dist(tmp_path),
+            sources_page=tmp_path / "landing" / "missing-sources.html",
+        )
+    )
+    resp = client.get("/sources")
+    assert resp.status_code == 200
+    assert _INDEX_HTML in resp.text
+
+
+def test_in_repo_sources_page_lists_corpus_sources() -> None:
+    # Serve the real committed landing/sources.html and check it renders the
+    # bibliography: the six track headings and a representative cited source.
+    _service, env, _clock = make_service()
+    client = TestClient(
+        create_app(env=env, default_user_id=USER_ID, sources_page=default_sources_page())
+    )
+    resp = client.get("/sources")
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("text/html")
+    for required in (
+        "Software Engineering",
+        "AI Engineering",
+        "Machine Learning Engineering",
+        "Data Science",
+        "Quantitative Development",
+        "Product Management",
+        # A concrete cited source url proves the list is populated, not a stub.
+        "netflixtechblog.com",
+    ):
+        assert required in resp.text, required
+
+
+# --------------------------------------------------------------------------- #
+# robots.txt + sitemap.xml: SEO essentials built from the request origin, so
+# they stay correct under any host. Registered unconditionally.
+# --------------------------------------------------------------------------- #
+
+
+def test_robots_txt_points_at_the_sitemap() -> None:
+    _service, env, _clock = make_service()
+    client = TestClient(create_app(env=env, default_user_id=USER_ID))
+    resp = client.get("/robots.txt")
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("text/plain")
+    assert "User-agent: *" in resp.text
+    # The sitemap URL is built from the request origin (TestClient uses
+    # http://testserver), so it stays correct under any deploy host.
+    assert "Sitemap: http://testserver/sitemap.xml" in resp.text
+
+
+def test_sitemap_lists_the_public_pages() -> None:
+    _service, env, _clock = make_service()
+    client = TestClient(create_app(env=env, default_user_id=USER_ID))
+    resp = client.get("/sitemap.xml")
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("application/xml")
+    for path in ("/", "/how-its-built", "/sources", "/privacy", "/terms"):
+        assert f"<loc>http://testserver{path}</loc>" in resp.text

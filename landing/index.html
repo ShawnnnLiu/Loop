@@ -4,23 +4,96 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Loop turns your interview-prep goal and real calendar into a study plan. It drafts sessions around your commitments and writes to Google Calendar only after you approve." />
+    <meta name="keywords" content="interview prep, study plan, coding interview, system design, product manager interview, machine learning interview, quant interview, Google Calendar scheduling, career prep, deterministic planning" />
+    <meta name="author" content="Shawn Liu" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+    <meta name="theme-color" content="#bd5a39" />
+    <link rel="canonical" href="https://loop-study.com/" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2034%2034'%3E%3Crect%20width='34'%20height='34'%20rx='9'%20fill='%2316212e'/%3E%3Ctext%20x='16.5'%20y='24'%20font-family='Georgia,serif'%20font-size='21'%20font-weight='600'%20fill='%23fbf8f2'%20text-anchor='middle'%3EL%3C/text%3E%3Ccircle%20cx='27'%20cy='28'%20r='5.5'%20fill='%23bd5a39'/%3E%3C/svg%3E" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Hanken+Grotesk:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500&display=swap" rel="stylesheet" />
     <meta name="application-name" content="Loop" />
     <meta property="og:site_name" content="Loop" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://loop-study.com/" />
+    <meta property="og:locale" content="en_US" />
     <meta property="og:title" content="Loop - interview prep, scheduled around your real life" />
     <meta property="og:description" content="Loop is a study-planning app: it turns your interview-prep goal and real availability into a week-by-week plan and writes it to Google Calendar only after you approve." />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Loop - interview prep, scheduled around your real life" />
+    <meta name="twitter:description" content="Turn your interview-prep goal and real availability into a week-by-week study plan. Loop writes to Google Calendar only after you approve." />
     <title>Loop - interview prep, scheduled around your real life</title>
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
-        "@type": "WebApplication",
-        "name": "Loop",
-        "url": "https://loop-study.com/",
-        "applicationCategory": "EducationalApplication",
-        "operatingSystem": "Web",
-        "description": "Loop is a study-planning app for interview prep: it turns your goal and real availability into a week-by-week study plan, drafts it around your existing commitments, and writes it to Google Calendar only after you approve."
+        "@graph": [
+          {
+            "@type": "WebApplication",
+            "@id": "https://loop-study.com/#app",
+            "name": "Loop",
+            "url": "https://loop-study.com/",
+            "applicationCategory": "EducationalApplication",
+            "operatingSystem": "Web",
+            "description": "Loop is a study-planning app for interview prep: it turns your goal and real availability into a week-by-week study plan, drafts it around your existing commitments, and writes it to Google Calendar only after you approve.",
+            "featureList": [
+              "Résumé-to-evidence extraction",
+              "Deterministic study-plan scheduling around your real calendar",
+              "Approval gate before any calendar write",
+              "Hash-checked, verified calendar writes",
+              "Career pathway fit and gap analysis"
+            ],
+            "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+            "creator": { "@id": "https://loop-study.com/#org" }
+          },
+          {
+            "@type": "Organization",
+            "@id": "https://loop-study.com/#org",
+            "name": "Loop",
+            "url": "https://loop-study.com/",
+            "founder": { "@type": "Person", "name": "Shawn Liu", "url": "https://github.com/ShawnnnLiu" }
+          },
+          {
+            "@type": "WebSite",
+            "@id": "https://loop-study.com/#website",
+            "url": "https://loop-study.com/",
+            "name": "Loop",
+            "publisher": { "@id": "https://loop-study.com/#org" }
+          },
+          {
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://loop-study.com/" },
+              { "@type": "ListItem", "position": 2, "name": "How it's built", "item": "https://loop-study.com/how-its-built" },
+              { "@type": "ListItem", "position": 3, "name": "Sources", "item": "https://loop-study.com/sources" }
+            ]
+          },
+          {
+            "@type": "FAQPage",
+            "mainEntity": [
+              {
+                "@type": "Question",
+                "name": "Does Loop write to my calendar automatically?",
+                "acceptedAnswer": { "@type": "Answer", "text": "No. Loop only creates draft study sessions. Nothing is written to Google Calendar until you explicitly approve the exact set of events, and the approved plan is hash-checked at write time." }
+              },
+              {
+                "@type": "Question",
+                "name": "What does Loop access from my Google account?",
+                "acceptedAnswer": { "@type": "Answer", "text": "Your email and profile to sign you in, your free/busy time ranges so it can schedule around commitments, and a single dedicated calendar Loop creates to write approved sessions. It cannot read event titles, descriptions, attendees, or other calendars." }
+              },
+              {
+                "@type": "Question",
+                "name": "Which careers does Loop prepare you for?",
+                "acceptedAnswer": { "@type": "Answer", "text": "Loop covers software engineering, AI engineering, machine learning engineering, data science, quantitative development, and product management, each grounded in a curated corpus of engineering blogs, interview postmortems, and practitioner essays." }
+              },
+              {
+                "@type": "Question",
+                "name": "Is Loop free?",
+                "acceptedAnswer": { "@type": "Answer", "text": "Loop is currently free and in closed beta while Google's OAuth verification is in progress." }
+              }
+            ]
+          }
+        ]
       }
     </script>
     <style>
@@ -43,6 +116,8 @@
       .glyph::after{content:'✓';position:absolute;right:-4px;bottom:-4px;width:16px;height:16px;border-radius:50%;background:var(--clay);color:#fff;font-size:9px;font-weight:800;display:grid;place-items:center;border:2px solid var(--paper)}
       .word{font-family:var(--serif);font-size:20px;font-weight:600}
       .spacer{flex:1}
+      .nav-links{display:flex;align-items:center;gap:2px}
+      @media (max-width:760px){.nav-links{display:none}}
       /* --- Buttons --- */
       .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-family:var(--sans);font-weight:600;font-size:15px;padding:12px 20px;border-radius:11px;border:1px solid transparent;cursor:pointer;text-decoration:none;white-space:nowrap}
       .btn-primary{background:var(--clay);color:#fff;box-shadow:0 1px 2px rgba(157,69,39,.25),0 10px 22px -12px rgba(189,90,57,.7)}
@@ -226,6 +301,17 @@
       .thesis{text-align:center;padding:clamp(44px,7vw,88px) 0}
       .thesis blockquote{margin:0;font-family:var(--serif);font-size:clamp(24px,3.6vw,38px);line-height:1.18;letter-spacing:-.015em;max-width:18ch;margin-inline:auto}
       .thesis .sub{color:var(--muted);margin-top:16px;font-size:15px}
+      /* --- Sources / corpus provenance --- */
+      .srcgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:32px}
+      .srccard{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px 18px 15px;box-shadow:var(--shadow-sm)}
+      .srccard .track{font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:.07em;text-transform:uppercase;color:var(--muted-2)}
+      .srccard h3{font-size:16.5px;margin-top:4px}
+      .srclist{list-style:none;margin:11px 0 0;padding:0;display:flex;flex-direction:column;gap:2px}
+      .srclist a{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-soft);text-decoration:none;padding:3px 0;border-radius:6px}
+      .srclist a::before{content:'↗';font-family:var(--mono);font-size:10px;color:var(--muted-2)}
+      .srclist a:hover{color:var(--clay-deep)}
+      .src-foot{display:flex;flex-wrap:wrap;align-items:center;gap:14px;margin-top:26px}
+      .src-note{font-size:13px;color:var(--muted);max-width:52ch}
       /* --- Not-this strip --- */
       .notthis{display:flex;flex-wrap:wrap;gap:10px 20px;margin-top:22px}
       .notthis span{font-size:14px;color:var(--ink-soft)}
@@ -255,8 +341,12 @@
         <span class="word">Loop</span>
       </div>
       <span class="spacer"></span>
-      <a class="btn btn-quiet" href="#how">How it works</a>
-      <a class="btn btn-quiet" href="/how-its-built">How it’s built</a>
+      <nav class="nav-links" aria-label="Primary">
+        <a class="btn btn-quiet nav-link" href="#how">How it works</a>
+        <a class="btn btn-quiet nav-link" href="#safety">Safety</a>
+        <a class="btn btn-quiet nav-link" href="#sources">Sources</a>
+        <a class="btn btn-quiet nav-link" href="/how-its-built">How it’s built</a>
+      </nav>
       <a class="btn btn-ghost" href="/auth/login">Sign in</a>
     </header>
 
@@ -651,7 +741,7 @@
       </section>
 
       <!-- Trust / safety -->
-      <section class="band">
+      <section class="band" id="safety">
         <div class="wrap">
           <span class="eyebrow">What the engine guarantees</span>
           <h2>Safe by construction, not by good intentions.</h2>
@@ -746,6 +836,94 @@
         </div>
       </section>
 
+      <!-- Sources / corpus provenance -->
+      <section class="band" id="sources">
+        <div class="wrap">
+          <span class="eyebrow">Grounded, not guessed</span>
+          <h2>Built on the field’s best writing.</h2>
+          <p class="section-lede">
+            Loop’s study modules are grounded in a curated corpus of engineering blogs, interview
+            postmortems, and practitioner essays - retrieved and cited, never invented. Here’s a
+            taste of who we read, by track.
+          </p>
+          <div class="srcgrid">
+            <div class="srccard">
+              <span class="track">Software Engineering</span>
+              <h3>Systems, reliability, code craft</h3>
+              <ul class="srclist">
+                <li><a href="https://netflixtechblog.com/" target="_blank" rel="noopener">Netflix TechBlog</a></li>
+                <li><a href="https://stripe.com/blog/engineering" target="_blank" rel="noopener">Stripe Engineering</a></li>
+                <li><a href="https://blog.cloudflare.com/" target="_blank" rel="noopener">The Cloudflare Blog</a></li>
+                <li><a href="https://engineering.fb.com/" target="_blank" rel="noopener">Engineering at Meta</a></li>
+                <li><a href="https://martinfowler.com/articles/microservices.html" target="_blank" rel="noopener">Martin Fowler on microservices</a></li>
+              </ul>
+            </div>
+            <div class="srccard">
+              <span class="track">AI Engineering</span>
+              <h3>LLM systems, agents, evals</h3>
+              <ul class="srclist">
+                <li><a href="https://www.anthropic.com/engineering/building-effective-agents" target="_blank" rel="noopener">Anthropic: Building Effective Agents</a></li>
+                <li><a href="https://huyenchip.com/blog/" target="_blank" rel="noopener">Chip Huyen</a></li>
+                <li><a href="https://eugeneyan.com/writing/" target="_blank" rel="noopener">Eugene Yan</a></li>
+                <li><a href="https://simonwillison.net/" target="_blank" rel="noopener">Simon Willison’s Weblog</a></li>
+                <li><a href="https://lilianweng.github.io/" target="_blank" rel="noopener">Lil’Log (Lilian Weng)</a></li>
+              </ul>
+            </div>
+            <div class="srccard">
+              <span class="track">Machine Learning</span>
+              <h3>Modeling, training, deployment</h3>
+              <ul class="srclist">
+                <li><a href="https://pytorch.org/blog/" target="_blank" rel="noopener">PyTorch Blog</a></li>
+                <li><a href="https://huggingface.co/blog" target="_blank" rel="noopener">Hugging Face Blog</a></li>
+                <li><a href="https://karpathy.github.io/2019/04/25/recipe/" target="_blank" rel="noopener">Karpathy: A Recipe for Training Neural Nets</a></li>
+                <li><a href="https://developers.google.com/machine-learning/guides/rules-of-ml" target="_blank" rel="noopener">Google: Rules of Machine Learning</a></li>
+                <li><a href="https://sebastianraschka.com/blog/" target="_blank" rel="noopener">Sebastian Raschka</a></li>
+              </ul>
+            </div>
+            <div class="srccard">
+              <span class="track">Data Science</span>
+              <h3>Experimentation, causal inference</h3>
+              <ul class="srclist">
+                <li><a href="https://netflixtechblog.com/what-is-an-a-b-test-b08cc1b57962" target="_blank" rel="noopener">Netflix: What is an A/B Test?</a></li>
+                <li><a href="https://engineering.atspotify.com/2020/10/spotifys-new-experimentation-platform-part-1" target="_blank" rel="noopener">Spotify’s Experimentation Platform</a></li>
+                <li><a href="https://blog.duolingo.com/improving-duolingo-one-experiment-at-a-time/" target="_blank" rel="noopener">Improving Duolingo, one experiment at a time</a></li>
+                <li><a href="https://multithreaded.stitchfix.com/blog/" target="_blank" rel="noopener">Stitch Fix: MultiThreaded</a></li>
+                <li><a href="https://eng.lyft.com/what-is-data-science-at-lyft-4101a69be028" target="_blank" rel="noopener">What is Data Science at Lyft?</a></li>
+              </ul>
+            </div>
+            <div class="srccard">
+              <span class="track">Quant Development</span>
+              <h3>Low-latency, market microstructure</h3>
+              <ul class="srclist">
+                <li><a href="https://blog.janestreet.com/" target="_blank" rel="noopener">Jane Street Tech Blog</a></li>
+                <li><a href="https://www.twosigma.com/articles/" target="_blank" rel="noopener">Two Sigma: Articles</a></li>
+                <li><a href="https://www.hudsonrivertrading.com/hrtbeat/" target="_blank" rel="noopener">HRT Beat</a></li>
+                <li><a href="https://www.optiver.com/insights/technology-blog/designing-low-latency-cpp-systems/" target="_blank" rel="noopener">Optiver: Low-Latency C++ Systems</a></li>
+                <li><a href="https://databento.com/blog/rust-vs-cpp" target="_blank" rel="noopener">Databento: Rust vs C++ for trading</a></li>
+              </ul>
+            </div>
+            <div class="srccard">
+              <span class="track">Product Management</span>
+              <h3>Discovery, strategy, prioritization</h3>
+              <ul class="srclist">
+                <li><a href="https://www.lennysnewsletter.com/" target="_blank" rel="noopener">Lenny’s Newsletter</a></li>
+                <li><a href="https://www.svpg.com/articles/" target="_blank" rel="noopener">Silicon Valley Product Group</a></li>
+                <li><a href="https://www.kennorton.com/essays/productmanager.html" target="_blank" rel="noopener">Ken Norton: How to Hire a PM</a></li>
+                <li><a href="https://www.intercom.com/blog/rice-simple-prioritization-for-product-managers/" target="_blank" rel="noopener">Intercom: RICE prioritization</a></li>
+                <li><a href="https://amplitude.com/blog/product-north-star-metric" target="_blank" rel="noopener">Amplitude: North Star Metric</a></li>
+              </ul>
+            </div>
+          </div>
+          <div class="src-foot">
+            <a class="btn btn-ghost" href="/sources">Browse all 180+ sources →</a>
+            <p class="src-note">
+              Every source is snapshotted with attribution and used only for bounded,
+              cited retrieval. See the full reading list, grouped by career track.
+            </p>
+          </div>
+        </div>
+      </section>
+
       <!-- Final CTA -->
       <section class="band band-alt final">
         <div class="wrap">
@@ -774,6 +952,7 @@
         <span class="muted">Built by <a class="muted" href="https://github.com/ShawnnnLiu">Shawn Liu</a></span>
         <span class="spacer"></span>
         <a class="muted" href="/how-its-built">How it’s built</a>
+        <a class="muted" href="/sources">Sources</a>
         <a class="muted" href="/privacy">Privacy</a>
         <a class="muted" href="/terms">Terms</a>
         <a class="muted" href="/auth/login">Get started →</a>

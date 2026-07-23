@@ -69,6 +69,15 @@ def default_how_its_built() -> Path:
     return Path(__file__).resolve().parents[5] / "landing" / "how-its-built.html"
 
 
+def default_sources_page() -> Path:
+    """The repo's static sources / further-reading page (``landing/sources.html``).
+
+    Served at ``/sources`` next to the landing — the crawlable bibliography of the
+    grounding corpus (generated from ``backend/corpus/corpus.db``), linked from the
+    homepage and footer. Hosted deploys may override it with ``SOURCES_INDEX``."""
+    return Path(__file__).resolve().parents[5] / "landing" / "sources.html"
+
+
 def default_privacy_page() -> Path:
     """The repo's static privacy-policy page (``landing/privacy.html``).
 
@@ -133,6 +142,7 @@ def create_app(
     spa_dist: Path | None = None,
     landing_index: Path | None = None,
     how_its_built: Path | None = None,
+    sources_page: Path | None = None,
     privacy_page: Path | None = None,
     terms_page: Path | None = None,
     canonical_host: str | None = None,
@@ -242,6 +252,37 @@ def create_app(
         @app.api_route("/how-its-built", methods=["GET", "HEAD"], include_in_schema=False)
         def how_its_built_page() -> FileResponse:
             return FileResponse(how_its_built, headers=_HTML_NO_CACHE)
+
+    # The static sources / further-reading page, a landing sibling: the crawlable
+    # bibliography of the grounding corpus, linked from the homepage and footer.
+    # Registered before the SPA catch-all so the catch-all can't swallow it.
+    if sources_page is not None and sources_page.is_file():
+
+        @app.api_route("/sources", methods=["GET", "HEAD"], include_in_schema=False)
+        def sources() -> FileResponse:
+            return FileResponse(sources_page, headers=_HTML_NO_CACHE)
+
+    # robots.txt and sitemap.xml: SEO essentials built from the request's own
+    # origin, so they stay correct under any host (and behind the canonical-host
+    # 301). Registered unconditionally, before the SPA catch-all.
+    _PUBLIC_PATHS = ("/", "/how-its-built", "/sources", "/privacy", "/terms")
+
+    @app.api_route("/robots.txt", methods=["GET", "HEAD"], include_in_schema=False)
+    def robots(request: Request) -> Response:
+        base = str(request.base_url).rstrip("/")
+        body = f"User-agent: *\nAllow: /\nSitemap: {base}/sitemap.xml\n"
+        return Response(content=body, media_type="text/plain")
+
+    @app.api_route("/sitemap.xml", methods=["GET", "HEAD"], include_in_schema=False)
+    def sitemap(request: Request) -> Response:
+        base = str(request.base_url).rstrip("/")
+        urls = "".join(f"  <url><loc>{base}{p}</loc></url>\n" for p in _PUBLIC_PATHS)
+        body = (
+            '<?xml version="1.0" encoding="UTF-8"?>\n'
+            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+            f"{urls}</urlset>\n"
+        )
+        return Response(content=body, media_type="application/xml")
 
     # The static policy pages (/privacy, /terms), landing siblings. /privacy is
     # a Google OAuth verification requirement (linked from the homepage). Like

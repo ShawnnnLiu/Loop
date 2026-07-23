@@ -35,6 +35,7 @@ dev = [
 
 [project.scripts]
 agentic-calendar-export-schemas = "agentic_calendar.tools.export_schemas:main"
+agentic-calendar-export-sources = "agentic_calendar.tools.export_sources_page:main"
 agentic-calendar-visualize = "agentic_calendar.tools.visualize:main"
 # show_accountability is deliberately module-only
 # (`uv run python -m agentic_calendar.tools.show_accountability`); it is an

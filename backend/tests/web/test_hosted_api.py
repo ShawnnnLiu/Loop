@@ -224,10 +224,13 @@ def test_free_busy_is_served_in_the_users_wall_clock(
     _login(client, monkeypatch)
     _onboard(client, timezone="America/Los_Angeles")
 
+    captured: dict[str, Any] = {}
+
     class _FreeBusyTransport:
         def query_free_busy(
-            self, *, calendar_id: str, time_min: datetime, time_max: datetime
+            self, *, calendar_ids: Any, time_min: datetime, time_max: datetime
         ) -> list[tuple[datetime, datetime]]:
+            captured["calendar_ids"] = list(calendar_ids)
             # 2026-07-03 2-3PM PDT, exactly as Google reports it: in UTC.
             return [
                 (
@@ -247,6 +250,9 @@ def test_free_busy_is_served_in_the_users_wall_clock(
     assert view["free_busy"] == [
         {"start": "2026-07-03T14:00:00-07:00", "end": "2026-07-03T15:00:00-07:00"}
     ]
+    # Availability spans the user's own commitments (primary) *and* the tasks we
+    # previously placed (their dedicated calendar), so re-plans don't double-book.
+    assert captured["calendar_ids"] == ["primary", "cal_pages"]
 
 
 # --------------------------------------------------------------------------- #

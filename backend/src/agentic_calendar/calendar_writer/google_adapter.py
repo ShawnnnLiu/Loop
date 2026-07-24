@@ -32,7 +32,7 @@ payloads and never touch the network.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from typing import Any, Protocol, runtime_checkable
 
@@ -235,9 +235,16 @@ class GoogleApiHttpTransport:
             ) from exc
 
     def query_free_busy(
-        self, *, calendar_id: str, time_min: datetime, time_max: datetime
+        self, *, calendar_ids: Sequence[str], time_min: datetime, time_max: datetime
     ) -> list[tuple[datetime, datetime]]:
-        """Busy intervals on ``calendar_id`` within ``[time_min, time_max)``.
+        """Union of busy intervals across ``calendar_ids`` in ``[time_min, time_max)``.
+
+        A single ``freebusy.query`` carries every requested calendar in ``items``
+        and Google returns a per-calendar ``busy`` array; the ranges are merged so
+        the caller sees one flat busy set. This is how the user's *own*
+        commitments (``primary``) and the tasks we previously placed (their
+        dedicated calendar) both register as busy — querying only ``primary``
+        would leave our own events invisible to the scheduler.
 
         Uses ``freebusy.query`` so only opaque busy *ranges* cross the boundary —
         never event titles or descriptions (privacy axiom). Read-only, so unlike
@@ -247,7 +254,7 @@ class GoogleApiHttpTransport:
         body = {
             "timeMin": time_min.isoformat(),
             "timeMax": time_max.isoformat(),
-            "items": [{"id": calendar_id}],
+            "items": [{"id": calendar_id} for calendar_id in calendar_ids],
         }
         try:
             response: Mapping[str, Any] = (
@@ -256,13 +263,15 @@ class GoogleApiHttpTransport:
         except Exception as exc:
             status = self._absent_status(exc)
             raise GoogleCalendarApiError(
-                f"freebusy.query failed for calendar {calendar_id!r}: "
+                f"freebusy.query failed for calendars {list(calendar_ids)!r}: "
                 f"{self._error_detail(exc)}",
                 status=status,
             ) from exc
-        windows = response.get("calendars", {}).get(calendar_id, {}).get("busy", [])
+        calendars = response.get("calendars", {})
         return [
-            (_free_busy_time(w, "start"), _free_busy_time(w, "end")) for w in windows
+            (_free_busy_time(w, "start"), _free_busy_time(w, "end"))
+            for calendar_id in calendar_ids
+            for w in calendars.get(calendar_id, {}).get("busy", [])
         ]
 
 

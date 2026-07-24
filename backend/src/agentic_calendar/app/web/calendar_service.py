@@ -74,16 +74,23 @@ def fetch_user_free_busy(
     token_cipher: TokenCipher,
     time_min: datetime,
     time_max: datetime,
-    calendar_id: str = "primary",
 ) -> list[dict[str, str]]:
     """This user's busy intervals over ``[time_min, time_max)`` as
     ``{"start", "end"}`` ISO dicts, ready for ``CycleService.propose(free_busy=)``.
 
-    Reads only opaque busy ranges from their real calendar (``primary`` by
-    default) via ``freebusy.query`` — no event content crosses the boundary, in
-    keeping with the no-raw-calendar-content axiom. Raises :class:`CycleError`
-    if Google is not connected; a stored token that predates the ``freebusy``
-    scope surfaces as a ``GoogleCalendarApiError`` (403) at query time.
+    Queries both the user's ``primary`` calendar (their real commitments) and
+    their dedicated calendar (the tasks we previously placed), unioning the busy
+    ranges. Including the dedicated calendar is what stops a re-plan or adjust
+    from double-booking a slot we already committed to — a ``freebusy.query``
+    against ``primary`` alone never sees our own events, since the write path
+    forbids writing to ``primary`` and always targets the dedicated calendar.
+    If no dedicated calendar is provisioned yet, only ``primary`` is queried.
+
+    Reads only opaque busy ranges via ``freebusy.query`` — no event content
+    crosses the boundary, in keeping with the no-raw-calendar-content axiom.
+    Raises :class:`CycleError` if Google is not connected; a stored token that
+    predates the ``freebusy`` scope surfaces as a ``GoogleCalendarApiError``
+    (403) at query time.
 
     Intervals are restamped in the user's timezone: Google returns UTC
     instants, but the SPA grid draws the wall-clock digits embedded in the ISO
@@ -96,8 +103,11 @@ def fetch_user_free_busy(
         raise CycleError(f"user {user_id!r} has not connected a Google account")
     token_json = json.loads(token_cipher.decrypt(cred.encrypted_token))
     transport = GoogleApiHttpTransport(build_service_from_token(token_json))
+    calendar_ids = ["primary"]
+    if cred.dedicated_calendar_id:
+        calendar_ids.append(cred.dedicated_calendar_id)
     intervals = transport.query_free_busy(
-        calendar_id=calendar_id, time_min=time_min, time_max=time_max
+        calendar_ids=calendar_ids, time_min=time_min, time_max=time_max
     )
     onboarding = env.state.get_onboarding(user_id)
     tz = onboarding.tzinfo() if onboarding is not None else UTC

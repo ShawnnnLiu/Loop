@@ -798,7 +798,7 @@ def test_query_free_busy_parses_ranges_and_sends_window() -> None:
     time_max = time_min + timedelta(days=7)
 
     intervals = transport.query_free_busy(
-        calendar_id="primary", time_min=time_min, time_max=time_max
+        calendar_ids=["primary"], time_min=time_min, time_max=time_max
     )
 
     assert intervals == [
@@ -810,6 +810,44 @@ def test_query_free_busy_parses_ranges_and_sends_window() -> None:
     assert body["timeMin"] == time_min.isoformat()
 
 
+def test_query_free_busy_unions_across_calendars() -> None:
+    """Busy ranges from every requested calendar are merged into one flat set.
+
+    This is the fix that makes our own placed tasks (dedicated calendar) count
+    as busy alongside the user's real commitments (``primary``); querying only
+    ``primary`` left our events invisible to the scheduler.
+    """
+    service = _FakeFreeBusyService(
+        {
+            "calendars": {
+                "primary": {"busy": [{"start": "2026-05-04T01:00:00Z", "end": "2026-05-04T02:00:00Z"}]},
+                "dedicated@group.calendar.google.com": {
+                    "busy": [{"start": "2026-05-04T05:00:00Z", "end": "2026-05-04T06:00:00Z"}]
+                },
+            }
+        }
+    )
+    transport = GoogleApiHttpTransport(service)
+    time_min = datetime(2026, 5, 4, tzinfo=UTC)
+    time_max = time_min + timedelta(days=7)
+
+    intervals = transport.query_free_busy(
+        calendar_ids=["primary", "dedicated@group.calendar.google.com"],
+        time_min=time_min,
+        time_max=time_max,
+    )
+
+    assert intervals == [
+        (datetime(2026, 5, 4, 1, tzinfo=UTC), datetime(2026, 5, 4, 2, tzinfo=UTC)),
+        (datetime(2026, 5, 4, 5, tzinfo=UTC), datetime(2026, 5, 4, 6, tzinfo=UTC)),
+    ]
+    # A single query carried both calendars in items.
+    assert service.queries[0]["items"] == [
+        {"id": "primary"},
+        {"id": "dedicated@group.calendar.google.com"},
+    ]
+
+
 def test_query_free_busy_empty_when_no_busy() -> None:
     transport = GoogleApiHttpTransport(
         _FakeFreeBusyService({"calendars": {"primary": {"busy": []}}})
@@ -817,7 +855,7 @@ def test_query_free_busy_empty_when_no_busy() -> None:
     t0 = datetime(2026, 5, 4, tzinfo=UTC)
     assert (
         transport.query_free_busy(
-            calendar_id="primary", time_min=t0, time_max=t0 + timedelta(days=1)
+            calendar_ids=["primary"], time_min=t0, time_max=t0 + timedelta(days=1)
         )
         == []
     )

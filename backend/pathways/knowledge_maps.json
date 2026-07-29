@@ -3,6 +3,17 @@
     "ai-integration-engineer": {
       "groups": [
         {
+          "blurb": "The core problem-solving vocabulary behind most interviews and design work.",
+          "branch": "core",
+          "group_id": "kg-cs-foundations",
+          "member_node_ids": [
+            "kn-algorithms",
+            "kn-complexity-analysis",
+            "kn-data-structures"
+          ],
+          "title": "CS Foundations"
+        },
+        {
           "blurb": "Working directly with language models: prompting, shaping, and adapting them.",
           "branch": "core",
           "group_id": "kg-llm-foundations",
@@ -55,6 +66,39 @@
         }
       ],
       "nodes": [
+        {
+          "blurb": "Standard approaches for sorting, searching, and transforming data.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 600,
+          "group_id": "kg-cs-foundations",
+          "kind": "skill",
+          "node_id": "kn-algorithms",
+          "skill_id": "skill.algorithms",
+          "title": "Algorithms"
+        },
+        {
+          "blurb": "Reasoning about how time and space grow with input size.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 300,
+          "group_id": "kg-cs-foundations",
+          "kind": "skill",
+          "node_id": "kn-complexity-analysis",
+          "skill_id": "skill.complexity-analysis",
+          "title": "Complexity analysis"
+        },
+        {
+          "blurb": "The containers, from lists to trees, that organize data in memory.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 480,
+          "group_id": "kg-cs-foundations",
+          "kind": "skill",
+          "node_id": "kn-data-structures",
+          "skill_id": "skill.data-structures",
+          "title": "Data structures"
+        },
         {
           "blurb": "Keeping model output inside safe, expected bounds.",
           "branch": null,
@@ -327,6 +371,17 @@
           "title": "Classical Machine Learning"
         },
         {
+          "blurb": "The core problem-solving vocabulary behind most interviews and design work.",
+          "branch": "core",
+          "group_id": "kg-cs-foundations",
+          "member_node_ids": [
+            "kn-algorithms",
+            "kn-complexity-analysis",
+            "kn-data-structures"
+          ],
+          "title": "CS Foundations"
+        },
+        {
           "blurb": "Recording runs and measuring change so results are reproducible.",
           "branch": "core",
           "group_id": "kg-experiment-tracking",
@@ -507,6 +562,39 @@
           "node_id": "kn-terraform",
           "skill_id": "skill.terraform",
           "title": "Terraform"
+        },
+        {
+          "blurb": "Standard approaches for sorting, searching, and transforming data.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 600,
+          "group_id": "kg-cs-foundations",
+          "kind": "skill",
+          "node_id": "kn-algorithms",
+          "skill_id": "skill.algorithms",
+          "title": "Algorithms"
+        },
+        {
+          "blurb": "Reasoning about how time and space grow with input size.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 300,
+          "group_id": "kg-cs-foundations",
+          "kind": "skill",
+          "node_id": "kn-complexity-analysis",
+          "skill_id": "skill.complexity-analysis",
+          "title": "Complexity analysis"
+        },
+        {
+          "blurb": "The containers, from lists to trees, that organize data in memory.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 480,
+          "group_id": "kg-cs-foundations",
+          "kind": "skill",
+          "node_id": "kn-data-structures",
+          "skill_id": "skill.data-structures",
+          "title": "Data structures"
         },
         {
           "blurb": "Scheduling and orchestrating data workflows as code.",
@@ -866,6 +954,17 @@
           "title": "Version Control & CI/CD"
         },
         {
+          "blurb": "The core problem-solving vocabulary behind most interviews and design work.",
+          "branch": "core",
+          "group_id": "kg-cs-foundations",
+          "member_node_ids": [
+            "kn-algorithms",
+            "kn-complexity-analysis",
+            "kn-data-structures"
+          ],
+          "title": "CS Foundations"
+        },
+        {
           "blurb": "How a backend is shaped: interfaces, boundaries, and how services talk.",
           "branch": "service-depth",
           "group_id": "kg-service-architecture",
@@ -1032,6 +1131,39 @@
           "node_id": "kn-terraform",
           "skill_id": "skill.terraform",
           "title": "Terraform"
+        },
+        {
+          "blurb": "Standard approaches for sorting, searching, and transforming data.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 600,
+          "group_id": "kg-cs-foundations",
+          "kind": "skill",
+          "node_id": "kn-algorithms",
+          "skill_id": "skill.algorithms",
+          "title": "Algorithms"
+        },
+        {
+          "blurb": "Reasoning about how time and space grow with input size.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 300,
+          "group_id": "kg-cs-foundations",
+          "kind": "skill",
+          "node_id": "kn-complexity-analysis",
+          "skill_id": "skill.complexity-analysis",
+          "title": "Complexity analysis"
+        },
+        {
+          "blurb": "The containers, from lists to trees, that organize data in memory.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 480,
+          "group_id": "kg-cs-foundations",
+          "kind": "skill",
+          "node_id": "kn-data-structures",
+          "skill_id": "skill.data-structures",
+          "title": "Data structures"
         },
         {
           "blurb": "Modeling data into tables and relationships that stay correct as they grow.",
@@ -1380,6 +1512,17 @@
           "title": "Version Control & CI/CD"
         },
         {
+          "blurb": "The core problem-solving vocabulary behind most interviews and design work.",
+          "branch": "core",
+          "group_id": "kg-cs-foundations",
+          "member_node_ids": [
+            "kn-algorithms",
+            "kn-complexity-analysis",
+            "kn-data-structures"
+          ],
+          "title": "CS Foundations"
+        },
+        {
           "blurb": "The day-to-day craft: testing, review, and keeping code fast and clean.",
           "branch": "core",
           "group_id": "kg-engineering-practice",
@@ -1593,6 +1736,39 @@
           "node_id": "kn-jenkins",
           "skill_id": "skill.jenkins",
           "title": "Jenkins"
+        },
+        {
+          "blurb": "Standard approaches for sorting, searching, and transforming data.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 600,
+          "group_id": "kg-cs-foundations",
+          "kind": "skill",
+          "node_id": "kn-algorithms",
+          "skill_id": "skill.algorithms",
+          "title": "Algorithms"
+        },
+        {
+          "blurb": "Reasoning about how time and space grow with input size.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 300,
+          "group_id": "kg-cs-foundations",
+          "kind": "skill",
+          "node_id": "kn-complexity-analysis",
+          "skill_id": "skill.complexity-analysis",
+          "title": "Complexity analysis"
+        },
+        {
+          "blurb": "The containers, from lists to trees, that organize data in memory.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 480,
+          "group_id": "kg-cs-foundations",
+          "kind": "skill",
+          "node_id": "kn-data-structures",
+          "skill_id": "skill.data-structures",
+          "title": "Data structures"
         },
         {
           "blurb": "Modeling data into tables and relationships that stay correct as they grow.",
@@ -1918,6 +2094,17 @@
     "llm-systems-engineer": {
       "groups": [
         {
+          "blurb": "The core problem-solving vocabulary behind most interviews and design work.",
+          "branch": "core",
+          "group_id": "kg-cs-foundations",
+          "member_node_ids": [
+            "kn-algorithms",
+            "kn-complexity-analysis",
+            "kn-data-structures"
+          ],
+          "title": "CS Foundations"
+        },
+        {
           "blurb": "Measuring LLM output quality and keeping it inside safe bounds.",
           "branch": "core",
           "group_id": "kg-llm-evaluation",
@@ -1972,6 +2159,39 @@
         }
       ],
       "nodes": [
+        {
+          "blurb": "Standard approaches for sorting, searching, and transforming data.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 600,
+          "group_id": "kg-cs-foundations",
+          "kind": "skill",
+          "node_id": "kn-algorithms",
+          "skill_id": "skill.algorithms",
+          "title": "Algorithms"
+        },
+        {
+          "blurb": "Reasoning about how time and space grow with input size.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 300,
+          "group_id": "kg-cs-foundations",
+          "kind": "skill",
+          "node_id": "kn-complexity-analysis",
+          "skill_id": "skill.complexity-analysis",
+          "title": "Complexity analysis"
+        },
+        {
+          "blurb": "The containers, from lists to trees, that organize data in memory.",
+          "branch": null,
+          "evidence_slot_id": null,
+          "expected_minutes": 480,
+          "group_id": "kg-cs-foundations",
+          "kind": "skill",
+          "node_id": "kn-data-structures",
+          "skill_id": "skill.data-structures",
+          "title": "Data structures"
+        },
         {
           "blurb": "Keeping model output inside safe, expected bounds.",
           "branch": null,
@@ -2251,6 +2471,6 @@
     }
   },
   "pathway_registry_version": "pathway-registry-v1",
-  "skill_grouping_version": "skill-grouping-v1",
+  "skill_grouping_version": "skill-grouping-v2",
   "taxonomy_version": "skill-taxonomy-v4"
 }

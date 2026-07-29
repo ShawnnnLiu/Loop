@@ -113,7 +113,12 @@ _BACKEND_INFRASTRUCTURE = PathwayTemplate(
             required_kinds=[EvidenceKind.WORK, EvidenceKind.PROJECT],
             required_themes_any=["backend-systems", "distributed-systems"],
             gap_module_hint="Design and ship one backend service with a clear API boundary",
-            branch_skill_ids=["skill.system-design", "skill.api-design", "skill.microservices"],
+            branch_skill_ids=[
+                "skill.system-design",
+                "skill.api-design",
+                "skill.microservices",
+                "skill.algorithms",
+            ],
         ),
         EvidenceSlot(
             slot_id="data-layer",
@@ -121,7 +126,12 @@ _BACKEND_INFRASTRUCTURE = PathwayTemplate(
             required_kinds=[EvidenceKind.WORK, EvidenceKind.PROJECT],
             required_themes_any=["data-layer"],
             gap_module_hint="Model and optimize a persistent data layer",
-            branch_skill_ids=["skill.database-design", "skill.postgresql", "skill.caching"],
+            branch_skill_ids=[
+                "skill.database-design",
+                "skill.postgresql",
+                "skill.caching",
+                "skill.data-structures",
+            ],
         ),
         EvidenceSlot(
             slot_id="production-ops",
@@ -165,7 +175,12 @@ _FULL_STACK_PRODUCT = PathwayTemplate(
             required_kinds=[EvidenceKind.WORK, EvidenceKind.PROJECT],
             required_themes_any=["backend-systems", "api-design"],
             gap_module_hint="Own the backend and API for a product feature",
-            branch_skill_ids=["skill.fastapi", "skill.rest-apis", "skill.postgresql"],
+            branch_skill_ids=[
+                "skill.fastapi",
+                "skill.rest-apis",
+                "skill.postgresql",
+                "skill.algorithms",
+            ],
         ),
         EvidenceSlot(
             slot_id="shipped-product",
@@ -173,7 +188,12 @@ _FULL_STACK_PRODUCT = PathwayTemplate(
             required_kinds=[EvidenceKind.WORK, EvidenceKind.PROJECT],
             required_themes_any=["product-engineering", "full-stack"],
             gap_module_hint="Ship one full-stack feature to real users",
-            branch_skill_ids=["skill.system-design", "skill.testing", "skill.ci-cd"],
+            branch_skill_ids=[
+                "skill.system-design",
+                "skill.testing",
+                "skill.ci-cd",
+                "skill.data-structures",
+            ],
         ),
         EvidenceSlot(
             slot_id="user-facing-polish",
@@ -201,7 +221,12 @@ _AI_INTEGRATION = PathwayTemplate(
             required_kinds=[EvidenceKind.PROJECT, EvidenceKind.WORK],
             required_themes_any=["applied-ml", "llm-integration"],
             gap_module_hint="Build and deploy one LLM-backed feature end to end",
-            branch_skill_ids=["skill.llms", "skill.rag", "skill.prompt-engineering"],
+            branch_skill_ids=[
+                "skill.llms",
+                "skill.rag",
+                "skill.prompt-engineering",
+                "skill.algorithms",
+            ],
         ),
         EvidenceSlot(
             slot_id="integration-breadth",
@@ -209,7 +234,12 @@ _AI_INTEGRATION = PathwayTemplate(
             required_kinds=[EvidenceKind.WORK, EvidenceKind.PROJECT],
             required_themes_any=["llm-orchestration", "developer-experience"],
             gap_module_hint="Wire an LLM into real tools and workflows",
-            branch_skill_ids=["skill.langchain", "skill.function-calling", "skill.structured-outputs"],
+            branch_skill_ids=[
+                "skill.langchain",
+                "skill.function-calling",
+                "skill.structured-outputs",
+                "skill.data-structures",
+            ],
         ),
         EvidenceSlot(
             slot_id="eval-telemetry",
@@ -250,6 +280,7 @@ _APPLIED_ML_SPECIALIST = PathwayTemplate(
                 "skill.xgboost",
                 "skill.feature-engineering",
                 "skill.model-evaluation",
+                "skill.algorithms",
             ],
         ),
         EvidenceSlot(
@@ -274,7 +305,12 @@ _APPLIED_ML_SPECIALIST = PathwayTemplate(
             required_kinds=[EvidenceKind.WORK, EvidenceKind.PROJECT],
             required_themes_any=["data-engineering"],
             gap_module_hint="Build one data pipeline feeding a model",
-            branch_skill_ids=["skill.spark", "skill.airflow", "skill.data-pipelines"],
+            branch_skill_ids=[
+                "skill.spark",
+                "skill.airflow",
+                "skill.data-pipelines",
+                "skill.data-structures",
+            ],
         ),
         EvidenceSlot(
             slot_id="writeup",
@@ -302,7 +338,12 @@ _LLM_SYSTEMS = PathwayTemplate(
             required_kinds=[EvidenceKind.WORK, EvidenceKind.PROJECT],
             required_themes_any=["llm-orchestration", "evaluation"],
             gap_module_hint="Build one orchestrated LLM workflow with evals",
-            branch_skill_ids=["skill.ai-agents", "skill.llm-evaluation", "skill.function-calling"],
+            branch_skill_ids=[
+                "skill.ai-agents",
+                "skill.llm-evaluation",
+                "skill.function-calling",
+                "skill.algorithms",
+            ],
         ),
         EvidenceSlot(
             slot_id="retrieval-project",
@@ -315,6 +356,7 @@ _LLM_SYSTEMS = PathwayTemplate(
                 "skill.embeddings",
                 "skill.vector-databases",
                 "skill.semantic-search",
+                "skill.data-structures",
             ],
         ),
         EvidenceSlot(

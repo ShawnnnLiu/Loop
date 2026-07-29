@@ -1,0 +1,1169 @@
+{
+  "skill_grouping_version": "skill-grouping-v2",
+  "taxonomy_version": "skill-taxonomy-v4",
+  "groups": [
+    {
+      "group_id": "kg-algorithmic-techniques",
+      "title": "Algorithmic Techniques",
+      "blurb": "Recursion, dynamic programming, and graph techniques for the harder end of coding problems."
+    },
+    {
+      "group_id": "kg-api-protocols",
+      "title": "API Protocols",
+      "blurb": "Wire formats and realtime channels beyond plain REST."
+    },
+    {
+      "group_id": "kg-backend-frameworks",
+      "title": "Backend Frameworks",
+      "blurb": "Server frameworks for building web services and APIs."
+    },
+    {
+      "group_id": "kg-backend-languages",
+      "title": "Backend & Systems Languages",
+      "blurb": "Compiled and statically typed languages for services and systems work."
+    },
+    {
+      "group_id": "kg-cicd",
+      "title": "Version Control & CI/CD",
+      "blurb": "Source control and the pipelines that build, test, and ship it."
+    },
+    {
+      "group_id": "kg-classical-ml",
+      "title": "Classical Machine Learning",
+      "blurb": "Supervised learning with tabular data: the models and how to judge them."
+    },
+    {
+      "group_id": "kg-cloud-platforms",
+      "title": "Cloud Platforms",
+      "blurb": "The major cloud providers services are deployed on."
+    },
+    {
+      "group_id": "kg-containers",
+      "title": "Containers & Provisioning",
+      "blurb": "Packaging and provisioning: containers, orchestration, and infrastructure as code."
+    },
+    {
+      "group_id": "kg-cs-foundations",
+      "title": "CS Foundations",
+      "blurb": "The core problem-solving vocabulary behind most interviews and design work."
+    },
+    {
+      "group_id": "kg-data-engineering",
+      "title": "Data Engineering",
+      "blurb": "Pipelines and warehouses that move and shape data at rest and in flight."
+    },
+    {
+      "group_id": "kg-data-streaming",
+      "title": "Messaging & Streaming",
+      "blurb": "Brokers and task queues that move work between services."
+    },
+    {
+      "group_id": "kg-databases-nosql",
+      "title": "NoSQL & Search Stores",
+      "blurb": "Document, key-value, wide-column, and search data stores."
+    },
+    {
+      "group_id": "kg-databases-relational",
+      "title": "Relational Data",
+      "blurb": "Relational stores and the discipline of modeling data well."
+    },
+    {
+      "group_id": "kg-deep-learning",
+      "title": "Deep Learning",
+      "blurb": "Neural networks, the frameworks that train them, and the hardware behind them."
+    },
+    {
+      "group_id": "kg-engineering-practice",
+      "title": "Engineering Practice",
+      "blurb": "The day-to-day craft: testing, review, and keeping code fast and clean."
+    },
+    {
+      "group_id": "kg-experiment-tracking",
+      "title": "Experiment Tracking",
+      "blurb": "Recording runs and measuring change so results are reproducible."
+    },
+    {
+      "group_id": "kg-frontend-frameworks",
+      "title": "Frontend Frameworks",
+      "blurb": "Component frameworks and tooling for building web interfaces."
+    },
+    {
+      "group_id": "kg-llm-evaluation",
+      "title": "LLM Evaluation & Safety",
+      "blurb": "Measuring LLM output quality and keeping it inside safe bounds."
+    },
+    {
+      "group_id": "kg-llm-foundations",
+      "title": "LLM Foundations",
+      "blurb": "Working directly with language models: prompting, shaping, and adapting them."
+    },
+    {
+      "group_id": "kg-llm-orchestration",
+      "title": "LLM Orchestration",
+      "blurb": "Wiring models into tools, agents, and multi-step workflows."
+    },
+    {
+      "group_id": "kg-llm-serving",
+      "title": "LLM Serving & Providers",
+      "blurb": "Calling hosted models and running open ones with cost and latency in mind."
+    },
+    {
+      "group_id": "kg-ml-domains",
+      "title": "ML Application Domains",
+      "blurb": "Where models get applied: vision, language, time, and beyond."
+    },
+    {
+      "group_id": "kg-ml-math",
+      "title": "ML Mathematics",
+      "blurb": "The statistics and linear algebra that ground machine learning."
+    },
+    {
+      "group_id": "kg-mlops",
+      "title": "MLOps & Serving",
+      "blurb": "Getting models off the notebook and into dependable production."
+    },
+    {
+      "group_id": "kg-observability-ops",
+      "title": "Operations & Observability",
+      "blurb": "Running software in production and seeing what it does."
+    },
+    {
+      "group_id": "kg-python-data-stack",
+      "title": "Python Data Stack",
+      "blurb": "The everyday notebooks and array libraries of data work."
+    },
+    {
+      "group_id": "kg-retrieval",
+      "title": "Retrieval & Grounding",
+      "blurb": "Finding and feeding the right context to a model."
+    },
+    {
+      "group_id": "kg-scalability",
+      "title": "Scaling & Concurrency",
+      "blurb": "Techniques for handling load: caching, queues, and concurrent work."
+    },
+    {
+      "group_id": "kg-scripting-languages",
+      "title": "Scripting & App Languages",
+      "blurb": "General-purpose languages for scripts, apps, and glue code."
+    },
+    {
+      "group_id": "kg-service-architecture",
+      "title": "Service Architecture",
+      "blurb": "How a backend is shaped: interfaces, boundaries, and how services talk."
+    },
+    {
+      "group_id": "kg-systems-and-security",
+      "title": "Systems & Security",
+      "blurb": "How machines run and talk, and how to keep access controlled."
+    },
+    {
+      "group_id": "kg-vector-stores",
+      "title": "Vector Stores",
+      "blurb": "The databases and libraries that hold and search embeddings."
+    },
+    {
+      "group_id": "kg-web-languages",
+      "title": "Web Languages",
+      "blurb": "The languages the browser runs and the types that keep them honest."
+    }
+  ],
+  "entries": [
+    {
+      "skill_id": "skill.ab-testing",
+      "group_id": "kg-experiment-tracking",
+      "expected_minutes": 300,
+      "blurb": "Comparing variants with controlled experiments to see what wins."
+    },
+    {
+      "skill_id": "skill.agile",
+      "group_id": "kg-engineering-practice",
+      "expected_minutes": 180,
+      "blurb": "Iterative ways of planning and shipping work in small increments."
+    },
+    {
+      "skill_id": "skill.ai-agents",
+      "group_id": "kg-llm-orchestration",
+      "expected_minutes": 420,
+      "blurb": "Letting a model plan and act through tools over multiple steps."
+    },
+    {
+      "skill_id": "skill.airflow",
+      "group_id": "kg-data-engineering",
+      "expected_minutes": 300,
+      "blurb": "Scheduling and orchestrating data workflows as code."
+    },
+    {
+      "skill_id": "skill.algorithms",
+      "group_id": "kg-cs-foundations",
+      "expected_minutes": 600,
+      "blurb": "Standard approaches for sorting, searching, and transforming data."
+    },
+    {
+      "skill_id": "skill.angular",
+      "group_id": "kg-frontend-frameworks",
+      "expected_minutes": 480,
+      "blurb": "A full-featured framework for structured single-page applications."
+    },
+    {
+      "skill_id": "skill.anthropic-api",
+      "group_id": "kg-llm-serving",
+      "expected_minutes": 180,
+      "blurb": "Calling Anthropic's Claude models from your application."
+    },
+    {
+      "skill_id": "skill.api-design",
+      "group_id": "kg-service-architecture",
+      "expected_minutes": 360,
+      "blurb": "Shaping interfaces that are clear, stable, and pleasant to consume."
+    },
+    {
+      "skill_id": "skill.application-security",
+      "group_id": "kg-systems-and-security",
+      "expected_minutes": 420,
+      "blurb": "Finding and closing the ways an application can be abused."
+    },
+    {
+      "skill_id": "skill.authentication",
+      "group_id": "kg-systems-and-security",
+      "expected_minutes": 360,
+      "blurb": "Verifying who a user is and what they are allowed to do."
+    },
+    {
+      "skill_id": "skill.aws",
+      "group_id": "kg-cloud-platforms",
+      "expected_minutes": 600,
+      "blurb": "The broadest cloud provider and its core compute and storage services."
+    },
+    {
+      "skill_id": "skill.azure",
+      "group_id": "kg-cloud-platforms",
+      "expected_minutes": 480,
+      "blurb": "Microsoft's cloud, common in enterprise environments."
+    },
+    {
+      "skill_id": "skill.bash",
+      "group_id": "kg-scripting-languages",
+      "expected_minutes": 360,
+      "blurb": "Shell scripting for automating the command line and glue tasks."
+    },
+    {
+      "skill_id": "skill.bigquery",
+      "group_id": "kg-data-engineering",
+      "expected_minutes": 240,
+      "blurb": "Google's serverless warehouse for querying large datasets."
+    },
+    {
+      "skill_id": "skill.c",
+      "group_id": "kg-backend-languages",
+      "expected_minutes": 900,
+      "blurb": "The low-level language much of the software world is still built on."
+    },
+    {
+      "skill_id": "skill.caching",
+      "group_id": "kg-scalability",
+      "expected_minutes": 300,
+      "blurb": "Storing computed results to cut latency and load."
+    },
+    {
+      "skill_id": "skill.cassandra",
+      "group_id": "kg-databases-nosql",
+      "expected_minutes": 360,
+      "blurb": "A wide-column store for write-heavy, distributed workloads."
+    },
+    {
+      "skill_id": "skill.celery",
+      "group_id": "kg-data-streaming",
+      "expected_minutes": 240,
+      "blurb": "A task queue for running background jobs in Python apps."
+    },
+    {
+      "skill_id": "skill.chunking",
+      "group_id": "kg-retrieval",
+      "expected_minutes": 180,
+      "blurb": "Splitting documents into passages that retrieve and fit well."
+    },
+    {
+      "skill_id": "skill.ci-cd",
+      "group_id": "kg-cicd",
+      "expected_minutes": 300,
+      "blurb": "Automating the path from a commit to a tested, deployed release."
+    },
+    {
+      "skill_id": "skill.code-review",
+      "group_id": "kg-engineering-practice",
+      "expected_minutes": 240,
+      "blurb": "Reading a teammate's change to catch issues and share context."
+    },
+    {
+      "skill_id": "skill.complexity-analysis",
+      "group_id": "kg-cs-foundations",
+      "expected_minutes": 300,
+      "blurb": "Reasoning about how time and space grow with input size."
+    },
+    {
+      "skill_id": "skill.computer-vision",
+      "group_id": "kg-ml-domains",
+      "expected_minutes": 480,
+      "blurb": "Teaching models to interpret images and video."
+    },
+    {
+      "skill_id": "skill.concurrency",
+      "group_id": "kg-scalability",
+      "expected_minutes": 480,
+      "blurb": "Doing many things at once without corrupting shared state."
+    },
+    {
+      "skill_id": "skill.cpp",
+      "group_id": "kg-backend-languages",
+      "expected_minutes": 1000,
+      "blurb": "C with abstractions, used where control and performance both matter."
+    },
+    {
+      "skill_id": "skill.csharp",
+      "group_id": "kg-backend-languages",
+      "expected_minutes": 720,
+      "blurb": "A general-purpose language at the center of the .NET ecosystem."
+    },
+    {
+      "skill_id": "skill.data-pipelines",
+      "group_id": "kg-data-engineering",
+      "expected_minutes": 420,
+      "blurb": "Moving and transforming data reliably from source to destination."
+    },
+    {
+      "skill_id": "skill.data-structures",
+      "group_id": "kg-cs-foundations",
+      "expected_minutes": 480,
+      "blurb": "The containers, from lists to trees, that organize data in memory."
+    },
+    {
+      "skill_id": "skill.database-design",
+      "group_id": "kg-databases-relational",
+      "expected_minutes": 420,
+      "blurb": "Modeling data into tables and relationships that stay correct as they grow."
+    },
+    {
+      "skill_id": "skill.datadog",
+      "group_id": "kg-observability-ops",
+      "expected_minutes": 180,
+      "blurb": "A hosted platform for monitoring across infrastructure and apps."
+    },
+    {
+      "skill_id": "skill.dbt",
+      "group_id": "kg-data-engineering",
+      "expected_minutes": 240,
+      "blurb": "Transforming warehouse data with version-controlled SQL models."
+    },
+    {
+      "skill_id": "skill.debugging",
+      "group_id": "kg-engineering-practice",
+      "expected_minutes": 300,
+      "blurb": "Systematically finding why software misbehaves and fixing it."
+    },
+    {
+      "skill_id": "skill.deep-learning",
+      "group_id": "kg-deep-learning",
+      "expected_minutes": 600,
+      "blurb": "Training multi-layer neural networks to learn rich representations."
+    },
+    {
+      "skill_id": "skill.diffusion-models",
+      "group_id": "kg-ml-domains",
+      "expected_minutes": 480,
+      "blurb": "The generative approach behind modern image synthesis."
+    },
+    {
+      "skill_id": "skill.distributed-systems",
+      "group_id": "kg-service-architecture",
+      "expected_minutes": 720,
+      "blurb": "Reasoning about systems whose parts fail and communicate over a network."
+    },
+    {
+      "skill_id": "skill.distributed-training",
+      "group_id": "kg-deep-learning",
+      "expected_minutes": 480,
+      "blurb": "Training large models across many GPUs or machines."
+    },
+    {
+      "skill_id": "skill.django",
+      "group_id": "kg-backend-frameworks",
+      "expected_minutes": 480,
+      "blurb": "A batteries-included Python framework for full web applications."
+    },
+    {
+      "skill_id": "skill.docker",
+      "group_id": "kg-containers",
+      "expected_minutes": 300,
+      "blurb": "Packaging software and its dependencies into portable containers."
+    },
+    {
+      "skill_id": "skill.dotnet",
+      "group_id": "kg-backend-frameworks",
+      "expected_minutes": 600,
+      "blurb": "Microsoft's framework for building services and apps in C#."
+    },
+    {
+      "skill_id": "skill.dynamic-programming",
+      "group_id": "kg-algorithmic-techniques",
+      "expected_minutes": 420,
+      "blurb": "Solving problems by reusing answers to overlapping subproblems."
+    },
+    {
+      "skill_id": "skill.dynamodb",
+      "group_id": "kg-databases-nosql",
+      "expected_minutes": 300,
+      "blurb": "A managed key-value and document store built for scale."
+    },
+    {
+      "skill_id": "skill.elasticsearch",
+      "group_id": "kg-databases-nosql",
+      "expected_minutes": 360,
+      "blurb": "A search and analytics engine over documents and logs."
+    },
+    {
+      "skill_id": "skill.embeddings",
+      "group_id": "kg-retrieval",
+      "expected_minutes": 300,
+      "blurb": "Turning text into vectors that capture meaning for search."
+    },
+    {
+      "skill_id": "skill.event-driven",
+      "group_id": "kg-service-architecture",
+      "expected_minutes": 420,
+      "blurb": "Architecting around events rather than direct calls between services."
+    },
+    {
+      "skill_id": "skill.experiment-tracking",
+      "group_id": "kg-experiment-tracking",
+      "expected_minutes": 240,
+      "blurb": "Recording runs so results can be compared and reproduced."
+    },
+    {
+      "skill_id": "skill.express",
+      "group_id": "kg-backend-frameworks",
+      "expected_minutes": 300,
+      "blurb": "A minimal, unopinionated web framework for Node.js."
+    },
+    {
+      "skill_id": "skill.faiss",
+      "group_id": "kg-vector-stores",
+      "expected_minutes": 240,
+      "blurb": "A library for fast similarity search over dense vectors."
+    },
+    {
+      "skill_id": "skill.fastapi",
+      "group_id": "kg-backend-frameworks",
+      "expected_minutes": 360,
+      "blurb": "A modern Python framework for typed, high-performance APIs."
+    },
+    {
+      "skill_id": "skill.feature-engineering",
+      "group_id": "kg-classical-ml",
+      "expected_minutes": 420,
+      "blurb": "Turning raw data into inputs a model can learn from."
+    },
+    {
+      "skill_id": "skill.feature-stores",
+      "group_id": "kg-mlops",
+      "expected_minutes": 300,
+      "blurb": "A managed home for the features models share in training and serving."
+    },
+    {
+      "skill_id": "skill.fine-tuning",
+      "group_id": "kg-llm-foundations",
+      "expected_minutes": 420,
+      "blurb": "Adapting a pretrained model to a task with more training."
+    },
+    {
+      "skill_id": "skill.flask",
+      "group_id": "kg-backend-frameworks",
+      "expected_minutes": 300,
+      "blurb": "A lightweight Python framework you assemble to taste."
+    },
+    {
+      "skill_id": "skill.function-calling",
+      "group_id": "kg-llm-orchestration",
+      "expected_minutes": 240,
+      "blurb": "Letting a model invoke your functions with structured arguments."
+    },
+    {
+      "skill_id": "skill.functional-programming",
+      "group_id": "kg-systems-and-security",
+      "expected_minutes": 360,
+      "blurb": "Building programs from pure functions and immutable data."
+    },
+    {
+      "skill_id": "skill.gcp",
+      "group_id": "kg-cloud-platforms",
+      "expected_minutes": 480,
+      "blurb": "Google's cloud and its compute, data, and ML offerings."
+    },
+    {
+      "skill_id": "skill.git",
+      "group_id": "kg-cicd",
+      "expected_minutes": 240,
+      "blurb": "Tracking changes and collaborating on code with confidence."
+    },
+    {
+      "skill_id": "skill.github-actions",
+      "group_id": "kg-cicd",
+      "expected_minutes": 180,
+      "blurb": "Automating builds and deploys from within GitHub."
+    },
+    {
+      "skill_id": "skill.go",
+      "group_id": "kg-backend-languages",
+      "expected_minutes": 600,
+      "blurb": "A small, fast language built for concurrent network services."
+    },
+    {
+      "skill_id": "skill.gpu-computing",
+      "group_id": "kg-deep-learning",
+      "expected_minutes": 360,
+      "blurb": "Using graphics hardware to accelerate heavy numerical work."
+    },
+    {
+      "skill_id": "skill.grafana",
+      "group_id": "kg-observability-ops",
+      "expected_minutes": 180,
+      "blurb": "Dashboards that visualize metrics and logs."
+    },
+    {
+      "skill_id": "skill.graph-algorithms",
+      "group_id": "kg-algorithmic-techniques",
+      "expected_minutes": 420,
+      "blurb": "Traversals and shortest paths over networks of nodes and edges."
+    },
+    {
+      "skill_id": "skill.graphql",
+      "group_id": "kg-api-protocols",
+      "expected_minutes": 300,
+      "blurb": "A query language letting clients ask for exactly the data they need."
+    },
+    {
+      "skill_id": "skill.grpc",
+      "group_id": "kg-api-protocols",
+      "expected_minutes": 300,
+      "blurb": "A fast, contract-first protocol for service-to-service calls."
+    },
+    {
+      "skill_id": "skill.guardrails",
+      "group_id": "kg-llm-evaluation",
+      "expected_minutes": 300,
+      "blurb": "Keeping model output inside safe, expected bounds."
+    },
+    {
+      "skill_id": "skill.html-css",
+      "group_id": "kg-web-languages",
+      "expected_minutes": 480,
+      "blurb": "The markup and styling every web interface is built from."
+    },
+    {
+      "skill_id": "skill.hugging-face",
+      "group_id": "kg-llm-serving",
+      "expected_minutes": 300,
+      "blurb": "The hub and libraries for open models and datasets."
+    },
+    {
+      "skill_id": "skill.inference-optimization",
+      "group_id": "kg-llm-serving",
+      "expected_minutes": 360,
+      "blurb": "Cutting the cost and latency of running a language model."
+    },
+    {
+      "skill_id": "skill.java",
+      "group_id": "kg-backend-languages",
+      "expected_minutes": 900,
+      "blurb": "A statically typed workhorse for large backend systems."
+    },
+    {
+      "skill_id": "skill.javascript",
+      "group_id": "kg-web-languages",
+      "expected_minutes": 720,
+      "blurb": "The language of the browser and much of the modern web stack."
+    },
+    {
+      "skill_id": "skill.jenkins",
+      "group_id": "kg-cicd",
+      "expected_minutes": 240,
+      "blurb": "A long-standing automation server for build and deploy pipelines."
+    },
+    {
+      "skill_id": "skill.jupyter",
+      "group_id": "kg-python-data-stack",
+      "expected_minutes": 120,
+      "blurb": "Interactive notebooks for exploring data and sharing analysis."
+    },
+    {
+      "skill_id": "skill.kafka",
+      "group_id": "kg-data-streaming",
+      "expected_minutes": 420,
+      "blurb": "A durable log for streaming events between systems at scale."
+    },
+    {
+      "skill_id": "skill.keras",
+      "group_id": "kg-deep-learning",
+      "expected_minutes": 240,
+      "blurb": "A high-level API for assembling neural networks quickly."
+    },
+    {
+      "skill_id": "skill.kotlin",
+      "group_id": "kg-scripting-languages",
+      "expected_minutes": 600,
+      "blurb": "A modern JVM language, first choice for much of Android development."
+    },
+    {
+      "skill_id": "skill.kubeflow",
+      "group_id": "kg-mlops",
+      "expected_minutes": 360,
+      "blurb": "Running ML workflows on top of Kubernetes."
+    },
+    {
+      "skill_id": "skill.kubernetes",
+      "group_id": "kg-containers",
+      "expected_minutes": 600,
+      "blurb": "Orchestrating containers across a cluster of machines."
+    },
+    {
+      "skill_id": "skill.langchain",
+      "group_id": "kg-llm-orchestration",
+      "expected_minutes": 300,
+      "blurb": "A framework for composing LLM calls, tools, and memory."
+    },
+    {
+      "skill_id": "skill.lightgbm",
+      "group_id": "kg-classical-ml",
+      "expected_minutes": 240,
+      "blurb": "A fast gradient-boosting framework for large tabular datasets."
+    },
+    {
+      "skill_id": "skill.linear-algebra",
+      "group_id": "kg-ml-math",
+      "expected_minutes": 480,
+      "blurb": "Vectors and matrices, the language neural networks are written in."
+    },
+    {
+      "skill_id": "skill.linux",
+      "group_id": "kg-observability-ops",
+      "expected_minutes": 420,
+      "blurb": "The operating system most servers run and the shell around it."
+    },
+    {
+      "skill_id": "skill.llamaindex",
+      "group_id": "kg-llm-orchestration",
+      "expected_minutes": 300,
+      "blurb": "A framework for connecting LLMs to your own data."
+    },
+    {
+      "skill_id": "skill.llm-evaluation",
+      "group_id": "kg-llm-evaluation",
+      "expected_minutes": 360,
+      "blurb": "Judging whether an LLM's output is actually good."
+    },
+    {
+      "skill_id": "skill.llm-observability",
+      "group_id": "kg-llm-evaluation",
+      "expected_minutes": 300,
+      "blurb": "Tracing and monitoring what an LLM feature does in production."
+    },
+    {
+      "skill_id": "skill.llms",
+      "group_id": "kg-llm-foundations",
+      "expected_minutes": 480,
+      "blurb": "How large language models work and where their limits are."
+    },
+    {
+      "skill_id": "skill.load-balancing",
+      "group_id": "kg-scalability",
+      "expected_minutes": 300,
+      "blurb": "Spreading traffic across instances so none is overwhelmed."
+    },
+    {
+      "skill_id": "skill.machine-learning",
+      "group_id": "kg-classical-ml",
+      "expected_minutes": 600,
+      "blurb": "Learning patterns from data to make predictions."
+    },
+    {
+      "skill_id": "skill.mcp",
+      "group_id": "kg-llm-orchestration",
+      "expected_minutes": 240,
+      "blurb": "An open protocol for connecting models to tools and data sources."
+    },
+    {
+      "skill_id": "skill.message-queues",
+      "group_id": "kg-scalability",
+      "expected_minutes": 300,
+      "blurb": "Decoupling producers and consumers with a queue in between."
+    },
+    {
+      "skill_id": "skill.microservices",
+      "group_id": "kg-service-architecture",
+      "expected_minutes": 480,
+      "blurb": "Splitting a system into independently deployable services."
+    },
+    {
+      "skill_id": "skill.mlflow",
+      "group_id": "kg-experiment-tracking",
+      "expected_minutes": 240,
+      "blurb": "Tracking experiments, models, and their metadata."
+    },
+    {
+      "skill_id": "skill.mlops",
+      "group_id": "kg-mlops",
+      "expected_minutes": 420,
+      "blurb": "The practices that keep models reproducible and reliable in production."
+    },
+    {
+      "skill_id": "skill.model-deployment",
+      "group_id": "kg-mlops",
+      "expected_minutes": 360,
+      "blurb": "Getting a trained model behind an endpoint that others can call."
+    },
+    {
+      "skill_id": "skill.model-evaluation",
+      "group_id": "kg-classical-ml",
+      "expected_minutes": 360,
+      "blurb": "Measuring whether a model actually works, and where it fails."
+    },
+    {
+      "skill_id": "skill.model-optimization",
+      "group_id": "kg-mlops",
+      "expected_minutes": 420,
+      "blurb": "Shrinking and speeding up models for cheaper, faster serving."
+    },
+    {
+      "skill_id": "skill.mongodb",
+      "group_id": "kg-databases-nosql",
+      "expected_minutes": 300,
+      "blurb": "A document database storing flexible JSON-like records."
+    },
+    {
+      "skill_id": "skill.multimodal",
+      "group_id": "kg-ml-domains",
+      "expected_minutes": 420,
+      "blurb": "Models that reason across text, images, and other inputs together."
+    },
+    {
+      "skill_id": "skill.mysql",
+      "group_id": "kg-databases-relational",
+      "expected_minutes": 360,
+      "blurb": "A widely deployed open-source relational database."
+    },
+    {
+      "skill_id": "skill.networking",
+      "group_id": "kg-systems-and-security",
+      "expected_minutes": 420,
+      "blurb": "How data moves across the internet, from packets to protocols."
+    },
+    {
+      "skill_id": "skill.nextjs",
+      "group_id": "kg-frontend-frameworks",
+      "expected_minutes": 360,
+      "blurb": "A React framework adding routing, rendering, and server features."
+    },
+    {
+      "skill_id": "skill.nginx",
+      "group_id": "kg-observability-ops",
+      "expected_minutes": 240,
+      "blurb": "A web server and reverse proxy that fronts many services."
+    },
+    {
+      "skill_id": "skill.nlp",
+      "group_id": "kg-ml-domains",
+      "expected_minutes": 480,
+      "blurb": "Getting models to work with human language."
+    },
+    {
+      "skill_id": "skill.nodejs",
+      "group_id": "kg-backend-frameworks",
+      "expected_minutes": 480,
+      "blurb": "A runtime that lets JavaScript power servers and tooling."
+    },
+    {
+      "skill_id": "skill.numpy",
+      "group_id": "kg-python-data-stack",
+      "expected_minutes": 240,
+      "blurb": "Fast array math that most Python data tools build on."
+    },
+    {
+      "skill_id": "skill.observability",
+      "group_id": "kg-observability-ops",
+      "expected_minutes": 360,
+      "blurb": "Making a running system legible through logs, metrics, and traces."
+    },
+    {
+      "skill_id": "skill.ollama",
+      "group_id": "kg-llm-serving",
+      "expected_minutes": 180,
+      "blurb": "Running open language models locally with a simple interface."
+    },
+    {
+      "skill_id": "skill.oop",
+      "group_id": "kg-systems-and-security",
+      "expected_minutes": 300,
+      "blurb": "Organizing code around objects that bundle data and behavior."
+    },
+    {
+      "skill_id": "skill.openai-api",
+      "group_id": "kg-llm-serving",
+      "expected_minutes": 180,
+      "blurb": "Calling OpenAI's hosted models from your application."
+    },
+    {
+      "skill_id": "skill.operating-systems",
+      "group_id": "kg-systems-and-security",
+      "expected_minutes": 480,
+      "blurb": "How processes, memory, and files are managed beneath your code."
+    },
+    {
+      "skill_id": "skill.pandas",
+      "group_id": "kg-python-data-stack",
+      "expected_minutes": 300,
+      "blurb": "The go-to library for wrangling tabular data in Python."
+    },
+    {
+      "skill_id": "skill.performance-optimization",
+      "group_id": "kg-engineering-practice",
+      "expected_minutes": 420,
+      "blurb": "Measuring and removing the bottlenecks that slow software down."
+    },
+    {
+      "skill_id": "skill.pgvector",
+      "group_id": "kg-vector-stores",
+      "expected_minutes": 180,
+      "blurb": "Vector similarity search inside PostgreSQL."
+    },
+    {
+      "skill_id": "skill.php",
+      "group_id": "kg-scripting-languages",
+      "expected_minutes": 600,
+      "blurb": "A pragmatic server language that still runs a large share of the web."
+    },
+    {
+      "skill_id": "skill.pinecone",
+      "group_id": "kg-vector-stores",
+      "expected_minutes": 180,
+      "blurb": "A managed vector database for similarity search."
+    },
+    {
+      "skill_id": "skill.postgresql",
+      "group_id": "kg-databases-relational",
+      "expected_minutes": 420,
+      "blurb": "A capable open-source relational database and its rich feature set."
+    },
+    {
+      "skill_id": "skill.probability",
+      "group_id": "kg-ml-math",
+      "expected_minutes": 420,
+      "blurb": "The mathematics of chance that underpins statistical models."
+    },
+    {
+      "skill_id": "skill.prometheus",
+      "group_id": "kg-observability-ops",
+      "expected_minutes": 240,
+      "blurb": "A metrics system for collecting and querying time-series data."
+    },
+    {
+      "skill_id": "skill.prompt-engineering",
+      "group_id": "kg-llm-foundations",
+      "expected_minutes": 240,
+      "blurb": "Shaping instructions and context to steer a model's output."
+    },
+    {
+      "skill_id": "skill.python",
+      "group_id": "kg-scripting-languages",
+      "expected_minutes": 600,
+      "blurb": "A readable general-purpose language that dominates data and scripting."
+    },
+    {
+      "skill_id": "skill.pytorch",
+      "group_id": "kg-deep-learning",
+      "expected_minutes": 480,
+      "blurb": "A flexible framework for building and training neural networks."
+    },
+    {
+      "skill_id": "skill.r",
+      "group_id": "kg-scripting-languages",
+      "expected_minutes": 600,
+      "blurb": "A language and environment purpose-built for statistics and analysis."
+    },
+    {
+      "skill_id": "skill.rabbitmq",
+      "group_id": "kg-data-streaming",
+      "expected_minutes": 300,
+      "blurb": "A message broker for routing work between services."
+    },
+    {
+      "skill_id": "skill.rag",
+      "group_id": "kg-retrieval",
+      "expected_minutes": 360,
+      "blurb": "Grounding a model's answers in retrieved source documents."
+    },
+    {
+      "skill_id": "skill.rails",
+      "group_id": "kg-backend-frameworks",
+      "expected_minutes": 480,
+      "blurb": "A convention-driven Ruby framework for building web apps fast."
+    },
+    {
+      "skill_id": "skill.ray",
+      "group_id": "kg-mlops",
+      "expected_minutes": 360,
+      "blurb": "A framework for scaling Python and ML workloads across a cluster."
+    },
+    {
+      "skill_id": "skill.react",
+      "group_id": "kg-frontend-frameworks",
+      "expected_minutes": 480,
+      "blurb": "A component library for building interactive user interfaces."
+    },
+    {
+      "skill_id": "skill.recommendation-systems",
+      "group_id": "kg-ml-domains",
+      "expected_minutes": 420,
+      "blurb": "Predicting what a user will want to see next."
+    },
+    {
+      "skill_id": "skill.recursion",
+      "group_id": "kg-algorithmic-techniques",
+      "expected_minutes": 240,
+      "blurb": "Solving a problem in terms of smaller versions of itself."
+    },
+    {
+      "skill_id": "skill.redis",
+      "group_id": "kg-databases-nosql",
+      "expected_minutes": 240,
+      "blurb": "An in-memory store used for caching, queues, and fast lookups."
+    },
+    {
+      "skill_id": "skill.redux",
+      "group_id": "kg-frontend-frameworks",
+      "expected_minutes": 240,
+      "blurb": "A predictable state container often paired with React."
+    },
+    {
+      "skill_id": "skill.reinforcement-learning",
+      "group_id": "kg-ml-domains",
+      "expected_minutes": 600,
+      "blurb": "Training agents to act by rewarding good outcomes."
+    },
+    {
+      "skill_id": "skill.reranking",
+      "group_id": "kg-retrieval",
+      "expected_minutes": 240,
+      "blurb": "Reordering retrieved candidates to put the best ones first."
+    },
+    {
+      "skill_id": "skill.responsible-ai",
+      "group_id": "kg-llm-evaluation",
+      "expected_minutes": 300,
+      "blurb": "Building AI systems with fairness, transparency, and harm in mind."
+    },
+    {
+      "skill_id": "skill.rest-apis",
+      "group_id": "kg-service-architecture",
+      "expected_minutes": 300,
+      "blurb": "The request/response conventions most web APIs still follow."
+    },
+    {
+      "skill_id": "skill.ruby",
+      "group_id": "kg-scripting-languages",
+      "expected_minutes": 600,
+      "blurb": "An expressive scripting language known for developer happiness and Rails."
+    },
+    {
+      "skill_id": "skill.rust",
+      "group_id": "kg-backend-languages",
+      "expected_minutes": 900,
+      "blurb": "A systems language that enforces memory safety without a garbage collector."
+    },
+    {
+      "skill_id": "skill.sagemaker",
+      "group_id": "kg-mlops",
+      "expected_minutes": 360,
+      "blurb": "AWS's managed platform for building and serving models."
+    },
+    {
+      "skill_id": "skill.scala",
+      "group_id": "kg-scripting-languages",
+      "expected_minutes": 720,
+      "blurb": "A JVM language blending object-oriented and functional styles, common in data work."
+    },
+    {
+      "skill_id": "skill.scikit-learn",
+      "group_id": "kg-classical-ml",
+      "expected_minutes": 360,
+      "blurb": "The standard Python toolkit for classical machine learning."
+    },
+    {
+      "skill_id": "skill.semantic-search",
+      "group_id": "kg-retrieval",
+      "expected_minutes": 300,
+      "blurb": "Finding results by meaning rather than exact keywords."
+    },
+    {
+      "skill_id": "skill.serverless",
+      "group_id": "kg-containers",
+      "expected_minutes": 300,
+      "blurb": "Running code as managed functions without provisioning servers."
+    },
+    {
+      "skill_id": "skill.sharding",
+      "group_id": "kg-scalability",
+      "expected_minutes": 360,
+      "blurb": "Partitioning data across machines to scale past one node."
+    },
+    {
+      "skill_id": "skill.snowflake",
+      "group_id": "kg-data-engineering",
+      "expected_minutes": 240,
+      "blurb": "A managed cloud data warehouse that separates storage and compute."
+    },
+    {
+      "skill_id": "skill.spark",
+      "group_id": "kg-data-engineering",
+      "expected_minutes": 480,
+      "blurb": "A distributed engine for processing large datasets in parallel."
+    },
+    {
+      "skill_id": "skill.spring-boot",
+      "group_id": "kg-backend-frameworks",
+      "expected_minutes": 600,
+      "blurb": "The dominant framework for building Java web services."
+    },
+    {
+      "skill_id": "skill.sql",
+      "group_id": "kg-data-engineering",
+      "expected_minutes": 360,
+      "blurb": "The query language for asking questions of relational data."
+    },
+    {
+      "skill_id": "skill.sqlite",
+      "group_id": "kg-databases-relational",
+      "expected_minutes": 180,
+      "blurb": "A tiny embedded relational database that lives in a single file."
+    },
+    {
+      "skill_id": "skill.statistics",
+      "group_id": "kg-ml-math",
+      "expected_minutes": 480,
+      "blurb": "Drawing reliable conclusions from data under uncertainty."
+    },
+    {
+      "skill_id": "skill.structured-outputs",
+      "group_id": "kg-llm-foundations",
+      "expected_minutes": 180,
+      "blurb": "Constraining a model to return machine-readable, validated shapes."
+    },
+    {
+      "skill_id": "skill.swift",
+      "group_id": "kg-scripting-languages",
+      "expected_minutes": 600,
+      "blurb": "Apple's language for building iOS and macOS applications."
+    },
+    {
+      "skill_id": "skill.system-design",
+      "group_id": "kg-service-architecture",
+      "expected_minutes": 720,
+      "blurb": "Composing components into a system that meets its scale and reliability goals."
+    },
+    {
+      "skill_id": "skill.tailwind",
+      "group_id": "kg-frontend-frameworks",
+      "expected_minutes": 180,
+      "blurb": "A utility-first CSS approach for styling straight in the markup."
+    },
+    {
+      "skill_id": "skill.tensorflow",
+      "group_id": "kg-deep-learning",
+      "expected_minutes": 480,
+      "blurb": "A neural-network framework with a broad production ecosystem."
+    },
+    {
+      "skill_id": "skill.terraform",
+      "group_id": "kg-containers",
+      "expected_minutes": 360,
+      "blurb": "Declaring cloud infrastructure as version-controlled code."
+    },
+    {
+      "skill_id": "skill.testing",
+      "group_id": "kg-engineering-practice",
+      "expected_minutes": 360,
+      "blurb": "Writing checks that keep software correct as it changes."
+    },
+    {
+      "skill_id": "skill.time-series",
+      "group_id": "kg-ml-domains",
+      "expected_minutes": 420,
+      "blurb": "Modeling data that unfolds over time to forecast ahead."
+    },
+    {
+      "skill_id": "skill.transformers",
+      "group_id": "kg-deep-learning",
+      "expected_minutes": 480,
+      "blurb": "The attention-based architecture behind modern language and vision models."
+    },
+    {
+      "skill_id": "skill.typescript",
+      "group_id": "kg-web-languages",
+      "expected_minutes": 480,
+      "blurb": "JavaScript with a type system that catches mistakes before they ship."
+    },
+    {
+      "skill_id": "skill.vector-databases",
+      "group_id": "kg-retrieval",
+      "expected_minutes": 300,
+      "blurb": "Stores built to search by vector similarity at scale."
+    },
+    {
+      "skill_id": "skill.vertex-ai",
+      "group_id": "kg-mlops",
+      "expected_minutes": 360,
+      "blurb": "Google Cloud's managed platform for the ML lifecycle."
+    },
+    {
+      "skill_id": "skill.vite",
+      "group_id": "kg-frontend-frameworks",
+      "expected_minutes": 120,
+      "blurb": "A fast build tool and dev server for modern frontend projects."
+    },
+    {
+      "skill_id": "skill.vllm",
+      "group_id": "kg-llm-serving",
+      "expected_minutes": 300,
+      "blurb": "A high-throughput engine for serving language models."
+    },
+    {
+      "skill_id": "skill.vue",
+      "group_id": "kg-frontend-frameworks",
+      "expected_minutes": 360,
+      "blurb": "An approachable component framework for building web interfaces."
+    },
+    {
+      "skill_id": "skill.wandb",
+      "group_id": "kg-experiment-tracking",
+      "expected_minutes": 180,
+      "blurb": "A hosted tool for logging and comparing training runs."
+    },
+    {
+      "skill_id": "skill.weaviate",
+      "group_id": "kg-vector-stores",
+      "expected_minutes": 180,
+      "blurb": "An open-source vector database with built-in modules."
+    },
+    {
+      "skill_id": "skill.websockets",
+      "group_id": "kg-api-protocols",
+      "expected_minutes": 240,
+      "blurb": "A persistent two-way channel for realtime web features."
+    },
+    {
+      "skill_id": "skill.xgboost",
+      "group_id": "kg-classical-ml",
+      "expected_minutes": 300,
+      "blurb": "A gradient-boosting library that wins on much tabular data."
+    }
+  ]
+}

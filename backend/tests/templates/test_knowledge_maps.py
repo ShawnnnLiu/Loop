@@ -40,3 +40,25 @@ def test_pathway_with_map_attaches_a_validated_map() -> None:
 def test_unknown_pathway_has_no_map() -> None:
     assert knowledge_map_for("does-not-exist") is None
     assert pathway_with_map("does-not-exist") is None
+
+
+def test_every_map_seeds_cs_foundations_on_the_core_branch() -> None:
+    """Every pathway map carries the CS-foundations basics by default.
+
+    Interview-prep basics (data structures, algorithms, complexity analysis)
+    are seeded from two slots per pathway, so the group lands on the shared
+    ``core`` branch and Strategist syllabi can tag DSA modules on every track.
+    """
+    expected = {"kn-data-structures", "kn-algorithms", "kn-complexity-analysis"}
+    for pathway in list_pathways():
+        kmap = knowledge_map_for(pathway.pathway_id)
+        assert kmap is not None
+        nodes_by_id = {n.node_id: n for n in kmap.nodes}
+        missing = expected - set(nodes_by_id)
+        assert not missing, f"{pathway.pathway_id}: missing {sorted(missing)}"
+        groups_by_id = {g.group_id: g for g in kmap.groups}
+        for node_id in expected:
+            group = groups_by_id[nodes_by_id[node_id].group_id]
+            assert group.branch == "core", (
+                f"{pathway.pathway_id}: {node_id} not on the core branch"
+            )

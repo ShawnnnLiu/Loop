@@ -53,7 +53,7 @@ def _add_picker_slice() -> set[str]:
 
 def test_grouping_loads_and_is_pinned() -> None:
     grouping = load_skill_grouping()
-    assert grouping.skill_grouping_version == "skill-grouping-v1"
+    assert grouping.skill_grouping_version == "skill-grouping-v2"
 
 
 def test_grouping_taxonomy_version_matches_the_pinned_taxonomy() -> None:

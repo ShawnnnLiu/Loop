@@ -32,7 +32,7 @@ from agentic_calendar.contracts.skill_grouping import (
 )
 
 DEFAULT_SKILL_GROUPING_PATH = (
-    Path(__file__).resolve().parents[3] / "taxonomy" / "skill_grouping_v1.json"
+    Path(__file__).resolve().parents[3] / "taxonomy" / "skill_grouping_v2.json"
 )
 """The current pinned grouping version. A grouping change is a NEW file version
 referenced explicitly (append-only, taxonomy discipline); the generated map

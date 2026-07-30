@@ -1,72 +1,84 @@
 # Agentic Calendar
 
-Deterministic career-preparation orchestration engine.
+Deterministic career-preparation orchestration engine, shipped as the hosted product **Loop** (interview prep, scheduled around your real life).
 
 > **LLMs propose. Deterministic infrastructure disposes.**
 
-This repository is the source code for the system described under `docs/`. Read
-`AGENTS.md` and the relevant axioms in `docs/axioms/` before making any
-substantive change.
+LLM nodes generate structured candidates and user-facing explanations.
+Deterministic code owns routing, validation, scheduling, approval gates, calendar writes, telemetry, drift classification, and source confidence scoring.
+Read `AGENTS.md` and the relevant axioms in `docs/axioms/` before making any substantive change.
 
 ## Repository layout
 
 ```
 Agentic-Calendar/
 ├── AGENTS.md                # constitution; required reading
-├── docs/                    # axioms, specs, ADRs, implementation plans
-├── backend/                 # Python modular monolith (Phase 1+)
-│   ├── pyproject.toml
+├── CLAUDE.md                # operating contract for Claude Code sessions
+├── docs/                    # axioms, specs, ADRs, implementation plans, writeups
+├── backend/                 # Python modular monolith: deterministic core + FastAPI app
 │   ├── src/agentic_calendar/
-│   └── tests/
+│   ├── tests/
+│   ├── corpus/              # committed grounding-corpus snapshot (BM25 retrieval)
+│   ├── taxonomy/            # versioned skill taxonomy + curated groupings
+│   ├── pathways/            # generated knowledge maps (make maps)
+│   ├── evalsets/            # committed LLM eval recordings (make eval-gate)
+│   └── Dockerfile           # production image (serves API + SPA + landing)
+├── frontend/                # Loop SPA (React + Vite + TypeScript), thin client of /api
+├── landing/                 # static landing, sources, privacy, and terms pages
 ├── schemas/                 # generated JSON Schema (committed; cross-language contract)
-├── frontend/                # NOT YET — created in Phase 2 alongside the approval UI
-└── infra/                   # NOT YET — created when Postgres / Redis are wired up
+└── fly.toml                 # single-machine Fly.io deploy config (SQLite + WAL)
 ```
 
-The repo is a **modular monolith** in a **monorepo** with one folder per
-language. Phase 1 is backend-only; the frontend and infra folders intentionally
-do not exist yet.
+The repo is a **modular monolith** in a **monorepo**.
+The backend is the only place control-plane logic lives; the SPA renders state and sends intents.
 
-## Phase 1 scope
+## What is implemented
 
-Phase 1 (`docs/implementation-plans/completed/phase-1-core-planning.md`) implements the
-deterministic planning core:
+The deterministic core:
 
-- Pydantic contracts for `user_profile`, `motivation_profile`,
-  `syllabus_units`, `task_plan`, `validation_result`, and `scheduler_output`.
-- A modular validation layer (schema, graph, coverage, user-fit, scheduling
-  preconditions) that never mutates inputs.
-- A pure greedy Scheduler that emits draft schedules or typed failures with
-  debug payloads.
+- Pydantic contracts in `contracts/`, one module per spec in `docs/specs/`, exported to `/schemas`.
+- A modular validation layer (schema, graph, coverage, user-fit, scheduling preconditions) with bounded repair and typed `reason_code` failures.
+- A pure greedy Scheduler that emits draft-only schedules or typed failures with debug payloads.
 - A deterministic Supervisor with explicit valid and forbidden transitions.
-- An immutable plan-version store (the active plan is never mutated in place).
-- Deterministic prerequisite logic (`task_plan.prerequisites_met` is forbidden).
-- An LLM adapter boundary (`llm_nodes/`) that ships fixture-backed fakes only;
-  no real LLM SDK calls in Phase 1.
-- Golden test scenarios from `docs/golden-test-cases.md` for every Phase 1
-  reason code (3, 4, 5, 6, 10, 11, 12, 15) plus the limited-capacity (1) and
-  no-weekday-availability (2) flows.
+- Immutable plan versions (`planning/`) and deterministic prerequisite logic (`prerequisites/`).
+- The approval gate and Calendar Write Manager (`approval/`, `calendar_writer/`): the only calendar writer, with `approved_payload_hash` recheck, dry-run, duplicate detection, verification read, and rollback.
+- Telemetry and deterministic drift classification (`telemetry/`, `drift/`), plus accountability and disposition tracking.
+- Deterministic source-claims scoring and BM25 grounding retrieval (`source_claims/`, `retrieval/`) over the committed corpus snapshot.
+- Skill taxonomy, career-track pathways, and generated knowledge maps (`skill_taxonomy/`, `backend/pathways/`).
 
-Phase 1 does **not** include calendar writes, approval UI, drift
-classification, RAG ingestion, sponsor reporting, or persistence. The
-no-calendar-write invariant is enforced by both the scheduler contract
-(`CalendarEventStatus.DRAFT_ONLY` only) and a pytest assertion in every
-golden scenario.
+The propose side and product surface:
+
+- `llm_nodes/` is the only package allowed to import LLM SDKs; it holds the real Anthropic-backed Strategist and Planner adapters plus fixture-backed fakes for tests, gated by committed eval recordings (`make eval-gate`).
+- A FastAPI app layer (`app/`) with server-side Google OAuth, session identity, consent, SQLite persistence, and the plan-propose-approve-write loop.
+- The Loop SPA in `frontend/` (onboarding, today view, plan generation, schedule review, approval, pathway atlas, accountability dashboard, thresholds).
+- Static landing and legal pages in `landing/`, served at `/` by the same server.
+- A single-machine hosted deployment on Fly.io behind `loop-study.com` (see `docs/deploy.md`); SQLite + WAL means exactly one machine, no workers.
+
+Import boundaries (LLM SDK isolation, region independence, contracts as leaf) are enforced by `.importlinter`.
 
 ## Quickstart
 
-The backend is the only buildable target right now.
+Backend (run from `backend/`):
 
 ```bash
 cd backend
-uv sync                 # creates backend/.venv from pyproject.toml + uv.lock
-uv run pytest           # runs the full Phase 1 test suite
-uv run ruff check .     # lint
-uv run mypy src         # type check
-make schemas            # regenerate /schemas/*.schema.json from Pydantic models
+uv sync --extra dev     # creates backend/.venv from pyproject.toml + uv.lock
+make test-fast          # pytest excluding slow golden/boundary/subprocess tests
+make check              # lint + typecheck + schema-check + maps-check + full test suite
+make schemas            # regenerate /schemas/*.schema.json after intentional contract changes
+uv run python -m agentic_calendar.app.web   # keyless dev server on :8000 (fixture LLM nodes, no Google)
 ```
 
-See `backend/README.md` for the full developer quickstart.
+Frontend (run from `frontend/`, with the dev backend on `:8000`):
+
+```bash
+cd frontend
+npm install
+npm run dev             # http://localhost:5173, proxies /api, /auth, /healthz to :8000
+npm run build           # writes frontend/dist/ for the production-like single server
+```
+
+See `backend/README.md` and `frontend/README.md` for the full developer quickstarts.
 
 ## Reading order
 
@@ -76,6 +88,9 @@ See `backend/README.md` for the full developer quickstart.
 4. `docs/axioms/02-state-machine.md`
 5. `docs/axioms/04-validation-layer.md`
 6. `docs/axioms/05-scheduler-policy.md`
-7. `docs/axioms/15-plan-versioning-and-diffs.md`
-8. `docs/axioms/16-reliability-patterns.md`
-9. `docs/specs/` (canonical schema contracts)
+7. `docs/axioms/06-calendar-safety.md`
+8. `docs/axioms/15-plan-versioning-and-diffs.md`
+9. `docs/axioms/16-reliability-patterns.md`
+10. `docs/specs/` (canonical schema contracts)
+
+Completed implementation plans live in `docs/implementation-plans/completed/`; active plans stay in `docs/implementation-plans/`.

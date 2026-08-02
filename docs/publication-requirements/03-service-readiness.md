@@ -7,6 +7,9 @@ blocks launch.
 
 ## 1. Custom domain (blocks verification AND the demo video)
 
+> Done 2026-07-19: loop-study.com live (fly certs, Console redirect URI, `CANONICAL_HOST` set in `fly.toml`), verified in Search Console, old fly.dev domain and redirect URI removed from the console.
+> The verification framing is moot as of 2026-07-31 (see README status), but the domain was needed for branding review and is simply the product's home now.
+
 - Status: code side shipped and dormant (`CANONICAL_HOST` redirect in
   `backend/src/agentic_calendar/app/web/server.py`; commented `[env]` slot
   in `fly.toml`). Infra side not done.
@@ -22,6 +25,10 @@ blocks launch.
   tester re-logs-in.
 
 ## 2. Privacy policy page (does not exist — new work)
+
+> Done 2026-07-19: `/privacy` + `/terms` shipped and verified live on loop-study.com (PRs #36, #37, #38), linked from the landing footer, URL pasted into the consent-screen config.
+> The LLM-boundary claim was code-verified before publishing (busy/free never reaches `llm_nodes/` or LLM-facing contracts).
+> Content requirements below are kept as the checklist the shipped page was written against.
 
 Nothing in `landing/` or the app mentions a privacy policy today. Required
 for verification; also simply owed to beta testers. Content must cover, in
@@ -99,10 +106,10 @@ their own plans:
 
 ## 6. Post-publication doc updates
 
-- `docs/deploy.md`: §1 scope list is stale (says `calendar.events`; the web
-  flow requests `calendar.app.created` + `calendar.freebusy`) and its
-  "choose In production (unverified)" guidance becomes wrong the moment
-  verification is submitted. Update after the Google side settles.
-- Landing page: once verified, the consent flow is clean — remove any
-  tester-facing instructions about clicking through the unverified warning
-  if any were written.
+- [x] `docs/deploy.md` §1 rewritten 2026-07-19: real web scopes, HTTPS-only
+  redirect URIs, web client as the project's only OAuth client. Re-check its
+  publishing-status guidance once "Publish App" is clicked (verification
+  never applied in the end; see README status 2026-07-31).
+- [x] Landing page: no unverified-warning instructions were ever written,
+  and none are needed - the consent flow is clean because no sensitive
+  scopes are requested.

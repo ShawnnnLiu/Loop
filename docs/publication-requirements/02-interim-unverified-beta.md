@@ -2,6 +2,13 @@
 
 Written 2026-07-16.
 
+> **Status 2026-07-31: the tradeoff this doc weighs no longer exists.**
+> The console confirms the app requests no sensitive or restricted scopes, so the "unverified app" warning screen and the 100-user lifetime cap described below do not apply - those are consequences of unapproved *sensitive* scopes.
+> Publishing to production is now a pure win with no interim downside: it ends the 7-day refresh-token expiry and the manual tester list, needs no review, and shows a clean consent screen.
+> Note: refresh tokens issued while still in Testing keep their 7-day expiry; existing testers reconnect once after publishing, then their tokens are long-lived.
+> Beta access remains gated app-side by `TESTER_ALLOWLIST`.
+> The Testing-status description below stays accurate until "Publish App" is clicked.
+
 ## Where the app is today: Testing status
 
 The consent screen is in **Testing** status. Consequences:

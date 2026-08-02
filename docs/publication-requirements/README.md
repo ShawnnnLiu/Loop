@@ -4,6 +4,24 @@ Written 2026-07-16. Researched against Google's OAuth verification docs as of
 that date (sources linked in each doc). Numbers quoted from Google (review
 timelines, user caps) are their published figures, not measurements.
 
+## Status 2026-07-31: RESOLVED - verification not required
+
+Branding verification passed (manual review, after the automated bounces logged in [01](01-google-oauth-verification.md)).
+The console Data Access page now classifies **every** requested scope - including `calendar.app.created` and freebusy - as **non-sensitive**, and states: "Verification is not required since your app is not requesting any sensitive or restricted scopes."
+The premise this folder was written under (freebusy puts the app in the sensitive-scope tier) no longer holds for this app.
+
+Consequences:
+
+- No sensitive-scope verification review.
+- No demo video ([01 §5](01-google-oauth-verification.md)).
+- No 100-user lifetime cap and no "unverified app" warning ([02](02-interim-unverified-beta.md)) - both only ever applied to unapproved sensitive scopes.
+- The path A / path B decision below is dissolved; there is only one path and it has no review step.
+
+The one remaining Google-side action is publishing the consent screen to production (checklist item 5), which is instant with non-sensitive scopes and ends the 7-day refresh-token expiry plus the manual tester list.
+Beta access stays gated app-side by `TESTER_ALLOWLIST`.
+The non-Google readiness items in [03](03-service-readiness.md) still apply.
+The rest of this folder is kept as written, as a record of the process; per-doc status notes mark what is now moot.
+
 ## Why this folder exists
 
 Opening the beta to testers **without manually adding each one** in Google
@@ -52,30 +70,24 @@ Staying in **Testing** status is the worst of both: manual tester list (max
 Tags: **[user]** = only you can do it; **[agent]** = hand to a session once
 its inputs exist.
 
-1. [ ] **[user]** Decide path A / B / B-then-A (recommendation in
-   [02](02-interim-unverified-beta.md): B-then-A if beta starts before
-   verification lands and the early cohort is small).
-2. [ ] **[user]** Buy the custom domain and run the cutover — the existing
-   runbook is `docs/implementation-plans/completed/loop-recruiter-readiness/REMAINING.md`
-   §2 (fly certs → Console redirect URI → `CANONICAL_HOST`). A `*.fly.dev`
-   host **cannot** pass Google's domain-ownership check, so this is
-   load-bearing for verification, not just branding.
-3. [ ] **[user]** Verify the domain in Google Search Console (same Google
-   account that owns the Cloud project).
-4. [ ] **[agent]** Write and serve a privacy policy page on that domain;
-   link it from the landing page (see
-   [03 §2](03-service-readiness.md); data-collection language comes from
-   [04 §5](04-data-strategy.md)). None exists today.
+1. [x] Moot 2026-07-31 - no verification tier applies, so the A/B
+   decision dissolved (see Status at top).
+2. [x] **[user]** Done 2026-07-19 - loop-study.com bought and cut over
+   (fly certs, Console redirect URI, `CANONICAL_HOST`; runbook was
+   `docs/implementation-plans/completed/loop-recruiter-readiness/REMAINING.md` §2).
+3. [x] **[user]** Done 2026-07-19 - domain verified in Google Search
+   Console (TXT record, dig-confirmed).
+4. [x] **[agent]** Done 2026-07-19 - `/privacy` + `/terms` live on
+   loop-study.com, linked from the landing footer (PRs #36, #37, #38).
 5. [ ] **[user]** Publish the consent screen to production (Console →
-   "Publish App"). This alone fixes the 7-day token expiry.
-6. [ ] **[user]** Submit verification in the Console **Verification
-   Center**: confirm scope classifications, paste the per-scope
-   justifications drafted in [01 §4](01-google-oauth-verification.md),
-   attach the demo video.
-7. [ ] **[user]** Record the verification demo video ([01 §5](01-google-oauth-verification.md)) —
-   distinct from the recruiter-readiness marketing video; it must show the
-   consent screen and scope usage with the URL bar visible.
-8. [ ] **[user]** Respond to Google review feedback until approved.
+   "Publish App"). This alone fixes the 7-day token expiry. With
+   non-sensitive scopes only, this is instant and needs no review.
+6. [x] Partially done 2026-07-19 (per-scope justifications submitted in
+   the Verification Center), then moot 2026-07-31 - no scope review
+   exists for this app.
+7. [x] Moot 2026-07-31 - demo video not required (it existed only for
+   sensitive-scope review).
+8. [x] Done 2026-07-31 - branding review passed; no scope review follows.
 9. [x] **[agent]** Done 2026-07-19: `docs/deploy.md` §1 now documents the
    real web scopes (`calendar.app.created` + `calendar.freebusy`), HTTPS-only
    redirect URIs (plain-http URIs block adding granular scopes in Data

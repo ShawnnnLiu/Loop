@@ -3,6 +3,14 @@
 Written 2026-07-16 against Google's published process. Google changes this
 process periodically — re-check the linked docs before submitting.
 
+> **Status 2026-07-31: MOOT - this app is not in the sensitive-scope tier.**
+> The console Data Access page classifies all requested scopes, including freebusy and `calendar.app.created`, as non-sensitive, and states verification is not required.
+> Branding verification passed separately.
+> The scope classification in §1 below is therefore outdated; trust the console.
+> §4 justifications were submitted 2026-07-19 before this became moot (harmless).
+> The §5 demo video was never recorded and is not needed.
+> Kept for the record and in case a future scope addition re-enters the verification tier (see §3 on re-verification triggers).
+
 ## 1. Scope inventory (what the app actually requests)
 
 Source of truth: `WEB_SCOPES` in
@@ -13,13 +21,20 @@ Source of truth: `WEB_SCOPES` in
 | `openid` | Sign-in | Non-sensitive |
 | `userinfo.email` | Account identity | Non-sensitive |
 | `userinfo.profile` | Display name | Non-sensitive |
-| `calendar.app.created` | Create the app's secondary calendar and manage events **on that calendar only** | Confirm in Verification Center (granular scope introduced 2024; treat as sensitive until the Console says otherwise) |
-| `calendar.freebusy` | Read busy/free ranges only — never event content — so the scheduler avoids existing commitments | **Sensitive** |
+| `calendar.app.created` | Create the app's secondary calendar and manage events **on that calendar only** | Non-sensitive (console-confirmed 2026-07-31) |
+| `calendar.freebusy` | Read busy/free ranges only — never event content — so the scheduler avoids existing commitments | Non-sensitive (console-confirmed 2026-07-31; this doc originally assumed sensitive) |
 
-One sensitive scope is enough to put the whole app in the sensitive-scope
-verification tier. All Calendar scopes are *sensitive*, not *restricted*:
-**no CASA/security assessment is required** (that tier is Gmail, Drive,
-Fitness, etc.).
+~~One sensitive scope is enough to put the whole app in the sensitive-scope
+verification tier.~~ Superseded: the console confirms no requested scope is
+sensitive, so no verification tier applies at all. (The old fallback claim
+also stands: even if a Calendar scope were sensitive, none are *restricted*,
+so **no CASA/security assessment** in any case.)
+
+Console-vs-code naming note (2026-07-31): the console Data Access list shows
+`calendar.events.freebusy` while `WEB_SCOPES` requests `calendar.freebusy` -
+two distinct scope strings, both non-sensitive, both freebusy-only. The
+runtime consent prompt follows what the code requests, so the mismatch is
+cosmetic; align the console list (or the code) when convenient.
 
 The Console **Verification Center** (APIs & Services → OAuth consent screen)
 shows the authoritative per-scope classification when you prepare the
@@ -108,6 +123,9 @@ identity; no justification text needed (non-sensitive), but they must be
 declared on the consent screen.
 
 ## 5. Demo video requirements
+
+> Moot 2026-07-31: no verification review exists for this app, so no demo video is required.
+> Requirements kept below in case a future sensitive-scope addition revives them.
 
 This is **not** the recruiter-readiness marketing video
 (`loop-recruiter-readiness/04-demo-video.md`) — different audience,

@@ -161,7 +161,6 @@ export function Observatory({
     }
     resetView()
     // resetView is stable enough for this purpose; depend only on the signal.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resetKey])
 
   function toggleGroup(groupId: string) {

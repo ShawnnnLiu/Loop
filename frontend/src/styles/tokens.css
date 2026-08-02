@@ -2305,3 +2305,188 @@ select.input {
     animation: none;
   }
 }
+
+/* ============================================================
+   Holographic foil buttons (lib/foil.ts + components/FoilButton.tsx).
+   The JS engine drives three custom properties per frame — --fx/--fy (shine
+   position, %) and --fi (strength 0..1) — plus a perspective tilt transform.
+   Everything below only *consumes* those vars, so every layer inherits the
+   engine's lerped, continuous motion for free.
+   Layers: element = metallic base coat; ::before = iridescent rainbow drift
+   (overlay blend); ::after = cursor-tracking glare (color-dodge blend), with
+   its geometry switched by data-foil-shape. To add a new shape, add one
+   [data-foil-shape='…'] ::after rule built from var(--fx)/var(--fy) — no JS
+   changes needed.
+   ============================================================ */
+.btn-foil {
+  --fx: 50%;
+  --fy: 50%;
+  --fi: 0;
+  --foil-bar-angle: 115deg;
+  --foil-bar-width: 18%;
+  --foil-spot-soft: 55%;
+  /* iridescent (default) palette. Coats keep mid-tone stops — overlay-blended
+     hue layers bleach to white on too-light bases. */
+  --foil-coat: linear-gradient(
+    165deg,
+    #eef0f8 0%,
+    #cdd2e4 28%,
+    #a4abc6 52%,
+    #dde0f0 78%,
+    #f5f6fc 100%
+  );
+  --foil-h1: #ff2fd2;
+  --foil-h2: #29e6ff;
+  --foil-h3: #ffd24a;
+  --foil-h4: #7b5cff;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  transform-style: preserve-3d;
+  will-change: transform;
+  background: var(--foil-coat);
+  color: var(--ink);
+  border-color: rgba(22, 33, 46, 0.18);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.65),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -1px 0 rgba(22, 33, 46, 0.14),
+    0 1px 2px rgba(22, 33, 46, 0.14),
+    0 10px 22px -12px rgba(22, 33, 46, 0.4);
+}
+.btn-foil[data-foil-palette='gold'] {
+  --foil-coat: linear-gradient(
+    165deg,
+    #f7e9c4 0%,
+    #e6c882 30%,
+    #c39c4e 55%,
+    #eed9a2 80%,
+    #faf0d6 100%
+  );
+  --foil-h1: #fff3d6;
+  --foil-h2: #ff9d5c;
+  --foil-h3: #ffd24a;
+  --foil-h4: #ffdf8a;
+  color: var(--ink);
+}
+.btn-foil[data-foil-palette='silver'] {
+  --foil-coat: linear-gradient(
+    165deg,
+    #f4f8fc 0%,
+    #d3dbe6 30%,
+    #a9b5c4 55%,
+    #dfe6ee 80%,
+    #f6fafd 100%
+  );
+  --foil-h1: #bfe3ff;
+  --foil-h2: #e4ecff;
+  --foil-h3: #9fb8d8;
+  --foil-h4: #dfe9f4;
+}
+/* Rainbow drift — a wide gradient sheet (320%) whose position slides with the
+   cursor, plus fine micro-bands for the printed-foil texture. */
+.btn-foil::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  border-radius: inherit;
+  background:
+    repeating-linear-gradient(
+      115deg,
+      rgba(255, 255, 255, 0) 0 3px,
+      rgba(255, 255, 255, 0.16) 3px 4px,
+      rgba(255, 255, 255, 0) 4px 7px
+    ),
+    linear-gradient(
+      115deg,
+      var(--foil-h1) 0%,
+      var(--foil-h2) 25%,
+      var(--foil-h3) 50%,
+      var(--foil-h4) 75%,
+      var(--foil-h1) 100%
+    );
+  background-size:
+    100% 100%,
+    320% 320%;
+  background-position:
+    0 0,
+    var(--fx) var(--fy);
+  mix-blend-mode: overlay;
+  opacity: calc(var(--fi) * 0.85);
+}
+/* Glare — geometry per data-foil-shape, all driven by --fx/--fy. */
+.btn-foil::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  border-radius: inherit;
+  mix-blend-mode: color-dodge;
+  opacity: calc(var(--fi) * 0.8);
+  /* spot (default): soft radial glare at the cursor. */
+  background: radial-gradient(
+    circle at var(--fx) var(--fy),
+    rgba(255, 255, 255, 0.6),
+    rgba(255, 255, 255, 0.22) calc(var(--foil-spot-soft) * 0.6),
+    rgba(255, 255, 255, 0) var(--foil-spot-soft)
+  );
+}
+.btn-foil[data-foil-shape='bar']::after {
+  /* Diagonal streak sweeping with the cursor's horizontal position. */
+  background: linear-gradient(
+    var(--foil-bar-angle),
+    rgba(255, 255, 255, 0) calc(var(--fx) - var(--foil-bar-width)),
+    rgba(255, 255, 255, 0.25) calc(var(--fx) - var(--foil-bar-width) * 0.35),
+    rgba(255, 255, 255, 0.65) var(--fx),
+    rgba(255, 255, 255, 0.25) calc(var(--fx) + var(--foil-bar-width) * 0.35),
+    rgba(255, 255, 255, 0) calc(var(--fx) + var(--foil-bar-width))
+  );
+}
+.btn-foil[data-foil-shape='conic']::after {
+  /* Angular rainbow burst around the cursor, masked so it stays local. */
+  background: conic-gradient(
+    from 200deg at var(--fx) var(--fy),
+    var(--foil-h1),
+    var(--foil-h2) 25%,
+    var(--foil-h3) 50%,
+    var(--foil-h4) 75%,
+    var(--foil-h1)
+  );
+  -webkit-mask: radial-gradient(circle at var(--fx) var(--fy), #000 15%, transparent 75%);
+  mask: radial-gradient(circle at var(--fx) var(--fy), #000 15%, transparent 75%);
+}
+.btn-foil[data-foil-shape='diamond']::after {
+  /* Four-point sparkle: one spike per 90° segment, softened by a radial mask. */
+  background: repeating-conic-gradient(
+    from 45deg at var(--fx) var(--fy),
+    rgba(255, 255, 255, 0) 0deg 36deg,
+    rgba(255, 255, 255, 0.75) 44deg 46deg,
+    rgba(255, 255, 255, 0) 54deg 90deg
+  );
+  -webkit-mask: radial-gradient(circle at var(--fx) var(--fy), #000 8%, transparent 55%);
+  mask: radial-gradient(circle at var(--fx) var(--fy), #000 8%, transparent 55%);
+}
+.btn-foil:disabled::before,
+.btn-foil:disabled::after {
+  opacity: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  /* The engine also parks --fi at 0; these static values keep a gentle
+     stationary sheen so the button still reads as foil, just motionless. */
+  .btn-foil {
+    transform: none !important;
+  }
+  .btn-foil::before {
+    opacity: 0.3;
+  }
+  .btn-foil::after {
+    opacity: 0.22;
+  }
+  .btn-foil:disabled::before,
+  .btn-foil:disabled::after {
+    opacity: 0;
+  }
+}

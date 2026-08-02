@@ -125,6 +125,12 @@
       .btn-ghost{background:var(--card);color:var(--ink);border-color:var(--line-2);box-shadow:var(--shadow-sm)}
       .btn-quiet{background:transparent;color:var(--ink-soft);padding:8px 12px}
       .gmark{font-family:var(--mono);font-weight:700}
+      /* --- Holographic foil CTA. Consumed by the engine inlined before </body>; it drives --fx/--fy (shine position) and --fi (strength) per frame. Source of truth for the effect: frontend/src/lib/foil.ts + tokens.css .btn-foil; coat and hues here are retuned to the landing's paper/clay/gold palette (champagne pearl coat; clay-rose/sage/gold/mauve iridescence) instead of the SPA's cool default. JS-off or reduced-data fallback: the class is only added at runtime, so the CTA stays the plain clay .btn-primary. --- */
+      .btn-foil{--fx:50%;--fy:50%;--fi:0;--foil-spot-soft:55%;position:relative;overflow:hidden;isolation:isolate;transform-style:preserve-3d;will-change:transform;background:linear-gradient(165deg,#f9f1de 0%,#eedbb4 28%,#cfa761 52%,#f1e3c2 78%,#fbf5e6 100%);color:var(--ink);border-color:rgba(154,109,47,.35);box-shadow:inset 0 0 0 1px rgba(255,255,255,.65),inset 0 1px 0 rgba(255,255,255,.95),inset 0 -1px 0 rgba(22,33,46,.14),0 1px 2px rgba(154,109,47,.25),0 10px 22px -12px rgba(154,109,47,.6)}
+      .btn-foil:hover{color:var(--ink)}
+      .btn-foil::before{content:'';position:absolute;inset:0;z-index:1;pointer-events:none;border-radius:inherit;background:repeating-linear-gradient(115deg,rgba(255,255,255,0) 0 3px,rgba(255,255,255,.16) 3px 4px,rgba(255,255,255,0) 4px 7px),linear-gradient(115deg,#d98a68 0%,#8fb89a 25%,#e6b95c 50%,#c9a1b8 75%,#d98a68 100%);background-size:100% 100%,320% 320%;background-position:0 0,var(--fx) var(--fy);mix-blend-mode:overlay;opacity:calc(var(--fi)*.85)}
+      .btn-foil::after{content:'';position:absolute;inset:0;z-index:2;pointer-events:none;border-radius:inherit;mix-blend-mode:color-dodge;opacity:calc(var(--fi)*.8);background:radial-gradient(circle at var(--fx) var(--fy),rgba(255,255,255,.6),rgba(255,255,255,.22) calc(var(--foil-spot-soft)*.6),rgba(255,255,255,0) var(--foil-spot-soft))}
+      @media (prefers-reduced-motion:reduce){.btn-foil{transform:none!important}.btn-foil::before{opacity:.3}.btn-foil::after{opacity:.22}}
       /* --- Closed-beta strip --- */
       .beta-strip{background:var(--gold-soft);border-top:1px solid var(--line);border-bottom:1px solid var(--line-2);font-size:13.5px;color:var(--ink-soft)}
       .beta-inner{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding-top:10px;padding-bottom:10px}
@@ -1028,6 +1034,23 @@
           render();
         }
       })();
+    </script>
+    <script>
+      /* Holographic foil engine - minified build of frontend/src/lib/foil.ts (the
+         single source of truth; unit tests live next to it). Inlined because the
+         landing is served as one self-contained file. Regenerate after changing
+         the source:
+           cd frontend && npx esbuild src/lib/foil.ts --bundle --format=iife --global-name=Foil --minify
+         and paste the output over the line below. */
+      "use strict";var Foil=(()=>{var y=Object.defineProperty;var P=Object.getOwnPropertyDescriptor;var S=Object.getOwnPropertyNames;var T=Object.prototype.hasOwnProperty;var R=(e,n)=>{for(var t in n)y(e,t,{get:n[t],enumerable:!0})},A=(e,n,t,o)=>{if(n&&typeof n=="object"||typeof n=="function")for(let r of S(n))!T.call(e,r)&&r!==t&&y(e,r,{get:()=>n[r],enumerable:!(o=P(n,r))||o.enumerable});return e};var $=e=>A(y({},"__esModule",{value:!0}),e);var W={};R(W,{FOIL_REST:()=>p,clamp:()=>d,computeFoilTarget:()=>F,edgeDistance:()=>v,lerp:()=>u,registerFoil:()=>q,smoothstep:()=>g});var I={palette:"iridescent",shape:"spot",maxTilt:10,falloff:260,intensity:1,smoothing:.1,barAngle:115,barWidth:18,spotSoftness:55},p={rx:0,ry:0,px:50,py:50,strength:0};function d(e,n,t){return e<n?n:e>t?t:e}function u(e,n,t){return e+(n-e)*t}function g(e,n,t){let o=d((t-e)/(n-e),0,1);return o*o*(3-2*o)}function v(e,n,t){let o=Math.max(e.left-n,0,n-(e.left+e.width)),r=Math.max(e.top-t,0,t-(e.top+e.height));return Math.hypot(o,r)}function F(e,n,t){if(!n||e.width<=0||e.height<=0)return p;let o=v(e,n.x,n.y),r=1-g(0,t.falloff,o);if(r<=0)return p;let s=(n.x-(e.left+e.width/2))/(e.width/2),i=(n.y-(e.top+e.height/2))/(e.height/2);return{rx:-d(i,-1,1)*t.maxTilt*r,ry:d(s,-1,1)*t.maxTilt*r,px:50+d(s,-1.2,1.2)*50,py:50+d(i,-1.2,1.2)*50,strength:r}}var a=.005,m=new Set,x=null,l=0,b=!1,f=null;function c(){l===0&&m.size>0&&(l=requestAnimationFrame(M))}function w(e){x={x:e.clientX,y:e.clientY},c()}function h(){x=null,c()}function L(){x&&c()}function M(){l=0;let e=f?.matches??!1;for(let t of m)t.rect=t.el.getBoundingClientRect();let n=!0;for(let t of m){let o=t.el.matches(":disabled"),r=e||o?p:F(t.rect,x,t.opts),s=t.opts.smoothing,i=t.cur;i.rx=u(i.rx,r.rx,s),i.ry=u(i.ry,r.ry,s),i.px=u(i.px,r.px,s),i.py=u(i.py,r.py,s),i.strength=u(i.strength,r.strength,s),(Math.abs(i.rx-r.rx)>a||Math.abs(i.ry-r.ry)>a||Math.abs(i.px-r.px)>a*10||Math.abs(i.py-r.py)>a*10||Math.abs(i.strength-r.strength)>a)&&(n=!1),E(t)}n||(l=requestAnimationFrame(M))}function E(e){let{el:n,cur:t,opts:o}=e,r=n.style;Math.abs(t.rx)>a||Math.abs(t.ry)>a?r.transform=`perspective(700px) rotateX(${t.rx.toFixed(3)}deg) rotateY(${t.ry.toFixed(3)}deg)`:r.transform="",r.setProperty("--fx",`${t.px.toFixed(2)}%`),r.setProperty("--fy",`${t.py.toFixed(2)}%`),r.setProperty("--fi",(t.strength*o.intensity).toFixed(3))}function k(){b||(b=!0,window.addEventListener("mousemove",w,{passive:!0}),window.addEventListener("blur",h),document.documentElement.addEventListener("mouseleave",h),window.addEventListener("scroll",L,{passive:!0,capture:!0}),f=window.matchMedia("(prefers-reduced-motion: reduce)"),f.addEventListener("change",c))}function O(){b&&(b=!1,window.removeEventListener("mousemove",w),window.removeEventListener("blur",h),document.documentElement.removeEventListener("mouseleave",h),window.removeEventListener("scroll",L,{capture:!0}),f?.removeEventListener("change",c),f=null,l!==0&&(cancelAnimationFrame(l),l=0))}function q(e,n={}){let t={...I,...n};e.classList.add("btn-foil"),e.dataset.foilShape=t.shape,e.dataset.foilPalette=t.palette,e.style.setProperty("--foil-bar-angle",`${t.barAngle}deg`),e.style.setProperty("--foil-bar-width",`${t.barWidth}%`),e.style.setProperty("--foil-spot-soft",`${t.spotSoftness}%`);let o={el:e,opts:t,cur:{...p},rect:e.getBoundingClientRect()};return E(o),m.add(o),k(),()=>{m.delete(o),e.classList.remove("btn-foil"),delete e.dataset.foilShape,delete e.dataset.foilPalette;for(let r of["--fx","--fy","--fi","--foil-bar-angle","--foil-bar-width","--foil-spot-soft"])e.style.removeProperty(r);e.style.transform="",m.size===0&&O()}}return $(W);})();
+    </script>
+    <script>
+      // Foil the two "Connect Google Calendar" CTAs: spot shine, landing-warm
+      // palette (see .btn-foil in the stylesheet above). The engine no-ops
+      // visually under prefers-reduced-motion and never touches link behavior.
+      document.querySelectorAll('a.btn-primary').forEach(function (el) {
+        Foil.registerFoil(el, { shape: 'spot' });
+      });
     </script>
   </body>
 </html>

@@ -36,7 +36,6 @@ def _config() -> WebAuthConfig:
         redirect_uri="https://app.test/auth/callback",
         session_secret="unit-test-session-secret",
         audience="cid",
-        tester_allowlist=frozenset({EMAIL}),
         https_only=False,
     )
 

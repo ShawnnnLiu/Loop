@@ -10,7 +10,7 @@ All configuration comes from environment variables (never the repo):
 
 * ``SHARED_DB_PATH``            — the one SQLite file every store shares.
 * ``GOOGLE_OAUTH_CLIENT_SECRET_FILE`` / ``OAUTH_REDIRECT_URI`` /
-  ``APP_SESSION_SECRET`` / ``TESTER_ALLOWLIST`` / ``APP_HTTPS_ONLY`` — see
+  ``APP_SESSION_SECRET`` / ``APP_HTTPS_ONLY`` — see
   :meth:`WebAuthConfig.from_env`.
 * ``APP_TOKEN_ENCRYPTION_KEY``  — the Fernet key for token-at-rest encryption.
 * ``ANTHROPIC_API_KEY``         — required: real testers' plans use the live

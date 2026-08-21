@@ -4,9 +4,8 @@ The flow: ``/auth/login`` mints a random CSRF ``state``, stashes it in the
 session, and redirects to Google's consent screen; Google redirects back to
 ``/auth/callback`` with a ``code`` and the echoed ``state``. The callback
 verifies the state, exchanges the code, verifies the signed-in identity,
-enforces the tester allowlist, resolves the Google ``sub`` to a stable app
-``user_id``, encrypts and persists the token, and writes ``user_id`` into the
-session. From then on every request's acting user comes from that signed
+resolves the Google ``sub`` to a stable app ``user_id``, encrypts and persists
+the token, and writes ``user_id`` into the session. From then on every request's acting user comes from that signed
 cookie (see :func:`agentic_calendar.app.web.deps.require_user`) — never from a
 form field, query param, or path.
 
@@ -38,8 +37,15 @@ from agentic_calendar.tools.google_oauth_web import (
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-_OAUTH_STATE_KEY = "oauth_state"
-_OAUTH_VERIFIER_KEY = "oauth_code_verifier"
+# Pending login attempts, stored in the session as {state: code_verifier}.
+# A dict (not a single slot) because login attempts overlap in practice: while
+# one tab sits on Google's consent screen, another tab hitting /auth/login
+# (e.g. the SPA's 401 redirect) must not invalidate the first tab's state —
+# a single slot made that a self-perpetuating "invalid or missing oauth state"
+# loop. Capped so the signed cookie stays small; oldest attempts evict first
+# (JSON round-trips preserve dict insertion order).
+_OAUTH_PENDING_KEY = "oauth_pending"
+_MAX_PENDING_LOGINS = 5
 
 
 def _config(request: Request) -> WebAuthConfig:
@@ -61,21 +67,29 @@ def login(request: Request) -> RedirectResponse:
         redirect_uri=config.redirect_uri,
         state=state,
     )
-    # PKCE spans both requests: stash the verifier (and the CSRF state) so the
-    # callback can replay them.
-    request.session[_OAUTH_STATE_KEY] = state
-    request.session[_OAUTH_VERIFIER_KEY] = code_verifier
+    # PKCE spans both requests: stash the verifier (keyed by the CSRF state) so
+    # the callback can replay it.
+    pending = dict(request.session.get(_OAUTH_PENDING_KEY) or {})
+    pending[state] = code_verifier
+    while len(pending) > _MAX_PENDING_LOGINS:
+        del pending[next(iter(pending))]
+    request.session[_OAUTH_PENDING_KEY] = pending
     return RedirectResponse(url, status_code=307)
 
 
 @router.get("/callback")
 def callback(request: Request, code: str, state: str) -> RedirectResponse:
     config = _config(request)
-    expected = request.session.pop(_OAUTH_STATE_KEY, None)
-    code_verifier = request.session.pop(_OAUTH_VERIFIER_KEY, None)
-    if not expected or state != expected:
-        # Defeats login-CSRF: the state must match the one this session minted.
+    pending = dict(request.session.get(_OAUTH_PENDING_KEY) or {})
+    code_verifier = pending.pop(state, None)
+    if code_verifier is None:
+        # Defeats login-CSRF: the state must match one this session minted.
+        # Each state is single-use, so replaying a callback URL lands here too.
         raise HTTPException(status_code=400, detail="invalid or missing oauth state")
+    if pending:
+        request.session[_OAUTH_PENDING_KEY] = pending
+    else:
+        request.session.pop(_OAUTH_PENDING_KEY, None)
 
     token_json = exchange_code(
         client_config=config.client_config,
@@ -85,9 +99,6 @@ def callback(request: Request, code: str, state: str) -> RedirectResponse:
         code_verifier=code_verifier,
     )
     identity = identity_from_token(token_json, audience=config.audience)
-    if not config.allows(identity.email):
-        # The ≤100-tester gate, enforced in-app regardless of Google console config.
-        raise HTTPException(status_code=403, detail="not on the tester allowlist")
 
     env: AppEnvironment = request.app.state.env
     cipher: TokenCipher = request.app.state.token_cipher

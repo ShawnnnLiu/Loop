@@ -34,7 +34,6 @@ def _config() -> WebAuthConfig:
         redirect_uri="https://app.test/auth/callback",
         session_secret="unit-test-session-secret",
         audience="cid",
-        tester_allowlist=frozenset({EMAIL}),
         https_only=False,  # TestClient speaks http
     )
 
@@ -61,16 +60,15 @@ def _login(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> str:
     return parse_qs(urlparse(resp.headers["location"]).query)["state"][0]
 
 
-def _complete_login(
-    client: TestClient,
+def _fake_google(
     monkeypatch: pytest.MonkeyPatch,
     *,
     sub: str = SUB,
     email: str = EMAIL,
     calendar_exists: bool = True,
     provisioned_id: str = "cal_provisioned",
-) -> object:
-    state = _login(client, monkeypatch)
+) -> None:
+    """Fake the Google seams the callback reaches (exchange, identity, SDK)."""
     monkeypatch.setattr(routes_auth, "exchange_code", lambda **kwargs: dict(TOKEN))
     monkeypatch.setattr(
         routes_auth,
@@ -88,6 +86,25 @@ def _complete_login(
         routes_auth,
         "create_dedicated_calendar",
         lambda service, *, summary, time_zone="UTC": provisioned_id,
+    )
+
+
+def _complete_login(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    sub: str = SUB,
+    email: str = EMAIL,
+    calendar_exists: bool = True,
+    provisioned_id: str = "cal_provisioned",
+) -> object:
+    state = _login(client, monkeypatch)
+    _fake_google(
+        monkeypatch,
+        sub=sub,
+        email=email,
+        calendar_exists=calendar_exists,
+        provisioned_id=provisioned_id,
     )
     return client.get(f"/auth/callback?code=abc&state={state}", follow_redirects=False)
 
@@ -139,15 +156,64 @@ def test_callback_rejects_mismatched_state(monkeypatch: pytest.MonkeyPatch) -> N
     assert resp.status_code == 400
 
 
-def test_callback_rejects_non_allowlisted_email(
+def test_any_google_account_can_sign_in(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Open signup: there is no allowlist — a first-time account completes."""
+    client, env, _cipher = _app()
+    resp = _complete_login(
+        client, monkeypatch, sub="google-sub-new", email="newcomer@example.edu"
+    )
+    assert resp.status_code == 307
+    assert (
+        env.credential_store.get_user_id_for_sub("google-sub-new")
+        == _user_id_for_sub("google-sub-new")
+    )
+    assert client.get("/api/status").status_code == 200
+
+
+def test_concurrent_login_attempt_keeps_earlier_state_valid(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    client, env, _cipher = _app()
-    resp = _complete_login(client, monkeypatch, email="intruder@example.com")
-    assert resp.status_code == 403
-    # No credential persisted, and the request stays unauthenticated.
-    assert env.credential_store.get_user_id_for_sub(SUB) is None
-    assert client.get("/api/status").status_code == 401
+    """A second /auth/login (another tab, or the SPA's 401 redirect) must not
+    invalidate a consent flow already in flight — the pending states coexist."""
+    client, _env, _cipher = _app()
+    first = _login(client, monkeypatch)
+    _login(client, monkeypatch)  # second tab starts its own attempt
+    _fake_google(monkeypatch)
+    resp = client.get(f"/auth/callback?code=abc&state={first}", follow_redirects=False)
+    assert resp.status_code == 307
+    assert resp.headers["location"] == "/app"
+
+
+def test_callback_state_is_single_use(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Replaying a completed callback URL (refresh/back) is rejected."""
+    client, _env, _cipher = _app()
+    state = _login(client, monkeypatch)
+    _fake_google(monkeypatch)
+    url = f"/auth/callback?code=abc&state={state}"
+    assert client.get(url, follow_redirects=False).status_code == 307
+    assert client.get(url, follow_redirects=False).status_code == 400
+
+
+def test_pending_login_states_cap_evicts_oldest(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, _env, _cipher = _app()
+    # One more attempt than the cap: the oldest state falls off, the rest hold.
+    attempts = routes_auth._MAX_PENDING_LOGINS + 1
+    states = [_login(client, monkeypatch) for _ in range(attempts)]
+    _fake_google(monkeypatch)
+    assert (
+        client.get(
+            f"/auth/callback?code=abc&state={states[0]}", follow_redirects=False
+        ).status_code
+        == 400
+    )
+    assert (
+        client.get(
+            f"/auth/callback?code=abc&state={states[1]}", follow_redirects=False
+        ).status_code
+        == 307
+    )
 
 
 def test_logout_clears_session(monkeypatch: pytest.MonkeyPatch) -> None:

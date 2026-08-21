@@ -29,7 +29,7 @@ primary_region = "lax"            # <-- a region near your testers
   destination = "/data"
 
 # Non-secret config. Secrets (APP_SESSION_SECRET, APP_TOKEN_ENCRYPTION_KEY,
-# TESTER_ALLOWLIST, ANTHROPIC_API_KEY, GOOGLE_OAUTH_CLIENT_SECRET_JSON) are set
+# ANTHROPIC_API_KEY, GOOGLE_OAUTH_CLIENT_SECRET_JSON) are set
 # with `fly secrets set` and injected as env vars at runtime.
 [env]
   SHARED_DB_PATH = "/data/app.db"

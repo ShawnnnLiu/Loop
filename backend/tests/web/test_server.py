@@ -38,7 +38,6 @@ def _set_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv("OAUTH_REDIRECT_URI", "https://app.test/auth/callback")
     monkeypatch.setenv("APP_SESSION_SECRET", "session-secret")
     monkeypatch.setenv("APP_TOKEN_ENCRYPTION_KEY", TokenCipher.generate_key())
-    monkeypatch.setenv("TESTER_ALLOWLIST", "a@example.com, b@example.com")
     monkeypatch.setenv("ANTHROPIC_API_KEY", "dummy-key-no-network")
     monkeypatch.setenv("APP_HTTPS_ONLY", "0")
     # Don't depend on the in-repo SPA build or landing page: keep both unmounted
@@ -154,6 +153,6 @@ def test_create_hosted_app_requires_oauth_config(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     _set_env(monkeypatch, tmp_path)
-    monkeypatch.delenv("TESTER_ALLOWLIST")
+    monkeypatch.delenv("APP_SESSION_SECRET")
     with pytest.raises(WebConfigError):
         create_hosted_app()

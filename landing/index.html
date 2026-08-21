@@ -89,7 +89,7 @@
               {
                 "@type": "Question",
                 "name": "Is Loop free?",
-                "acceptedAnswer": { "@type": "Answer", "text": "Loop is currently free and in closed beta while Google's OAuth verification is in progress." }
+                "acceptedAnswer": { "@type": "Answer", "text": "Loop is currently free while in early access. Anyone can sign in with a Google account." }
               }
             ]
           }
@@ -133,13 +133,9 @@
       .btn-foil::before{content:'';position:absolute;inset:0;z-index:1;pointer-events:none;border-radius:inherit;background:repeating-linear-gradient(115deg,rgba(255,255,255,0) 0 3px,rgba(255,255,255,.16) 3px 4px,rgba(255,255,255,0) 4px 7px),linear-gradient(115deg,#d98a68 0%,#8fb89a 25%,#e6b95c 50%,#c9a1b8 75%,#d98a68 100%);background-size:100% 100%,320% 320%;background-position:0 0,var(--fx) var(--fy);mix-blend-mode:overlay;opacity:calc(var(--fi)*.85)}
       .btn-foil::after{content:'';position:absolute;inset:0;z-index:2;pointer-events:none;border-radius:inherit;mix-blend-mode:color-dodge;opacity:calc(var(--fi)*.8);background:radial-gradient(circle at var(--fx) var(--fy),rgba(255,255,255,.6),rgba(255,255,255,.22) calc(var(--foil-spot-soft)*.6),rgba(255,255,255,0) var(--foil-spot-soft))}
       @media (prefers-reduced-motion:reduce){.btn-foil{transform:none!important}.btn-foil::before{opacity:.3}.btn-foil::after{opacity:.22}}
-      /* --- Closed-beta strip --- */
-      .beta-strip{background:var(--gold-soft);border-top:1px solid var(--line);border-bottom:1px solid var(--line-2);font-size:13.5px;color:var(--ink-soft)}
-      .beta-inner{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding-top:10px;padding-bottom:10px}
-      .beta-tag{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#8a5c20;background:#fff;border:1px solid var(--gold);border-radius:999px;padding:2px 9px;white-space:nowrap}
       /* --- Hero --- */
-      /* Full-viewport hero: 100svh minus the nav + beta strip, whose measured height JS writes into --chrome (140px static fallback). min-height only, so short/landscape viewports overflow gracefully instead of clipping. */
-      .hero{display:grid;grid-template-columns:1.05fr .95fr;gap:clamp(28px,5vw,64px);align-items:center;align-content:center;min-height:calc(100vh - var(--chrome,140px));min-height:calc(100svh - var(--chrome,140px));scroll-snap-align:end;scroll-snap-stop:always;padding:clamp(24px,4vh,56px) 0}
+      /* Full-viewport hero: 100svh minus the nav, whose measured height JS writes into --chrome (80px static fallback). min-height only, so short/landscape viewports overflow gracefully instead of clipping. */
+      .hero{display:grid;grid-template-columns:1.05fr .95fr;gap:clamp(28px,5vw,64px);align-items:center;align-content:center;min-height:calc(100vh - var(--chrome,80px));min-height:calc(100svh - var(--chrome,80px));scroll-snap-align:end;scroll-snap-stop:always;padding:clamp(24px,4vh,56px) 0}
       .hero h1{font-size:clamp(34px,3.9vw,52px);margin-top:14px}
       .hero p.lede{font-size:clamp(17px,1.6vw,21px);color:var(--ink-soft);margin:18px 0 0;max-width:38ch}
       .cta-row{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:30px}
@@ -359,7 +355,6 @@
       }
       @media (max-width:560px){
         .cta-row{flex-direction:column;align-items:stretch}
-        .beta-strip{font-size:12.5px}
         .mock-bar{font-size:13.5px;padding:11px 14px}
         .mock-grid{gap:6px;padding:14px}
         .mock-day{font-size:10.5px}
@@ -393,18 +388,6 @@
       <a class="btn btn-ghost" href="/auth/login">Sign in</a>
     </header>
 
-    <div class="beta-strip" role="note">
-      <div class="wrap beta-inner">
-        <span class="beta-tag">Closed beta</span>
-        <span>
-          Loop is awaiting Google’s OAuth verification, so sign-in is limited to approved
-          testers for now. Email
-          <a href="mailto:xl3704@columbia.edu?subject=Loop%20beta%20access">xl3704@columbia.edu</a>
-          to request access.
-        </span>
-      </div>
-    </div>
-
     <main>
       <!-- Hero -->
       <div class="wrap">
@@ -424,11 +407,8 @@
               <a class="btn btn-ghost" href="#how">See how it works</a>
             </div>
             <p class="tester-note">
-              Loop is in closed beta while Google’s OAuth verification is in progress, so sign-in
-              works only for allowlisted Google accounts. Email
-              <a href="mailto:xl3704@columbia.edu?subject=Loop%20beta%20access">xl3704@columbia.edu</a>
-              to request access. If your account isn’t on the list yet, you’ll see a clear message
-              at sign-in.
+              Free while in early access. Sign in with any Google account — Loop writes only to
+              its own dedicated calendar, and only after you approve.
             </p>
           </div>
           <div class="mock" aria-hidden="true">
@@ -977,9 +957,7 @@
             </a>
           </div>
           <p class="tester-note" style="margin-inline: auto; text-align: center">
-            Closed beta. Email
-            <a href="mailto:xl3704@columbia.edu?subject=Loop%20beta%20access">xl3704@columbia.edu</a>
-            to request access while Google’s OAuth verification is in progress.
+            Free while in early access. Sign in with any Google account.
           </p>
         </div>
       </section>
@@ -1003,14 +981,13 @@
     </footer>
 
     <script>
-      // Full-viewport hero: measure the nav + beta strip so the hero can
-      // subtract them from 100svh. CSS falls back to a 140px estimate
-      // without JS, so this is progressive enhancement only.
+      // Full-viewport hero: measure the nav so the hero can subtract it
+      // from 100svh. CSS falls back to an 80px estimate without JS, so
+      // this is progressive enhancement only.
       (function () {
         var nav = document.querySelector('.nav');
-        var beta = document.querySelector('.beta-strip');
         var set = function () {
-          var h = (nav ? nav.offsetHeight : 0) + (beta ? beta.offsetHeight : 0);
+          var h = nav ? nav.offsetHeight : 0;
           document.documentElement.style.setProperty('--chrome', h + 'px');
         };
         set();

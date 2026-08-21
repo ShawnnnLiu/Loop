@@ -49,7 +49,6 @@ deterministic core and every axiom-06 invariant are unchanged.
 | `OAUTH_REDIRECT_URI` | Must equal the Authorized redirect URI exactly. |
 | `APP_SESSION_SECRET` | Random secret for signing the session cookie. |
 | `APP_TOKEN_ENCRYPTION_KEY` | Fernet key for encrypting OAuth tokens at rest. |
-| `TESTER_ALLOWLIST` | Comma-separated emails permitted to sign in (the in-app ≤100 gate). |
 | `ANTHROPIC_API_KEY` | Required — real plans use the live Anthropic nodes. |
 | `APP_HTTPS_ONLY` | `1` (default) in production; `0` only for local http runs. |
 | `TUNING_PATH` | Optional `tuning.toml` (overrides journaled to the change log). |
@@ -90,7 +89,6 @@ docker run -p 8000:8000 \
     -e GOOGLE_OAUTH_CLIENT_SECRET_FILE=/run/secrets/client.json \
     -e OAUTH_REDIRECT_URI=https://<your-domain>/auth/callback \
     -e APP_SESSION_SECRET=... -e APP_TOKEN_ENCRYPTION_KEY=... \
-    -e TESTER_ALLOWLIST="a@example.com,b@example.com" \
     -e ANTHROPIC_API_KEY=... \
     -v /run/secrets/client.json:/run/secrets/client.json:ro \
     agentic-calendar
@@ -114,7 +112,6 @@ fly volumes create data --region <region> --size 1   # persistent SQLite
 fly secrets set \
   APP_SESSION_SECRET="$(python -c 'import secrets;print(secrets.token_urlsafe(48))')" \
   APP_TOKEN_ENCRYPTION_KEY="$(python -c 'from cryptography.fernet import Fernet;print(Fernet.generate_key().decode())')" \
-  TESTER_ALLOWLIST="a@example.com,b@example.com" \
   ANTHROPIC_API_KEY="sk-ant-..." \
   GOOGLE_OAUTH_CLIENT_SECRET_JSON="$(cat client_secret.json)"
 fly deploy   # build context is the repo root, where fly.toml lives
@@ -130,8 +127,10 @@ the Node stage runs `npm ci && npm run build`, then the Python stage copies
 
 - **Back up the volume** holding `SHARED_DB_PATH` — it contains personal data
   and encrypted refresh tokens.
-- Add/remove testers by editing `TESTER_ALLOWLIST` and restarting.
-- A signed-in tester completes the whole loop in the **React SPA**: the landing
+- Sign-in is open: any Google account can connect (there is no in-app
+  allowlist; the app requests only non-sensitive scopes, so Google's OAuth
+  user cap does not apply either).
+- A signed-in user completes the whole loop in the **React SPA**: the landing
   at `/` → Connect Google → onboarding wizard → generate → drag-adjust → approve
   → write/verify → today/check-in. (The JSON API at `/api/*` still backs every
   step and remains directly callable.)
@@ -185,6 +184,5 @@ real only when its findings email exists — the console panel keeps showing the
 previous attempt's findings until a new decision lands.
 
 Then open `https://loop-study.com/` in a browser, click **Connect Google
-Calendar**, sign in with an allowlisted account, and walk the wizard → approve →
-write. A non-allowlisted account is rejected at `/auth/callback` with 403 — add
-it to `TESTER_ALLOWLIST` and restart.
+Calendar**, sign in with any Google account, and walk the wizard → approve →
+write.

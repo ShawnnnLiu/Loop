@@ -38,8 +38,6 @@ class WebAuthConfig:
     session_secret: str
     audience: str
     """The OAuth client id — the id_token audience verified on callback."""
-    tester_allowlist: frozenset[str]
-    """Lower-cased emails permitted to sign in (the ≤100-tester gate, in-app)."""
     https_only: bool = True
     """Session cookie ``Secure`` flag. True in production; tests/localhost set False."""
 
@@ -50,9 +48,8 @@ class WebAuthConfig:
         The web client JSON comes from ``GOOGLE_OAUTH_CLIENT_SECRET_JSON``
         (inline JSON — convenient on platforms whose secrets are env vars, e.g.
         Fly.io) or ``GOOGLE_OAUTH_CLIENT_SECRET_FILE`` (a path). Plus
-        ``OAUTH_REDIRECT_URI``, ``APP_SESSION_SECRET``, ``TESTER_ALLOWLIST``
-        (comma-separated emails). ``APP_HTTPS_ONLY=0`` disables the Secure flag
-        for local runs.
+        ``OAUTH_REDIRECT_URI`` and ``APP_SESSION_SECRET``. ``APP_HTTPS_ONLY=0``
+        disables the Secure flag for local runs.
         """
         client_config = _load_client_config()
         web = client_config.get("web")
@@ -61,24 +58,13 @@ class WebAuthConfig:
                 "client secret JSON must be a Web-application client "
                 "(a top-level 'web' object with a 'client_id')"
             )
-        allowlist = frozenset(
-            email.strip().lower()
-            for email in _require_env("TESTER_ALLOWLIST").split(",")
-            if email.strip()
-        )
-        if not allowlist:
-            raise WebConfigError("TESTER_ALLOWLIST is empty; no one could sign in")
         return cls(
             client_config=client_config,
             redirect_uri=_require_env("OAUTH_REDIRECT_URI"),
             session_secret=_require_env("APP_SESSION_SECRET"),
             audience=str(web["client_id"]),
-            tester_allowlist=allowlist,
             https_only=os.environ.get("APP_HTTPS_ONLY", "1") != "0",
         )
-
-    def allows(self, email: str) -> bool:
-        return email.strip().lower() in self.tester_allowlist
 
 
 def _require_env(var: str) -> str:

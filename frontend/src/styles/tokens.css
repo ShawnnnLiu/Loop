@@ -619,6 +619,10 @@ select.input {
   display: flex;
   flex-direction: column;
   height: calc(100vh - 66px); /* below the topbar */
+  /* Dynamic viewport: on phones 100vh includes the browser chrome, so the
+     legend and the last hours sat under the toolbar. dvh tracks the visible
+     area; the vh line above is the fallback for engines without it. */
+  height: calc(100dvh - 66px);
   min-height: 0;
 }
 .sched-banner {
@@ -628,6 +632,10 @@ select.input {
   padding: 14px clamp(16px, 4vw, 26px);
   border-bottom: 1px solid var(--line);
   background: var(--clay-tint);
+}
+.sched-banner-copy {
+  flex: 1;
+  min-width: 0;
 }
 .sched-scroll {
   flex: 1;
@@ -659,6 +667,13 @@ select.input {
 .sched-head .dcol-today .label {
   color: var(--clay-deep);
   font-weight: 700;
+}
+.sched-head .dcol .label {
+  font-size: 11px;
+}
+.sched-head .dcol-date {
+  font-family: var(--serif);
+  font-size: 17px;
 }
 .sched-body {
   display: flex;
@@ -786,6 +801,90 @@ select.input {
   border-top: 1px solid var(--line);
   font-size: 12px;
   color: var(--muted);
+}
+
+/* Phone-width review page. The banner is a single flex row on desktop; at
+   phone width that row squeezed the copy into a ~60px column and pushed the
+   primary button off the right edge (357px of banner over 320px of grid on a
+   402px viewport). Here the banner wraps: title row, then controls, with the
+   CTA sharing the controls row when it fits and taking a full row when it
+   doesn't. The drag hint is dropped (the legend already carries it), the day
+   headers shrink so seven columns stop colliding, and the topbar nav scrolls
+   instead of clipping its last entries. */
+@media (max-width: 560px) {
+  .tb {
+    gap: 10px;
+  }
+  .tb-nav {
+    flex: 1;
+    min-width: 0;
+    margin-left: 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .tb-nav::-webkit-scrollbar {
+    display: none;
+  }
+  .tb-nav a {
+    padding: 7px 10px;
+    flex: none;
+  }
+  .tb-nav {
+    /* Soften the clipped last entry so the row reads as scrollable. */
+    mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  }
+  .tb .spacer,
+  .tb-email {
+    display: none;
+  }
+  .sched-banner {
+    flex-wrap: wrap;
+    gap: 8px 10px;
+    padding: 10px 16px;
+  }
+  .sched-banner-copy {
+    /* Wide enough that nothing else (sync note, chips, pager, CTA) fits
+       beside it on the title row, so the controls always wrap below; it then
+       grows to fill the row next to the ✦ mark. */
+    flex: 1 1 240px;
+  }
+  .sched-banner .t-h3 {
+    font-size: 17px;
+  }
+  .sched-banner-hint {
+    display: none;
+  }
+  .sched-banner-ctl {
+    flex: none;
+  }
+  .btn.sched-banner-cta {
+    flex: 1 1 auto;
+    margin-left: auto;
+    padding: 9px 16px;
+    font-size: 14px;
+    border-radius: 10px;
+  }
+  .sched-head .gutter,
+  .sched-gutter {
+    width: 38px;
+  }
+  .sched-head .dcol {
+    padding: 6px 0;
+  }
+  .sched-head .dcol .label {
+    font-size: 10px;
+  }
+  .sched-head .dcol-date {
+    font-size: 12.5px;
+  }
+  .sched-legend {
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    padding: 8px 16px;
+    font-size: 11.5px;
+  }
 }
 .sw {
   display: inline-block;

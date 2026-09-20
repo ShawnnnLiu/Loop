@@ -27,7 +27,7 @@ export function Topbar({ email }: { email: string | null }) {
       </nav>
       <span className="spacer" />
       {email && (
-        <span className="muted" style={{ fontSize: 13 }}>
+        <span className="muted tb-email" style={{ fontSize: 13 }}>
           {email}
         </span>
       )}

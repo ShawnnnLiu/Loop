@@ -644,9 +644,9 @@ export function ScheduleReviewScreen() {
       <div className="sched-banner">
         <span className="agent-mark">✦</span>
         {editable ? (
-          <div style={{ flex: 1 }}>
+          <div className="sched-banner-copy">
             <div className="t-h3">Review your proposed week</div>
-            <div className="muted" style={{ fontSize: 13, marginTop: 2 }}>
+            <div className="muted sched-banner-hint" style={{ fontSize: 13, marginTop: 2 }}>
               {viewKind === 'grid' ? (
                 <>
                   Drag any <b style={{ color: 'var(--clay-deep)' }}>proposed</b> block to a new time
@@ -680,9 +680,9 @@ export function ScheduleReviewScreen() {
               ))}
           </div>
         ) : (
-          <div style={{ flex: 1 }}>
+          <div className="sched-banner-copy">
             <div className="t-h3">{banner.title}</div>
-            <div className="muted" style={{ fontSize: 13, marginTop: 2 }}>
+            <div className="muted sched-banner-hint" style={{ fontSize: 13, marginTop: 2 }}>
               {banner.sub}
             </div>
             {mode === 'replan' && status?.reflection && (
@@ -705,7 +705,7 @@ export function ScheduleReviewScreen() {
           </div>
         )}
         {syncNote}
-        <div className="row" style={{ gap: 6 }}>
+        <div className="row sched-banner-ctl" style={{ gap: 6 }}>
           <button
             className={viewKind === 'grid' ? 'chip on' : 'chip'}
             type="button"
@@ -722,7 +722,7 @@ export function ScheduleReviewScreen() {
           </button>
         </div>
         {viewKind === 'grid' && weeks.length > 1 && (
-          <div className="row" style={{ gap: 6 }}>
+          <div className="row sched-banner-ctl" style={{ gap: 6 }}>
             <button
               className="btn btn-soft sm"
               type="button"
@@ -745,17 +745,17 @@ export function ScheduleReviewScreen() {
           </div>
         )}
         {editable ? (
-          <button className="btn btn-primary lg" type="button" onClick={() => navigate('/approve')}>
+          <button className="btn btn-primary lg sched-banner-cta" type="button" onClick={() => navigate('/approve')}>
             Continue to approval →
           </button>
         ) : mode === 'failed' ? (
-          <button className="btn btn-primary lg" type="button" onClick={() => navigate('/approve')}>
+          <button className="btn btn-primary lg sched-banner-cta" type="button" onClick={() => navigate('/approve')}>
             Recover this write →
           </button>
         ) : mode === 'replan' ? (
           pendingChoice ? null : (
             <button
-              className="btn btn-primary lg"
+              className="btn btn-primary lg sched-banner-cta"
               type="button"
               disabled={replanning}
               onClick={() => void runReplan()}
@@ -764,11 +764,11 @@ export function ScheduleReviewScreen() {
             </button>
           )
         ) : mode === 'closed' ? (
-          <button className="btn btn-primary lg" type="button" onClick={() => navigate('/plan')}>
+          <button className="btn btn-primary lg sched-banner-cta" type="button" onClick={() => navigate('/plan')}>
             Build a new plan →
           </button>
         ) : (
-          <button className="btn btn-primary lg" type="button" onClick={() => navigate('/today')}>
+          <button className="btn btn-primary lg sched-banner-cta" type="button" onClick={() => navigate('/today')}>
             Go to Today →
           </button>
         )}
@@ -910,10 +910,10 @@ export function ScheduleReviewScreen() {
                 const isToday = windowMs + i * DAY_MS === anchorMs
                 return (
                   <div key={i} className={isToday ? 'dcol dcol-today' : 'dcol'}>
-                    <div className="label" style={{ fontSize: 11 }}>
+                    <div className="label">
                       {isToday ? 'Today' : h.dow}
                     </div>
-                    <div style={{ fontFamily: 'var(--serif)', fontSize: 17 }}>{h.label}</div>
+                    <div className="dcol-date">{h.label}</div>
                   </div>
                 )
               })}

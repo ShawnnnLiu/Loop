@@ -1,0 +1,4778 @@
+{
+  "prompt_version": "model-compare-opus-5-5-low-2026-09-23",
+  "model_name": "claude-opus-5-5",
+  "outputs": {
+    "strategist_swe_backend_ng_grounded": [
+      {
+        "syllabus_version": "v1",
+        "goal_summary": "Prepare for new-grad Backend SWE interviews (target: Uber) over 10 weeks, closing system design and behavioral gaps while maintaining core coding strength.",
+        "modules": [
+          {
+            "module_id": "mod_sysdesign_fundamentals",
+            "title": "System Design Fundamentals for Backend",
+            "priority": "high",
+            "reason": "System design is a declared weakness and a core backend interview round.",
+            "target_outcomes": [
+              "Explain load balancing, caching, sharding, replication, and queues",
+              "Estimate capacity and throughput for a simple service"
+            ],
+            "estimated_total_min": 600,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_sysdesign_practice",
+            "title": "System Design Mock Problems (Ride-sharing, Feeds, Rate Limiters)",
+            "priority": "high",
+            "reason": "Applying design fundamentals end-to-end addresses the system design weakness directly.",
+            "target_outcomes": [
+              "Deliver a structured 45-minute design walkthrough",
+              "Discuss trade-offs for a ride-matching style service"
+            ],
+            "estimated_total_min": 720,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_behavioral_stories",
+            "title": "Behavioral Interview Story Bank (STAR)",
+            "priority": "high",
+            "reason": "Behavioral interviews are a declared weakness; a strong story bank is needed for every loop.",
+            "target_outcomes": [
+              "Write 8 STAR stories covering conflict, ownership, failure, and impact",
+              "Deliver each story in under 3 minutes"
+            ],
+            "estimated_total_min": 480,
+            "difficulty": 2,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_behavioral_mocks",
+            "title": "Behavioral Mock Interviews and Feedback",
+            "priority": "medium",
+            "reason": "Rehearsal consolidates the behavioral weakness fix.",
+            "target_outcomes": [
+              "Complete 4 recorded mock behavioral sessions",
+              "Handle follow-up probing questions confidently"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_trees_graphs",
+            "title": "Trees, Graphs, and Binary Search",
+            "priority": "medium",
+            "reason": "Extends coding coverage beyond existing array/hash map strengths.",
+            "target_outcomes": [
+              "Solve medium tree and graph traversal problems in 25 minutes",
+              "Apply binary search on answer space"
+            ],
+            "estimated_total_min": 600,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_dp_strings",
+            "title": "Dynamic Programming and String Problems",
+            "priority": "medium",
+            "reason": "Common interview topics not listed as strengths.",
+            "target_outcomes": [
+              "Recognize and solve classic 1D/2D DP patterns",
+              "Solve medium string manipulation problems"
+            ],
+            "estimated_total_min": 540,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_backend_concepts",
+            "title": "Backend Concepts Review (APIs, Databases, Concurrency)",
+            "priority": "low",
+            "reason": "Supports backend-specific discussion in design and coding rounds.",
+            "target_outcomes": [
+              "Compare SQL vs NoSQL and indexing strategies",
+              "Explain REST API design and basic concurrency primitives"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 2,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_full_mocks",
+            "title": "Full Loop Mock Interviews",
+            "priority": "medium",
+            "reason": "Integrates coding, design, and behavioral practice under time pressure.",
+            "target_outcomes": [
+              "Complete 3 full mock loops",
+              "Identify and fix remaining gaps"
+            ],
+            "estimated_total_min": 480,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          }
+        ]
+      }
+    ],
+    "strategist_swe_backend_mid_grounded": [
+      {
+        "syllabus_version": "v1",
+        "goal_summary": "Prepare an advanced Go/distributed-systems engineer to move from IC2 to Senior Backend Engineer (target: Stripe) in 8 weeks by closing gaps in system design at scale and leadership stories.",
+        "modules": [
+          {
+            "module_id": "mod_sd_framework",
+            "title": "System Design Interview Framework and Ambiguity Handling",
+            "priority": "high",
+            "reason": "System design at scale is a declared weakness and is central to senior backend interviews.",
+            "target_outcomes": [
+              "Apply a repeatable framework: requirements, estimates, API, data model, scaling",
+              "Clarify ambiguous prompts and state tradeoffs explicitly"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_sd_scale_drills",
+            "title": "Scaling Deep Dives: Sharding, Caching, Queues, Consistency",
+            "priority": "high",
+            "reason": "Directly addresses the system design at scale weakness by building on existing distributed systems strength.",
+            "target_outcomes": [
+              "Design partitioning and replication strategies for high-throughput services",
+              "Justify consistency and idempotency choices under failure"
+            ],
+            "estimated_total_min": 480,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_sd_payments_mocks",
+            "title": "Payments-Style System Design Mock Interviews",
+            "priority": "medium",
+            "reason": "Timed mocks consolidate design skills on domains relevant to a payments company like Stripe.",
+            "target_outcomes": [
+              "Complete 4 timed mock designs (e.g., payment ledger, rate limiter, webhook delivery)",
+              "Self-review against senior-level rubric"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_leadership_stories",
+            "title": "Leadership Story Bank (STAR)",
+            "priority": "high",
+            "reason": "Leadership stories are a declared weakness and senior-level loops weigh behavioral leadership signals heavily.",
+            "target_outcomes": [
+              "Draft 6 STAR stories covering ownership, conflict, mentoring, and ambiguity",
+              "Quantify impact for each story"
+            ],
+            "estimated_total_min": 300,
+            "difficulty": 2,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_leadership_practice",
+            "title": "Behavioral Mock Practice and Senior Scope Framing",
+            "priority": "medium",
+            "reason": "Rehearsal turns the story bank into fluent, senior-scoped answers.",
+            "target_outcomes": [
+              "Deliver each story in under 3 minutes",
+              "Handle follow-up probing on decisions and outcomes"
+            ],
+            "estimated_total_min": 180,
+            "difficulty": 2,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_backend_coding",
+            "title": "Backend Coding Rounds in Go",
+            "priority": "low",
+            "reason": "Maintain coding sharpness using the existing Go strength.",
+            "target_outcomes": [
+              "Solve practical coding problems (API, concurrency) cleanly in Go"
+            ],
+            "estimated_total_min": 240,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          }
+        ]
+      }
+    ],
+    "strategist_swe_frontend_ng_grounded": [
+      {
+        "syllabus_version": "v1",
+        "goal_summary": "Prepare a beginner for a first new-grad Frontend Developer role by closing gaps in data structures, JavaScript async, and system design, building on HTML/CSS strengths.",
+        "modules": [
+          {
+            "module_id": "mod_ds_foundations",
+            "title": "Data Structures Foundations in JavaScript",
+            "priority": "high",
+            "reason": "Data structures is a listed weakness and a core part of coding interviews.",
+            "target_outcomes": [
+              "Implement arrays, hash maps, stacks, queues, and linked lists in JavaScript",
+              "Analyze time and space complexity with Big-O"
+            ],
+            "estimated_total_min": 600,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_ds_practice",
+            "title": "Trees, Graphs, and Interview Problem Practice",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Solve tree and graph traversal problems with BFS and DFS",
+              "Complete 40 easy-to-medium coding problems"
+            ],
+            "estimated_total_min": 600,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_js_async",
+            "title": "JavaScript Async: Event Loop, Promises, async/await",
+            "priority": "high",
+            "reason": "JavaScript async is a listed weakness and essential for real frontend work and interviews.",
+            "target_outcomes": [
+              "Explain the event loop, microtasks, and macrotasks",
+              "Write and chain Promises and use async/await with error handling",
+              "Fetch and render API data in the browser"
+            ],
+            "estimated_total_min": 540,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_frontend_sysdesign",
+            "title": "Frontend System Design Basics",
+            "priority": "high",
+            "reason": "System design is a listed weakness; new-grad frontend interviews increasingly include component and app design.",
+            "target_outcomes": [
+              "Design a component architecture for a small app (e.g., autocomplete, news feed)",
+              "Discuss state management, caching, and performance tradeoffs"
+            ],
+            "estimated_total_min": 540,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_react_project",
+            "title": "Portfolio Project with a Modern Framework",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Build and deploy a React app that uses async data fetching",
+              "Apply HTML/CSS strengths for responsive, accessible UI"
+            ],
+            "estimated_total_min": 720,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_behavioral_star",
+            "title": "Behavioral Interviews with STAR Stories",
+            "priority": "low",
+            "reason": null,
+            "target_outcomes": [
+              "Prepare 5 concise STAR stories emphasizing actions and results"
+            ],
+            "estimated_total_min": 240,
+            "difficulty": 2,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_mock_interviews",
+            "title": "Mock Coding Interviews",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Complete 6 timed mock interviews combining JS and data structures"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          }
+        ]
+      }
+    ],
+    "strategist_swe_fullstack_career_change_grounded": [
+      {
+        "syllabus_version": "v1",
+        "goal_summary": "Career changer targeting junior Full Stack Developer in 20 weeks: close algorithms, system design, and testing gaps while building full-stack fundamentals.",
+        "modules": [
+          {
+            "module_id": "mod_algo_foundations",
+            "title": "Algorithms & Data Structures Foundations",
+            "priority": "high",
+            "reason": "Algorithms is a declared weakness and core to junior coding interviews.",
+            "target_outcomes": [
+              "Use arrays, hash maps, stacks, queues confidently",
+              "Analyze time and space complexity with Big-O"
+            ],
+            "estimated_total_min": 600,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_algo_patterns",
+            "title": "Coding Interview Patterns Practice",
+            "priority": "high",
+            "reason": "Pattern practice turns the algorithms weakness into interview-ready skill.",
+            "target_outcomes": [
+              "Solve two-pointer, sliding window, BFS/DFS, and recursion problems",
+              "Complete easy/medium problems in 30 minutes"
+            ],
+            "estimated_total_min": 720,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_testing",
+            "title": "Software Testing Fundamentals",
+            "priority": "high",
+            "reason": "Testing is a declared weakness and expected of full-stack developers.",
+            "target_outcomes": [
+              "Write unit tests with Jest or pytest",
+              "Write integration and end-to-end tests for a web app"
+            ],
+            "estimated_total_min": 480,
+            "difficulty": 2,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_system_design_basics",
+            "title": "System Design Basics for Web Apps",
+            "priority": "high",
+            "reason": "System design is a declared weakness; juniors need fundamentals of web architecture.",
+            "target_outcomes": [
+              "Explain client-server, load balancing, caching, and databases",
+              "Sketch a simple scalable web application design"
+            ],
+            "estimated_total_min": 540,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_frontend",
+            "title": "Frontend Fundamentals: JavaScript & React",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Build interactive UIs with React components and state",
+              "Fetch and render API data"
+            ],
+            "estimated_total_min": 600,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_backend",
+            "title": "Backend APIs with Node.js and SQL",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Build a REST API with authentication",
+              "Leverage SQL strength to model and query a relational database"
+            ],
+            "estimated_total_min": 600,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_capstone",
+            "title": "Full-Stack Portfolio Project",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Ship a tested, deployed full-stack app",
+              "Present the project's design decisions"
+            ],
+            "estimated_total_min": 720,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_behavioral",
+            "title": "Behavioral Interviews & Career-Change Story",
+            "priority": "low",
+            "reason": null,
+            "target_outcomes": [
+              "Prepare STAR stories including handling feedback",
+              "Frame the career change using communication strengths"
+            ],
+            "estimated_total_min": 240,
+            "difficulty": 2,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "knowledge_node_ids": []
+          }
+        ]
+      }
+    ],
+    "strategist_swe_platform_mid_grounded": [
+      {
+        "syllabus_version": "v1",
+        "goal_summary": "Close coding interview and system design gaps for mid-level Platform Engineer interviews (Datadog target) within 6 weeks at ~5 hours/week, leveraging Kubernetes and CI/CD strengths.",
+        "modules": [
+          {
+            "module_id": "mod_coding_core",
+            "title": "Coding Interview Foundations: Arrays, Strings, Hashing",
+            "priority": "high",
+            "reason": "Coding interviews are a declared weakness and gate most platform engineering loops.",
+            "target_outcomes": [
+              "Solve medium array/string/hash map problems in under 30 minutes",
+              "Communicate approach and complexity clearly while coding"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_coding_trees_graphs",
+            "title": "Trees, Graphs, and Binary Search Patterns",
+            "priority": "high",
+            "reason": "Coding interviews are a listed weakness; trees, graphs and binary search are frequent interview topics.",
+            "target_outcomes": [
+              "Implement BFS/DFS and tree traversals from scratch",
+              "Apply binary search to sorted and answer-space problems"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_system_design_fundamentals",
+            "title": "System Design Fundamentals for Platform Engineers",
+            "priority": "high",
+            "reason": "System design is a declared weakness and central to platform engineering interviews.",
+            "target_outcomes": [
+              "Use a repeatable framework: requirements, estimates, APIs, data model, scaling",
+              "Explain caching, load balancing, queues, replication and sharding trade-offs"
+            ],
+            "estimated_total_min": 420,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_system_design_infra",
+            "title": "Infrastructure & Observability Design Drills",
+            "priority": "medium",
+            "reason": "Applies system design practice to platform topics like metrics pipelines, deployment systems and multi-tenant clusters, building on Kubernetes/CI/CD strengths.",
+            "target_outcomes": [
+              "Design a metrics ingestion and alerting pipeline end to end",
+              "Design a scalable CI/CD or deployment platform with rollback"
+            ],
+            "estimated_total_min": 300,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_mock_interviews",
+            "title": "Timed Mock Interviews (Coding + Design)",
+            "priority": "medium",
+            "reason": "Consolidates both weaknesses under realistic time pressure.",
+            "target_outcomes": [
+              "Complete 3 timed coding mocks and 2 design mocks",
+              "Identify and remediate recurring mistakes"
+            ],
+            "estimated_total_min": 300,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_behavioral_platform",
+            "title": "Platform Engineering Stories & Behavioral Prep",
+            "priority": "low",
+            "reason": "Prepares concise stories highlighting Kubernetes and CI/CD impact.",
+            "target_outcomes": [
+              "Draft 5 STAR stories covering incidents, migrations and automation"
+            ],
+            "estimated_total_min": 120,
+            "difficulty": 2,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          }
+        ]
+      }
+    ],
+    "strategist_swe_sre_mid_grounded": [
+      {
+        "syllabus_version": "v1",
+        "goal_summary": "Prepare for mid-level Site Reliability Engineer interviews (target: Cloudflare) in 8 weeks by closing gaps in coding interviews and distributed systems theory while leveraging Linux and incident response strengths.",
+        "modules": [
+          {
+            "module_id": "mod_coding_foundations",
+            "title": "Coding Interview Foundations: Arrays, Strings, Hashing",
+            "priority": "high",
+            "reason": "Coding interviews are a listed weakness and a core gate in SRE interview loops.",
+            "target_outcomes": [
+              "Solve easy/medium array, string, and hash map problems within 25 minutes",
+              "Communicate approach and complexity clearly while coding"
+            ],
+            "estimated_total_min": 420,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_coding_structures",
+            "title": "Coding Interviews: Trees, Graphs, Queues, and Heaps",
+            "priority": "high",
+            "reason": "Extends the coding interview weakness into the data structures commonly tested at mid level.",
+            "target_outcomes": [
+              "Implement BFS/DFS and heap-based solutions from scratch",
+              "Solve medium tree and graph problems under time pressure"
+            ],
+            "estimated_total_min": 420,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_sre_scripting",
+            "title": "SRE-Style Practical Coding: Log Parsing and Automation",
+            "priority": "medium",
+            "reason": "Applies coding practice to operational tasks typical of SRE coding rounds, building on Linux strength.",
+            "target_outcomes": [
+              "Write scripts to parse logs and compute metrics",
+              "Handle edge cases and large inputs efficiently"
+            ],
+            "estimated_total_min": 300,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_dist_theory",
+            "title": "Distributed Systems Theory: Consistency, Replication, Consensus",
+            "priority": "high",
+            "reason": "Distributed systems theory is a listed weakness and underpins SRE design and reliability discussions.",
+            "target_outcomes": [
+              "Explain CAP, consistency models, and quorum replication",
+              "Describe Raft/Paxos leader election and failure handling"
+            ],
+            "estimated_total_min": 480,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_dist_failure",
+            "title": "Distributed Failure Modes, Load Balancing, and Caching",
+            "priority": "medium",
+            "reason": "Connects distributed theory to real-world failure modes relevant to incident response.",
+            "target_outcomes": [
+              "Analyze partial failures, cascading failures, and retries",
+              "Explain load balancing, CDN caching, and rate limiting tradeoffs"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_system_design",
+            "title": "System Design Interview Framework for Reliability",
+            "priority": "medium",
+            "reason": "Structured approach to handling ambiguity in system design interviews.",
+            "target_outcomes": [
+              "Apply a repeatable framework to scope and design a service",
+              "Discuss SLOs, monitoring, and redundancy in designs"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_incident_stories",
+            "title": "Incident Response and Behavioral Story Bank",
+            "priority": "low",
+            "reason": "Packages existing incident response strength into interview-ready narratives.",
+            "target_outcomes": [
+              "Prepare 5 STAR stories on incidents and postmortems"
+            ],
+            "estimated_total_min": 180,
+            "difficulty": 2,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_mock_interviews",
+            "title": "Mock Interviews: Coding and Design",
+            "priority": "medium",
+            "reason": "Consolidates both weaknesses under realistic interview conditions.",
+            "target_outcomes": [
+              "Complete 4 timed mock interviews and review feedback"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          }
+        ]
+      }
+    ],
+    "strategist_swe_backend_intern_grounded": [
+      {
+        "syllabus_version": "v1",
+        "goal_summary": "Prepare a beginner Python developer for Backend SWE Intern interviews over 12 weeks by closing data structures and behavioral interview gaps, then adding backend fundamentals and mock practice.",
+        "modules": [
+          {
+            "module_id": "mod_ds_foundations",
+            "title": "Core Data Structures in Python",
+            "priority": "high",
+            "reason": "Data structures is a declared weakness and the core of intern coding interviews.",
+            "target_outcomes": [
+              "Implement arrays, linked lists, stacks, queues, and hash maps in Python",
+              "Analyze time and space complexity with Big-O"
+            ],
+            "estimated_total_min": 720,
+            "difficulty": 2,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_ds_trees_graphs",
+            "title": "Trees, Heaps, and Graphs",
+            "priority": "high",
+            "reason": "Extends the data structures weakness into the non-linear structures common in interviews.",
+            "target_outcomes": [
+              "Implement binary trees, BSTs, and heaps",
+              "Solve problems with BFS and DFS"
+            ],
+            "estimated_total_min": 720,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_algo_patterns",
+            "title": "Coding Interview Problem Patterns",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Apply two pointers, sliding window, and recursion patterns",
+              "Solve easy/medium problems within 30 minutes"
+            ],
+            "estimated_total_min": 720,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_behavioral_star",
+            "title": "Behavioral Interviews with STAR",
+            "priority": "high",
+            "reason": "Behavioral interviews are a declared weakness.",
+            "target_outcomes": [
+              "Write 6 STAR stories from projects and coursework",
+              "Deliver concise answers emphasizing actions and results"
+            ],
+            "estimated_total_min": 480,
+            "difficulty": 2,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_amazon_lp",
+            "title": "Amazon Leadership Principles Practice",
+            "priority": "low",
+            "reason": null,
+            "target_outcomes": [
+              "Map STAR stories to Leadership Principles",
+              "Handle LP questions inside technical rounds"
+            ],
+            "estimated_total_min": 240,
+            "difficulty": 2,
+            "source_claim_ids": [
+              "claim_1691962efcbbe35d"
+            ],
+            "company_specific": true,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_backend_basics",
+            "title": "Backend Fundamentals for Interns",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Explain HTTP, REST APIs, and databases basics",
+              "Build a small Python REST API with a SQL database"
+            ],
+            "estimated_total_min": 600,
+            "difficulty": 2,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_bloomberg_prep",
+            "title": "Bloomberg-style Coding Round Prep",
+            "priority": "low",
+            "reason": null,
+            "target_outcomes": [
+              "Practice timed problems on HackerRank over video",
+              "Prepare a 'Why Bloomberg?' answer"
+            ],
+            "estimated_total_min": 300,
+            "difficulty": 3,
+            "source_claim_ids": [
+              "claim_e918b011daec1cbc",
+              "claim_3419e8d9e19d6812"
+            ],
+            "company_specific": true,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_mock_interviews",
+            "title": "Mock Interviews and Review",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Complete 6 timed mock coding interviews",
+              "Complete 2 mock behavioral interviews"
+            ],
+            "estimated_total_min": 600,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          }
+        ]
+      }
+    ],
+    "strategist_swe_fullstack_senior_grounded": [
+      {
+        "syllabus_version": "v1",
+        "goal_summary": "Prepare for a Staff Software Engineer full-stack loop at Airbnb in 6 weeks by closing the timed-coding and behavioral gaps while keeping system design strengths sharp.",
+        "modules": [
+          {
+            "module_id": "mod_timed_coding",
+            "title": "Coding Under Time Pressure",
+            "priority": "high",
+            "reason": "Coding under time pressure is a declared weakness and a core part of every staff loop.",
+            "target_outcomes": [
+              "Solve medium problems within 25 minutes with clean code",
+              "Apply a consistent clarify-plan-code-test routine under a timer"
+            ],
+            "estimated_total_min": 480,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_behavioral_staff",
+            "title": "Staff-Level Behavioral Storytelling",
+            "priority": "high",
+            "reason": "Behavioral interviews are a declared weakness; staff candidates are judged heavily on scope, influence, and handling feedback.",
+            "target_outcomes": [
+              "Prepare 8 STAR stories showing staff-level scope and influence",
+              "Answer feedback and conflict questions with a clear ownership and learning arc"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_fullstack_coding",
+            "title": "Full-Stack Practical Coding Drills",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Build small API-plus-UI features end to end within a timed session"
+            ],
+            "estimated_total_min": 240,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_system_design_refresh",
+            "title": "System Design Refresh: Reliability and Scaled-Down Designs",
+            "priority": "low",
+            "reason": null,
+            "target_outcomes": [
+              "Practice designing scaled-down versions of real services with reliability trade-offs"
+            ],
+            "estimated_total_min": 180,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          }
+        ]
+      }
+    ],
+    "strategist_swe_devops_junior_grounded": [
+      {
+        "syllabus_version": "v1",
+        "goal_summary": "Prepare for junior DevOps Engineer interviews in 10 weeks by closing algorithms and networking fundamentals gaps while leveraging Docker and bash strengths.",
+        "modules": [
+          {
+            "module_id": "mod_networking",
+            "title": "Networking Fundamentals for DevOps",
+            "priority": "high",
+            "reason": "Networking fundamentals is a declared weakness and core to DevOps interviews.",
+            "target_outcomes": [
+              "Explain the OSI and TCP/IP models",
+              "Troubleshoot DNS, HTTP, TLS, and subnetting issues",
+              "Use tools like dig, curl, netstat, and tcpdump"
+            ],
+            "estimated_total_min": 720,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_algorithms",
+            "title": "Core Algorithms and Data Structures",
+            "priority": "high",
+            "reason": "Algorithms is a declared weakness and commonly appears in coding screens.",
+            "target_outcomes": [
+              "Solve array, string, and hash map problems",
+              "Apply binary search and basic tree traversal",
+              "Analyze time and space complexity"
+            ],
+            "estimated_total_min": 720,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_linux_scripting",
+            "title": "Linux Internals and Scripting Practice",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Explain processes, permissions, and systemd",
+              "Write robust bash and Python automation scripts"
+            ],
+            "estimated_total_min": 480,
+            "difficulty": 2,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_cicd_k8s",
+            "title": "CI/CD Pipelines and Kubernetes Basics",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Build a CI/CD pipeline for a containerized app",
+              "Deploy and debug workloads on Kubernetes"
+            ],
+            "estimated_total_min": 600,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_iac_cloud",
+            "title": "Infrastructure as Code and Cloud Fundamentals",
+            "priority": "low",
+            "reason": null,
+            "target_outcomes": [
+              "Provision infrastructure with Terraform",
+              "Describe core cloud networking and IAM concepts"
+            ],
+            "estimated_total_min": 480,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_mock_interviews",
+            "title": "Mock Interviews and Behavioral Prep",
+            "priority": "low",
+            "reason": null,
+            "target_outcomes": [
+              "Complete timed technical mock interviews",
+              "Prepare STAR stories about incidents and automation"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 2,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          }
+        ]
+      }
+    ],
+    "strategist_swe_backend_faang_grounded": [
+      {
+        "syllabus_version": "v1",
+        "goal_summary": "Prepare for a mid-level big-tech backend Software Engineer loop (Google, Meta) in eight weeks by closing the system design and behavioral interview gaps while keeping graph and DP coding skills sharp.",
+        "modules": [
+          {
+            "module_id": "mod_sd_foundations",
+            "title": "System Design Foundations for Backend Engineers",
+            "priority": "high",
+            "reason": "System design is a declared weakness and a core round in big-tech backend loops.",
+            "target_outcomes": [
+              "Explain scalability, caching, load balancing, sharding, and replication trade-offs",
+              "Estimate capacity and throughput for a given service"
+            ],
+            "estimated_total_min": 600,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_sd_framework",
+            "title": "Structured System Design Interview Framework",
+            "priority": "high",
+            "reason": "Handling ambiguity and structuring the design conversation directly addresses the system design weakness.",
+            "target_outcomes": [
+              "Apply a repeatable framework: requirements, API, data model, high-level design, deep dives",
+              "Drive clarifying questions under ambiguity"
+            ],
+            "estimated_total_min": 480,
+            "difficulty": 3,
+            "source_claim_ids": [
+              "claim_e265d3982756e7a1",
+              "claim_d94ea0c49b4a0f6d"
+            ],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_sd_google_practice",
+            "title": "Google-style System Design Mock Practice",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Complete timed mock designs of classic backend systems in Google interview style",
+              "Review interview replays and self-critique"
+            ],
+            "estimated_total_min": 600,
+            "difficulty": 4,
+            "source_claim_ids": [
+              "claim_19abe8704bc59573",
+              "claim_d80d352ec1d1167d"
+            ],
+            "company_specific": true,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_behavioral_stories",
+            "title": "Behavioral Interview Story Bank (STAR)",
+            "priority": "high",
+            "reason": "Behavioral interviews are a declared weakness and are scored in every Google and Meta loop.",
+            "target_outcomes": [
+              "Write 8-10 STAR stories covering conflict, leadership, failure, and impact",
+              "Quantify outcomes for each story"
+            ],
+            "estimated_total_min": 420,
+            "difficulty": 2,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_behavioral_mocks",
+            "title": "Behavioral Mock Interviews and Delivery",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Deliver stories concisely within 2-3 minutes",
+              "Handle follow-up probing questions confidently"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_coding_maintenance",
+            "title": "Coding Round Maintenance: Mixed Problem Sets",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Solve timed medium/hard problems across arrays, strings, trees, graphs, and DP",
+              "Communicate approach and complexity aloud"
+            ],
+            "estimated_total_min": 600,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_full_loop_mock",
+            "title": "Full Loop Simulation and Final Review",
+            "priority": "low",
+            "reason": null,
+            "target_outcomes": [
+              "Complete a simulated back-to-back loop of coding, design, and behavioral rounds",
+              "Identify and patch remaining gaps"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          }
+        ]
+      }
+    ],
+    "strategist_ai_engineer_aie_ng_grounded": [
+      {
+        "syllabus_version": "v1",
+        "goal_summary": "Prepare for new-grad AI Engineer roles building LLM products by closing gaps in LLM evaluation, RAG, and system design, then applying them to agentic architectures.",
+        "modules": [
+          {
+            "module_id": "mod_llm_eval",
+            "title": "Evaluating LLM Systems",
+            "priority": "high",
+            "reason": "Evaluation of LLM systems is a declared weakness and core to shipping LLM products.",
+            "target_outcomes": [
+              "Design eval sets and rubrics for LLM outputs",
+              "Implement LLM-as-judge and automated regression evals",
+              "Measure retrieval and end-to-end quality metrics"
+            ],
+            "estimated_total_min": 600,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_rag",
+            "title": "Retrieval Augmented Generation Foundations",
+            "priority": "high",
+            "reason": "Retrieval augmented generation is a declared weakness and a staple of LLM product work.",
+            "target_outcomes": [
+              "Build a RAG pipeline with chunking, embeddings, and a vector store",
+              "Apply hybrid search and reranking",
+              "Diagnose retrieval failures"
+            ],
+            "estimated_total_min": 720,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_sysdesign",
+            "title": "System Design for LLM Applications",
+            "priority": "high",
+            "reason": "System design is a declared weakness and common in AI engineer interviews.",
+            "target_outcomes": [
+              "Design scalable LLM-backed services leveraging REST API skills",
+              "Reason about latency, cost, caching, and rate limits",
+              "Present designs clearly in interview format"
+            ],
+            "estimated_total_min": 720,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_context_eng",
+            "title": "Context Engineering for Agents",
+            "priority": "medium",
+            "reason": "Industry guidance highlights context pollution as a persistent design concern.",
+            "target_outcomes": [
+              "Manage context relevance and compaction in agent loops",
+              "Explain why larger context windows do not remove relevance concerns"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 3,
+            "source_claim_ids": [
+              "claim_178be3371fe9677a"
+            ],
+            "company_specific": true,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_multi_agent",
+            "title": "Multi-Agent Architecture Design",
+            "priority": "medium",
+            "reason": "Combines system design practice with orchestrator-subagent patterns described in engineering sources.",
+            "target_outcomes": [
+              "Design a lead-agent/subagent research system with parallel search",
+              "Use artifact stores to pass lightweight references instead of full outputs"
+            ],
+            "estimated_total_min": 480,
+            "difficulty": 4,
+            "source_claim_ids": [
+              "claim_1ccecbbc47768930",
+              "claim_bd636e1d0a0174f8",
+              "claim_c25a0b025b7d49ad"
+            ],
+            "company_specific": true,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_agent_safety_testing",
+            "title": "Agent Testing, Guardrails, and Sandboxing",
+            "priority": "medium",
+            "reason": "Links evaluation skills to agent reliability; sources stress sandboxed testing against compounding errors.",
+            "target_outcomes": [
+              "Build sandboxed test harnesses for agents",
+              "Add guardrails and cost controls to agent workflows"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 3,
+            "source_claim_ids": [
+              "claim_62f89fbeee8329e6"
+            ],
+            "company_specific": true,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_capstone",
+            "title": "Capstone: Evaluated RAG Agent Product",
+            "priority": "low",
+            "reason": null,
+            "target_outcomes": [
+              "Ship a Python RAG agent with an eval suite and design writeup for portfolio"
+            ],
+            "estimated_total_min": 480,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          }
+        ]
+      }
+    ],
+    "strategist_ai_engineer_aie_mid_grounded": [
+      {
+        "syllabus_version": "v1",
+        "goal_summary": "Transition from backend engineering to a mid-level Applied AI Engineer role targeting Anthropic by closing gaps in prompt engineering, vector search, and model evaluation within 8 weeks at about 6 hours per week.",
+        "modules": [
+          {
+            "module_id": "mod_prompt_eng",
+            "title": "Prompt Engineering Foundations and Patterns",
+            "priority": "high",
+            "reason": "Prompt engineering is a declared weakness and a core daily skill for Applied AI Engineers.",
+            "target_outcomes": [
+              "Design structured prompts with system instructions, few-shot examples, and output schemas",
+              "Iterate prompts systematically using test cases"
+            ],
+            "estimated_total_min": 540,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_vector_search",
+            "title": "Embeddings, Vector Search, and RAG Pipelines",
+            "priority": "high",
+            "reason": "Vector search is a declared weakness and underpins retrieval-augmented applications; the user's backend and SQL strengths make it a fast win.",
+            "target_outcomes": [
+              "Explain embeddings and similarity metrics",
+              "Build a RAG service with chunking, indexing, and ANN retrieval",
+              "Tune retrieval quality with hybrid search and reranking"
+            ],
+            "estimated_total_min": 600,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_model_eval",
+            "title": "LLM Evaluation Methods and Harnesses",
+            "priority": "high",
+            "reason": "Model evaluation is a declared weakness and is essential for shipping reliable LLM features.",
+            "target_outcomes": [
+              "Build an eval harness with golden datasets and automated metrics",
+              "Use LLM-as-judge and human review with calibration",
+              "Track regressions across prompt and model changes"
+            ],
+            "estimated_total_min": 600,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_rlhf_anthropic",
+            "title": "RLHF and Preference Modeling for Anthropic Interviews",
+            "priority": "medium",
+            "reason": "Anthropic is the target company; understanding the RLHF pipeline and reward models supports alignment-aware discussion.",
+            "target_outcomes": [
+              "Describe the three RLHF stages: pretraining, reward model training, RL fine-tuning",
+              "Explain how reward models convert human preferences into scalar rewards",
+              "Summarize key RLHF papers such as InstructGPT and GopherCite"
+            ],
+            "estimated_total_min": 300,
+            "difficulty": 4,
+            "source_claim_ids": [
+              "claim_eebf03c671006215",
+              "claim_23f34b486220ca6b",
+              "claim_0c5487092cd31517",
+              "claim_bc7b5f0e6f277b30",
+              "claim_b9115672b72c0d1b"
+            ],
+            "company_specific": true,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_capstone",
+            "title": "Capstone: Evaluated RAG Application",
+            "priority": "medium",
+            "reason": "Integrates prompting, retrieval, and evaluation into a portfolio project for interviews.",
+            "target_outcomes": [
+              "Ship an end-to-end LLM app with prompts, retrieval, and an eval suite",
+              "Present design tradeoffs and eval results"
+            ],
+            "estimated_total_min": 480,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_interview_prep",
+            "title": "Applied AI Interview Practice",
+            "priority": "low",
+            "reason": null,
+            "target_outcomes": [
+              "Practice LLM system design questions",
+              "Articulate the backend-to-AI transition story"
+            ],
+            "estimated_total_min": 240,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          }
+        ]
+      }
+    ],
+    "strategist_ai_engineer_aie_senior_grounded": [
+      {
+        "syllabus_version": "v1",
+        "goal_summary": "Prepare for a senior AI engineering loop by closing gaps in agent architectures and cost/latency tradeoffs within a 6-week, ~5 hr/week budget.",
+        "modules": [
+          {
+            "module_id": "mod_agent_arch",
+            "title": "Agent Architecture Foundations: Workflows vs Agents",
+            "priority": "high",
+            "reason": "Agent architectures are a declared weakness and core to senior AI engineering interviews.",
+            "target_outcomes": [
+              "Distinguish workflows from autonomous agents",
+              "Design tool-using agent loops with error recovery",
+              "Explain evaluator-optimizer and orchestrator-worker patterns"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 4,
+            "source_claim_ids": [
+              "claim_c25a0b025b7d49ad"
+            ],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_multi_agent",
+            "title": "Multi-Agent Orchestration and Subagent Design",
+            "priority": "high",
+            "reason": "Extends the agent architectures weakness into lead-agent/subagent designs commonly probed in system design rounds.",
+            "target_outcomes": [
+              "Design a lead agent spawning parallel subagents",
+              "Use artifact stores to pass lightweight references instead of full outputs"
+            ],
+            "estimated_total_min": 300,
+            "difficulty": 4,
+            "source_claim_ids": [
+              "claim_1ccecbbc47768930",
+              "claim_bd636e1d0a0174f8"
+            ],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_cost_latency",
+            "title": "Cost and Latency Tradeoffs in LLM Systems",
+            "priority": "high",
+            "reason": "Cost and latency tradeoffs are a declared weakness and a frequent senior-level design discussion.",
+            "target_outcomes": [
+              "Estimate token cost and latency for agent designs",
+              "Apply caching, batching, model routing, and parallelism tradeoffs",
+              "Reason about context size vs relevance and context pollution"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 4,
+            "source_claim_ids": [
+              "claim_178be3371fe9677a"
+            ],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_context_eng",
+            "title": "Context Engineering for Agents",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Apply compaction, retrieval, and memory strategies to limit context pollution"
+            ],
+            "estimated_total_min": 240,
+            "difficulty": 3,
+            "source_claim_ids": [
+              "claim_178be3371fe9677a"
+            ],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_rlhf_limits",
+            "title": "RLHF Basics and Model Limitations",
+            "priority": "low",
+            "reason": null,
+            "target_outcomes": [
+              "Explain the RLHF pipeline and its limitations around harmful or inaccurate output"
+            ],
+            "estimated_total_min": 120,
+            "difficulty": 3,
+            "source_claim_ids": [
+              "claim_f5525f33f9240bb2"
+            ],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_mock_design",
+            "title": "Mock Senior AI System Design Interviews",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Deliver end-to-end agent system designs with explicit cost/latency tradeoffs under interview conditions"
+            ],
+            "estimated_total_min": 420,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          }
+        ]
+      }
+    ],
+    "strategist_ai_engineer_genai_career_change_grounded": [
+      {
+        "syllabus_version": "v1",
+        "goal_summary": "Prepare a beginner with data analysis strengths to transition into a junior GenAI Engineer role in 20 weeks by closing gaps in coding interviews, ML fundamentals, and LLM application design.",
+        "modules": [
+          {
+            "module_id": "mod_python_ds_algo",
+            "title": "Python Data Structures and Algorithms for Coding Interviews",
+            "priority": "high",
+            "reason": "Coding interviews are a listed weakness and gate entry into engineering roles.",
+            "target_outcomes": [
+              "Solve easy/medium array, string, hash map, and two-pointer problems",
+              "Explain time and space complexity of solutions"
+            ],
+            "estimated_total_min": 900,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_interview_practice",
+            "title": "Timed Mock Coding Interviews",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Complete timed problems while communicating reasoning aloud",
+              "Handle trees, graphs, and recursion questions"
+            ],
+            "estimated_total_min": 600,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_ml_fundamentals",
+            "title": "Machine Learning Fundamentals",
+            "priority": "high",
+            "reason": "Machine learning fundamentals are a listed weakness and underpin all GenAI engineering work.",
+            "target_outcomes": [
+              "Explain supervised learning, loss functions, gradient descent, and overfitting",
+              "Train and evaluate a simple model in scikit-learn"
+            ],
+            "estimated_total_min": 840,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_llm_training_rlhf",
+            "title": "How LLMs Are Trained: Pretraining, Reward Models, and RLHF",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Describe the three RLHF stages: pretraining, reward model training, RL fine-tuning",
+              "Explain how InstructGPT applied RLHF"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 3,
+            "source_claim_ids": [
+              "claim_eebf03c671006215",
+              "claim_0c5487092cd31517",
+              "claim_bc7b5f0e6f277b30"
+            ],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_llm_app_design",
+            "title": "LLM Application Design: Prompting, RAG, and Workflows",
+            "priority": "high",
+            "reason": "LLM application design is a listed weakness and the core skill of a GenAI Engineer.",
+            "target_outcomes": [
+              "Build a retrieval-augmented generation app with an LLM API",
+              "Design prompt chains and routing workflows"
+            ],
+            "estimated_total_min": 900,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_agents_guardrails",
+            "title": "Building Agents Safely: Testing and Guardrails",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Explain when agents are appropriate versus simpler workflows",
+              "Test an agent in a sandbox with guardrails against compounding errors"
+            ],
+            "estimated_total_min": 480,
+            "difficulty": 4,
+            "source_claim_ids": [
+              "claim_62f89fbeee8329e6"
+            ],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_portfolio_project",
+            "title": "GenAI Portfolio Project Leveraging Data Analysis",
+            "priority": "low",
+            "reason": null,
+            "target_outcomes": [
+              "Ship a documented LLM-powered data analysis tool",
+              "Present design tradeoffs in interviews"
+            ],
+            "estimated_total_min": 600,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          }
+        ]
+      }
+    ],
+    "strategist_ai_engineer_llm_platform_grounded": [
+      {
+        "syllabus_version": "v1",
+        "goal_summary": "Prepare for mid-level LLM Platform Engineer interviews (target: OpenAI) in 8 weeks by closing gaps in inference optimization and evaluation pipelines, then building RLHF, agent-architecture and platform system design fluency on top of existing Kubernetes and Python strengths.",
+        "modules": [
+          {
+            "module_id": "mod_inference_opt",
+            "title": "LLM Inference Optimization Fundamentals",
+            "priority": "high",
+            "reason": "Inference optimization is a declared weakness and core to LLM platform engineering interviews.",
+            "target_outcomes": [
+              "Explain KV caching, continuous batching and paged attention",
+              "Compare quantization approaches (INT8/FP8/4-bit) and their trade-offs",
+              "Reason about latency vs throughput and GPU memory budgeting"
+            ],
+            "estimated_total_min": 600,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_serving_k8s",
+            "title": "Serving LLMs at Scale on Kubernetes",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Design a GPU-backed model serving deployment with autoscaling",
+              "Explain speculative decoding and tensor/pipeline parallelism in serving"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_eval_pipelines",
+            "title": "Building LLM Evaluation Pipelines",
+            "priority": "high",
+            "reason": "Evaluation pipelines are a declared weakness and a frequent platform interview topic.",
+            "target_outcomes": [
+              "Design an offline eval harness with versioned datasets and metrics",
+              "Implement LLM-as-judge and regression gating in CI",
+              "Discuss online evaluation and A/B testing of model versions"
+            ],
+            "estimated_total_min": 600,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_rlhf_reward",
+            "title": "RLHF and Reward Model Pipelines",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Explain how reward models map text to scalar human-preference scores",
+              "Describe RLHF limitations and how evals detect harmful or inaccurate outputs"
+            ],
+            "estimated_total_min": 300,
+            "difficulty": 3,
+            "source_claim_ids": [
+              "claim_23f34b486220ca6b",
+              "claim_f5525f33f9240bb2"
+            ],
+            "company_specific": true,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_agent_arch",
+            "title": "Multi-Agent Systems and Context Engineering",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Design a lead-agent/subagent orchestration with artifact storage",
+              "Explain context pollution and relevance management strategies"
+            ],
+            "estimated_total_min": 300,
+            "difficulty": 3,
+            "source_claim_ids": [
+              "claim_1ccecbbc47768930",
+              "claim_bd636e1d0a0174f8",
+              "claim_178be3371fe9677a"
+            ],
+            "company_specific": true,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_platform_design",
+            "title": "LLM Platform System Design Mock Interviews",
+            "priority": "high",
+            "reason": "Integrates inference and evaluation gap work into the system design format expected in target interviews.",
+            "target_outcomes": [
+              "Complete timed mock designs for an inference gateway and an eval platform",
+              "Articulate trade-offs clearly under interview conditions"
+            ],
+            "estimated_total_min": 480,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_python_coding",
+            "title": "Python Coding Interview Refresh",
+            "priority": "low",
+            "reason": null,
+            "target_outcomes": [
+              "Solve medium coding problems in Python within 30 minutes"
+            ],
+            "estimated_total_min": 240,
+            "difficulty": 2,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          }
+        ]
+      }
+    ],
+    "strategist_ai_engineer_aie_intern_grounded": [
+      {
+        "syllabus_version": "v1",
+        "goal_summary": "Prepare a beginner Python developer for an AI Engineering internship in 12 weeks by closing data structures and RAG gaps, then building LLM agent and RLHF literacy.",
+        "modules": [
+          {
+            "module_id": "mod_ds_core",
+            "title": "Core Data Structures in Python",
+            "priority": "high",
+            "reason": "Data structures is a listed weakness and a staple of internship coding interviews.",
+            "target_outcomes": [
+              "Implement arrays, linked lists, stacks, queues, and hash maps in Python",
+              "Analyze time and space complexity with Big-O"
+            ],
+            "estimated_total_min": 720,
+            "difficulty": 2,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_ds_trees_graphs",
+            "title": "Trees, Heaps, and Graphs",
+            "priority": "high",
+            "reason": "Extends the data structures weakness into the tree and graph topics common in interviews.",
+            "target_outcomes": [
+              "Implement BST, heap, BFS and DFS",
+              "Solve 20 interview-style problems"
+            ],
+            "estimated_total_min": 720,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_rag_foundations",
+            "title": "Retrieval Augmented Generation Foundations",
+            "priority": "high",
+            "reason": "RAG is a listed weakness and a core AI engineering skill.",
+            "target_outcomes": [
+              "Explain embeddings, chunking, and vector search",
+              "Build a minimal RAG pipeline in Python"
+            ],
+            "estimated_total_min": 720,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_rag_project",
+            "title": "RAG Project and Evaluation",
+            "priority": "high",
+            "reason": "A portfolio RAG project with evaluation turns the RAG weakness into demonstrable evidence.",
+            "target_outcomes": [
+              "Ship a RAG app over a document set",
+              "Measure retrieval quality and answer faithfulness"
+            ],
+            "estimated_total_min": 600,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_agents",
+            "title": "Building Effective LLM Agents",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Distinguish workflows from agents",
+              "Build a tool-using agent with guardrails and sandboxed testing"
+            ],
+            "estimated_total_min": 540,
+            "difficulty": 3,
+            "source_claim_ids": [
+              "claim_c25a0b025b7d49ad",
+              "claim_62f89fbeee8329e6"
+            ],
+            "company_specific": true,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_rlhf",
+            "title": "RLHF Concepts Overview",
+            "priority": "low",
+            "reason": null,
+            "target_outcomes": [
+              "Explain reward model training and RL fine-tuning of language models",
+              "Summarize key RLHF papers such as InstructGPT"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 3,
+            "source_claim_ids": [
+              "claim_0c5487092cd31517",
+              "claim_bc7b5f0e6f277b30",
+              "claim_b9115672b72c0d1b"
+            ],
+            "company_specific": true,
+            "knowledge_node_ids": []
+          }
+        ]
+      }
+    ],
+    "strategist_ai_engineer_aie_research_to_eng_grounded": [
+      {
+        "syllabus_version": "v1",
+        "goal_summary": "Transition from research engineer to product AI engineer in 6 weeks by closing gaps in production systems, system design, and behavioral interviews, while grounding LLM product knowledge in RLHF, agent architectures, and context engineering.",
+        "modules": [
+          {
+            "module_id": "mod_prod_systems",
+            "title": "Production ML Systems Foundations",
+            "priority": "high",
+            "reason": "Production systems is a listed weakness and core to the AI Engineer role.",
+            "target_outcomes": [
+              "Deploy a PyTorch model behind a served API with monitoring",
+              "Explain latency, caching, batching, and observability trade-offs for LLM services"
+            ],
+            "estimated_total_min": 420,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_system_design",
+            "title": "System Design for LLM Applications",
+            "priority": "high",
+            "reason": "System design is a listed weakness and a standard interview round for AI Engineers.",
+            "target_outcomes": [
+              "Design a RAG or agent-backed product end to end",
+              "Discuss scaling, cost, evaluation, and failure modes clearly"
+            ],
+            "estimated_total_min": 420,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_behavioral",
+            "title": "Behavioral Interview Stories: Research to Product",
+            "priority": "high",
+            "reason": "Behavioral interviews are a listed weakness; the research-to-product narrative must be convincing.",
+            "target_outcomes": [
+              "Draft 6 STAR stories emphasizing shipping and collaboration",
+              "Deliver a crisp career-transition pitch"
+            ],
+            "estimated_total_min": 240,
+            "difficulty": 2,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_agents_context",
+            "title": "Multi-Agent Architectures and Context Engineering",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Explain lead-agent/subagent orchestration patterns",
+              "Apply context management techniques to limit context pollution"
+            ],
+            "estimated_total_min": 240,
+            "difficulty": 3,
+            "source_claim_ids": [
+              "claim_1ccecbbc47768930",
+              "claim_178be3371fe9677a"
+            ],
+            "company_specific": true,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_rlhf",
+            "title": "RLHF Pipeline in Practice",
+            "priority": "low",
+            "reason": null,
+            "target_outcomes": [
+              "Describe pretraining, reward modeling, and RL fine-tuning stages",
+              "Discuss RLHF limitations in product contexts"
+            ],
+            "estimated_total_min": 180,
+            "difficulty": 3,
+            "source_claim_ids": [
+              "claim_eebf03c671006215",
+              "claim_23f34b486220ca6b",
+              "claim_f5525f33f9240bb2"
+            ],
+            "company_specific": true,
+            "knowledge_node_ids": []
+          }
+        ]
+      }
+    ],
+    "strategist_ai_engineer_aie_startup_grounded": [
+      {
+        "syllabus_version": "v1",
+        "goal_summary": "Prepare an advanced full-stack engineer for a senior Founding AI Engineer role at a startup by closing gaps in LLM system evaluation and scaling retrieval, then building agentic system skills within a 4-week, ~8h/week budget.",
+        "modules": [
+          {
+            "module_id": "mod_llm_eval_foundations",
+            "title": "Evaluation of LLM Systems: Foundations and Harnesses",
+            "priority": "high",
+            "reason": "Evaluation of LLM systems is a declared weakness and core to a founding AI engineer role.",
+            "target_outcomes": [
+              "Design golden datasets and rubric-based evals for LLM features",
+              "Implement LLM-as-judge and deterministic checks in an automated harness",
+              "Track regressions across prompt and model changes"
+            ],
+            "estimated_total_min": 480,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_scaling_retrieval",
+            "title": "Scaling Retrieval: Indexing, Hybrid Search, and Reranking",
+            "priority": "high",
+            "reason": "Scaling retrieval is a declared weakness; production RAG quality and cost depend on it.",
+            "target_outcomes": [
+              "Choose chunking, embedding, and ANN index strategies for large corpora",
+              "Implement hybrid BM25 + vector search with reranking",
+              "Measure recall@k and latency at scale"
+            ],
+            "estimated_total_min": 480,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_agent_patterns",
+            "title": "Agentic Workflows and Multi-Agent Architecture",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Distinguish workflows from autonomous agents and pick appropriately",
+              "Build a multi-round search agent with an evaluator loop",
+              "Use artifact storage with lightweight references between subagents"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 4,
+            "source_claim_ids": [
+              "claim_c25a0b025b7d49ad",
+              "claim_bd636e1d0a0174f8",
+              "claim_62f89fbeee8329e6"
+            ],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_rag_eval_capstone",
+            "title": "Capstone: Evaluated, Scaled RAG Agent",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Ship an end-to-end RAG agent with sandboxed testing and guardrails",
+              "Report retrieval and answer-quality metrics from the eval harness"
+            ],
+            "estimated_total_min": 420,
+            "difficulty": 5,
+            "source_claim_ids": [
+              "claim_62f89fbeee8329e6"
+            ],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_rlhf_overview",
+            "title": "RLHF and Human-Feedback Methods Overview",
+            "priority": "low",
+            "reason": null,
+            "target_outcomes": [
+              "Explain reward modeling and RLHF pipelines",
+              "Relate human-feedback methods to evaluation design"
+            ],
+            "estimated_total_min": 180,
+            "difficulty": 3,
+            "source_claim_ids": [
+              "claim_bc7b5f0e6f277b30",
+              "claim_b9115672b72c0d1b"
+            ],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          }
+        ]
+      }
+    ],
+    "strategist_quant_dev_quant_ng_grounded": [
+      {
+        "syllabus_version": "v1",
+        "goal_summary": "Prepare for new-grad Quant Developer interviews (Jane Street) by closing gaps in low-latency systems, brainteasers, and behavioral interviews while leveraging C++ and probability strengths.",
+        "modules": [
+          {
+            "module_id": "mod_low_latency_core",
+            "title": "Low-Latency Systems Foundations",
+            "priority": "high",
+            "reason": "Low-latency systems is a declared weakness and central to quant developer roles.",
+            "target_outcomes": [
+              "Explain cache hierarchy, branch prediction, and memory layout effects on latency",
+              "Profile and optimize a hot path in C++"
+            ],
+            "estimated_total_min": 600,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_concurrency_lockfree",
+            "title": "Trading-Style Concurrency: Thread Pinning and Lock-Free Programming",
+            "priority": "high",
+            "reason": "Directly addresses the low-latency weakness; sources describe core pinning and lock-free techniques as standard in trading systems.",
+            "target_outcomes": [
+              "Implement a lock-free SPSC ring buffer with atomics",
+              "Reason about memory ordering and deterministic latency"
+            ],
+            "estimated_total_min": 540,
+            "difficulty": 5,
+            "source_claim_ids": [
+              "claim_f289d64925e5b59e"
+            ],
+            "company_specific": true,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_realtime_data",
+            "title": "Real-Time Market Data Handling and Binary Parsing",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Parse a binary market data feed efficiently",
+              "Design a low-latency order book data structure"
+            ],
+            "estimated_total_min": 420,
+            "difficulty": 4,
+            "source_claim_ids": [
+              "claim_2ed95fa5563fd79e",
+              "claim_e1a2e38c7efef1d0"
+            ],
+            "company_specific": true,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_brainteasers",
+            "title": "Brainteasers and Mental Math Drills",
+            "priority": "high",
+            "reason": "Brainteasers are a declared weakness and a staple of quant interview rounds.",
+            "target_outcomes": [
+              "Solve classic logic and estimation puzzles under time pressure",
+              "Apply probability strengths to puzzle-style questions"
+            ],
+            "estimated_total_min": 600,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_behavioral",
+            "title": "Behavioral Interview Preparation",
+            "priority": "high",
+            "reason": "Behavioral interviews are a declared weakness and every loop includes them.",
+            "target_outcomes": [
+              "Prepare 6 STAR stories covering ownership, collaboration, and failure",
+              "Deliver concise answers in mock interviews"
+            ],
+            "estimated_total_min": 420,
+            "difficulty": 2,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_cpp_interview",
+            "title": "C++ and Algorithms Interview Sharpening",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Solve medium/hard coding problems in modern C++",
+              "Answer C++ internals questions (move semantics, templates, UB)"
+            ],
+            "estimated_total_min": 480,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_mock_loops",
+            "title": "Full Mock Quant Developer Interview Loops",
+            "priority": "low",
+            "reason": null,
+            "target_outcomes": [
+              "Complete 4 timed mock loops mixing coding, systems, puzzles, and behavioral"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          }
+        ]
+      }
+    ],
+    "strategist_quant_dev_quant_mid_grounded": [
+      {
+        "syllabus_version": "v1",
+        "goal_summary": "Transition from backend engineering to a mid-level Quantitative Developer role in 10 weeks by closing gaps in C++ performance, statistics, and market microstructure, building on existing Python and distributed systems strengths.",
+        "modules": [
+          {
+            "module_id": "mod_cpp_perf",
+            "title": "Low-Latency C++ Performance Engineering",
+            "priority": "high",
+            "reason": "C++ performance is a listed weakness and a core requirement for quant developer roles.",
+            "target_outcomes": [
+              "Write cache-friendly modern C++ with move semantics and templates",
+              "Profile and optimize hot paths using perf and benchmarks",
+              "Implement a lock-free queue"
+            ],
+            "estimated_total_min": 900,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_stats",
+            "title": "Statistics and Probability for Quant Development",
+            "priority": "high",
+            "reason": "Statistics is a listed weakness and underpins signal research and interview questions.",
+            "target_outcomes": [
+              "Apply hypothesis testing, regression, and estimation",
+              "Solve probability and expected-value interview problems",
+              "Analyze time series with Python"
+            ],
+            "estimated_total_min": 840,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_microstructure",
+            "title": "Market Microstructure Fundamentals",
+            "priority": "high",
+            "reason": "Market microstructure is a listed weakness and essential domain knowledge for trading systems.",
+            "target_outcomes": [
+              "Explain order books, order types, and matching engines",
+              "Understand market data feeds and order entry protocols",
+              "Build a simple limit order book simulator"
+            ],
+            "estimated_total_min": 720,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_latency_infra",
+            "title": "Latency Measurement and Market Data Infrastructure",
+            "priority": "medium",
+            "reason": "Industry sources emphasize latency monitoring, packet capture, and nanosecond-scale market data handling.",
+            "target_outcomes": [
+              "Measure and correlate latency across market data and order entry",
+              "Understand kernel bypass and hardware acceleration concepts",
+              "Design a production-like performance test setup"
+            ],
+            "estimated_total_min": 540,
+            "difficulty": 4,
+            "source_claim_ids": [
+              "claim_db9b12a2b933be3c",
+              "claim_ab2cac9d69c37585",
+              "claim_1b1bd8403dd15b38"
+            ],
+            "company_specific": true,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_embedded_eng",
+            "title": "Embedded Engineering with Trading Teams",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Understand acceleration vs platform team roles",
+              "Prepare stories on accelerating research and trading workflows"
+            ],
+            "estimated_total_min": 240,
+            "difficulty": 2,
+            "source_claim_ids": [
+              "claim_a62e7aaa1148d486"
+            ],
+            "company_specific": true,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_interview_prep",
+            "title": "Quant Developer Interview Practice",
+            "priority": "low",
+            "reason": null,
+            "target_outcomes": [
+              "Complete timed C++ and algorithm coding drills",
+              "Practice trading-system design questions leveraging distributed systems strength"
+            ],
+            "estimated_total_min": 480,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          }
+        ]
+      }
+    ],
+    "strategist_quant_dev_quant_senior_grounded": [
+      {
+        "syllabus_version": "v1",
+        "goal_summary": "Prepare for a Senior Quant Developer loop at Citadel in 6 weeks by closing probability-puzzle and system-design gaps while leveraging C++ and Linux strengths for low-latency discussions.",
+        "modules": [
+          {
+            "module_id": "mod_prob_puzzles",
+            "title": "Probability Puzzles and Expected Value Drills",
+            "priority": "high",
+            "reason": "Probability puzzles are a declared weakness and a staple of quant dev interview loops.",
+            "target_outcomes": [
+              "Solve conditional probability, expectation, and Markov chain puzzles under time pressure",
+              "Articulate reasoning clearly while solving brainteasers"
+            ],
+            "estimated_total_min": 540,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_trading_sysdesign",
+            "title": "System Design for Trading Infrastructure",
+            "priority": "high",
+            "reason": "System design is a declared weakness and is central to senior-level quant developer interviews.",
+            "target_outcomes": [
+              "Design a market data feed handler and order gateway end to end",
+              "Discuss throughput, latency, fault tolerance, and data pipeline tradeoffs"
+            ],
+            "estimated_total_min": 600,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_low_latency_cpp",
+            "title": "Low-Latency C++ and Linux Performance Deep Dive",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Explain cache effects, lock-free structures, and kernel bypass networking",
+              "Profile and optimize a hot path in C++"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 4,
+            "source_claim_ids": [
+              "claim_2ed95fa5563fd79e",
+              "claim_e1a2e38c7efef1d0"
+            ],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_mock_loop",
+            "title": "Senior Quant Dev Mock Interview Loop",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Complete timed mocks mixing probability, coding, and design rounds",
+              "Refine senior-level behavioral stories on ownership and impact"
+            ],
+            "estimated_total_min": 300,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          }
+        ]
+      }
+    ],
+    "strategist_quant_dev_quant_intern_grounded": [
+      {
+        "syllabus_version": "v1",
+        "goal_summary": "Close C++, probability, and timed-coding gaps for a Quant Developer internship within 14 weeks, building on Python and linear algebra strengths.",
+        "modules": [
+          {
+            "module_id": "mod_cpp_foundations",
+            "title": "C++ Foundations for Python Developers",
+            "priority": "high",
+            "reason": "C++ is a listed weakness and the core language of quant developer roles.",
+            "target_outcomes": [
+              "Write, compile, and debug C++17 programs",
+              "Use references, pointers, RAII, and smart pointers correctly",
+              "Apply STL containers and algorithms"
+            ],
+            "estimated_total_min": 720,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_cpp_performance",
+            "title": "C++ Performance and Memory Model",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Explain cache locality and avoid unnecessary allocations",
+              "Profile and benchmark simple C++ code"
+            ],
+            "estimated_total_min": 480,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_cpp_concurrency_trading",
+            "title": "C++ Concurrency for Low-Latency Trading",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Use threads, atomics, and condition variables",
+              "Describe lock-free techniques and CPU core pinning for deterministic latency"
+            ],
+            "estimated_total_min": 420,
+            "difficulty": 4,
+            "source_claim_ids": [
+              "claim_f289d64925e5b59e",
+              "claim_ab2cac9d69c37585"
+            ],
+            "company_specific": true,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_probability_core",
+            "title": "Probability Fundamentals for Quant Interviews",
+            "priority": "high",
+            "reason": "Probability is a listed weakness and a staple of quant interviews.",
+            "target_outcomes": [
+              "Solve conditional probability and Bayes problems",
+              "Compute expectations and variances of common distributions",
+              "Apply linearity of expectation to puzzles"
+            ],
+            "estimated_total_min": 720,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_probability_puzzles",
+            "title": "Probability Brainteasers and Markov Chains",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Solve classic quant brainteasers under time limits",
+              "Model problems with simple Markov chains"
+            ],
+            "estimated_total_min": 420,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_timed_coding",
+            "title": "Timed Coding Practice",
+            "priority": "high",
+            "reason": "Coding under time pressure is a listed weakness that directly affects interview outcomes.",
+            "target_outcomes": [
+              "Solve medium problems in under 30 minutes",
+              "Use a consistent problem-solving routine under a timer"
+            ],
+            "estimated_total_min": 720,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_mock_interviews",
+            "title": "Mock Quant Developer Interviews",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Complete timed mock sessions mixing C++ coding and probability",
+              "Communicate reasoning clearly under pressure"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_trading_engineering_context",
+            "title": "Trading Firm Engineering Structure and Latency Context",
+            "priority": "low",
+            "reason": null,
+            "target_outcomes": [
+              "Explain embedded Acceleration vs Platform engineering roles",
+              "Discuss why latency matters in market data and trading"
+            ],
+            "estimated_total_min": 180,
+            "difficulty": 2,
+            "source_claim_ids": [
+              "claim_a62e7aaa1148d486",
+              "claim_1b1bd8403dd15b38",
+              "claim_ab2cac9d69c37585"
+            ],
+            "company_specific": true,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          }
+        ]
+      }
+    ],
+    "strategist_quant_dev_quant_phd_grounded": [
+      {
+        "syllabus_version": "v1",
+        "goal_summary": "Transition from PhD to new-grad Quantitative Developer at Two Sigma in 8 weeks by closing gaps in software engineering practices and coding interviews, leveraging existing numerical methods and research strengths.",
+        "modules": [
+          {
+            "module_id": "mod_coding_interview_core",
+            "title": "Coding Interview Foundations: Data Structures and Algorithms",
+            "priority": "high",
+            "reason": "Coding interviews are a declared weakness and the primary gate for new-grad quant developer roles.",
+            "target_outcomes": [
+              "Solve medium array, hash map, and two-pointer problems within 25 minutes",
+              "Explain time and space complexity for every solution"
+            ],
+            "estimated_total_min": 720,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_coding_interview_advanced",
+            "title": "Advanced Interview Patterns: Graphs, DP, Heaps",
+            "priority": "high",
+            "reason": "Coding interviews are a declared weakness; advanced patterns are frequent in quant developer screens.",
+            "target_outcomes": [
+              "Implement BFS/DFS, Dijkstra, and heap-based solutions from scratch",
+              "Solve classic dynamic programming problems"
+            ],
+            "estimated_total_min": 720,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_swe_practices",
+            "title": "Software Engineering Practices: Testing, Version Control, Code Review",
+            "priority": "high",
+            "reason": "Software engineering practices are a declared weakness; research code habits must shift to production standards.",
+            "target_outcomes": [
+              "Write unit and property-based tests for numerical code",
+              "Use Git branching and pull-request workflows",
+              "Refactor research scripts into modular, typed packages"
+            ],
+            "estimated_total_min": 600,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_twosigma_data_as_code",
+            "title": "Two Sigma-style Data Engineering and CI/CD",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Build a CI/CD pipeline that tests data transformations",
+              "Explain treating data as code with versioned, tested datasets"
+            ],
+            "estimated_total_min": 480,
+            "difficulty": 3,
+            "source_claim_ids": [
+              "claim_2d91da088e08a9b4"
+            ],
+            "company_specific": true,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_performance_latency",
+            "title": "Performance Engineering and Latency Monitoring for Trading Systems",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Profile and optimize a hot loop in C++ or Python",
+              "Design a simple market data latency monitoring tool"
+            ],
+            "estimated_total_min": 480,
+            "difficulty": 4,
+            "source_claim_ids": [
+              "claim_db9b12a2b933be3c",
+              "claim_2ed95fa5563fd79e"
+            ],
+            "company_specific": true,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_mock_interviews",
+            "title": "Timed Mock Interviews and Project Storytelling",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Complete four timed mock coding interviews",
+              "Present PhD numerical methods research as an engineering project narrative"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          }
+        ]
+      }
+    ],
+    "strategist_quant_dev_quant_lowlat_grounded": [
+      {
+        "syllabus_version": "v1",
+        "goal_summary": "Prepare an advanced C++/networking engineer for mid-level low-latency developer roles in 6 weeks by closing probability and behavioral interview gaps and sharpening low-latency systems depth.",
+        "modules": [
+          {
+            "module_id": "mod_probability_foundations",
+            "title": "Probability for Trading Interviews",
+            "priority": "high",
+            "reason": "Probability is a declared weakness and is heavily tested in trading firm interviews.",
+            "target_outcomes": [
+              "Solve conditional probability and Bayes problems quickly",
+              "Compute expectations and variances for discrete and continuous distributions",
+              "Work through classic brainteasers such as dice, coins and random walks"
+            ],
+            "estimated_total_min": 540,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_behavioral_interviews",
+            "title": "Behavioral Interview Stories",
+            "priority": "high",
+            "reason": "Behavioral interviews are a declared weakness and serve as a gating round at trading firms.",
+            "target_outcomes": [
+              "Draft 6 STAR stories from past C++ and networking work",
+              "Deliver concise answers on conflict, failure and impact"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 2,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_lowlat_concurrency",
+            "title": "Lock-free Concurrency and Core Pinning in C++",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Implement an SPSC lock-free queue with correct memory ordering",
+              "Explain thread pinning and its deterministic latency tradeoffs"
+            ],
+            "estimated_total_min": 420,
+            "difficulty": 4,
+            "source_claim_ids": [
+              "claim_f289d64925e5b59e"
+            ],
+            "company_specific": true,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_market_data_latency",
+            "title": "Market Data Latency and Network Paths",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Discuss hardware-accelerated market data pipelines",
+              "Explain network-level latency tradeoffs between data centers"
+            ],
+            "estimated_total_min": 300,
+            "difficulty": 3,
+            "source_claim_ids": [
+              "claim_ab2cac9d69c37585",
+              "claim_1b1bd8403dd15b38",
+              "claim_334894c615216f05"
+            ],
+            "company_specific": true,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_hrt_embedded_role",
+            "title": "Understanding Embedded Acceleration Engineering Roles",
+            "priority": "low",
+            "reason": null,
+            "target_outcomes": [
+              "Explain how Acceleration teams support Algo teams",
+              "Tailor behavioral answers to embedded engineering work"
+            ],
+            "estimated_total_min": 120,
+            "difficulty": 2,
+            "source_claim_ids": [
+              "claim_a62e7aaa1148d486"
+            ],
+            "company_specific": true,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_probability_mock",
+            "title": "Probability and Mental Math Mock Drills",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Complete timed probability mock sets with at least 80% accuracy"
+            ],
+            "estimated_total_min": 240,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          }
+        ]
+      }
+    ],
+    "strategist_quant_dev_quant_career_change_grounded": [
+      {
+        "syllabus_version": "v1",
+        "goal_summary": "Career change into junior quant development in 20 weeks: close C++, data structures, and system design gaps, leveraging a mathematics strength, with low-latency trading infrastructure context.",
+        "modules": [
+          {
+            "module_id": "mod_cpp_foundations",
+            "title": "Modern C++ Foundations",
+            "priority": "high",
+            "reason": "C++ is a listed weakness and the core language for quant development.",
+            "target_outcomes": [
+              "Write idiomatic C++17 using RAII, references, and the STL",
+              "Understand memory management, pointers, and smart pointers"
+            ],
+            "estimated_total_min": 900,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_cpp_performance",
+            "title": "Performance-Oriented C++",
+            "priority": "high",
+            "reason": "Low-latency C++ skills address the C++ weakness at the level quant roles demand.",
+            "target_outcomes": [
+              "Profile and optimize C++ code",
+              "Apply cache-aware data layouts, move semantics, and templates"
+            ],
+            "estimated_total_min": 600,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_data_structures",
+            "title": "Data Structures and Algorithms",
+            "priority": "high",
+            "reason": "Data structures is a listed weakness and a staple of quant developer interviews.",
+            "target_outcomes": [
+              "Implement arrays, hash maps, heaps, trees, and graphs in C++",
+              "Solve interview-style problems with complexity analysis"
+            ],
+            "estimated_total_min": 1080,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_system_design",
+            "title": "System Design Fundamentals",
+            "priority": "high",
+            "reason": "System design is a listed weakness required for building trading infrastructure.",
+            "target_outcomes": [
+              "Design scalable services with queues, caches, and storage",
+              "Reason about latency, throughput, and trade-offs"
+            ],
+            "estimated_total_min": 720,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_lowlatency_design",
+            "title": "Low-Latency Trading Infrastructure Case Studies",
+            "priority": "medium",
+            "reason": "Applies system design to market data, latency monitoring, and performance test labs described in industry sources.",
+            "target_outcomes": [
+              "Explain market data pipelines and latency monitoring",
+              "Sketch a production-mimicking performance test environment"
+            ],
+            "estimated_total_min": 480,
+            "difficulty": 4,
+            "source_claim_ids": [
+              "claim_db9b12a2b933be3c",
+              "claim_2ed95fa5563fd79e"
+            ],
+            "company_specific": true,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_data_as_code",
+            "title": "Data Engineering and Data-as-Code Practices",
+            "priority": "low",
+            "reason": "Builds familiarity with data infrastructure and CI/CD practices used in quant firms.",
+            "target_outcomes": [
+              "Describe CI/CD applied to datasets",
+              "Build a small reproducible data pipeline"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 2,
+            "source_claim_ids": [
+              "claim_2d91da088e08a9b4"
+            ],
+            "company_specific": true,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_quant_math_bridge",
+            "title": "Applying Math to Quant Programming",
+            "priority": "low",
+            "reason": "Leverages the mathematics strength by implementing numerical and statistical routines in C++.",
+            "target_outcomes": [
+              "Implement statistics and time-series calculations in C++"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          }
+        ]
+      }
+    ],
+    "strategist_quant_dev_quant_python_grounded": [
+      {
+        "syllabus_version": "v1",
+        "goal_summary": "Prepare for Python-first mid-level Quant Developer roles in 8 weeks by closing C++, concurrency, and brainteaser gaps while leveraging pandas and statistics strengths.",
+        "modules": [
+          {
+            "module_id": "mod_cpp_foundations",
+            "title": "Modern C++ Foundations for Python Developers",
+            "priority": "high",
+            "reason": "C++ is a listed weakness and a core language in trading technology stacks.",
+            "target_outcomes": [
+              "Write idiomatic modern C++ (RAII, smart pointers, move semantics)",
+              "Translate Python data-processing code into efficient C++"
+            ],
+            "estimated_total_min": 600,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_concurrency",
+            "title": "Concurrency: Threads, Atomics, and Lock-Free Basics",
+            "priority": "high",
+            "reason": "Concurrency is a listed weakness, and trading systems rely on thread pinning and lock-free techniques for deterministic latency.",
+            "target_outcomes": [
+              "Use threads, atomics, and condition variables correctly in C++",
+              "Explain lock-free queues and core pinning tradeoffs",
+              "Contrast Python GIL, multiprocessing, and asyncio models"
+            ],
+            "estimated_total_min": 540,
+            "difficulty": 5,
+            "source_claim_ids": [
+              "claim_f289d64925e5b59e"
+            ],
+            "company_specific": true,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_brainteasers",
+            "title": "Quant Brainteasers and Probability Puzzles",
+            "priority": "high",
+            "reason": "Brainteasers are a listed weakness and a standard quant interview screen.",
+            "target_outcomes": [
+              "Solve common probability and expected-value puzzles under time pressure",
+              "Communicate reasoning clearly aloud"
+            ],
+            "estimated_total_min": 480,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_low_latency",
+            "title": "Low-Latency Systems and Market Data Concepts",
+            "priority": "medium",
+            "reason": "Latency optimization is central to speed-sensitive trading firms.",
+            "target_outcomes": [
+              "Explain market data pipelines and sources of latency",
+              "Discuss hardware and network approaches to reducing latency"
+            ],
+            "estimated_total_min": 300,
+            "difficulty": 3,
+            "source_claim_ids": [
+              "claim_ab2cac9d69c37585",
+              "claim_1b1bd8403dd15b38",
+              "claim_e1a2e38c7efef1d0"
+            ],
+            "company_specific": true,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_python_perf",
+            "title": "High-Performance Python for Quant Dev",
+            "priority": "medium",
+            "reason": "Target roles are Python-first; builds on pandas strength.",
+            "target_outcomes": [
+              "Profile and vectorize pandas/NumPy code",
+              "Use Cython or pybind11 to bind C++ to Python"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_mock_interviews",
+            "title": "Mixed Mock Interviews",
+            "priority": "low",
+            "reason": null,
+            "target_outcomes": [
+              "Complete timed mocks combining coding, concurrency, and puzzles"
+            ],
+            "estimated_total_min": 240,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          }
+        ]
+      }
+    ],
+    "strategist_product_manager_pm_apm_grounded": [
+      {
+        "syllabus_version": "v1",
+        "goal_summary": "Prepare a beginner for Associate Product Manager programs (Google target) in 12 weeks by closing gaps in product sense, estimation, and execution interviews, while leveraging communication and SQL strengths for behavioral and metrics rounds.",
+        "modules": [
+          {
+            "module_id": "mod_product_sense",
+            "title": "Product Sense Framework Foundations",
+            "priority": "high",
+            "reason": "Product sense is a listed weakness and a core APM interview round.",
+            "target_outcomes": [
+              "Apply the six-step framework: clarify, strategy, users, pain points, solutions, MVP",
+              "Connect each step so the recommendation feels inevitable",
+              "Complete 10 timed product design mocks"
+            ],
+            "estimated_total_min": 900,
+            "difficulty": 3,
+            "source_claim_ids": [
+              "claim_bda5416f380371d2"
+            ],
+            "company_specific": false,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_estimation",
+            "title": "Estimation and Market Sizing Drills",
+            "priority": "high",
+            "reason": "Estimation questions are a listed weakness frequently asked in APM loops.",
+            "target_outcomes": [
+              "Structure top-down and bottom-up estimates",
+              "Sanity-check assumptions aloud",
+              "Solve 15 estimation prompts under 10 minutes each"
+            ],
+            "estimated_total_min": 600,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_execution",
+            "title": "Execution Interviews: Metrics, Goals, and Tradeoffs",
+            "priority": "high",
+            "reason": "Execution interviews are a listed weakness; SQL strength can be leveraged for metrics reasoning.",
+            "target_outcomes": [
+              "Define north-star and guardrail metrics",
+              "Diagnose metric drops with a root-cause structure",
+              "Make and defend prioritization tradeoffs"
+            ],
+            "estimated_total_min": 780,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_behavioral",
+            "title": "Behavioral Stories with STAR and Deep Follow-ups",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Build 6 STAR stories from projects and school",
+              "Prepare for multiple layers of follow-up beyond STAR"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 2,
+            "source_claim_ids": [
+              "claim_159e39f6f5e3817e"
+            ],
+            "company_specific": false,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_google_apm",
+            "title": "Google APM Loop Preparation",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Understand Google's longer 4-6 week process and hiring committee review",
+              "Practice Google-style product design and estimation mocks"
+            ],
+            "estimated_total_min": 480,
+            "difficulty": 3,
+            "source_claim_ids": [
+              "claim_b99e19b0c1f05781"
+            ],
+            "company_specific": true,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_mock_loops",
+            "title": "Full Mock Interview Loops",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Complete 4 full mock loops across product sense, estimation, execution, and behavioral",
+              "Iterate on feedback"
+            ],
+            "estimated_total_min": 480,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_pm_fundamentals",
+            "title": "PM Role and Product Strategy Basics",
+            "priority": "low",
+            "reason": null,
+            "target_outcomes": [
+              "Explain what a PM does day to day",
+              "Analyze 5 products' strategy and business models"
+            ],
+            "estimated_total_min": 240,
+            "difficulty": 2,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "knowledge_node_ids": []
+          }
+        ]
+      }
+    ],
+    "strategist_product_manager_pm_eng_to_pm_grounded": [
+      {
+        "syllabus_version": "v1",
+        "goal_summary": "Transition from engineer to mid-level Product Manager in 10 weeks by closing gaps in product sense, metrics and analytics, and behavioral interviews while leveraging technical depth.",
+        "modules": [
+          {
+            "module_id": "mod_product_sense",
+            "title": "Product Sense and Product Design Frameworks",
+            "priority": "high",
+            "reason": "Product sense is a listed weakness and core to every PM interview loop.",
+            "target_outcomes": [
+              "Apply a structured framework to product design questions",
+              "Identify user segments, pain points, and prioritize solutions",
+              "Articulate product vision and tradeoffs"
+            ],
+            "estimated_total_min": 720,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_metrics",
+            "title": "Metrics, Analytics, and A/B Testing",
+            "priority": "high",
+            "reason": "Metrics and analytics is a listed weakness; execution and A/B testing questions are standard in PM interviews.",
+            "target_outcomes": [
+              "Define north-star and guardrail metrics for a product",
+              "Diagnose metric drops with root-cause analysis",
+              "Design and interpret A/B tests"
+            ],
+            "estimated_total_min": 660,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_behavioral",
+            "title": "Behavioral Interviews and STAR Storytelling",
+            "priority": "high",
+            "reason": "Behavioral interviews are a listed weakness; the engineer-to-PM story must be told convincingly.",
+            "target_outcomes": [
+              "Build a bank of 8-10 STAR stories framed around PM competencies",
+              "Handle multiple layers of follow-up beyond STAR",
+              "Tell a compelling engineer-to-PM transition narrative"
+            ],
+            "estimated_total_min": 540,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_ai_pm",
+            "title": "AI Product Strategy Questions",
+            "priority": "medium",
+            "reason": "AI PM questions are increasingly standard across PM loops.",
+            "target_outcomes": [
+              "Discuss AI strategy, safety tradeoffs, and competitive positioning",
+              "Explain how you have used AI at work and would integrate it into products"
+            ],
+            "estimated_total_min": 300,
+            "difficulty": 3,
+            "source_claim_ids": [
+              "claim_8da31f4acc3289d0"
+            ],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_technical_pm",
+            "title": "Leveraging Technical Depth in PM Interviews",
+            "priority": "low",
+            "reason": "Builds on existing strengths in technical depth and system design.",
+            "target_outcomes": [
+              "Answer technical PM questions by translating engineering tradeoffs into product impact"
+            ],
+            "estimated_total_min": 180,
+            "difficulty": 2,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_mocks",
+            "title": "Full Mock PM Interview Loops",
+            "priority": "medium",
+            "reason": "Integrates product sense, metrics, and behavioral practice under realistic conditions.",
+            "target_outcomes": [
+              "Complete at least four timed mock interviews across question types",
+              "Iterate on feedback to close remaining gaps"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          }
+        ]
+      }
+    ],
+    "strategist_product_manager_pm_senior_grounded": [
+      {
+        "syllabus_version": "v1",
+        "goal_summary": "Prepare for a Senior PM loop at Meta in 6 weeks by closing gaps in strategy questions and case interviews, building on roadmapping and stakeholder strengths.",
+        "modules": [
+          {
+            "module_id": "mod_strategy",
+            "title": "Product Strategy Question Mastery",
+            "priority": "high",
+            "reason": "Strategy questions are a declared weakness and central to senior PM loops.",
+            "target_outcomes": [
+              "Structure market-entry, competitive, and growth strategy answers",
+              "Articulate trade-offs and long-term vision at senior scope"
+            ],
+            "estimated_total_min": 480,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_cases",
+            "title": "Case Interview Drills",
+            "priority": "high",
+            "reason": "Case interviews are a declared weakness requiring repeated structured practice.",
+            "target_outcomes": [
+              "Apply a clarify-strategy-users-pain points-solutions-MVP flow to cases",
+              "Complete timed mock cases with specific, connected reasoning"
+            ],
+            "estimated_total_min": 480,
+            "difficulty": 4,
+            "source_claim_ids": [
+              "claim_bda5416f380371d2"
+            ],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_meta_product_sense",
+            "title": "Meta Product Sense and AI Product Sense Prep",
+            "priority": "high",
+            "reason": "Meta is the target company and its product sense round directly exercises strategy and case skills.",
+            "target_outcomes": [
+              "Practice Meta-style product sense prompts including AI products",
+              "Deliver recommendations that follow inevitably from prior steps"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 4,
+            "source_claim_ids": [
+              "claim_bda5416f380371d2"
+            ],
+            "company_specific": true,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_level_stories",
+            "title": "Senior-Level Positioning and Story Bank",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Calibrate stories to senior scope",
+              "Leverage roadmapping and stakeholder strengths in behavioral answers"
+            ],
+            "estimated_total_min": 240,
+            "difficulty": 3,
+            "source_claim_ids": [
+              "claim_6f4355b15ab709c8"
+            ],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_metrics_ab",
+            "title": "Metrics and A/B Testing Refresher",
+            "priority": "low",
+            "reason": null,
+            "target_outcomes": [
+              "Define success metrics and interpret experiment results"
+            ],
+            "estimated_total_min": 180,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          }
+        ]
+      }
+    ],
+    "strategist_product_manager_pm_platform_grounded": [
+      {
+        "syllabus_version": "v1",
+        "goal_summary": "Prepare for mid-level Platform PM interviews in 8 weeks by closing product sense and execution gaps while leveraging API and developer-experience strengths.",
+        "modules": [
+          {
+            "module_id": "mod_product_sense",
+            "title": "Product Sense Framework Foundations",
+            "priority": "high",
+            "reason": "Product sense is a listed weakness and a core PM interview round.",
+            "target_outcomes": [
+              "Apply the clarify-strategy-users-pain points-solutions-MVP framework with specificity",
+              "Connect each step so the recommendation feels inevitable"
+            ],
+            "estimated_total_min": 600,
+            "difficulty": 3,
+            "source_claim_ids": [
+              "claim_bda5416f380371d2"
+            ],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_platform_product_sense",
+            "title": "Product Sense for Platform and Developer Products",
+            "priority": "high",
+            "reason": "Extends the product sense weakness into platform contexts, using API and developer-experience strengths.",
+            "target_outcomes": [
+              "Design developer-facing platform products with clear user segmentation",
+              "Articulate ecosystem and API tradeoffs in product sense answers"
+            ],
+            "estimated_total_min": 480,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_execution",
+            "title": "Execution Interviews: Metrics, Goals, and Tradeoffs",
+            "priority": "high",
+            "reason": "Execution interviews are a listed weakness.",
+            "target_outcomes": [
+              "Define north-star and guardrail metrics for platform products",
+              "Diagnose metric drops with structured root-cause analysis",
+              "Make prioritization and launch tradeoff decisions"
+            ],
+            "estimated_total_min": 600,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_execution_mocks",
+            "title": "Execution and Product Sense Mock Interviews",
+            "priority": "medium",
+            "reason": "Timed practice consolidates both weakness areas.",
+            "target_outcomes": [
+              "Complete timed mock rounds with feedback",
+              "Track and fix recurring answer gaps"
+            ],
+            "estimated_total_min": 480,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_ai_pm",
+            "title": "AI Product Strategy Questions",
+            "priority": "medium",
+            "reason": "AI strategy and safety tradeoff questions are now common in PM loops.",
+            "target_outcomes": [
+              "Answer AI strategy, safety tradeoff, and positioning questions",
+              "Explain how you have used AI at work"
+            ],
+            "estimated_total_min": 300,
+            "difficulty": 3,
+            "source_claim_ids": [
+              "claim_8da31f4acc3289d0"
+            ],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_behavioral",
+            "title": "Behavioral Stories with STAR and Deep Follow-ups",
+            "priority": "medium",
+            "reason": "Behavioral rounds need STAR stories that survive layered follow-up.",
+            "target_outcomes": [
+              "Build 6-8 STAR stories from platform work",
+              "Prepare deeper follow-up layers per story"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 2,
+            "source_claim_ids": [
+              "claim_159e39f6f5e3817e"
+            ],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_technical_platform",
+            "title": "Platform Technical Fluency Refresh",
+            "priority": "low",
+            "reason": "Keeps API and developer-experience strengths sharp for technical discussions.",
+            "target_outcomes": [
+              "Discuss API versioning, reliability, and SDK design tradeoffs concisely"
+            ],
+            "estimated_total_min": 180,
+            "difficulty": 2,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          }
+        ]
+      }
+    ],
+    "strategist_product_manager_pm_growth_grounded": [
+      {
+        "syllabus_version": "v1",
+        "goal_summary": "Prepare for mid-level Growth PM interviews in 8 weeks by closing product sense and estimation gaps while leveraging experimentation and SQL strengths.",
+        "modules": [
+          {
+            "module_id": "mod_product_sense",
+            "title": "Product Sense Foundations and Frameworks",
+            "priority": "high",
+            "reason": "Product sense is a listed weakness and a core Growth PM interview round.",
+            "target_outcomes": [
+              "Apply a structured framework to product design questions",
+              "Identify user segments, pain points, and prioritize solutions"
+            ],
+            "estimated_total_min": 720,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_growth_product_sense",
+            "title": "Growth-Focused Product Sense Drills",
+            "priority": "high",
+            "reason": "Extends the product sense weakness into growth loops, activation, and retention cases.",
+            "target_outcomes": [
+              "Diagnose funnel problems and propose growth levers",
+              "Answer improve-a-metric product questions"
+            ],
+            "estimated_total_min": 540,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_estimation",
+            "title": "Estimation and Market Sizing Questions",
+            "priority": "high",
+            "reason": "Estimation questions are a listed weakness.",
+            "target_outcomes": [
+              "Structure top-down and bottom-up estimates",
+              "Sanity-check assumptions and communicate math clearly"
+            ],
+            "estimated_total_min": 540,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_metrics_ab",
+            "title": "Metrics and A/B Testing Interview Polish",
+            "priority": "medium",
+            "reason": "Convert experimentation and SQL strengths into crisp interview answers.",
+            "target_outcomes": [
+              "Define north-star and guardrail metrics",
+              "Answer A/B testing interview questions confidently"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 2,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_behavioral",
+            "title": "Behavioral Stories with STAR and Level Targeting",
+            "priority": "medium",
+            "reason": "Behavioral rounds require level-appropriate stories structured with STAR and deeper follow-ups.",
+            "target_outcomes": [
+              "Prepare 6-8 STAR stories scoped to mid-level PM",
+              "Handle multi-layer follow-up questions"
+            ],
+            "estimated_total_min": 420,
+            "difficulty": 2,
+            "source_claim_ids": [
+              "claim_159e39f6f5e3817e",
+              "claim_6f4355b15ab709c8"
+            ],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_ai_pm",
+            "title": "AI Product Questions for PM Loops",
+            "priority": "low",
+            "reason": "AI strategy and usage questions are now common in PM loops.",
+            "target_outcomes": [
+              "Articulate how you use AI at work",
+              "Discuss AI integration tradeoffs in product development"
+            ],
+            "estimated_total_min": 240,
+            "difficulty": 3,
+            "source_claim_ids": [
+              "claim_8da31f4acc3289d0"
+            ],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_mock",
+            "title": "Mixed Mock Interviews",
+            "priority": "medium",
+            "reason": "Integrate all rounds under timed conditions.",
+            "target_outcomes": [
+              "Complete timed mocks across product sense, estimation, and metrics"
+            ],
+            "estimated_total_min": 480,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          }
+        ]
+      }
+    ],
+    "strategist_product_manager_pm_career_change_grounded": [
+      {
+        "syllabus_version": "v1",
+        "goal_summary": "Career change into junior Product Manager in 16 weeks: close gaps in metrics/analytics, technical fundamentals, and execution interviews while leveraging customer research strength for product sense and behavioral rounds.",
+        "modules": [
+          {
+            "module_id": "mod_metrics",
+            "title": "Metrics and Analytics for PMs",
+            "priority": "high",
+            "reason": "Metrics and analytics is a declared weakness and core to PM interviews.",
+            "target_outcomes": [
+              "Define north star and guardrail metrics for a product",
+              "Diagnose metric drops with structured root-cause analysis",
+              "Explain funnel, retention, and cohort analysis"
+            ],
+            "estimated_total_min": 600,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_ab_testing",
+            "title": "A/B Testing and Experimentation",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Design an A/B test with hypothesis, sample size, and success metrics",
+              "Interpret experiment results and pitfalls"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 3,
+            "source_claim_ids": [
+              "claim_ede61a0918debb61"
+            ],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_tech",
+            "title": "Technical Fundamentals for PMs",
+            "priority": "high",
+            "reason": "Technical fundamentals is a declared weakness; beginners need them to work with engineers and pass technical rounds.",
+            "target_outcomes": [
+              "Explain client-server architecture, APIs, and databases",
+              "Discuss basic system design tradeoffs at a PM level",
+              "Understand basics of how AI/ML products work"
+            ],
+            "estimated_total_min": 600,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_execution",
+            "title": "Execution Interview Mastery",
+            "priority": "high",
+            "reason": "Execution interviews are a declared weakness and a standard PM loop round.",
+            "target_outcomes": [
+              "Answer prioritization and tradeoff questions with a clear framework",
+              "Handle goal-setting and launch-decision questions",
+              "Complete 5 timed execution mock answers"
+            ],
+            "estimated_total_min": 600,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_product_sense",
+            "title": "Product Sense Framework",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Apply clarify-strategy-users-pain points-solutions-MVP framework with specificity",
+              "Leverage customer research strength in user segmentation"
+            ],
+            "estimated_total_min": 480,
+            "difficulty": 3,
+            "source_claim_ids": [
+              "claim_bda5416f380371d2"
+            ],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_behavioral",
+            "title": "Behavioral Interviews and Career-Change Story",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Craft a compelling career-change narrative",
+              "Prepare 6 STAR stories highlighting customer research"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 2,
+            "source_claim_ids": [
+              "claim_0ccca7755fa2fc78"
+            ],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_takehome",
+            "title": "PM Take-Home Assignments and Product Vision",
+            "priority": "low",
+            "reason": null,
+            "target_outcomes": [
+              "Complete one take-home assignment end-to-end",
+              "Write a concise product vision statement"
+            ],
+            "estimated_total_min": 300,
+            "difficulty": 3,
+            "source_claim_ids": [
+              "claim_ede61a0918debb61"
+            ],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_mocks",
+            "title": "Full Mock Interview Loops and Process Planning",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Complete 4 full mock loops across metrics, execution, and product sense",
+              "Plan for a 3-6 week interview process timeline"
+            ],
+            "estimated_total_min": 480,
+            "difficulty": 4,
+            "source_claim_ids": [
+              "claim_b99e19b0c1f05781"
+            ],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          }
+        ]
+      }
+    ],
+    "strategist_data_scientist_ds_ng_grounded": [
+      {
+        "syllabus_version": "v1",
+        "goal_summary": "Prepare for new-grad Data Scientist interviews in 10 weeks by closing SQL, product case, and ML fundamentals gaps while leveraging Python and statistics strengths.",
+        "modules": [
+          {
+            "module_id": "mod_sql_interviews",
+            "title": "SQL Interview Mastery",
+            "priority": "high",
+            "reason": "SQL interviews are a listed weakness and a core screening round for data scientist roles.",
+            "target_outcomes": [
+              "Write joins, aggregations, and window functions fluently",
+              "Solve timed SQL interview problems under 20 minutes"
+            ],
+            "estimated_total_min": 900,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_product_case",
+            "title": "Product Case and Metrics Questions",
+            "priority": "high",
+            "reason": "Product case questions are a listed weakness and commonly assessed in data scientist interviews.",
+            "target_outcomes": [
+              "Define success metrics for a product feature",
+              "Structure A/B test design and diagnose metric changes"
+            ],
+            "estimated_total_min": 780,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_ml_fundamentals",
+            "title": "Machine Learning Fundamentals",
+            "priority": "high",
+            "reason": "Machine learning fundamentals are a listed weakness and frequently probed in DS technical rounds.",
+            "target_outcomes": [
+              "Explain bias-variance, regularization, and evaluation metrics",
+              "Compare linear models, trees, and ensembles with trade-offs"
+            ],
+            "estimated_total_min": 900,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_python_coding",
+            "title": "Python Coding Drills for DS Interviews",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Solve hash map, string, sorting, and sliding window problems in Python"
+            ],
+            "estimated_total_min": 480,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_stats_refresh",
+            "title": "Applied Statistics Interview Refresh",
+            "priority": "low",
+            "reason": null,
+            "target_outcomes": [
+              "Answer probability and hypothesis testing questions crisply"
+            ],
+            "estimated_total_min": 300,
+            "difficulty": 2,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_mock_interviews",
+            "title": "Mixed Mock Interviews",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Complete full mock loops covering SQL, case, and ML rounds"
+            ],
+            "estimated_total_min": 480,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          }
+        ]
+      }
+    ],
+    "strategist_data_scientist_ds_mid_grounded": [
+      {
+        "syllabus_version": "v1",
+        "goal_summary": "Prepare for a Senior Data Scientist loop (Netflix target) over 8 weeks by closing coding interview and ML system design gaps while leveraging experimentation and causal inference strengths.",
+        "modules": [
+          {
+            "module_id": "mod_coding_core",
+            "title": "Coding Interview Patterns: Hash Maps, Strings, Sliding Window",
+            "priority": "high",
+            "reason": "Coding interviews are a declared weakness and a standard gate in senior DS loops.",
+            "target_outcomes": [
+              "Solve medium hash map and string problems in under 25 minutes",
+              "Apply sliding window templates fluently"
+            ],
+            "estimated_total_min": 540,
+            "difficulty": 3,
+            "source_claim_ids": [
+              "claim_d954b9eabc940c37"
+            ],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_coding_dp_sort",
+            "title": "Coding Interview Patterns: Sorting, Parsing, Dynamic Programming",
+            "priority": "high",
+            "reason": "Extends the coding interview weakness into harder commonly tested topics.",
+            "target_outcomes": [
+              "Solve classic DP problems with clear recurrence explanations",
+              "Implement parsing and sorting-based solutions cleanly"
+            ],
+            "estimated_total_min": 480,
+            "difficulty": 4,
+            "source_claim_ids": [
+              "claim_d954b9eabc940c37"
+            ],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_sql_pandas",
+            "title": "SQL and Pandas Data Manipulation Drills",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Write window-function SQL queries under time pressure",
+              "Perform grouped transformations in pandas"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_mlsd_foundations",
+            "title": "ML System Design Foundations",
+            "priority": "high",
+            "reason": "Machine learning system design is a declared weakness and core to senior-level evaluation.",
+            "target_outcomes": [
+              "Structure an ML design answer: problem framing, data, features, model, evaluation, serving, monitoring",
+              "Discuss offline vs online metrics tradeoffs"
+            ],
+            "estimated_total_min": 540,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_mlsd_recsys",
+            "title": "Recommendation and Personalization System Design (Netflix-style)",
+            "priority": "high",
+            "reason": "Recommendation systems are central to Netflix and directly address the ML system design weakness.",
+            "target_outcomes": [
+              "Design a two-stage candidate generation and ranking recommender",
+              "Connect A/B testing strengths to online evaluation of recommenders"
+            ],
+            "estimated_total_min": 420,
+            "difficulty": 4,
+            "source_claim_ids": [
+              "claim_ee3724bf1df4af05"
+            ],
+            "company_specific": true,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_mock_interviews",
+            "title": "Timed Mock Coding and Design Interviews",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Complete 4 timed mock coding interviews with verbal reasoning",
+              "Complete 2 mock ML design interviews"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 4,
+            "source_claim_ids": [
+              "claim_8e8ff93f719709cb"
+            ],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_experimentation_polish",
+            "title": "Experimentation and Causal Inference Case Polish",
+            "priority": "low",
+            "reason": null,
+            "target_outcomes": [
+              "Deliver concise senior-level answers on experiment design and causal pitfalls"
+            ],
+            "estimated_total_min": 180,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          }
+        ]
+      }
+    ],
+    "strategist_data_scientist_ds_analyst_to_ds_grounded": [
+      {
+        "syllabus_version": "v1",
+        "goal_summary": "Transition from analyst to junior Data Scientist in 14 weeks by closing gaps in statistics, machine learning fundamentals, and Python, building on existing SQL and dashboard strengths.",
+        "modules": [
+          {
+            "module_id": "mod_python_foundations",
+            "title": "Python for Data Analysis",
+            "priority": "high",
+            "reason": "Python is a listed weakness and a prerequisite for statistics and ML work.",
+            "target_outcomes": [
+              "Write clean Python functions and scripts",
+              "Manipulate data with pandas and NumPy",
+              "Translate SQL queries into pandas operations"
+            ],
+            "estimated_total_min": 900,
+            "difficulty": 2,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_statistics_core",
+            "title": "Applied Statistics and Inference",
+            "priority": "high",
+            "reason": "Statistics is a listed weakness and central to data scientist interviews.",
+            "target_outcomes": [
+              "Explain distributions, sampling, and the central limit theorem",
+              "Run and interpret hypothesis tests and confidence intervals",
+              "Design and analyze A/B tests"
+            ],
+            "estimated_total_min": 1000,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_ml_fundamentals",
+            "title": "Machine Learning Fundamentals",
+            "priority": "high",
+            "reason": "Machine learning fundamentals are a listed weakness and core to the target role.",
+            "target_outcomes": [
+              "Train and evaluate regression and classification models in scikit-learn",
+              "Explain bias-variance tradeoff, overfitting, and cross-validation",
+              "Choose appropriate evaluation metrics"
+            ],
+            "estimated_total_min": 1100,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_coding_interview_patterns",
+            "title": "Python Coding Interview Patterns",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Solve hash map, string, sorting, and sliding window problems in Python",
+              "Communicate problem-solving approach clearly"
+            ],
+            "estimated_total_min": 600,
+            "difficulty": 3,
+            "source_claim_ids": [
+              "claim_d954b9eabc940c37",
+              "claim_ee3724bf1df4af05"
+            ],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_portfolio_project",
+            "title": "End-to-End Data Science Portfolio Project",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Complete a project from SQL extraction to ML model and dashboard",
+              "Present findings in a concise write-up"
+            ],
+            "estimated_total_min": 800,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_mock_interviews",
+            "title": "Data Science Mock Interviews",
+            "priority": "low",
+            "reason": null,
+            "target_outcomes": [
+              "Practice statistics, ML, and SQL interview questions under time pressure"
+            ],
+            "estimated_total_min": 300,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          }
+        ]
+      }
+    ],
+    "strategist_data_scientist_ds_phd_grounded": [
+      {
+        "syllabus_version": "v1",
+        "goal_summary": "Transition from PhD to an industry new-grad Data Scientist role in 8 weeks by closing the gaps in SQL interviews, product case questions, and behavioral interviews, while leveraging existing research and modeling strengths.",
+        "modules": [
+          {
+            "module_id": "mod_sql_foundations",
+            "title": "SQL Interview Foundations: Joins, Aggregations, Window Functions",
+            "priority": "high",
+            "reason": "SQL interviews are a declared weakness and a core screen for data science roles.",
+            "target_outcomes": [
+              "Write correct multi-table joins and GROUP BY aggregations under time pressure",
+              "Apply window functions (ROW_NUMBER, LAG, running totals) to interview-style problems"
+            ],
+            "estimated_total_min": 480,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_sql_timed_practice",
+            "title": "Timed SQL Interview Drills",
+            "priority": "high",
+            "reason": "Moving from knowing SQL to performing it live in interviews directly addresses the SQL interview weakness.",
+            "target_outcomes": [
+              "Solve medium/hard SQL problems within 15-20 minutes",
+              "Explain query logic and edge cases aloud"
+            ],
+            "estimated_total_min": 420,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_product_metrics",
+            "title": "Product Sense and Metrics Design",
+            "priority": "high",
+            "reason": "Product case questions are a declared weakness, and a PhD background rarely covers product metrics.",
+            "target_outcomes": [
+              "Define north-star and guardrail metrics for a product",
+              "Diagnose metric changes with a structured framework"
+            ],
+            "estimated_total_min": 420,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_product_case_ab",
+            "title": "Product Case Practice: A/B Testing and Experiment Design",
+            "priority": "high",
+            "reason": "Experimentation is a common product case theme and turns the modeling strength into answers to product case questions.",
+            "target_outcomes": [
+              "Design an A/B test covering power, duration, and pitfalls",
+              "Deliver end-to-end product case answers in mock format"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_behavioral_stories",
+            "title": "Behavioral Interviews: Translating Research into Industry Stories",
+            "priority": "high",
+            "reason": "Behavioral interviews are a declared weakness. PhD candidates need to reframe academic work into impact-focused STAR stories.",
+            "target_outcomes": [
+              "Draft 6-8 STAR stories covering conflict, failure, impact, and leadership",
+              "Deliver a concise 2-minute 'tell me about yourself' pitch"
+            ],
+            "estimated_total_min": 300,
+            "difficulty": 2,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_behavioral_mocks",
+            "title": "Behavioral Mock Interviews and Feedback",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Complete at least 3 behavioral mock interviews",
+              "Refine stories based on feedback"
+            ],
+            "estimated_total_min": 240,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_python_data_coding",
+            "title": "Python/Pandas Data Manipulation and Coding Screens",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Solve hash map, string, and sorting problems in Python",
+              "Perform data wrangling tasks in pandas quickly"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_stats_ml_refresh",
+            "title": "Applied Stats and ML Interview Refresh",
+            "priority": "low",
+            "reason": null,
+            "target_outcomes": [
+              "Explain bias-variance, regularization, and evaluation metrics concisely for industry audiences"
+            ],
+            "estimated_total_min": 240,
+            "difficulty": 2,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_full_mock_loop",
+            "title": "Full Data Science Mock Interview Loop",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Complete a combined SQL, product case, and behavioral mock loop",
+              "Identify remaining gaps for the final week"
+            ],
+            "estimated_total_min": 300,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          }
+        ]
+      }
+    ],
+    "strategist_mle_mle_ng_grounded": [
+      {
+        "syllabus_version": "v1",
+        "goal_summary": "Prepare for new-grad Machine Learning Engineer interviews over 12 weeks by closing gaps in ML system design, coding interviews, and behavioral interviews, building on PyTorch and Python strengths.",
+        "modules": [
+          {
+            "module_id": "mod_coding_foundations",
+            "title": "Coding Interview Foundations: Core Data Structures and Patterns",
+            "priority": "high",
+            "reason": "Coding interviews are a listed weakness and a gating round in MLE interviews at top companies.",
+            "target_outcomes": [
+              "Solve medium array, string, hash map, and stack problems in Python within 30 minutes",
+              "Apply two-pointer, sliding window, and stack patterns (e.g., path simplification)"
+            ],
+            "estimated_total_min": 720,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_coding_graphs_dp",
+            "title": "Graphs, Grid DFS, and Memoization for Hard Problems",
+            "priority": "high",
+            "reason": "Hard grid/graph problems like Longest Increasing Path appear in FAANG MLE coding rounds, which target the coding interview weakness.",
+            "target_outcomes": [
+              "Implement BFS/DFS on grids and graphs",
+              "Solve Longest Increasing Path in a Matrix using DFS with memoization",
+              "Explain the time and space complexity of the solutions"
+            ],
+            "estimated_total_min": 720,
+            "difficulty": 4,
+            "source_claim_ids": [
+              "claim_49ccb230c27f207a"
+            ],
+            "company_specific": true,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_mock_coding",
+            "title": "Timed Mock Coding Interviews",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Complete 8 timed mock problems while communicating reasoning aloud",
+              "Handle edge cases and testing under time pressure"
+            ],
+            "estimated_total_min": 480,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_ml_sysdesign_framework",
+            "title": "ML System Design Framework",
+            "priority": "high",
+            "reason": "ML system design is a listed weakness and a core MLE interview round.",
+            "target_outcomes": [
+              "Apply a structured framework: problem framing, metrics, data, features, model, serving, monitoring",
+              "Discuss offline and online evaluation trade-offs"
+            ],
+            "estimated_total_min": 600,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_ml_sysdesign_cases",
+            "title": "ML System Design Case Studies (Recommendation, Search, Ranking)",
+            "priority": "high",
+            "reason": "Practicing end-to-end cases addresses the ML system design weakness directly, as expected for FAANG MLE loops.",
+            "target_outcomes": [
+              "Design a recommendation system and a search ranking system end to end",
+              "Address scaling, latency, feature stores, and model retraining"
+            ],
+            "estimated_total_min": 720,
+            "difficulty": 4,
+            "source_claim_ids": [
+              "claim_902bf4b374abaa53"
+            ],
+            "company_specific": true,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_ml_fundamentals",
+            "title": "ML Fundamentals Refresh for Interviews",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Explain bias-variance, regularization, loss functions, and evaluation metrics",
+              "Connect PyTorch training practices to theory questions"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_behavioral",
+            "title": "Behavioral Interview Story Bank (STAR)",
+            "priority": "high",
+            "reason": "Behavioral interviews are a listed weakness and are scored in every loop.",
+            "target_outcomes": [
+              "Write 8 STAR stories covering conflict, failure, impact, and learning",
+              "Deliver each story in under 3 minutes"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 2,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_full_mock",
+            "title": "Full Mock Interview Loops",
+            "priority": "low",
+            "reason": null,
+            "target_outcomes": [
+              "Complete 2 full mock loops (coding, ML design, behavioral)",
+              "Identify and fix remaining gaps"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          }
+        ]
+      }
+    ],
+    "strategist_mle_mle_mid_grounded": [
+      {
+        "syllabus_version": "v1",
+        "goal_summary": "Transition from backend to mid-level Machine Learning Engineer in 10 weeks by closing deep learning fundamentals and ML system design gaps, leveraging distributed systems and Python strengths, and practicing FAANG-style MLE coding interviews.",
+        "modules": [
+          {
+            "module_id": "mod_ml_foundations",
+            "title": "Core ML Concepts Refresher",
+            "priority": "high",
+            "reason": "Deep learning fundamentals is a listed weakness and requires a solid base in classical ML concepts first.",
+            "target_outcomes": [
+              "Explain bias-variance, regularization, and evaluation metrics",
+              "Train and evaluate baseline models in scikit-learn"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 2,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_dl_fundamentals",
+            "title": "Deep Learning Fundamentals",
+            "priority": "high",
+            "reason": "Deep learning fundamentals is a declared weakness central to MLE interviews.",
+            "target_outcomes": [
+              "Derive backpropagation for an MLP",
+              "Implement and train CNN and transformer basics in PyTorch",
+              "Diagnose overfitting and optimization issues"
+            ],
+            "estimated_total_min": 900,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_ml_system_design",
+            "title": "ML System Design Foundations",
+            "priority": "high",
+            "reason": "ML system design is a declared weakness and a core MLE interview round.",
+            "target_outcomes": [
+              "Structure an ML design answer from problem framing to monitoring",
+              "Design feature pipelines, training, and serving architectures",
+              "Discuss offline vs online evaluation and drift"
+            ],
+            "estimated_total_min": 840,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_ml_design_uber_cases",
+            "title": "ML Design Case Drills (ETA, Pricing, Recommendations)",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Practice end-to-end designs for ranking, ETA prediction, and fraud detection",
+              "Leverage distributed systems strength in serving scale discussions"
+            ],
+            "estimated_total_min": 540,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_faang_mle_coding",
+            "title": "FAANG MLE Coding Interview Drills",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Solve Longest Increasing Path in a Matrix with DFS plus memoization",
+              "Solve Simplify Path with a stack",
+              "Complete medium/hard problems in 30-40 minutes"
+            ],
+            "estimated_total_min": 480,
+            "difficulty": 3,
+            "source_claim_ids": [
+              "claim_49ccb230c27f207a",
+              "claim_902bf4b374abaa53"
+            ],
+            "company_specific": true,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_mle_mock_interviews",
+            "title": "Mock MLE Interviews and Behavioral Framing",
+            "priority": "low",
+            "reason": null,
+            "target_outcomes": [
+              "Complete two full mock loops",
+              "Craft a backend-to-ML transition narrative"
+            ],
+            "estimated_total_min": 300,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          }
+        ]
+      }
+    ],
+    "strategist_mle_mle_senior_grounded": [
+      {
+        "syllabus_version": "v1",
+        "goal_summary": "Prepare for a Senior ML Engineer loop in 6 weeks by closing gaps in ML system design at scale and leadership stories, plus FAANG-style coding practice.",
+        "modules": [
+          {
+            "module_id": "mod_ml_sysdesign",
+            "title": "ML System Design at Scale",
+            "priority": "high",
+            "reason": "ML system design at scale is a declared weakness and a core senior MLE interview round.",
+            "target_outcomes": [
+              "Design end-to-end ML systems (recommendation, ranking, fraud) with serving, monitoring, and retraining",
+              "Reason about latency, throughput, and cost trade-offs at scale",
+              "Deliver a structured 45-minute design walkthrough"
+            ],
+            "estimated_total_min": 720,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_leadership_stories",
+            "title": "Senior Leadership Stories",
+            "priority": "high",
+            "reason": "Leadership stories are a declared weakness and senior loops weigh behavioral leadership signal heavily.",
+            "target_outcomes": [
+              "Draft 6-8 STAR stories covering influence, conflict, mentorship, and ambiguity",
+              "Rehearse concise delivery with measurable impact"
+            ],
+            "estimated_total_min": 420,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_faang_mle_coding",
+            "title": "FAANG MLE Coding Drills (Matrix DFS, Path Parsing)",
+            "priority": "medium",
+            "reason": "Postmortem reports FAANG MLE loops include problems like Longest Increasing Path in a Matrix and Simplify Path.",
+            "target_outcomes": [
+              "Solve memoized DFS on grids such as Longest Increasing Path",
+              "Solve stack-based string problems such as Simplify Path"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 4,
+            "source_claim_ids": [
+              "claim_49ccb230c27f207a",
+              "claim_902bf4b374abaa53"
+            ],
+            "company_specific": true,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_mock_loop",
+            "title": "Full Mock Senior MLE Loop",
+            "priority": "low",
+            "reason": null,
+            "target_outcomes": [
+              "Complete a mock loop combining design, coding, and behavioral rounds",
+              "Identify remaining gaps for final review"
+            ],
+            "estimated_total_min": 180,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          }
+        ]
+      }
+    ],
+    "strategist_mle_mle_intern_grounded": [
+      {
+        "syllabus_version": "v1",
+        "goal_summary": "Prepare a beginner for an ML Engineer internship in 14 weeks by closing data structures and deep learning fundamentals gaps, building on existing Python and linear algebra strengths.",
+        "modules": [
+          {
+            "module_id": "mod_ds_foundations",
+            "title": "Core Data Structures in Python",
+            "priority": "high",
+            "reason": "Data structures is a declared weakness and a core part of MLE coding interviews.",
+            "target_outcomes": [
+              "Implement arrays, hash maps, stacks, queues, and linked lists",
+              "Analyze time and space complexity with Big-O"
+            ],
+            "estimated_total_min": 600,
+            "difficulty": 2,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_trees_graphs",
+            "title": "Trees, Graphs, and Traversal",
+            "priority": "high",
+            "reason": "Graph and grid traversal build directly on the declared data structures weakness and appear frequently in interviews.",
+            "target_outcomes": [
+              "Implement BFS and DFS on trees, graphs, and grids",
+              "Apply memoization to grid DFS problems"
+            ],
+            "estimated_total_min": 540,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_faang_mle_coding",
+            "title": "FAANG MLE-style Coding Drills",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Solve Longest Increasing Path in a Matrix using DFS with memoization",
+              "Solve Simplify Path using a stack",
+              "Practice timed problem solving with verbal explanation"
+            ],
+            "estimated_total_min": 420,
+            "difficulty": 4,
+            "source_claim_ids": [
+              "claim_49ccb230c27f207a",
+              "claim_902bf4b374abaa53"
+            ],
+            "company_specific": true,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_ml_basics",
+            "title": "Machine Learning Fundamentals Refresher",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Explain supervised learning, loss functions, and gradient descent",
+              "Understand bias-variance and overfitting"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 2,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_dl_fundamentals",
+            "title": "Deep Learning Fundamentals",
+            "priority": "high",
+            "reason": "Deep learning fundamentals is a declared weakness and central to ML engineering roles.",
+            "target_outcomes": [
+              "Derive backpropagation for a multilayer perceptron",
+              "Explain activations, initialization, regularization, and optimizers",
+              "Describe CNNs, RNNs, and transformer basics"
+            ],
+            "estimated_total_min": 720,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_dl_pytorch",
+            "title": "Hands-on Neural Networks with PyTorch",
+            "priority": "high",
+            "reason": "Practical implementation solidifies the deep learning fundamentals weakness and is expected of intern candidates.",
+            "target_outcomes": [
+              "Build and train an MLP and a CNN in PyTorch",
+              "Debug training loops and evaluate models"
+            ],
+            "estimated_total_min": 540,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_mock_interviews",
+            "title": "Mock Interviews and ML Concept Q&A",
+            "priority": "low",
+            "reason": null,
+            "target_outcomes": [
+              "Complete timed mock coding interviews",
+              "Answer common ML/DL conceptual questions clearly"
+            ],
+            "estimated_total_min": 300,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          }
+        ]
+      }
+    ]
+  },
+  "judge_scores": {},
+  "groundedness_scores": {
+    "strategist_swe_backend_ng_grounded": {
+      "groundedness": 5
+    },
+    "strategist_swe_backend_mid_grounded": {
+      "groundedness": 5
+    },
+    "strategist_swe_frontend_ng_grounded": {
+      "groundedness": 5
+    },
+    "strategist_swe_fullstack_career_change_grounded": {
+      "groundedness": 5
+    },
+    "strategist_swe_platform_mid_grounded": {
+      "groundedness": 5
+    },
+    "strategist_swe_sre_mid_grounded": {
+      "groundedness": 5
+    },
+    "strategist_swe_backend_intern_grounded": {
+      "groundedness": 5
+    },
+    "strategist_swe_fullstack_senior_grounded": {
+      "groundedness": 3
+    },
+    "strategist_swe_devops_junior_grounded": {
+      "groundedness": 5
+    },
+    "strategist_swe_backend_faang_grounded": {
+      "groundedness": 3
+    },
+    "strategist_ai_engineer_aie_ng_grounded": {
+      "groundedness": 5
+    },
+    "strategist_ai_engineer_aie_mid_grounded": {
+      "groundedness": 5
+    },
+    "strategist_ai_engineer_aie_senior_grounded": {
+      "groundedness": 5
+    },
+    "strategist_ai_engineer_genai_career_change_grounded": {
+      "groundedness": 5
+    },
+    "strategist_ai_engineer_llm_platform_grounded": {
+      "groundedness": 5
+    },
+    "strategist_ai_engineer_aie_intern_grounded": {
+      "groundedness": 5
+    },
+    "strategist_ai_engineer_aie_research_to_eng_grounded": {
+      "groundedness": 5
+    },
+    "strategist_ai_engineer_aie_startup_grounded": {
+      "groundedness": 5
+    },
+    "strategist_quant_dev_quant_ng_grounded": {
+      "groundedness": 2
+    },
+    "strategist_quant_dev_quant_mid_grounded": {
+      "groundedness": 3
+    },
+    "strategist_quant_dev_quant_senior_grounded": {
+      "groundedness": 3
+    },
+    "strategist_quant_dev_quant_intern_grounded": {
+      "groundedness": 3
+    },
+    "strategist_quant_dev_quant_phd_grounded": {
+      "groundedness": 2
+    },
+    "strategist_quant_dev_quant_lowlat_grounded": {
+      "groundedness": 5
+    },
+    "strategist_quant_dev_quant_career_change_grounded": {
+      "groundedness": 4
+    },
+    "strategist_quant_dev_quant_python_grounded": {
+      "groundedness": 4
+    },
+    "strategist_product_manager_pm_apm_grounded": {
+      "groundedness": 4
+    },
+    "strategist_product_manager_pm_eng_to_pm_grounded": {
+      "groundedness": 5
+    },
+    "strategist_product_manager_pm_senior_grounded": {
+      "groundedness": 4
+    },
+    "strategist_product_manager_pm_platform_grounded": {
+      "groundedness": 5
+    },
+    "strategist_product_manager_pm_growth_grounded": {
+      "groundedness": 5
+    },
+    "strategist_product_manager_pm_career_change_grounded": {
+      "groundedness": 4
+    },
+    "strategist_data_scientist_ds_ng_grounded": {
+      "groundedness": 5
+    },
+    "strategist_data_scientist_ds_mid_grounded": {
+      "groundedness": 2
+    },
+    "strategist_data_scientist_ds_analyst_to_ds_grounded": {
+      "groundedness": 4
+    },
+    "strategist_data_scientist_ds_phd_grounded": {
+      "groundedness": 5
+    },
+    "strategist_mle_mle_ng_grounded": {
+      "groundedness": 3
+    },
+    "strategist_mle_mle_mid_grounded": {
+      "groundedness": 5
+    },
+    "strategist_mle_mle_senior_grounded": {
+      "groundedness": 5
+    },
+    "strategist_mle_mle_intern_grounded": {
+      "groundedness": 5
+    }
+  },
+  "taxonomy_version": null
+}

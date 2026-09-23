@@ -166,7 +166,7 @@ def test_happy_path_returns_validated_plan_and_logs_one_complete_row() -> None:
     assert row.model_name == "claude-sonnet-5"
     assert (row.attempt, row.sdk_retry) == (0, 0)
     assert (row.input_tokens, row.output_tokens) == (100, 50)
-    assert row.cost_estimate_usd == (100 * 3.00 + 50 * 15.00) / 1_000_000
+    assert row.cost_estimate_usd == (100 * 2.00 + 50 * 10.00) / 1_000_000
     assert row.prompt_hash is not None and row.response_hash is not None
     assert row.cache_hit is False
     # Schema-enforced generation was requested with the target contract.
@@ -275,22 +275,39 @@ def test_cache_hit_flag_follows_provider_cache_reads() -> None:
     assert store.list_all()[0].cache_hit is True
 
 
+def test_estimate_cost_usd_honours_cache_read_multiplier() -> None:
+    """opus-5-5 publishes cache reads at 0.05x base input, not the 0.10x
+    every other tier uses; the multiplier is per-config, not a constant."""
+    config = adapter.AdapterConfig(
+        model_name="m",
+        prompt_version="v",
+        max_tokens=10,
+        input_price_per_mtok=4.0,
+        output_price_per_mtok=20.0,
+        cache_read_multiplier=0.05,
+    )
+    cost = config.estimate_cost_usd(
+        input_tokens=0, output_tokens=0, cache_read_tokens=1_000_000
+    )
+    assert cost == pytest.approx(0.20)
+
+
 def test_estimate_cost_usd_prices_cache_tiers() -> None:
     """Cache writes bill at 1.25x and cache reads at 0.10x the input rate
     (5-minute-TTL ephemeral — the only TTL the transport uses); the provider
     excludes both tiers from input_tokens, so pricing them is additive."""
-    config = adapter.PLANNER_CONFIG  # $3.00 / $15.00 per Mtok
+    config = adapter.PLANNER_CONFIG  # $2.00 / $10.00 per Mtok
     cost = config.estimate_cost_usd(
         input_tokens=1_000,
         output_tokens=100,
         cache_creation_tokens=2_000,
         cache_read_tokens=4_000,
     )
-    expected = ((1_000 + 2_000 * 1.25 + 4_000 * 0.10) * 3.00 + 100 * 15.00) / 1_000_000
+    expected = ((1_000 + 2_000 * 1.25 + 4_000 * 0.10) * 2.00 + 100 * 10.00) / 1_000_000
     assert cost == expected
     # Without cache tokens the pre-caching formula is unchanged.
     assert config.estimate_cost_usd(input_tokens=100, output_tokens=50) == (
-        (100 * 3.00 + 50 * 15.00) / 1_000_000
+        (100 * 2.00 + 50 * 10.00) / 1_000_000
     )
 
 
@@ -312,7 +329,7 @@ def test_log_row_carries_cache_tier_counts_with_tier_priced_cost() -> None:
     row = store.list_all()[0]
     assert (row.cache_creation_tokens, row.cache_read_tokens) == (2_000, 4_000)
     assert row.cache_hit is True
-    expected = ((100 + 2_000 * 1.25 + 4_000 * 0.10) * 3.00 + 50 * 15.00) / 1_000_000
+    expected = ((100 + 2_000 * 1.25 + 4_000 * 0.10) * 2.00 + 50 * 10.00) / 1_000_000
     assert row.cost_estimate_usd == expected
 
 
@@ -756,11 +773,13 @@ class _FakeMessagesResource:
     def __init__(self, text: str) -> None:
         self._text = text
         self.calls: list[dict[str, Any]] = []
+        #: Blocks returned BEFORE the text block (thinking-on responses).
+        self.leading_blocks: list[Any] = []
 
     def create(self, **kwargs: Any) -> Any:
         self.calls.append(kwargs)
         return SimpleNamespace(
-            content=[SimpleNamespace(type="text", text=self._text)],
+            content=[*self.leading_blocks, SimpleNamespace(type="text", text=self._text)],
             stop_reason="end_turn",
             usage=SimpleNamespace(
                 input_tokens=100,
@@ -800,6 +819,70 @@ def test_transport_hands_engine_raw_output_without_validating() -> None:
     # runs adaptive thinking, whose tokens bill inside max_tokens and would
     # truncate the 1024-cap prose nodes. The pin must be explicit.
     assert client.messages.calls[0]["thinking"] == {"type": "disabled"}
+    assert "effort" not in client.messages.calls[0]["output_config"]
+
+
+def test_transport_effort_omits_thinking_and_sets_output_config_effort() -> None:
+    """opus-5-5 rejects ``thinking: disabled`` with a 400 — effort is its only
+    thinking control. With an effort level the transport must OMIT the
+    thinking param entirely (not send adaptive) and steer via
+    ``output_config.effort``; the schema shaping is unchanged."""
+    client = _FakeAnthropicClient(json.dumps(_HIGH_PRIORITY_NO_REASON))
+    result = AnthropicMessagesTransport(client=client).complete(
+        model_name="claude-opus-5-5",
+        max_tokens=16384,
+        system="s",
+        user_prompt="p",
+        output_contract=SyllabusUnits,
+        effort="low",
+    )
+    assert result.payload == _HIGH_PRIORITY_NO_REASON
+    sent = client.messages.calls[0]
+    assert "thinking" not in sent
+    assert sent["output_config"]["effort"] == "low"
+    assert sent["output_config"]["format"]["type"] == "json_schema"
+
+
+def test_transport_selects_first_text_block_after_thinking_blocks() -> None:
+    """With thinking on, responses begin with a thinking block; the JSON
+    body is the first TEXT block, selected by type, never by position."""
+    client = _FakeAnthropicClient(json.dumps(_HIGH_PRIORITY_NO_REASON))
+    client.messages.leading_blocks = [
+        SimpleNamespace(type="thinking", thinking="", signature="sig")
+    ]
+    result = AnthropicMessagesTransport(client=client).complete(
+        model_name="claude-opus-5-5",
+        max_tokens=16384,
+        system="s",
+        user_prompt="p",
+        output_contract=SyllabusUnits,
+        effort="medium",
+    )
+    assert result.payload == _HIGH_PRIORITY_NO_REASON
+
+
+def test_engine_forwards_config_effort_to_the_request() -> None:
+    """The effort knob is deterministic per-node config: the engine forwards
+    it on every call (repairs included), so an opus-5-5 config never sends
+    the rejected ``thinking: disabled`` pin."""
+    client = _FakeAnthropicClient(json.dumps(_HIGH_PRIORITY_NO_REASON))
+    config = adapter.STRATEGIST_CONFIG.model_copy(
+        update={"model_name": "claude-opus-5-5", "effort": "low"}
+    )
+    strategist = AnthropicStrategist(
+        transport=AnthropicMessagesTransport(client=client),
+        store=InMemoryLlmCallLogStore(),
+        clock=FrozenClock(_NOW),
+        id_generator=DeterministicIdGenerator(),
+        config=config,
+    )
+    with pytest.raises(LLMGenerationError):
+        strategist.run(run_id="run_effort", user_profile=_profile())
+    assert len(client.messages.calls) == 3
+    for sent in client.messages.calls:
+        assert sent["model"] == "claude-opus-5-5"
+        assert "thinking" not in sent
+        assert sent["output_config"]["effort"] == "low"
 
 
 def test_strategist_contract_violation_repairs_then_typed_error() -> None:

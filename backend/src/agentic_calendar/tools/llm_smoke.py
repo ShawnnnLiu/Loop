@@ -65,6 +65,7 @@ from agentic_calendar.llm_nodes.anthropic_adapter import (
     PLANNER_CONFIG,
     REFLECTION_CONFIG,
     STRATEGIST_CONFIG,
+    EffortLevel,
     TransportResult,
 )
 
@@ -137,6 +138,7 @@ class _GuardedTransport:
         output_contract: type[BaseModel],
         repair_suffix: str | None = None,
         timeout_seconds: float = 300.0,
+        effort: EffortLevel | None = None,
     ) -> TransportResult:
         if self._calls + 1 > self._max_calls:
             raise SmokeGuardTripped(
@@ -170,6 +172,7 @@ class _GuardedTransport:
             output_contract=output_contract,
             repair_suffix=repair_suffix,
             timeout_seconds=timeout_seconds,
+            effort=effort,
         )
 
 

@@ -15,8 +15,10 @@ from agentic_calendar.llm_nodes.call_log import LlmNodeName
 from agentic_calendar.llm_nodes.eval import EvalError, EvalSet, grade_recording
 from agentic_calendar.llm_nodes.eval_judge import judge_recording
 from agentic_calendar.tools.capture_eval_recordings import (
+    STRATEGIST_ARMS,
     capture,
     main,
+    node_configs,
     parse_case_inputs,
 )
 
@@ -143,6 +145,27 @@ def test_capture_records_every_case_and_grades_cleanly() -> None:
     assert report.plan_quality.mean_distinct_title_ratio == 1.0
 
 
+def test_legacy_strategist_arm_is_the_pre_switch_config_and_labels_the_recording() -> None:
+    """``--strategist-config legacy-opus-4-8`` re-runs the previous frontier
+    tier exactly as it shipped (thinking off, its pricing) and the recording's
+    model label follows the arm, so before/after reports name the right model."""
+    legacy = STRATEGIST_ARMS["legacy-opus-4-8"]
+    shipped = STRATEGIST_ARMS["shipped"]
+    assert legacy.model_name == "claude-opus-4-8" and legacy.effort is None
+    assert (legacy.input_price_per_mtok, legacy.output_price_per_mtok) == (5.00, 25.00)
+    assert shipped.model_name == "claude-opus-5-5" and shipped.effort == "low"
+    assert legacy.prompt_version == shipped.prompt_version  # same prompt bytes
+    eval_set = _load_set()
+    recording = capture(
+        eval_set,
+        transport=_CannedTransport(),  # type: ignore[arg-type]
+        store=InMemoryLlmCallLogStore(),
+        label="legacy-arm",
+        configs=node_configs(legacy),
+    )
+    assert recording.model_name == "claude-opus-4-8+claude-sonnet-5"
+
+
 def test_judge_scores_prose_cases_only_and_flows_into_the_report() -> None:
     eval_set = _load_set()
     transport = _CannedTransport()
@@ -153,22 +176,21 @@ def test_judge_scores_prose_cases_only_and_flows_into_the_report() -> None:
         label="canned-test",
     )
     scores, unjudged = judge_recording(
-        eval_set, recording, transport=transport  # type: ignore[arg-type]
+        eval_set,
+        recording,
+        transport=transport,  # type: ignore[arg-type]
     )
 
     prose_ids = {
         case.case_id
         for case in eval_set.cases
-        if case.node
-        in (LlmNodeName.REFLECTION_SUMMARY, LlmNodeName.USER_FACING_EXPLANATION)
+        if case.node in (LlmNodeName.REFLECTION_SUMMARY, LlmNodeName.USER_FACING_EXPLANATION)
     }
     assert set(scores) == prose_ids
     assert unjudged == []
     assert all(set(s) == {"tone", "specificity", "actionability"} for s in scores.values())
 
-    judged = recording.model_validate(
-        {**recording.model_dump(), "judge_scores": scores}
-    )
+    judged = recording.model_validate({**recording.model_dump(), "judge_scores": scores})
     report = grade_recording(eval_set, judged)
     assert set(report.judge_scores) == prose_ids
     assert report.judge_scores[next(iter(prose_ids))].tone == 4

@@ -60,10 +60,12 @@ from agentic_calendar.llm_nodes import (
 )
 from agentic_calendar.llm_nodes.anthropic_adapter import (
     EXPLANATION_CONFIG,
+    LEGACY_OPUS_4_8_STRATEGIST_CONFIG,
     PLANNER_CONFIG,
     REFLECTION_CONFIG,
     RESUME_INTAKE_CONFIG,
     STRATEGIST_CONFIG,
+    AdapterConfig,
 )
 from agentic_calendar.llm_nodes.call_log import LlmNodeName
 from agentic_calendar.llm_nodes.eval import EvalCase, EvalRecording, EvalSet
@@ -75,13 +77,29 @@ from agentic_calendar.llm_nodes.eval_judge import (
 from agentic_calendar.skill_taxonomy import load_registry, resolve
 from agentic_calendar.tools.llm_smoke import SmokeGuardTripped, _GuardedTransport
 
-_NODE_CONFIGS = {
-    LlmNodeName.STRATEGIST: STRATEGIST_CONFIG,
-    LlmNodeName.PLANNER: PLANNER_CONFIG,
-    LlmNodeName.REFLECTION_SUMMARY: REFLECTION_CONFIG,
-    LlmNodeName.USER_FACING_EXPLANATION: EXPLANATION_CONFIG,
-    LlmNodeName.RESUME_INTAKE: RESUME_INTAKE_CONFIG,
+#: Named strategist arms the capture can run. ``shipped`` is the production
+#: config; the legacy arm exists so a model comparison can re-run the
+#: previous tier on the same eval set without editing source.
+STRATEGIST_ARMS: dict[str, AdapterConfig] = {
+    "shipped": STRATEGIST_CONFIG,
+    "legacy-opus-4-8": LEGACY_OPUS_4_8_STRATEGIST_CONFIG,
+    # The effort sweep the provider's migration guide asks for: the shipped
+    # model one effort level up, same prompt bytes and cap.
+    "opus-5-5-medium": STRATEGIST_CONFIG.model_copy(update={"effort": "medium"}),
 }
+
+
+def node_configs(strategist: AdapterConfig = STRATEGIST_CONFIG) -> dict[LlmNodeName, AdapterConfig]:
+    return {
+        LlmNodeName.STRATEGIST: strategist,
+        LlmNodeName.PLANNER: PLANNER_CONFIG,
+        LlmNodeName.REFLECTION_SUMMARY: REFLECTION_CONFIG,
+        LlmNodeName.USER_FACING_EXPLANATION: EXPLANATION_CONFIG,
+        LlmNodeName.RESUME_INTAKE: RESUME_INTAKE_CONFIG,
+    }
+
+
+_NODE_CONFIGS = node_configs()
 
 #: Headroom multiplier over one clean pass at each case's output cap — covers
 #: the input-token heuristic plus bounded repair re-prompts.
@@ -111,9 +129,7 @@ def _resolve_profile(
     return UserProfile.model_validate(referenced.inputs["user_profile"])
 
 
-def parse_case_inputs(
-    case: EvalCase, by_id: Mapping[str, EvalCase]
-) -> dict[str, Any]:
+def parse_case_inputs(case: EvalCase, by_id: Mapping[str, EvalCase]) -> dict[str, Any]:
     """Contract-validate one case's inputs into the node's run() kwargs."""
     inputs = case.inputs
     if not inputs:
@@ -128,8 +144,7 @@ def parse_case_inputs(
         kwargs: dict[str, Any] = {
             "user_profile": profile,
             "source_claims": [
-                SourceClaim.model_validate(claim)
-                for claim in inputs.get("source_claims", [])
+                SourceClaim.model_validate(claim) for claim in inputs.get("source_claims", [])
             ],
         }
         if "strategy_constraints" in inputs:
@@ -147,8 +162,7 @@ def parse_case_inputs(
     if case.node is LlmNodeName.REFLECTION_SUMMARY:
         return {
             "drift_events": [
-                DriftEvent.model_validate(event)
-                for event in inputs.get("drift_events", [])
+                DriftEvent.model_validate(event) for event in inputs.get("drift_events", [])
             ],
             "completion_rate": inputs.get("completion_rate"),
         }
@@ -164,6 +178,7 @@ def _adapter_for(
     transport: AnthropicTransport,
     store: InMemoryLlmCallLogStore,
     recorder: Any,
+    configs: Mapping[LlmNodeName, AdapterConfig],
 ) -> Any:
     common = {
         "transport": transport,
@@ -173,7 +188,7 @@ def _adapter_for(
         "attempt_recorder": recorder,
     }
     if node is LlmNodeName.STRATEGIST:
-        return AnthropicStrategist(**common)
+        return AnthropicStrategist(**common, config=configs[node])
     if node is LlmNodeName.PLANNER:
         return AnthropicPlanner(**common)
     if node is LlmNodeName.REFLECTION_SUMMARY:
@@ -197,6 +212,7 @@ def capture(
     transport: AnthropicTransport,
     store: InMemoryLlmCallLogStore,
     label: str,
+    configs: Mapping[LlmNodeName, AdapterConfig] | None = None,
 ) -> EvalRecording:
     """Run every case through its real adapter, recording raw attempts.
 
@@ -205,6 +221,7 @@ def capture(
     A case that produced no parseable output at all records ``[{}]`` so
     grading counts it invalid rather than silently missing.
     """
+    configs = configs if configs is not None else _NODE_CONFIGS
     by_id = {case.case_id: case for case in eval_set.cases}
     outputs: dict[str, list[dict[str, Any]]] = {}
     for case in eval_set.cases:
@@ -214,15 +231,13 @@ def capture(
         def record(attempt: int, payload: dict[str, Any] | None) -> None:
             attempts[attempt] = payload  # noqa: B023 — rebound per case below
 
-        adapter = _adapter_for(case.node, transport, store, record)
+        adapter = _adapter_for(case.node, transport, store, record, configs)
         # A generation failure is expected for repair-prone cases: the
         # recorded invalid attempts are exactly what the eval measures.
         # Guard trips are NOT suppressed — they must abort the capture.
         with contextlib.suppress(LLMNodeError):
             adapter.run(run_id=f"eval_{case.case_id}", **kwargs)
-        outputs[case.case_id] = [
-            attempts.get(i) or {} for i in sorted(attempts)
-        ] or [{}]
+        outputs[case.case_id] = [attempts.get(i) or {} for i in sorted(attempts)] or [{}]
         print(
             f"  {case.case_id}: {len(outputs[case.case_id])} attempt(s) recorded",
             file=sys.stderr,
@@ -230,9 +245,7 @@ def capture(
     # Label with the models of the nodes actually in the set, and pin the
     # taxonomy version whenever a resume_intake case ran (06-skill-taxonomy
     # pinning discipline — grading cross-checks it against the cases).
-    model_name = "+".join(
-        sorted({_NODE_CONFIGS[case.node].model_name for case in eval_set.cases})
-    )
+    model_name = "+".join(sorted({configs[case.node].model_name for case in eval_set.cases}))
     taxonomy_version = (
         load_registry().taxonomy_version
         if any(case.node is LlmNodeName.RESUME_INTAKE for case in eval_set.cases)
@@ -246,13 +259,17 @@ def capture(
     )
 
 
-def _default_budget(eval_set: EvalSet) -> float:
-    per_case_output_cost = sum(
-        _NODE_CONFIGS[case.node].max_tokens
-        * _NODE_CONFIGS[case.node].output_price_per_mtok
-        for case in eval_set.cases
-    ) / 1_000_000
-    return round(per_case_output_cost * _COST_BUDGET_OVERHEAD, 2)
+def _default_budget(
+    eval_set: EvalSet, configs: Mapping[LlmNodeName, AdapterConfig] = _NODE_CONFIGS
+) -> float:
+    per_case_output_cost = (
+        sum(
+            configs[case.node].max_tokens * configs[case.node].output_price_per_mtok
+            for case in eval_set.cases
+        )
+        / 1_000_000
+    )
+    return round(float(per_case_output_cost) * _COST_BUDGET_OVERHEAD, 2)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -265,6 +282,21 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--live", action="store_true", help="Allow real API calls.")
     parser.add_argument("--judge", action="store_true", help="Add Tier-2 judge scores.")
     parser.add_argument("--max-cost-usd", type=float, default=None)
+    parser.add_argument(
+        "--strategist-config",
+        choices=sorted(STRATEGIST_ARMS),
+        default="shipped",
+        help="Which strategist arm to run: the shipped config or a named "
+        "legacy comparison arm (model + pricing + thinking mode as it shipped).",
+    )
+    parser.add_argument(
+        "--calls-out",
+        type=Path,
+        default=None,
+        help="Also write the llm_call_log rows (hashes/counts only, no raw "
+        "content) as JSON — the input run_llm_eval --calls grades for "
+        "latency/token/cost aggregates.",
+    )
     parser.add_argument(
         "--validate-only",
         action="store_true",
@@ -299,20 +331,20 @@ def main(argv: list[str] | None = None) -> int:
     prose_cases = sum(
         1
         for case in eval_set.cases
-        if case.node
-        in (LlmNodeName.REFLECTION_SUMMARY, LlmNodeName.USER_FACING_EXPLANATION)
+        if case.node in (LlmNodeName.REFLECTION_SUMMARY, LlmNodeName.USER_FACING_EXPLANATION)
     )
     # --judge adds one voice call per prose case and one groundedness call
     # per strategist case (each with the bounded judge retries).
-    strategist_cases = sum(
-        1 for case in eval_set.cases if case.node is LlmNodeName.STRATEGIST
-    )
+    strategist_cases = sum(1 for case in eval_set.cases if case.node is LlmNodeName.STRATEGIST)
     judged_cases = prose_cases + strategist_cases
     max_calls = len(eval_set.cases) * 3 + (judged_cases * 3 if args.judge else 0)
-    budget = args.max_cost_usd if args.max_cost_usd is not None else _default_budget(eval_set)
+    configs = node_configs(STRATEGIST_ARMS[args.strategist_config])
+    budget = (
+        args.max_cost_usd if args.max_cost_usd is not None else _default_budget(eval_set, configs)
+    )
     pricing = {
         config.model_name: (config.input_price_per_mtok, config.output_price_per_mtok)
-        for config in (*_NODE_CONFIGS.values(), JUDGE_CONFIG)
+        for config in (*configs.values(), JUDGE_CONFIG)
     }
     store = InMemoryLlmCallLogStore()
     transport = _GuardedTransport(
@@ -324,11 +356,11 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     try:
-        recording = capture(eval_set, transport=transport, store=store, label=args.label)
+        recording = capture(
+            eval_set, transport=transport, store=store, label=args.label, configs=configs
+        )
         if args.judge:
-            scores, unjudged = judge_recording(
-                eval_set, recording, transport=transport
-            )
+            scores, unjudged = judge_recording(eval_set, recording, transport=transport)
             grounded_scores, ungrounded_judged = judge_groundedness(
                 eval_set, recording, transport=transport
             )
@@ -353,11 +385,20 @@ def main(argv: list[str] | None = None) -> int:
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(recording.model_dump_json(indent=2) + "\n", encoding="utf-8")
-    spent = sum(row.cost_estimate_usd for row in store.list_all())
+    rows = store.list_all()
+    spent = sum(row.cost_estimate_usd for row in rows)
     print(
         f"wrote {args.out} ({transport.calls} calls, ~${spent:.4f} estimated)",
         file=sys.stderr,
     )
+    if args.calls_out is not None:
+        args.calls_out.parent.mkdir(parents=True, exist_ok=True)
+        args.calls_out.write_text(
+            json.dumps([row.model_dump(mode="json") for row in rows], indent=2, sort_keys=True)
+            + "\n",
+            encoding="utf-8",
+        )
+        print(f"wrote {len(rows)} llm_call_log rows to {args.calls_out}", file=sys.stderr)
     return 0
 
 

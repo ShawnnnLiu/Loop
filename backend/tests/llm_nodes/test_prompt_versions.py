@@ -96,9 +96,13 @@ _PINNED: list[tuple[str, object, str, str]] = [
         # eight-rule self-check line. MM-A (2026-07-21) advances the version
         # date but leaves the system prompt untouched. v8 (MM-C): system-prompt
         # rule 9 (do not re-assign mastered skills; bound review modules) + the
-        # nine-rule self-check line move the system hash.
-        "strategist-v8-2026-07-21",
-        "8933ff360e5a1b9e8b4db914a3562752a689d203c9f0d81aa676c727f601759a",
+        # nine-rule self-check line move the system hash. v9 (2026-09-23):
+        # rule 5 rescoped to every-module relevance-gated citation and the
+        # exemplar's generic module now cites — both move the system hash.
+        # v10 (2026-09-23): rule 5 gains the substantive-evidence gate (no
+        # chrome citation) after v9's judge regression — system hash moves.
+        "strategist-v10-2026-09-23",
+        "0456d4c1be6d7e75df87e0265317afd811aee5706196d402cef1d1f4af592f65",
     ),
     (
         "_PLANNER_SYSTEM",
@@ -506,9 +510,13 @@ _FULL_PROMPT_PINS: list[
         # review_node_ids / max_review_modules / max_review_minutes) now
         # serializes into the bundle JSON at its defaults — rendered bytes
         # changed, rehashed. v8 (MM-C): system-prompt rule 9 changes the system
-        # frame — rehashed.
-        "strategist-v8-2026-07-21",
-        "b93104950b5a82c4bee16d274508e785bc9dae5c8ecb11db8c0063e2fd875d07",
+        # frame — rehashed. v9 (2026-09-23): rule 5 rescoped to every-module
+        # relevance-gated citation + exemplar generic-module citation change
+        # the system frame — rehashed (assembly bytes untouched). v10
+        # (2026-09-23): rule 5 substantive-evidence gate — system frame only,
+        # rehashed.
+        "strategist-v10-2026-09-23",
+        "956895835d2bbf84c0510f0b2407d5bf82ffe3e7bcc192783a1d53395d21960d",
     ),
     (
         "planner",

@@ -428,7 +428,24 @@ STRATEGIST_CONFIG = AdapterConfig(
     # tags are all mastered; bound review modules by max_review_modules /
     # max_review_minutes. The mastery-slice fields now populate (non-empty) when
     # a pathway is selected, so both the system and full-render hashes move.
-    prompt_version="strategist-v8-2026-07-21",
+    # v9 (2026-09-23): rule 5 rescoped from company-specific-only to EVERY
+    # module — cite each provided claim relevant to the module, relevance-gated
+    # ("leave empty only when no provided claim is relevant"); the
+    # company-specific must-cite floor stays. The exemplar's generic module now
+    # cites (was []), so the exemplar no longer teaches non-citation. Chosen to
+    # lift citation_coverage/claim_utilization on eval_set_v10 (baseline
+    # opus55_low: 0.2631/0.5917); validator unchanged — unknown/expired ids
+    # still reject, generic-module citations were always accepted.
+    # v10 (2026-09-23, same day): v9 measured coverage 0.7913 / utilization
+    # 0.9800 but the advisory groundedness judge fell 4.325 -> 3.225 because
+    # chrome claims (article-title teasers, coach CTAs, credits blocks) were
+    # cited into loosely-matching modules (recording
+    # opus55_low_v9prompt_v10_2026_09_23). v10 keeps the every-module scope and
+    # adds a substantive-evidence gate to rule 5: define "substantively
+    # supports", forbid citing navigation/marketing/title-list/credits/CTA
+    # text. This is a relevance instruction, not confidence assignment —
+    # axiom 08's deterministic scoring is untouched.
+    prompt_version="strategist-v10-2026-09-23",
     max_tokens=16384,
     input_price_per_mtok=4.00,
     output_price_per_mtok=20.00,
@@ -949,7 +966,7 @@ _STRATEGIST_EXEMPLAR: dict[str, Any] = {
             "target_outcomes": ["Implement BFS and DFS from scratch"],
             "estimated_total_min": 240,
             "difficulty": 4,
-            "source_claim_ids": [],
+            "source_claim_ids": ["claim_algo_07"],
             "company_specific": False,
         },
         {
@@ -1021,9 +1038,16 @@ _STRATEGIST_SYSTEM = (
     "3. Priority — use only the priority values the constraints allow.\n"
     "4. Time budget — keep the total of estimated_total_min across all modules "
     "within the constraints' max_total_estimated_minutes.\n"
-    "5. Evidence — for any company-specific module, list the supporting claims "
-    "in source_claim_ids, using only ids that appear in the provided "
-    "source_claims.\n"
+    "5. Evidence — for EVERY module, list in source_claim_ids the ids of all "
+    "provided source_claims that substantively support the module's topic or "
+    "motivate its inclusion, using only ids that appear in the provided "
+    "source_claims. A claim substantively supports a module when its text "
+    "carries real information about the skills, interview formats, processes, "
+    "or expectations the module trains. Never cite a claim whose text is "
+    "merely navigation, marketing copy, a list of article titles, credits, or "
+    "a call to action, even when its words overlap the module's topic; leave "
+    "source_claim_ids empty when no provided claim substantively supports "
+    "that module. Any company-specific module must cite at least one claim.\n"
     "6. Justification — every module you mark high priority carries a non-empty "
     "'reason' explaining why it is high priority.\n"
     "7. Story pillars — when the constraints carry unfilled_slots, you may "

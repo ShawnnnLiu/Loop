@@ -144,6 +144,16 @@ eval-gate:
 		--recording evalsets/recordings/opus55_medium_v10_2026_09_23.json \
 		--min-schema-validity-rate 1.0 --min-repair-recovery-rate 1.0 \
 		--min-citation-coverage 0.2747
+	uv run python -m agentic_calendar.tools.run_llm_eval --strict \
+		--eval-set evalsets/eval_set_v10.json \
+		--recording evalsets/recordings/opus55_low_v9prompt_v10_2026_09_23.json \
+		--min-schema-validity-rate 1.0 --min-repair-recovery-rate 1.0 \
+		--min-citation-coverage 0.7913
+	uv run python -m agentic_calendar.tools.run_llm_eval --strict \
+		--eval-set evalsets/eval_set_v10.json \
+		--recording evalsets/recordings/opus55_low_v10prompt_v10_2026_09_23.json \
+		--min-schema-validity-rate 1.0 --min-repair-recovery-rate 1.0 \
+		--min-citation-coverage 0.4662
 
 # The v4 pair grades the grounded/ungrounded twins (grounding-RAG G-H).
 # citation-coverage floor seeded at the measured grounded-arm value
@@ -158,6 +168,13 @@ eval-gate:
 # the SAME model (0.6444 in July vs 0.2254 for opus-4-8 today): with three
 # grounded cases the metric is high-variance, so treat these floors as
 # regression tripwires for the committed bytes, not as model rankings.
+#
+# The *_v9prompt / *_v10prompt pairs (2026-09-23) are the strategist
+# prompt-grounding iteration on opus-5-5 low: v9 rescoped rule 5 to
+# every-module citation (coverage 0.7913 but the advisory judge fell to
+# 3.225 from chrome citation); v10 added the substantive-evidence gate and
+# ships (coverage 0.4662, judge 3.925, zero unknown citations). v9 is
+# committed as the measured intermediate, floors = its own recording.
 #
 # The v10 pairs are the same two arms on the 40-case grounded set
 # (evalsets/eval_set_v10.json, derived — see `make grounded-evalset`). With

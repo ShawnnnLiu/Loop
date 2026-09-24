@@ -11,7 +11,9 @@ authority; this table is a navigation aid.
 
 | Plan | Status |
 | --- | --- |
+| `agent-eval-repair-recovery/` | Planning docs written 2026-08-30, not implemented — eval set v9 (strategist repair, error cases first) + first non-vacuous repair-recovery gate floor. |
 | `career-track-expansion/` | Planning docs written, not implemented — 9 career profiles + mechanics checklist. |
+| `hybrid-retrieval-ship/` | Planning docs written 2026-09-10, not implemented — ship the measured BM25+dense RRF hybrid as an opt-in claim-assembly retriever with its own eval gate. |
 | `narrative-pathways/` | Planning docs written, not implemented — character sheet, pathway registry, knowledge map. |
 | `resume-intake-onboarding/` | Implemented — RI-A…RI-F merged; running the enrichment tool and adopting a v5 taxonomy remains an operator action. |
 | `scheduler-placement-quality/` | Partially complete — core spine (phases 01–03) merged; phases 04–05 gated on post-spine evidence. |

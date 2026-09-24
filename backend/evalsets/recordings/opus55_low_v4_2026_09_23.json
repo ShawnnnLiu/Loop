@@ -1,0 +1,663 @@
+{
+  "prompt_version": "model-compare-opus-5-5-low-2026-09-23",
+  "model_name": "claude-opus-5-5",
+  "outputs": {
+    "strategist_swe_grounded": [
+      {
+        "syllabus_version": "v1",
+        "goal_summary": "Prepare for new-grad Backend SWE interviews at Uber in 10 weeks by closing the system design and behavioral interview gaps while keeping coding skills sharp.",
+        "modules": [
+          {
+            "module_id": "mod_sysdesign_foundations",
+            "title": "System Design Foundations",
+            "priority": "high",
+            "reason": "System design is a declared weakness and a core backend interview topic.",
+            "target_outcomes": [
+              "Explain load balancing, caching, sharding, and replication trade-offs",
+              "Walk through a structured design framework: requirements, API, data model, scaling"
+            ],
+            "estimated_total_min": 600,
+            "difficulty": 3,
+            "source_claim_ids": [
+              "claim_e265d3982756e7a1"
+            ],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_sysdesign_practice",
+            "title": "System Design Mock Problems",
+            "priority": "high",
+            "reason": "Applying design frameworks under time pressure directly addresses the system design weakness.",
+            "target_outcomes": [
+              "Complete 6 timed design problems such as URL shortener, rate limiter, and news feed",
+              "Communicate trade-offs clearly within 45 minutes"
+            ],
+            "estimated_total_min": 540,
+            "difficulty": 4,
+            "source_claim_ids": [
+              "claim_e265d3982756e7a1"
+            ],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_uber_data_systems",
+            "title": "Uber-style Data Infrastructure Design",
+            "priority": "medium",
+            "reason": "Uber is the target company, and its engineering blog highlights large-scale data replication challenges.",
+            "target_outcomes": [
+              "Discuss petabyte-scale replication bottlenecks and parallelization strategies",
+              "Design a distributed data pipeline informed by Uber's HDFS replication case"
+            ],
+            "estimated_total_min": 300,
+            "difficulty": 4,
+            "source_claim_ids": [
+              "claim_15efcf2a3dd3a766"
+            ],
+            "company_specific": true,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_behavioral_stories",
+            "title": "Behavioral Story Bank (STAR)",
+            "priority": "high",
+            "reason": "Behavioral interviews are a declared weakness, and weak answers to common questions sink otherwise strong candidates.",
+            "target_outcomes": [
+              "Draft 8 STAR stories covering feedback, conflict, failure, and ownership",
+              "Answer 'tell me about constructive feedback' with reflection and growth"
+            ],
+            "estimated_total_min": 420,
+            "difficulty": 2,
+            "source_claim_ids": [
+              "claim_06d4fb7599160fef"
+            ],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_behavioral_mocks",
+            "title": "Behavioral Mock Interviews",
+            "priority": "medium",
+            "reason": "Rehearsing the story bank aloud builds fluency.",
+            "target_outcomes": [
+              "Complete 4 recorded mock behavioral sessions",
+              "Keep answers under 3 minutes with clear results"
+            ],
+            "estimated_total_min": 300,
+            "difficulty": 2,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_coding_maintenance",
+            "title": "Coding Interview Maintenance (Trees, Graphs, DP)",
+            "priority": "medium",
+            "reason": "Coding rounds remain required; this builds beyond the existing strengths in arrays and hash maps.",
+            "target_outcomes": [
+              "Solve 30 medium problems on trees, graphs, and dynamic programming",
+              "Maintain speed on array and hash map patterns"
+            ],
+            "estimated_total_min": 900,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_backend_fundamentals",
+            "title": "Backend Fundamentals Review",
+            "priority": "low",
+            "reason": "Supports both design and coding rounds for backend roles.",
+            "target_outcomes": [
+              "Explain databases, indexing, transactions, and REST vs gRPC",
+              "Describe concurrency basics and message queues"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          }
+        ]
+      }
+    ],
+    "strategist_swe_ungrounded": [
+      {
+        "syllabus_version": "v1",
+        "goal_summary": "Prepare for new-grad Backend SWE interviews over 10 weeks by closing system design and behavioral gaps while keeping core coding skills sharp.",
+        "modules": [
+          {
+            "module_id": "mod_sysdesign_foundations",
+            "title": "System Design Foundations",
+            "priority": "high",
+            "reason": "System design is a declared weakness and a core part of backend interviews.",
+            "target_outcomes": [
+              "Explain load balancing, caching, sharding, and replication trade-offs",
+              "Estimate capacity for a simple service"
+            ],
+            "estimated_total_min": 600,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_sysdesign_practice",
+            "title": "System Design Mock Problems",
+            "priority": "high",
+            "reason": "Applying system design concepts to full problems directly addresses the declared system design weakness.",
+            "target_outcomes": [
+              "Design a URL shortener, rate limiter, and ride-matching style service end to end",
+              "Communicate a structured design within 45 minutes"
+            ],
+            "estimated_total_min": 600,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_behavioral_stories",
+            "title": "Behavioral Interview Story Bank",
+            "priority": "high",
+            "reason": "Behavioral interviews are a declared weakness.",
+            "target_outcomes": [
+              "Write 6-8 STAR stories covering conflict, ownership, failure, and impact",
+              "Deliver each story concisely in under 3 minutes"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 2,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_behavioral_mocks",
+            "title": "Behavioral Mock Interviews",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Complete mock behavioral rounds and refine answers from feedback"
+            ],
+            "estimated_total_min": 240,
+            "difficulty": 2,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_dsa_breadth",
+            "title": "Coding Interview Breadth: Trees, Graphs, DP",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Solve medium problems on trees, graphs, and dynamic programming",
+              "Extend array and hash map strengths to new patterns"
+            ],
+            "estimated_total_min": 900,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_backend_fundamentals",
+            "title": "Backend Fundamentals Review",
+            "priority": "low",
+            "reason": null,
+            "target_outcomes": [
+              "Explain databases, indexing, transactions, REST APIs, and concurrency basics"
+            ],
+            "estimated_total_min": 300,
+            "difficulty": 2,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_full_mocks",
+            "title": "Full Loop Mock Interviews",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Complete timed coding, design, and behavioral mock loops"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          }
+        ]
+      }
+    ],
+    "strategist_mle_grounded": [
+      {
+        "syllabus_version": "v1",
+        "goal_summary": "Prepare for senior MLE interviews at Hugging Face and Uber by closing RLHF/alignment and ML system design gaps.",
+        "modules": [
+          {
+            "module_id": "mod_rlhf_foundations",
+            "title": "RLHF and Alignment Foundations",
+            "priority": "high",
+            "reason": "RLHF and alignment is a declared weakness and core to Hugging Face roles.",
+            "target_outcomes": [
+              "Explain the SFT, reward model, and PPO pipeline",
+              "Compare RLHF with DPO and other preference methods"
+            ],
+            "estimated_total_min": 480,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_hf_rlhf_deep_dive",
+            "title": "Hugging Face RLHF Literature and Iterative Training",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Discuss InstructGPT, WebGPT, GopherCite, TAMER, and COACH",
+              "Explain iterative online reward model and policy updates"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 4,
+            "source_claim_ids": [
+              "claim_502edf011c95591f",
+              "claim_b9115672b72c0d1b",
+              "claim_bc7b5f0e6f277b30"
+            ],
+            "company_specific": true,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_ml_system_design",
+            "title": "ML System Design Fundamentals",
+            "priority": "high",
+            "reason": "ML system design is a declared weakness and central to senior MLE interviews.",
+            "target_outcomes": [
+              "Structure an end-to-end ML design answer",
+              "Reason about training, serving, latency, and monitoring tradeoffs"
+            ],
+            "estimated_total_min": 600,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_uber_search_design",
+            "title": "Uber-style Semantic Search System Design",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Design a two-tower semantic retrieval system",
+              "Discuss Matryoshka embeddings, quantization, and distributed training"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 4,
+            "source_claim_ids": [
+              "claim_187143c9a2a2a3d6"
+            ],
+            "company_specific": true,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_mock_interviews",
+            "title": "Mock Interviews and Review",
+            "priority": "low",
+            "reason": null,
+            "target_outcomes": [
+              "Complete timed mock design and RLHF discussions"
+            ],
+            "estimated_total_min": 240,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          }
+        ]
+      }
+    ],
+    "strategist_mle_ungrounded": [
+      {
+        "syllabus_version": "v1",
+        "goal_summary": "Prepare for senior Machine Learning Engineer interviews in 8 weeks by closing gaps in RLHF/alignment and ML system design, while sharpening deep learning, coding, and behavioral readiness.",
+        "modules": [
+          {
+            "module_id": "mod_rlhf_alignment",
+            "title": "RLHF and Alignment Foundations",
+            "priority": "high",
+            "reason": "RLHF and alignment is a declared weakness and a frequent topic for senior MLE roles working with LLMs.",
+            "target_outcomes": [
+              "Explain the SFT, reward modeling, and PPO stages of RLHF",
+              "Compare DPO and other preference optimization methods with PPO-based RLHF",
+              "Discuss reward hacking, evaluation, and safety trade-offs"
+            ],
+            "estimated_total_min": 600,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_ml_system_design",
+            "title": "ML System Design Fundamentals",
+            "priority": "high",
+            "reason": "ML system design is a declared weakness and a core round in senior MLE interviews.",
+            "target_outcomes": [
+              "Structure an ML design answer covering problem framing, data, features, model, serving, and monitoring",
+              "Design feature stores, training pipelines, and online/offline evaluation"
+            ],
+            "estimated_total_min": 600,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_ml_design_drills",
+            "title": "ML System Design Mock Drills",
+            "priority": "high",
+            "reason": "Timed practice is needed to turn the ML system design weakness into interview-ready performance.",
+            "target_outcomes": [
+              "Complete 45-minute mock designs for recommendation, ranking, and LLM serving systems",
+              "Articulate latency, cost, and scaling trade-offs clearly"
+            ],
+            "estimated_total_min": 480,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_deep_learning_llm",
+            "title": "Deep Learning and Transformer Review",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Explain transformer attention, tokenization, and fine-tuning methods such as LoRA",
+              "Discuss training stability and optimization techniques"
+            ],
+            "estimated_total_min": 420,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_ml_coding",
+            "title": "ML Coding and Algorithms Practice",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Implement core ML components (e.g., attention, loss functions) in Python from scratch",
+              "Solve medium-level algorithm problems within time limits"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_behavioral",
+            "title": "Senior-Level Behavioral Stories",
+            "priority": "low",
+            "reason": null,
+            "target_outcomes": [
+              "Prepare 6 STAR stories demonstrating technical leadership and ownership"
+            ],
+            "estimated_total_min": 180,
+            "difficulty": 2,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "knowledge_node_ids": []
+          }
+        ]
+      }
+    ],
+    "strategist_aie_grounded": [
+      {
+        "syllabus_version": "v1",
+        "goal_summary": "Six-week AI Engineer (senior) interview prep targeting Anthropic, closing gaps in agent architectures and LLM evaluation while leveraging backend strengths.",
+        "modules": [
+          {
+            "module_id": "mod_agent_foundations",
+            "title": "Agent Architectures: Workflows vs Agents",
+            "priority": "high",
+            "reason": "Agent architectures is a declared weakness and central to AI Engineer interviews.",
+            "target_outcomes": [
+              "Explain prompt chaining, routing, parallelization, orchestrator-workers, and evaluator-optimizer patterns",
+              "Decide when a workflow suffices versus an autonomous agent"
+            ],
+            "estimated_total_min": 420,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_agent_build",
+            "title": "Build a Tool-Using Agent with Error Recovery",
+            "priority": "high",
+            "reason": "Hands-on agent building addresses the agent architectures weakness with a portfolio artifact.",
+            "target_outcomes": [
+              "Implement a tool-calling agent loop with planning and error recovery",
+              "Add guardrails and sandboxed testing"
+            ],
+            "estimated_total_min": 480,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_llm_eval",
+            "title": "LLM Evaluation Fundamentals",
+            "priority": "high",
+            "reason": "LLM evaluation is a declared weakness and a core senior AI Engineer competency.",
+            "target_outcomes": [
+              "Design eval sets, metrics, and LLM-as-judge rubrics",
+              "Build an automated eval harness with regression tracking"
+            ],
+            "estimated_total_min": 480,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_anthropic_agents",
+            "title": "Anthropic's Approach to Effective Agents",
+            "priority": "high",
+            "reason": "Anthropic is the target company and its published agent guidance is likely interview material.",
+            "target_outcomes": [
+              "Discuss multi-round search agents with evaluator-driven stopping",
+              "Articulate cost, compounding-error risks, and sandboxed testing for agents like SWE-bench and computer use"
+            ],
+            "estimated_total_min": 300,
+            "difficulty": 3,
+            "source_claim_ids": [
+              "claim_c25a0b025b7d49ad",
+              "claim_62f89fbeee8329e6"
+            ],
+            "company_specific": true,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_rlhf",
+            "title": "RLHF and Human-Feedback Evaluation",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Explain reward modeling and iterative RLHF",
+              "Summarize WebGPT, InstructGPT, and GopherCite"
+            ],
+            "estimated_total_min": 300,
+            "difficulty": 4,
+            "source_claim_ids": [
+              "claim_502edf011c95591f",
+              "claim_bc7b5f0e6f277b30"
+            ],
+            "company_specific": true,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_ai_system_design",
+            "title": "AI System Design Leveraging Backend Strengths",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Design production LLM/agent services covering latency, cost, observability, and evals"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_mock_interviews",
+            "title": "Mock Interviews and Project Storytelling",
+            "priority": "low",
+            "reason": null,
+            "target_outcomes": [
+              "Deliver concise stories about agent and eval projects",
+              "Complete two mock technical rounds"
+            ],
+            "estimated_total_min": 180,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          }
+        ]
+      }
+    ],
+    "strategist_aie_ungrounded": [
+      {
+        "syllabus_version": "v1",
+        "goal_summary": "Prepare for senior AI Engineer interviews in 6 weeks by closing gaps in agent architectures and LLM evaluation, leveraging existing backend engineering strength.",
+        "modules": [
+          {
+            "module_id": "mod_agent_arch",
+            "title": "Agent Architectures Foundations",
+            "priority": "high",
+            "reason": "Agent architectures is a declared weakness and core to AI engineer interviews.",
+            "target_outcomes": [
+              "Explain tool-use, planning, and memory patterns in LLM agents",
+              "Build a simple tool-calling agent loop from scratch",
+              "Discuss failure modes and guardrails for agents"
+            ],
+            "estimated_total_min": 600,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_llm_eval",
+            "title": "LLM Evaluation Methods",
+            "priority": "high",
+            "reason": "LLM evaluation is a declared weakness and heavily tested for senior AI engineers.",
+            "target_outcomes": [
+              "Design eval sets and metrics for LLM tasks",
+              "Use model-graded and human evals appropriately",
+              "Build a regression eval harness"
+            ],
+            "estimated_total_min": 600,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_llm_sys_design",
+            "title": "LLM System Design for Backend Engineers",
+            "priority": "medium",
+            "reason": null,
+            "target_outcomes": [
+              "Design RAG and agent-backed services end to end",
+              "Reason about latency, cost, and reliability trade-offs"
+            ],
+            "estimated_total_min": 480,
+            "difficulty": 4,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          },
+          {
+            "module_id": "mod_mock_interviews",
+            "title": "AI Engineer Mock Interviews and Behavioral Prep",
+            "priority": "low",
+            "reason": null,
+            "target_outcomes": [
+              "Complete timed mock technical and design interviews",
+              "Prepare senior-level project stories"
+            ],
+            "estimated_total_min": 360,
+            "difficulty": 3,
+            "source_claim_ids": [],
+            "company_specific": false,
+            "evidence_slot_id": null,
+            "knowledge_node_ids": []
+          }
+        ]
+      }
+    ]
+  },
+  "judge_scores": {},
+  "groundedness_scores": {
+    "strategist_swe_grounded": {
+      "groundedness": 3
+    },
+    "strategist_swe_ungrounded": {
+      "groundedness": 5
+    },
+    "strategist_mle_grounded": {
+      "groundedness": 5
+    },
+    "strategist_mle_ungrounded": {
+      "groundedness": 5
+    },
+    "strategist_aie_grounded": {
+      "groundedness": 5
+    },
+    "strategist_aie_ungrounded": {
+      "groundedness": 5
+    }
+  },
+  "taxonomy_version": null
+}

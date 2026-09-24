@@ -38,8 +38,8 @@ JUDGE_CONFIG = AdapterConfig(
     model_name="claude-sonnet-5",
     prompt_version="judge-v1-2026-07-04",
     max_tokens=256,
-    input_price_per_mtok=3.00,
-    output_price_per_mtok=15.00,
+    input_price_per_mtok=2.00,
+    output_price_per_mtok=10.00,
 )
 
 _JUDGE_SYSTEM = (

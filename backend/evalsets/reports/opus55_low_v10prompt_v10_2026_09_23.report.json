@@ -1,0 +1,172 @@
+{
+  "call_aggregates": {
+    "strategist": {
+      "calls": 40,
+      "mean_latency_ms": 10876.325,
+      "total_cost_estimate_usd": 1.9091750000000003,
+      "total_input_tokens": 160,
+      "total_output_tokens": 47824
+    }
+  },
+  "eval_set_version": "v10",
+  "groundedness_scores": {
+    "strategist_ai_engineer_aie_intern_grounded": {
+      "groundedness": 4
+    },
+    "strategist_ai_engineer_aie_mid_grounded": {
+      "groundedness": 5
+    },
+    "strategist_ai_engineer_aie_ng_grounded": {
+      "groundedness": 5
+    },
+    "strategist_ai_engineer_aie_research_to_eng_grounded": {
+      "groundedness": 5
+    },
+    "strategist_ai_engineer_aie_senior_grounded": {
+      "groundedness": 3
+    },
+    "strategist_ai_engineer_aie_startup_grounded": {
+      "groundedness": 5
+    },
+    "strategist_ai_engineer_genai_career_change_grounded": {
+      "groundedness": 5
+    },
+    "strategist_ai_engineer_llm_platform_grounded": {
+      "groundedness": 5
+    },
+    "strategist_data_scientist_ds_analyst_to_ds_grounded": {
+      "groundedness": 4
+    },
+    "strategist_data_scientist_ds_mid_grounded": {
+      "groundedness": 5
+    },
+    "strategist_data_scientist_ds_ng_grounded": {
+      "groundedness": 5
+    },
+    "strategist_data_scientist_ds_phd_grounded": {
+      "groundedness": 3
+    },
+    "strategist_mle_mle_intern_grounded": {
+      "groundedness": 5
+    },
+    "strategist_mle_mle_mid_grounded": {
+      "groundedness": 5
+    },
+    "strategist_mle_mle_ng_grounded": {
+      "groundedness": 5
+    },
+    "strategist_mle_mle_senior_grounded": {
+      "groundedness": 5
+    },
+    "strategist_product_manager_pm_apm_grounded": {
+      "groundedness": 5
+    },
+    "strategist_product_manager_pm_career_change_grounded": {
+      "groundedness": 5
+    },
+    "strategist_product_manager_pm_eng_to_pm_grounded": {
+      "groundedness": 5
+    },
+    "strategist_product_manager_pm_growth_grounded": {
+      "groundedness": 5
+    },
+    "strategist_product_manager_pm_platform_grounded": {
+      "groundedness": 4
+    },
+    "strategist_product_manager_pm_senior_grounded": {
+      "groundedness": 4
+    },
+    "strategist_quant_dev_quant_career_change_grounded": {
+      "groundedness": 3
+    },
+    "strategist_quant_dev_quant_intern_grounded": {
+      "groundedness": 4
+    },
+    "strategist_quant_dev_quant_lowlat_grounded": {
+      "groundedness": 3
+    },
+    "strategist_quant_dev_quant_mid_grounded": {
+      "groundedness": 2
+    },
+    "strategist_quant_dev_quant_ng_grounded": {
+      "groundedness": 4
+    },
+    "strategist_quant_dev_quant_phd_grounded": {
+      "groundedness": 4
+    },
+    "strategist_quant_dev_quant_python_grounded": {
+      "groundedness": 4
+    },
+    "strategist_quant_dev_quant_senior_grounded": {
+      "groundedness": 2
+    },
+    "strategist_swe_backend_faang_grounded": {
+      "groundedness": 4
+    },
+    "strategist_swe_backend_intern_grounded": {
+      "groundedness": 3
+    },
+    "strategist_swe_backend_mid_grounded": {
+      "groundedness": 5
+    },
+    "strategist_swe_backend_ng_grounded": {
+      "groundedness": 1
+    },
+    "strategist_swe_devops_junior_grounded": {
+      "groundedness": 2
+    },
+    "strategist_swe_frontend_ng_grounded": {
+      "groundedness": 3
+    },
+    "strategist_swe_fullstack_career_change_grounded": {
+      "groundedness": 2
+    },
+    "strategist_swe_fullstack_senior_grounded": {
+      "groundedness": 2
+    },
+    "strategist_swe_platform_mid_grounded": {
+      "groundedness": 2
+    },
+    "strategist_swe_sre_mid_grounded": {
+      "groundedness": 5
+    }
+  },
+  "grounding": {
+    "cases_with_claims": 40,
+    "cases_without_claims": 0,
+    "citation_coverage": 0.4662,
+    "claim_utilization": 0.5867,
+    "high_confidence_share": 1.0,
+    "unknown_citation_count": 0
+  },
+  "judge_scores": {},
+  "model_name": "claude-opus-5-5",
+  "overall": {
+    "cases": 40,
+    "invalid_after_repair": 0,
+    "post_repair_invalid_rate": 0.0,
+    "recovered_by_repair": 0,
+    "repair_recovery_rate": null,
+    "rubric_graded": 0,
+    "rubric_pass_rate": null,
+    "rubric_passed": 0,
+    "schema_valid_first_attempt": 40,
+    "schema_validity_rate": 1.0
+  },
+  "per_node": {
+    "strategist": {
+      "cases": 40,
+      "invalid_after_repair": 0,
+      "post_repair_invalid_rate": 0.0,
+      "recovered_by_repair": 0,
+      "repair_recovery_rate": null,
+      "rubric_graded": 0,
+      "rubric_pass_rate": null,
+      "rubric_passed": 0,
+      "schema_valid_first_attempt": 40,
+      "schema_validity_rate": 1.0
+    }
+  },
+  "plan_quality": null,
+  "prompt_version": "opus55-low-v10prompt"
+}

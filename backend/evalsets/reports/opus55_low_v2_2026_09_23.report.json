@@ -1,0 +1,149 @@
+{
+  "call_aggregates": {
+    "planner": {
+      "calls": 3,
+      "mean_latency_ms": 12405.0,
+      "total_cost_estimate_usd": 0.0435972,
+      "total_input_tokens": 6,
+      "total_output_tokens": 4179
+    },
+    "reflection_summary": {
+      "calls": 2,
+      "mean_latency_ms": 3242.0,
+      "total_cost_estimate_usd": 0.0035102,
+      "total_input_tokens": 4,
+      "total_output_tokens": 303
+    },
+    "strategist": {
+      "calls": 3,
+      "mean_latency_ms": 10195.333333333334,
+      "total_cost_estimate_usd": 0.106878,
+      "total_input_tokens": 12,
+      "total_output_tokens": 2851
+    },
+    "user_facing_explanation": {
+      "calls": 3,
+      "mean_latency_ms": 3684.3333333333335,
+      "total_cost_estimate_usd": 0.010594,
+      "total_input_tokens": 2822,
+      "total_output_tokens": 495
+    }
+  },
+  "eval_set_version": "v2",
+  "groundedness_scores": {
+    "strategist_backend_swe": {
+      "groundedness": 5
+    },
+    "strategist_constraint_probe": {
+      "groundedness": 5
+    },
+    "strategist_with_resume": {
+      "groundedness": 5
+    }
+  },
+  "grounding": {
+    "cases_with_claims": 1,
+    "cases_without_claims": 2,
+    "citation_coverage": 0.5,
+    "claim_utilization": 1.0,
+    "high_confidence_share": 1.0,
+    "unknown_citation_count": 0
+  },
+  "judge_scores": {
+    "explanation_capacity_failure": {
+      "actionability": 4,
+      "specificity": 5,
+      "tone": 5
+    },
+    "explanation_repair_exhausted": {
+      "actionability": 5,
+      "specificity": 5,
+      "tone": 4
+    },
+    "explanation_validation_pass": {
+      "actionability": 2,
+      "specificity": 3,
+      "tone": 4
+    },
+    "reflection_duration_drift": {
+      "actionability": 4,
+      "specificity": 4,
+      "tone": 5
+    },
+    "reflection_multi_drift": {
+      "actionability": 5,
+      "specificity": 5,
+      "tone": 5
+    }
+  },
+  "model_name": "claude-opus-5-5+claude-sonnet-5",
+  "overall": {
+    "cases": 11,
+    "invalid_after_repair": 0,
+    "post_repair_invalid_rate": 0.0,
+    "recovered_by_repair": 0,
+    "repair_recovery_rate": null,
+    "rubric_graded": 7,
+    "rubric_pass_rate": 1.0,
+    "rubric_passed": 7,
+    "schema_valid_first_attempt": 11,
+    "schema_validity_rate": 1.0
+  },
+  "per_node": {
+    "planner": {
+      "cases": 3,
+      "invalid_after_repair": 0,
+      "post_repair_invalid_rate": 0.0,
+      "recovered_by_repair": 0,
+      "repair_recovery_rate": null,
+      "rubric_graded": 1,
+      "rubric_pass_rate": 1.0,
+      "rubric_passed": 1,
+      "schema_valid_first_attempt": 3,
+      "schema_validity_rate": 1.0
+    },
+    "reflection_summary": {
+      "cases": 2,
+      "invalid_after_repair": 0,
+      "post_repair_invalid_rate": 0.0,
+      "recovered_by_repair": 0,
+      "repair_recovery_rate": null,
+      "rubric_graded": 2,
+      "rubric_pass_rate": 1.0,
+      "rubric_passed": 2,
+      "schema_valid_first_attempt": 2,
+      "schema_validity_rate": 1.0
+    },
+    "strategist": {
+      "cases": 3,
+      "invalid_after_repair": 0,
+      "post_repair_invalid_rate": 0.0,
+      "recovered_by_repair": 0,
+      "repair_recovery_rate": null,
+      "rubric_graded": 1,
+      "rubric_pass_rate": 1.0,
+      "rubric_passed": 1,
+      "schema_valid_first_attempt": 3,
+      "schema_validity_rate": 1.0
+    },
+    "user_facing_explanation": {
+      "cases": 3,
+      "invalid_after_repair": 0,
+      "post_repair_invalid_rate": 0.0,
+      "recovered_by_repair": 0,
+      "repair_recovery_rate": null,
+      "rubric_graded": 3,
+      "rubric_pass_rate": 1.0,
+      "rubric_passed": 3,
+      "schema_valid_first_attempt": 3,
+      "schema_validity_rate": 1.0
+    }
+  },
+  "plan_quality": {
+    "mean_distinct_title_ratio": 1.0,
+    "mean_max_dependency_depth": 7.3333,
+    "mean_tasks_per_module": 4.2778,
+    "plans_graded": 3
+  },
+  "prompt_version": "model-compare-opus-5-5-low-2026-09-23"
+}

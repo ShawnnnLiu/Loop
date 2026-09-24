@@ -1,4 +1,4 @@
-.PHONY: help install sync test test-fast lint typecheck format boundaries schemas schema-check maps maps-check eval-gate retrieval-eval visualize check clean
+.PHONY: help install sync test test-fast lint typecheck format boundaries schemas schema-check maps maps-check grounded-evalset eval-gate retrieval-eval visualize check clean
 
 help:
 	@echo "Targets:"
@@ -15,6 +15,7 @@ help:
 	@echo "  maps        regenerate pathways/knowledge_maps.json from the curated grouping"
 	@echo "  maps-check  verify the committed knowledge maps match a fresh regeneration (no write)"
 	@echo "  eval-gate   strict-grade committed eval recordings (offline; amended axiom 22)"
+	@echo "  grounded-evalset  regenerate evalsets/eval_set_v10.json from the pinned corpus (offline)"
 	@echo "  retrieval-eval  grade the labeled retrieval query set against the pinned corpus snapshot (corpus/corpus.db, committed)"
 	@echo "  visualize   render the 'success' scheduler scenario to ../schedule.html"
 	@echo "  check       lint + typecheck + schema-check + maps-check + test (boundaries run inside test)"
@@ -52,6 +53,17 @@ maps:
 
 maps-check:
 	uv run python -m agentic_calendar.tools.generate_knowledge_maps --check
+
+# Grounded strategist eval set (v10): derived from the pinned corpus snapshot
+# by the sanctioned claim pipeline — never hand-edited. The test suite runs
+# the --check form, so `make check` fails on drift.
+grounded-evalset:
+	uv run python -m agentic_calendar.tools.build_grounded_eval_set \
+		--queries corpus/claim_queries_v4.json \
+		--manifest corpus/manifest_v1.json \
+		--corpus-db corpus/corpus.db --snapshot snap_0217291f46e331b9 \
+		--k 10 --as-of 2026-09-23 \
+		--out evalsets/eval_set_v10.json
 
 sources:
 	uv run python -m agentic_calendar.tools.export_sources_page
@@ -99,11 +111,80 @@ eval-gate:
 		--recording evalsets/recordings/grounding_2026_07_06.json \
 		--min-schema-validity-rate 1.0 --min-repair-recovery-rate 1.0 \
 		--min-citation-coverage 0.6444
+	uv run python -m agentic_calendar.tools.run_llm_eval --strict \
+		--eval-set evalsets/eval_set_v2.json \
+		--recording evalsets/recordings/opus48_v2_2026_09_23.json \
+		--min-schema-validity-rate 1.0 --min-repair-recovery-rate 1.0
+	uv run python -m agentic_calendar.tools.run_llm_eval --strict \
+		--eval-set evalsets/eval_set_v2.json \
+		--recording evalsets/recordings/opus55_low_v2_2026_09_23.json \
+		--min-schema-validity-rate 1.0 --min-repair-recovery-rate 1.0
+	uv run python -m agentic_calendar.tools.run_llm_eval --strict \
+		--eval-set evalsets/eval_set_v4.json \
+		--recording evalsets/recordings/opus48_v4_2026_09_23.json \
+		--min-schema-validity-rate 1.0 --min-repair-recovery-rate 1.0 \
+		--min-citation-coverage 0.2254
+	uv run python -m agentic_calendar.tools.run_llm_eval --strict \
+		--eval-set evalsets/eval_set_v4.json \
+		--recording evalsets/recordings/opus55_low_v4_2026_09_23.json \
+		--min-schema-validity-rate 1.0 --min-repair-recovery-rate 1.0 \
+		--min-citation-coverage 0.4190
+	uv run python -m agentic_calendar.tools.run_llm_eval --strict \
+		--eval-set evalsets/eval_set_v10.json \
+		--recording evalsets/recordings/opus48_v10_2026_09_23.json \
+		--min-schema-validity-rate 1.0 --min-repair-recovery-rate 1.0 \
+		--min-citation-coverage 0.2907
+	uv run python -m agentic_calendar.tools.run_llm_eval --strict \
+		--eval-set evalsets/eval_set_v10.json \
+		--recording evalsets/recordings/opus55_low_v10_2026_09_23.json \
+		--min-schema-validity-rate 1.0 --min-repair-recovery-rate 1.0 \
+		--min-citation-coverage 0.2631
+	uv run python -m agentic_calendar.tools.run_llm_eval --strict \
+		--eval-set evalsets/eval_set_v10.json \
+		--recording evalsets/recordings/opus55_medium_v10_2026_09_23.json \
+		--min-schema-validity-rate 1.0 --min-repair-recovery-rate 1.0 \
+		--min-citation-coverage 0.2747
+	uv run python -m agentic_calendar.tools.run_llm_eval --strict \
+		--eval-set evalsets/eval_set_v10.json \
+		--recording evalsets/recordings/opus55_low_v9prompt_v10_2026_09_23.json \
+		--min-schema-validity-rate 1.0 --min-repair-recovery-rate 1.0 \
+		--min-citation-coverage 0.7913
+	uv run python -m agentic_calendar.tools.run_llm_eval --strict \
+		--eval-set evalsets/eval_set_v10.json \
+		--recording evalsets/recordings/opus55_low_v10prompt_v10_2026_09_23.json \
+		--min-schema-validity-rate 1.0 --min-repair-recovery-rate 1.0 \
+		--min-citation-coverage 0.4662
 
 # The v4 pair grades the grounded/ungrounded twins (grounding-RAG G-H).
 # citation-coverage floor seeded at the measured grounded-arm value
 # (2026-07-06 capture: coverage 0.6444, utilization 0.8667, zero unknown
 # citations) — a heuristic prior like every seeded floor.
+#
+# The 2026-09-23 model-comparison pairs (opus48_* / opus55_low_*) are the
+# before/after recordings behind the Strategist's move from claude-opus-4-8
+# (thinking off) to claude-opus-5-5 at effort=low (newest = shipped). Same
+# v8 prompt bytes, same day, same eval sets; every floor is the value
+# measured on that recording. Note the v4 citation-coverage spread across
+# the SAME model (0.6444 in July vs 0.2254 for opus-4-8 today): with three
+# grounded cases the metric is high-variance, so treat these floors as
+# regression tripwires for the committed bytes, not as model rankings.
+#
+# The *_v9prompt / *_v10prompt pairs (2026-09-23) are the strategist
+# prompt-grounding iteration on opus-5-5 low: v9 rescoped rule 5 to
+# every-module citation (coverage 0.7913 but the advisory judge fell to
+# 3.225 from chrome citation); v10 added the substantive-evidence gate and
+# ships (coverage 0.4662, judge 3.925, zero unknown citations). v9 is
+# committed as the measured intermediate, floors = its own recording.
+#
+# The v10 pairs are the same two arms on the 40-case grounded set
+# (evalsets/eval_set_v10.json, derived — see `make grounded-evalset`). With
+# forty data points the coverage story flattens: 0.2907 (opus-4-8) vs
+# 0.2631 (opus-5-5 low), a wash inside the run-to-run noise the v4 pairs
+# exhibit; utilization 0.4717 → 0.5917 and the advisory groundedness judge
+# 3.62 → 4.33 are the grounding deltas that survive. The opus55_medium
+# pair is the effort sweep: coverage 0.2747, utilization 0.6650, but it
+# costs MORE than opus-4-8 ($2.62 vs $2.37 over the 40 cases) and is
+# slower (p50 18.2 s vs 14.9 s) — `low` stays shipped. Floors = measured.
 
 # Retrieval eval gate (grounding-RAG G-D). Deterministic like eval-gate —
 # queries + labels + snapshot pin are all versioned. Since 2026-07-14 the

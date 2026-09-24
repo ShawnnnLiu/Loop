@@ -35,7 +35,7 @@ import json
 import re
 import time
 from collections.abc import Callable, Collection, Sequence
-from typing import Any, Protocol, cast, runtime_checkable
+from typing import Any, Literal, Protocol, cast, runtime_checkable
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
 
@@ -118,6 +118,14 @@ class TransportResult(BaseModel):
     input rate."""
 
 
+#: The provider's ``output_config.effort`` levels. ``None`` on an
+#: :class:`AdapterConfig` means "thinking pinned off" (the only mode the
+#: 1024-cap prose nodes and the 256-cap judge can run under); a level means
+#: adaptive thinking steered by effort, the ONLY thinking control on
+#: claude-opus-5-5, which rejects ``thinking: disabled`` with a 400.
+EffortLevel = Literal["low", "medium", "high", "xhigh", "max"]
+
+
 @runtime_checkable
 class AnthropicTransport(Protocol):
     """Single-call surface the generation engine depends on.
@@ -134,6 +142,7 @@ class AnthropicTransport(Protocol):
         output_contract: type[BaseModel],
         repair_suffix: str | None = None,
         timeout_seconds: float = 300.0,
+        effort: EffortLevel | None = None,
     ) -> TransportResult: ...
 
 
@@ -208,6 +217,7 @@ class AnthropicMessagesTransport:
         output_contract: type[BaseModel],
         repair_suffix: str | None = None,
         timeout_seconds: float = 300.0,
+        effort: EffortLevel | None = None,
     ) -> TransportResult:
         import anthropic
 
@@ -222,9 +232,9 @@ class AnthropicMessagesTransport:
         # the cached prefix (system + base prompt) is reused across repair rounds
         # and retries — the repair suffix is the only re-processed content. The
         # breakpoint must be here and not on ``system``: providers only cache
-        # prefixes above a per-model minimum (4096 tokens on opus-4-8; sonnet-5
-        # is unlisted in the provider table, sonnet-4-6 was 2048 — verify via
-        # cache_read tokens on the next capture), which the system prompts alone
+        # prefixes above a per-model minimum (4096 tokens on opus-4-8; the
+        # 2026-09-23 capture shows opus-5-5 writing cache entries from ~3.1k
+        # tokens and sonnet-5 from ~1.1k), which the system prompts alone
         # never reach. Blocks below the minimum silently don't cache, so small
         # prompts (prose nodes) are unaffected.
         content: list[TextBlockParam] = [
@@ -236,28 +246,44 @@ class AnthropicMessagesTransport:
         ]
         if repair_suffix is not None:
             content.append({"type": "text", "text": repair_suffix})
+        output_config: dict[str, Any] = {
+            "format": {"type": "json_schema", "schema": schema}
+        }
+        thinking: dict[str, Any] | None
+        if effort is None:
+            # Thinking is pinned OFF, explicitly: on sonnet-5, OMITTING the
+            # param silently runs adaptive thinking whose tokens bill inside
+            # max_tokens — the 1024-cap prose nodes and the 256-cap eval
+            # judge would truncate. opus-4-8 accepts the explicit disabled
+            # too (there, omitting already means off), so one pin covers
+            # every thinking-off tier and keeps output budgets deterministic.
+            thinking = {"type": "disabled"}
+        else:
+            # Effort-steered adaptive thinking (claude-opus-5-5 and later:
+            # thinking cannot be disabled, effort is the only control, and
+            # thinking tokens bill inside max_tokens). The thinking param is
+            # OMITTED rather than sent as adaptive — the same request shape
+            # the provider's migration guide prescribes. Response content then
+            # begins with a thinking block; the block walk below selects by
+            # type, so the first text block is still the structured JSON.
+            thinking = None
+            output_config["effort"] = effort
+        request: dict[str, Any] = {
+            "model": model_name,
+            "max_tokens": max_tokens,
+            "system": system,
+            "messages": [{"role": "user", "content": content}],
+            "output_config": output_config,
+            # Explicit ceiling per call: without it a hung call is bounded
+            # only by the SDK's 10-minute default while the user watches
+            # the generation spinner. 300s default; calibrate from the
+            # call log's p99 once real latency data accumulates.
+            "timeout": timeout_seconds,
+        }
+        if thinking is not None:
+            request["thinking"] = thinking
         try:
-            response = self._client.messages.create(
-                model=model_name,
-                max_tokens=max_tokens,
-                system=system,
-                messages=[{"role": "user", "content": content}],
-                output_config={"format": {"type": "json_schema", "schema": schema}},
-                # Thinking is pinned OFF, explicitly: on sonnet-5, OMITTING the
-                # param silently runs adaptive thinking whose tokens bill inside
-                # max_tokens — the 1024-cap prose nodes and the 256-cap eval
-                # judge would truncate. opus-4-8 accepts the explicit disabled
-                # too (there, omitting already means off), so one pin covers
-                # every tier this adapter targets and keeps output budgets
-                # deterministic. Enabling thinking is a future decision to make
-                # with eval data, alongside raised max_tokens.
-                thinking={"type": "disabled"},
-                # Explicit ceiling per call: without it a hung call is bounded
-                # only by the SDK's 10-minute default while the user watches
-                # the generation spinner. 300s default; calibrate from the
-                # call log's p99 once real latency data accumulates.
-                timeout=timeout_seconds,
-            )
+            response = self._client.messages.create(**request)
         # In the pinned SDK (anthropic 0.109.1) APIConnectionError SUBCLASSES
         # APIError, so `except anthropic.APIError` alone would already catch
         # pre-response connection/timeout failures. The explicit union is
@@ -321,6 +347,13 @@ class AdapterConfig(BaseModel):
     transport failures (delay = base * 2**retry). Pacing only — the retry
     budget itself stays capped at 2. The SDK also backs off internally on
     429/5xx within each call; this spaces OUR retries after those exhaust."""
+    effort: EffortLevel | None = None
+    """``None`` pins thinking OFF (the prose/judge caps depend on it); a level
+    runs effort-steered adaptive thinking instead (required on opus-5-5). Set
+    per node, deterministically, never from prompt text."""
+    cache_read_multiplier: float = Field(default=0.10, ge=0)
+    """Cache-read price as a fraction of base input (provider-published:
+    0.10 on every tier this adapter targets except opus-5-5's 0.05)."""
 
     def estimate_cost_usd(
         self,
@@ -334,40 +367,44 @@ class AdapterConfig(BaseModel):
 
         Cache tiers: with 5-minute-TTL ``ephemeral`` caching (the only TTL
         this adapter uses) the provider EXCLUDES cache tokens from
-        ``input_tokens``; cache writes bill at 1.25x and cache reads at 0.10x
-        the base input rate. The multipliers are deliberately encoded here as
-        heuristic pricing constants (recorded in axiom 09), not a billing fact.
+        ``input_tokens``; cache writes bill at 1.25x and cache reads at
+        ``cache_read_multiplier`` (0.10x, or 0.05x on opus-5-5) the base input
+        rate. The multipliers are deliberately encoded here as heuristic
+        pricing constants (recorded in axiom 09), not a billing fact.
         """
         input_cost = (
             input_tokens
             + cache_creation_tokens * 1.25
-            + cache_read_tokens * 0.10
+            + cache_read_tokens * self.cache_read_multiplier
         ) * self.input_price_per_mtok
         return (input_cost + output_tokens * self.output_price_per_mtok) / 1_000_000
 
 
 # Defaults follow axiom 09 model tiering (frontier Strategist; Sonnet-tier
 # Planner/Reflection/Explanation since the 2026-07-04 amendment — those nodes
-# write every task title and user-facing sentence). Prices are $ per 1M tokens,
-# sticker not intro (sonnet-5's $2/$10 promo lapses 2026-08-31 and encoding it
-# would silently understate costs after that); estimates pending production
-# measurement (axiom 09 disclosure). The structured nodes (Strategist syllabus /
+# write every task title and user-facing sentence). Prices are $ per 1M tokens
+# at the provider's published sticker (sonnet-5's launch $2/$10 became the
+# standard price on 2026-09-01 instead of rising to $3/$15; re-pinned
+# 2026-09-23); estimates pending production measurement (axiom 09 disclosure). The structured nodes (Strategist syllabus /
 # Planner task plan) get 16k after a real 2-page résumé drove the generated JSON
 # past the old 4k/8k caps and truncated mid-output → LLM_RETRY_LIMIT_EXCEEDED.
-# 16k stays within both models' output ceilings (opus-4-8 and sonnet-5 both
+# 16k stays within both models' output ceilings (opus-5-5 and sonnet-5 both
 # 128k) and under the non-streaming SDK timeout budget (this transport is
-# non-streaming). The prose nodes keep 1024 — the smallest round cap above
-# their ~500/~300 budgets that leaves JSON-envelope headroom; those caps are
-# only safe because the transport pins thinking off (see complete()) — on
-# sonnet-5, adaptive thinking would bill its tokens inside max_tokens.
+# non-streaming). On opus-5-5 the Strategist's thinking tokens bill inside
+# that 16k (2026-09-23 comparison: ~0.6-1.5k output per call at effort=low,
+# nowhere near the cap). The prose nodes keep 1024 — the smallest round cap
+# above their ~500/~300 budgets that leaves JSON-envelope headroom; those
+# caps are only safe because the transport pins thinking off for them
+# (effort=None, see complete()) — on sonnet-5, adaptive thinking would bill
+# its tokens inside max_tokens.
 #
 # Sampling parameters (temperature/top_p/top_k) are deliberately NOT configured:
-# opus-4-8 rejects them with a 400 and sonnet-tier models reject non-default
+# the opus tiers reject them with a 400 and sonnet-tier models reject non-default
 # values, so sampling is pinned by the API on every tier this adapter targets.
 # Eval comparability therefore rests on prompt-byte pinning (the pinned-hash
 # test ties prompt_version to the prompt bytes), not on a temperature knob.
 STRATEGIST_CONFIG = AdapterConfig(
-    model_name="claude-opus-4-8",
+    model_name="claude-opus-5-5",
     # v5 (PD-B): plan_direction — translate rule + hedge extension in the
     # system prompt, labeled raw block + bundle exclusion in the assembly.
     # 2026-07-20 (NP-A): StrategyConstraints gained the story-layer fields
@@ -391,10 +428,44 @@ STRATEGIST_CONFIG = AdapterConfig(
     # tags are all mastered; bound review modules by max_review_modules /
     # max_review_minutes. The mastery-slice fields now populate (non-empty) when
     # a pathway is selected, so both the system and full-render hashes move.
-    prompt_version="strategist-v8-2026-07-21",
+    # v9 (2026-09-23): rule 5 rescoped from company-specific-only to EVERY
+    # module — cite each provided claim relevant to the module, relevance-gated
+    # ("leave empty only when no provided claim is relevant"); the
+    # company-specific must-cite floor stays. The exemplar's generic module now
+    # cites (was []), so the exemplar no longer teaches non-citation. Chosen to
+    # lift citation_coverage/claim_utilization on eval_set_v10 (baseline
+    # opus55_low: 0.2631/0.5917); validator unchanged — unknown/expired ids
+    # still reject, generic-module citations were always accepted.
+    # v10 (2026-09-23, same day): v9 measured coverage 0.7913 / utilization
+    # 0.9800 but the advisory groundedness judge fell 4.325 -> 3.225 because
+    # chrome claims (article-title teasers, coach CTAs, credits blocks) were
+    # cited into loosely-matching modules (recording
+    # opus55_low_v9prompt_v10_2026_09_23). v10 keeps the every-module scope and
+    # adds a substantive-evidence gate to rule 5: define "substantively
+    # supports", forbid citing navigation/marketing/title-list/credits/CTA
+    # text. This is a relevance instruction, not confidence assignment —
+    # axiom 08's deterministic scoring is untouched.
+    prompt_version="strategist-v10-2026-09-23",
     max_tokens=16384,
-    input_price_per_mtok=5.00,
-    output_price_per_mtok=25.00,
+    input_price_per_mtok=4.00,
+    output_price_per_mtok=20.00,
+    cache_read_multiplier=0.05,
+    # opus-5-5 cannot run thinking-off; `low` keeps its thinking short (the
+    # nearest analogue to the thinking-off 4.8 baseline) and thinking tokens
+    # bill inside the 16k cap. Chosen by the 2026-09-23 model comparison.
+    effort="low",
+)
+#: The pre-2026-09-23 Strategist config, kept ONLY as a comparison arm for
+#: the capture tool (``--strategist-config legacy-opus-4-8``): thinking off,
+#: the previous frontier tier and its pricing. Never wired into production.
+LEGACY_OPUS_4_8_STRATEGIST_CONFIG = STRATEGIST_CONFIG.model_copy(
+    update={
+        "model_name": "claude-opus-4-8",
+        "input_price_per_mtok": 5.00,
+        "output_price_per_mtok": 25.00,
+        "cache_read_multiplier": 0.10,
+        "effort": None,
+    }
 )
 PLANNER_CONFIG = AdapterConfig(
     model_name="claude-sonnet-5",
@@ -404,22 +475,22 @@ PLANNER_CONFIG = AdapterConfig(
     # template text is unchanged.
     prompt_version="planner-v6-2026-07-20",
     max_tokens=16384,
-    input_price_per_mtok=3.00,
-    output_price_per_mtok=15.00,
+    input_price_per_mtok=2.00,
+    output_price_per_mtok=10.00,
 )
 REFLECTION_CONFIG = AdapterConfig(
     model_name="claude-sonnet-5",
     prompt_version="reflection-v3-2026-07-05",
     max_tokens=1024,
-    input_price_per_mtok=3.00,
-    output_price_per_mtok=15.00,
+    input_price_per_mtok=2.00,
+    output_price_per_mtok=10.00,
 )
 EXPLANATION_CONFIG = AdapterConfig(
     model_name="claude-sonnet-5",
     prompt_version="explanation-v3-2026-07-05",
     max_tokens=1024,
-    input_price_per_mtok=3.00,
-    output_price_per_mtok=15.00,
+    input_price_per_mtok=2.00,
+    output_price_per_mtok=10.00,
 )
 # ResumeIntake runs on Haiku (locked decision 4; axiom 09's onboarding row):
 # a user-initiated, bounded extraction — cheap, fast, schema-enforced, and
@@ -652,6 +723,7 @@ class _GenerationEngine:
                     output_contract=self._contract,
                     repair_suffix=repair_suffix,
                     timeout_seconds=self._config.timeout_seconds,
+                    effort=self._config.effort,
                 )
             except TransportError as exc:
                 if not exc.retryable:
@@ -894,7 +966,7 @@ _STRATEGIST_EXEMPLAR: dict[str, Any] = {
             "target_outcomes": ["Implement BFS and DFS from scratch"],
             "estimated_total_min": 240,
             "difficulty": 4,
-            "source_claim_ids": [],
+            "source_claim_ids": ["claim_algo_07"],
             "company_specific": False,
         },
         {
@@ -966,9 +1038,16 @@ _STRATEGIST_SYSTEM = (
     "3. Priority — use only the priority values the constraints allow.\n"
     "4. Time budget — keep the total of estimated_total_min across all modules "
     "within the constraints' max_total_estimated_minutes.\n"
-    "5. Evidence — for any company-specific module, list the supporting claims "
-    "in source_claim_ids, using only ids that appear in the provided "
-    "source_claims.\n"
+    "5. Evidence — for EVERY module, list in source_claim_ids the ids of all "
+    "provided source_claims that substantively support the module's topic or "
+    "motivate its inclusion, using only ids that appear in the provided "
+    "source_claims. A claim substantively supports a module when its text "
+    "carries real information about the skills, interview formats, processes, "
+    "or expectations the module trains. Never cite a claim whose text is "
+    "merely navigation, marketing copy, a list of article titles, credits, or "
+    "a call to action, even when its words overlap the module's topic; leave "
+    "source_claim_ids empty when no provided claim substantively supports "
+    "that module. Any company-specific module must cite at least one claim.\n"
     "6. Justification — every module you mark high priority carries a non-empty "
     "'reason' explaining why it is high priority.\n"
     "7. Story pillars — when the constraints carry unfilled_slots, you may "

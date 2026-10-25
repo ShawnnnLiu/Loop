@@ -4,8 +4,15 @@ Usage::
 
     uv run python -m agentic_calendar.tools.embed_corpus \\
         --db corpus/corpus.db --snapshot snap_xxxxxxxxxxxxxxxx \\
-        --queries evalsets/retrieval_queries_v2.json [--dry-run] \\
+        --queries evalsets/retrieval_queries_v2.json \\
+        [--claim-queries corpus/claim_queries_v4.json] [--dry-run] \\
         [--max-tokens 1000000]
+
+``--queries`` embeds a labeled retrieval *eval* set's query texts;
+``--claim-queries`` embeds a claim-query set's texts, which
+``refresh_claims --mode hybrid`` needs before it can rank. Both are
+query-side texts and land in the cache as ``input_type="query"``; a text the
+two sets share is embedded once.
 
 This is the ONLY place embedding provider calls happen (ask-first networked
 command, same protocol as ingestion fetches). ``--dry-run`` prints what would
@@ -25,8 +32,11 @@ off.
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
+
+from pydantic import ValidationError
 
 from agentic_calendar.common.errors import AgenticCalendarError
 from agentic_calendar.common.sqlite import SqliteDatabase
@@ -43,6 +53,7 @@ from agentic_calendar.retrieval import (
     SqliteVectorStore,
 )
 from agentic_calendar.retrieval.eval import load_query_set
+from agentic_calendar.tools.refresh_claims import load_claim_queries
 
 #: Conservative chars-per-token prior for the dry-run estimate only; the
 #: live run reports the provider's measured count.
@@ -133,8 +144,8 @@ def main(
     parser = argparse.ArgumentParser(
         description=(
             "Embed a pinned snapshot's chunks (and optionally a labeled query "
-            "set's query texts) into the retrieval vector cache. Networked and "
-            "ask-first; prefer --dry-run first."
+            "set's and a claim-query set's query texts) into the retrieval "
+            "vector cache. Networked and ask-first; prefer --dry-run first."
         )
     )
     parser.add_argument("--db", type=Path, required=True)
@@ -146,6 +157,15 @@ def main(
         type=Path,
         default=None,
         help="Labeled query set whose query texts to embed as input_type=query.",
+    )
+    parser.add_argument(
+        "--claim-queries",
+        type=Path,
+        default=None,
+        help=(
+            "Claim query set (corpus/claim_queries_v*.json) whose query texts "
+            "get embedded for hybrid claim assembly."
+        ),
     )
     parser.add_argument("--model", default=None, help="Embedding model override.")
     parser.add_argument(
@@ -212,6 +232,31 @@ def main(
                 model_name=config.model_name,
                 input_type="query",
             )
+        eval_query_pending = len(query_texts)
+        total_claim_queries = 0
+        claim_query_pending = 0
+        if args.claim_queries is not None:
+            try:
+                claim_set = load_claim_queries(args.claim_queries)
+            except (OSError, json.JSONDecodeError, ValidationError) as exc:
+                print(
+                    f"error: invalid claim query set {args.claim_queries}: {exc}",
+                    file=sys.stderr,
+                )
+                return 1
+            claim_texts = [query.query_text for query in claim_set.queries]
+            # Counted as unique texts: one text may serve several tracks.
+            total_claim_queries = len(set(claim_texts))
+            claim_pending = _pending_texts(
+                claim_texts,
+                vectors,
+                model_name=config.model_name,
+                input_type="query",
+            )
+            claim_query_pending = len(claim_pending)
+            query_texts.extend(claim_pending)
+        # An eval query and a claim query may share text; embed it once.
+        query_texts = list(dict.fromkeys(query_texts))
 
         estimated_tokens = _estimate_tokens(chunk_texts) + _estimate_tokens(query_texts)
         estimated_cost = config.estimate_cost_usd(estimated_tokens)
@@ -219,8 +264,14 @@ def main(
             f"snapshot {snapshot.snapshot_id}: {len(chunks)} chunks "
             f"({len(chunks) - len(chunk_texts)} cached, {len(chunk_texts)} to embed); "
             f"{total_queries} queries "
-            f"({total_queries - len(query_texts)} cached, {len(query_texts)} to embed)"
+            f"({total_queries - eval_query_pending} cached, {eval_query_pending} to embed)"
         )
+        if args.claim_queries is not None:
+            print(
+                f"{total_claim_queries} claim query texts "
+                f"({total_claim_queries - claim_query_pending} cached, "
+                f"{claim_query_pending} to embed)"
+            )
         print(
             f"model {config.model_name}: estimated ~{estimated_tokens} tokens, "
             f"~${estimated_cost:.4f} (chars/{_CHARS_PER_TOKEN_ESTIMATE} prior; "

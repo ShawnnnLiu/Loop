@@ -2,8 +2,9 @@
 
 All offline: the embedding transport is a deterministic fake recording its
 calls. Covers the dry-run-first contract, the hard token cap, idempotent
-resume (cache hits skip provider calls), and the end-to-end seam — embed CLI
-populates the cache, eval CLI grades ``--mode hybrid`` from it, and an
+resume (cache hits skip provider calls), claim-query texts cached as
+query-side vectors for hybrid claim assembly, and the end-to-end seam — embed
+CLI populates the cache, eval CLI grades ``--mode hybrid`` from it, and an
 unpopulated cache is a loud typed error, never a silent BM25 run.
 """
 
@@ -31,6 +32,7 @@ from agentic_calendar.llm_nodes.voyage_embeddings import (
 )
 from agentic_calendar.retrieval import SqliteCorpusRegistry, SqliteVectorStore
 from agentic_calendar.tools.embed_corpus import main as embed_main
+from agentic_calendar.tools.refresh_claims import ClaimQuerySet
 from agentic_calendar.tools.run_retrieval_eval import main as eval_main
 
 _COLLECTED = date(2026, 7, 6)
@@ -123,6 +125,31 @@ def _write_queries(tmp_path: Path) -> Path:
     return path
 
 
+#: Claim-query texts; the first is shared verbatim with the eval set's rq_hit.
+_CLAIM_QUERY_TEXTS = (
+    "system design sharding",
+    "capacity estimation interview practice",
+    "feature engineering reproducibility",
+)
+
+
+def _write_claim_queries(tmp_path: Path) -> Path:
+    path = tmp_path / "claim_queries.json"
+    claim_set = ClaimQuerySet.model_validate(
+        {
+            "query_set_version": "claim-queries-test",
+            "k": 5,
+            "queries": [
+                {"track": "swe", "query_text": _CLAIM_QUERY_TEXTS[0]},
+                {"track": "swe", "query_text": _CLAIM_QUERY_TEXTS[1]},
+                {"track": "mle", "query_text": _CLAIM_QUERY_TEXTS[2]},
+            ],
+        }
+    )
+    path.write_text(claim_set.model_dump_json(), encoding="utf-8")
+    return path
+
+
 def test_dry_run_estimates_without_any_provider_call(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -161,6 +188,83 @@ def test_execute_caches_vectors_and_reports_measured_usage(
     assert "measured" in out
     vectors = SqliteVectorStore(SqliteDatabase(db_path))
     assert vectors.count(model_name="voyage-3.5") > 0
+
+
+def test_dry_run_counts_claim_queries(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    db_path, snapshot_id = _seed_corpus(tmp_path)
+    claim_queries = _write_claim_queries(tmp_path)
+    vectors = SqliteVectorStore(SqliteDatabase(db_path))
+    # One claim query already cached: the dry run must count it as a hit.
+    vectors.put_many(
+        [(content_hash_for(_CLAIM_QUERY_TEXTS[1]), [1.0, 0.0])],
+        model_name="voyage-3.5",
+        input_type="query",
+    )
+    transport = FakeEmbeddingTransport()
+    rc = embed_main(
+        [
+            "--db", str(db_path), "--snapshot", snapshot_id,
+            "--claim-queries", str(claim_queries), "--dry-run",
+        ],
+        transport=transport,
+    )
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "3 claim query texts (1 cached, 2 to embed)" in out
+    assert "dry run: no network calls made" in out
+    assert transport.calls == []
+    assert vectors.count(model_name="voyage-3.5") == 1
+
+
+def test_claim_query_texts_land_in_the_cache_as_query_type(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    db_path, snapshot_id = _seed_corpus(tmp_path)
+    queries = _write_queries(tmp_path)
+    claim_queries = _write_claim_queries(tmp_path)
+    transport = FakeEmbeddingTransport()
+    rc = embed_main(
+        [
+            "--db", str(db_path), "--snapshot", snapshot_id,
+            "--queries", str(queries), "--claim-queries", str(claim_queries),
+        ],
+        transport=transport,
+    )
+    assert rc == 0
+    capsys.readouterr()
+    # 2 eval texts + 3 claim texts, one shared verbatim: embedded once.
+    assert sum(count for kind, count in transport.calls if kind == "query") == 4
+    vectors = SqliteVectorStore(SqliteDatabase(db_path))
+    for text in _CLAIM_QUERY_TEXTS:
+        content_hash = content_hash_for(text)
+        assert (
+            vectors.get(content_hash, model_name="voyage-3.5", input_type="query")
+            is not None
+        )
+        assert (
+            vectors.get(content_hash, model_name="voyage-3.5", input_type="document")
+            is None
+        )
+
+
+def test_invalid_claim_query_set_is_a_loud_error(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    db_path, snapshot_id = _seed_corpus(tmp_path)
+    transport = FakeEmbeddingTransport()
+    # A retrieval eval set is not a claim query set.
+    rc = embed_main(
+        [
+            "--db", str(db_path), "--snapshot", snapshot_id,
+            "--claim-queries", str(_write_queries(tmp_path)),
+        ],
+        transport=transport,
+    )
+    assert rc == 1
+    assert "invalid claim query set" in capsys.readouterr().err
+    assert transport.calls == []
 
 
 def test_rerun_is_idempotent_and_makes_no_provider_call(

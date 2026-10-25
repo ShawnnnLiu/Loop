@@ -5,8 +5,10 @@ set + params → identical records), excerpts are bounded verbatim text,
 corroboration links exact duplicates ONLY (the restraint is the behavior),
 scoring belongs to the sanctioned ingestor (pipeline-supplied score fields are
 stripped), ``--dry-run`` writes nothing, and a live re-run is idempotent by
-claim identity. The golden case proves the populated store actually reaches
-the strategist through the D1 curation filter and survives syllabus
+claim identity. Hybrid ranking is opt-in and runs from deterministic fake
+vectors seeded straight into the cache; a missing vector is a typed error,
+never a silent BM25 run. The golden case proves the populated store actually
+reaches the strategist through the D1 curation filter and survives syllabus
 validation — the Phase 5 injection seam, finally exercised with real data.
 """
 
@@ -16,6 +18,8 @@ import copy
 from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any, cast
+
+import pytest
 
 from agentic_calendar.app.cycle import CycleService
 from agentic_calendar.app.environment import (
@@ -46,7 +50,14 @@ from agentic_calendar.llm_nodes.strategist import FixtureStrategist
 from agentic_calendar.llm_nodes.user_facing_explanation import (
     DeterministicUserFacingExplanation,
 )
-from agentic_calendar.retrieval import SqliteChunkIndex, SqliteCorpusRegistry
+from agentic_calendar.retrieval import (
+    HybridSearcher,
+    MissingEmbeddingsError,
+    SqliteChunkIndex,
+    SqliteCorpusRegistry,
+    SqliteVectorStore,
+)
+from agentic_calendar.retrieval.eval import ChunkSearcher
 from agentic_calendar.source_claims.ingestion import (
     ClaimIngestionStatus,
     InMemorySourceClaimStore,
@@ -151,6 +162,28 @@ _QUERY_SET = ClaimQuerySet.model_validate(
     }
 )
 
+_MODEL = "voyage-3.5"
+
+#: One query at k=3, below the four keepable chunks: a re-ranking changes
+#: which claims assemble, not only their order.
+_HYBRID_QUERY_SET = ClaimQuerySet.model_validate(
+    {
+        "query_set_version": "test-claim-queries-hybrid",
+        "k": 3,
+        "queries": [{"track": "swe", "query_text": "system design interviews preparation"}],
+    }
+)
+
+#: Dense geometry that inverts BM25's head: every query vector points at the
+#: 40-day-old notes (BM25 rank 5 of 7) and away from the shared guide/mirror
+#: paragraph (BM25 ranks 1-2); every other chunk is orthogonal.
+_QUERY_VECTOR = [1.0, 0.0]
+_DENSE_BY_NEEDLE = {
+    "repeated practice": [1.0, 0.0],
+    "clear capacity estimation": [-1.0, 0.0],
+}
+_DENSE_DEFAULT = [0.0, 1.0]
+
 
 def _build_corpus(tmp_path: Path) -> tuple[Path, str]:
     """Register the fixture docs, pin a snapshot, build the index."""
@@ -186,11 +219,50 @@ def _assemble(tmp_path: Path) -> AssemblyReport:
     report = assemble_claims(
         registry=registry,
         index=index,
+        searcher=index,
         snapshot_id=snapshot_id,
         query_set=_QUERY_SET,
         manifest=_MANIFEST,
     )
     return report
+
+
+def _seed_vectors(corpus_db_path: Path, snapshot_id: str, query_set: ClaimQuerySet) -> None:
+    """Cache a fake vector per chunk (by substring match) plus every query's."""
+    db = SqliteDatabase(corpus_db_path)
+    entries = []
+    for chunk in SqliteChunkIndex(db).list_chunks(snapshot_id):
+        vector = _DENSE_DEFAULT
+        for needle, chosen in _DENSE_BY_NEEDLE.items():
+            if needle in chunk.text:
+                vector = chosen
+        entries.append((content_hash_for(chunk.text), vector))
+    vectors = SqliteVectorStore(db)
+    vectors.put_many(entries, model_name=_MODEL, input_type="document")
+    vectors.put_many(
+        [(content_hash_for(query.query_text), _QUERY_VECTOR) for query in query_set.queries],
+        model_name=_MODEL,
+        input_type="query",
+    )
+
+
+def _assemble_ranked(
+    corpus_db_path: Path, snapshot_id: str, *, query_set: ClaimQuerySet, hybrid: bool
+) -> AssemblyReport:
+    """Assemble over a built corpus, ranked by BM25 or by the hybrid searcher."""
+    db = SqliteDatabase(corpus_db_path)
+    index = SqliteChunkIndex(db)
+    searcher: ChunkSearcher = (
+        HybridSearcher(index, SqliteVectorStore(db), model_name=_MODEL) if hybrid else index
+    )
+    return assemble_claims(
+        registry=SqliteCorpusRegistry(db),
+        index=index,
+        searcher=searcher,
+        snapshot_id=snapshot_id,
+        query_set=query_set,
+        manifest=_MANIFEST,
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -351,6 +423,66 @@ def test_breadcrumbless_chunks_keep_the_plain_document_url(tmp_path: Path) -> No
 
 
 # --------------------------------------------------------------------------- #
+# hybrid ranking (seeded fake vectors; no embedding provider anywhere)
+# --------------------------------------------------------------------------- #
+
+
+def test_hybrid_assembly_uses_the_fused_ranking(tmp_path: Path) -> None:
+    corpus_db, snapshot_id = _build_corpus(tmp_path)
+    _seed_vectors(corpus_db, snapshot_id, _HYBRID_QUERY_SET)
+    bm25 = _assemble_ranked(corpus_db, snapshot_id, query_set=_HYBRID_QUERY_SET, hybrid=False)
+    hybrid = _assemble_ranked(corpus_db, snapshot_id, query_set=_HYBRID_QUERY_SET, hybrid=True)
+    bm25_ids = [claim.claim_id for claim in bm25.claims]
+    hybrid_ids = [claim.claim_id for claim in hybrid.claims]
+    assert len(bm25_ids) == len(hybrid_ids) == _HYBRID_QUERY_SET.k
+    assert hybrid_ids != bm25_ids
+    # k sits below the keepable chunk count, so the set moves, not just the order.
+    assert set(hybrid_ids) != set(bm25_ids)
+    lifted = next(
+        claim.claim_id
+        for claim in hybrid.claims
+        if claim.document_url == "https://plain.example.com/old-notes"
+    )
+    # The dense arm lifted BM25's rank-5 chunk to the top of the fused ranking.
+    assert hybrid_ids[0] == lifted
+    assert lifted not in bm25_ids
+
+
+def test_hybrid_assembly_without_vectors_raises_typed_error(tmp_path: Path) -> None:
+    corpus_db, snapshot_id = _build_corpus(tmp_path)
+    with pytest.raises(MissingEmbeddingsError) as excinfo:
+        _assemble_ranked(corpus_db, snapshot_id, query_set=_QUERY_SET, hybrid=True)
+    # The first claim query's vector is resolved before any chunk vector.
+    assert excinfo.value.model_name == _MODEL
+    assert excinfo.value.input_type == "query"
+    assert excinfo.value.missing_count == 1
+
+
+def test_hybrid_assembly_is_deterministic(tmp_path: Path) -> None:
+    reports = []
+    for name in ("a", "b"):
+        corpus_db, snapshot_id = _build_corpus(tmp_path / name)
+        _seed_vectors(corpus_db, snapshot_id, _QUERY_SET)
+        reports.append(
+            _assemble_ranked(corpus_db, snapshot_id, query_set=_QUERY_SET, hybrid=True)
+        )
+    first, second = reports
+    assert [c.claim_id for c in first.claims] == [c.claim_id for c in second.claims]
+    assert first.claims == second.claims
+    assert (
+        first.skipped_short,
+        first.skipped_chrome,
+        first.skipped_stale,
+        first.duplicates_folded,
+    ) == (
+        second.skipped_short,
+        second.skipped_chrome,
+        second.skipped_stale,
+        second.duplicates_folded,
+    )
+
+
+# --------------------------------------------------------------------------- #
 # ingestion
 # --------------------------------------------------------------------------- #
 
@@ -478,6 +610,49 @@ def test_cli_rejects_invalid_query_set(tmp_path: Path) -> None:
     args = _cli_args(tmp_path, corpus_db, snapshot_id, "--dry-run")
     args[1] = str(tmp_path / "manifest.json")  # a manifest is not a query set
     assert main(args) == 1
+
+
+def test_cli_defaults_to_bm25_and_needs_no_vectors(tmp_path: Path, capsys: Any) -> None:
+    corpus_db, snapshot_id = _build_corpus(tmp_path)
+    exit_code = main(
+        _cli_args(tmp_path, corpus_db, snapshot_id, "--dry-run"),
+        clock=FrozenClock(_NOW),
+    )
+    assert exit_code == 0
+    out = capsys.readouterr().out
+    assert "retriever: bm25" in out
+    assert "ingested=4" in out
+    # The opt-in guard: the default run never touched a vector.
+    assert SqliteVectorStore(SqliteDatabase(corpus_db)).count(model_name=_MODEL) == 0
+
+
+def test_cli_rejects_hybrid_without_cached_vectors(tmp_path: Path, capsys: Any) -> None:
+    corpus_db, snapshot_id = _build_corpus(tmp_path)
+    exit_code = main(
+        _cli_args(tmp_path, corpus_db, snapshot_id, "--mode", "hybrid", "--dry-run"),
+        clock=FrozenClock(_NOW),
+    )
+    assert exit_code == 1
+    captured = capsys.readouterr()
+    assert "not cached" in captured.err
+    assert "agentic_calendar.tools.embed_corpus" in captured.err
+    # Stopped before scoring: no retriever line, no assembly, no BM25 fallback.
+    assert "retriever:" not in captured.out
+    assert "ingestion:" not in captured.out
+
+
+def test_cli_dry_run_hybrid_prints_the_retriever_line(tmp_path: Path, capsys: Any) -> None:
+    corpus_db, snapshot_id = _build_corpus(tmp_path)
+    _seed_vectors(corpus_db, snapshot_id, _QUERY_SET)
+    exit_code = main(
+        _cli_args(tmp_path, corpus_db, snapshot_id, "--mode", "hybrid", "--dry-run"),
+        clock=FrozenClock(_NOW),
+    )
+    assert exit_code == 0
+    out = capsys.readouterr().out
+    assert "retriever: hybrid (model voyage-3.5, rrf_k=60, candidate_depth=50)" in out
+    assert "dry-run" in out
+    assert "ingested=4" in out
 
 
 def test_repo_claim_query_set_is_valid_and_covers_all_tracks() -> None:

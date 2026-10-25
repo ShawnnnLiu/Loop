@@ -691,6 +691,7 @@ def servable_claims_by_track(
     report = assemble_claims(
         registry=registry,
         index=index,
+        searcher=index,
         snapshot_id=snapshot.snapshot_id,
         query_set=query_set,
         manifest=manifest,

@@ -9,8 +9,23 @@ Usage::
         --corpus-db corpus/corpus.db --snapshot snap_xxxxxxxxxxxxxxxx \\
         --dry-run
 
+    # Same preview, ranked by the hybrid retriever (RRF over BM25 + dense
+    # cosine) from the vector cache.
+    ... --mode hybrid [--embedding-model voyage-3.5] --dry-run
+
     # Live: populate the app database's claim store (idempotent re-run).
     ... --app-db dogfood.db
+
+``--mode bm25`` is the default and the shipped posture. ``--mode hybrid``
+reads cached vectors only and never calls an embedding provider: a chunk or
+claim-query vector the cache lacks is the typed ``MissingEmbeddingsError``
+pointing at the embed CLI (``agentic_calendar.tools.embed_corpus``, whose
+``--claim-queries`` caches the query side), and the run stops there instead
+of degrading to BM25.
+The claim store is additive across retrievers: a hybrid run over a
+BM25-populated store ingests the new claims and leaves the existing ones in
+place, and an excerpt both retrievers find collapses to the same
+content-derived ``claim_id``.
 
 This is the production path that finally populates ``env.claim_store``: the
 injection seam (``StrategistInput.source_claims`` → prompt rule 5 → the
@@ -83,14 +98,18 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from agentic_calendar.common.clock import Clock, SystemClock
+from agentic_calendar.common.errors import AgenticCalendarError
 from agentic_calendar.common.sqlite import SqliteDatabase
 from agentic_calendar.contracts.career_track import CareerTrack
 from agentic_calendar.contracts.retrieval_query import MAX_RETRIEVAL_K, RetrievalQuery
 from agentic_calendar.retrieval import (
     CorpusRegistry,
+    HybridSearcher,
     SqliteChunkIndex,
     SqliteCorpusRegistry,
+    SqliteVectorStore,
 )
+from agentic_calendar.retrieval.eval import ChunkSearcher
 from agentic_calendar.source_claims.expiration import compute_expires_at
 from agentic_calendar.source_claims.ingestion import (
     ClaimIngestionOutcome,
@@ -356,6 +375,7 @@ def assemble_claims(
     *,
     registry: CorpusRegistry,
     index: SqliteChunkIndex,
+    searcher: ChunkSearcher,
     snapshot_id: str,
     query_set: ClaimQuerySet,
     manifest: CorpusManifest,
@@ -365,9 +385,15 @@ def assemble_claims(
 ) -> AssemblyReport:
     """Run every query, excerpt the ranked chunks, dedup, link exact duplicates.
 
+    Ranking comes from ``searcher`` (the BM25 ``SqliteChunkIndex`` itself, or
+    a ``HybridSearcher`` over it); chunk and document lookup come from
+    ``index`` and ``registry``. The two are separate so the retriever is
+    swappable without the lookup path moving. ``searcher`` has no default on
+    purpose: a mis-wired caller must fail loudly, never fall back to BM25.
+
     Pure given its inputs: query file order, then rank order, decides
-    first-occurrence dedup, so the same snapshot + query set + params always
-    assembles the identical record list (asserted by test).
+    first-occurrence dedup, so the same snapshot + query set + retriever +
+    params always assembles the identical record list (asserted by test).
     """
     seen: set[tuple[str, str]] = set()
     claims: list[AssembledClaim] = []
@@ -376,7 +402,7 @@ def assemble_claims(
     skipped_stale = 0
     duplicates_folded = 0
     for query in query_set.queries:
-        result = index.search(
+        result = searcher.search(
             RetrievalQuery(query_text=query.query_text, track=query.track, k=query_set.k),
             snapshot_id=snapshot_id,
         )
@@ -545,6 +571,20 @@ def main(argv: list[str] | None = None, *, clock: Clock | None = None) -> int:
     parser.add_argument("--corpus-db", type=Path, required=True, help="Corpus SQLite database.")
     parser.add_argument("--snapshot", required=True, help="Pinned snapshot id (snap_ + 16 hex).")
     parser.add_argument(
+        "--mode",
+        choices=("bm25", "hybrid"),
+        default="bm25",
+        help=(
+            "Retriever for claim assembly: bm25 (default, the shipped posture) "
+            "or hybrid (RRF over BM25 + dense cosine)."
+        ),
+    )
+    parser.add_argument(
+        "--embedding-model",
+        default="voyage-3.5",
+        help="Vector-cache model name for --mode hybrid.",
+    )
+    parser.add_argument(
         "--app-db",
         type=Path,
         default=None,
@@ -586,14 +626,35 @@ def main(argv: list[str] | None = None, *, clock: Clock | None = None) -> int:
     index = SqliteChunkIndex(corpus_db)
     # Derived data: (re)building is offline, idempotent, deterministic.
     index.build(registry, snapshot)
+    hybrid: HybridSearcher | None = None
+    if args.mode == "hybrid":
+        hybrid = HybridSearcher(
+            index, SqliteVectorStore(corpus_db), model_name=args.embedding_model
+        )
+    searcher: ChunkSearcher = hybrid if hybrid is not None else index
 
-    report = assemble_claims(
-        registry=registry,
-        index=index,
-        snapshot_id=snapshot.snapshot_id,
-        query_set=query_set,
-        manifest=manifest,
-    )
+    try:
+        report = assemble_claims(
+            registry=registry,
+            index=index,
+            searcher=searcher,
+            snapshot_id=snapshot.snapshot_id,
+            query_set=query_set,
+            manifest=manifest,
+        )
+    except AgenticCalendarError as exc:
+        # A missing vector stops the run; it never degrades to BM25.
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+
+    if hybrid is not None:
+        print(
+            f"retriever: hybrid (model {args.embedding_model}, "
+            f"rrf_k={hybrid.params.rrf_k}, "
+            f"candidate_depth={hybrid.params.candidate_depth})"
+        )
+    else:
+        print("retriever: bm25")
 
     store: SourceClaimStore
     if args.dry_run:
